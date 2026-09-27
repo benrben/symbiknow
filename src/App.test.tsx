@@ -235,6 +235,7 @@ function fixture(options: {
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
   window.localStorage.removeItem('symbiknow.theme');
+  window.localStorage.removeItem('symbiknow.assistant.document-width');
   document.documentElement.removeAttribute('data-theme');
   // CodeMirror measures text ranges, which jsdom does not lay out.
   Range.prototype.getBoundingClientRect = () => ({ x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON: () => ({}) });
@@ -516,6 +517,77 @@ describe('App composition', () => {
     expect(within(reader).getByText('Related API details.')).toBeTruthy();
     expect(window.location.search).toBe('?canvas=billing&doc=billing-client');
     expect(server.requests.some(request => request.path === '/api/canvases/billing')).toBe(true);
+  });
+
+  it('opens Symbi beside an editor and reader with the current document as context', async () => {
+    const block: CanvasBlock = { id: 'guide', title: 'Guide', file: 'guide.md', kind: 'markdown', content: '# Guide',
+      contentHash: 'first-version', x: 0, y: 0, width: 400, height: 280, links: [] };
+    const server = fixture({ initialBlocks: [block], hasApiKey: true });
+    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
+    render(<App/>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Guide' }));
+    const editor = screen.getByRole('dialog', { name: 'Block editor' });
+    fireEvent.click(within(editor).getByRole('button', { name: 'Ask Symbi' }));
+    const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
+    await waitFor(() => expect(document.activeElement).toBe(compose));
+    const resizeHandle = screen.getByRole('separator', { name: 'Resize chat panel' });
+    const startingWidth = Number(resizeHandle.getAttribute('aria-valuenow'));
+    fireEvent.keyDown(resizeHandle, { key: 'ArrowLeft' });
+    expect(resizeHandle.getAttribute('aria-valuenow')).toBe(String(startingWidth + 24));
+    expect(document.querySelector('.app-shell')?.getAttribute('style')).toContain(`${startingWidth + 24}px`);
+    expect(screen.getByRole('button', { name: 'Choose assistant context' }).textContent).toContain('Using: Guide');
+    expect(screen.getByRole('button', { name: /Review Guide for clarity/ })).toBeTruthy();
+    fireEvent.change(compose, { target: { value: 'Review this document.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(server.requests.some(request => request.path === '/api/chat/stream')).toBe(true));
+    expect((server.requests.find(request => request.path === '/api/chat/stream')?.body as { viewContext: unknown }).viewContext)
+      .toMatchObject({ readerBlockId: 'guide', editingBlockId: 'guide', selectedBlockIds: ['guide'], editorHasUnsavedChanges: false });
+
+    fireEvent.click(within(editor).getByRole('button', { name: 'Close dialog' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Read Guide full page' }));
+    const reader = screen.getByRole('dialog', { name: 'Guide full page' });
+    fireEvent.click(within(reader).getByRole('button', { name: 'Ask Symbi' }));
+    fireEvent.change(compose, { target: { value: 'Explain this document.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(server.requests.filter(request => request.path === '/api/chat/stream')).toHaveLength(2));
+    expect((server.requests.filter(request => request.path === '/api/chat/stream')[1].body as { viewContext: unknown }).viewContext)
+      .toMatchObject({ readerBlockId: 'guide', selectedBlockIds: ['guide'] });
+  });
+
+  it('refreshes a clean editor after a Symbi edit and protects an unsaved draft', async () => {
+    const block: CanvasBlock = { id: 'guide', title: 'Guide', file: 'guide.md', kind: 'markdown', content: '# Guide',
+      contentHash: 'first-version', x: 0, y: 0, width: 400, height: 280, links: [] };
+    const firstReply = deferred<{ message: string; changed: boolean }>();
+    const secondReply = deferred<{ message: string; changed: boolean }>();
+    const server = fixture({ initialBlocks: [block], hasApiKey: true,
+      chatReplies: [firstReply.promise, secondReply.promise] });
+    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
+    render(<App/>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Guide' }));
+    const editor = screen.getByRole('dialog', { name: 'Block editor' });
+    fireEvent.click(within(editor).getByRole('button', { name: 'Ask Symbi' }));
+    const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
+    fireEvent.change(compose, { target: { value: 'Edit this document.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(server.requests.some(request => request.path === '/api/chat/stream')).toBe(true));
+    server.canvas.blocks[0] = { ...server.canvas.blocks[0], content: '# Better guide', contentHash: 'second-version' };
+    firstReply.resolve({ message: 'Updated the guide.', changed: true });
+    await waitFor(() => expect(editorText(editor)).toBe('# Better guide'));
+
+    typeInEditor(editor, '# My unsaved draft');
+    fireEvent.change(compose, { target: { value: 'Review my changes.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(server.requests.filter(request => request.path === '/api/chat/stream')).toHaveLength(2));
+    expect((server.requests.filter(request => request.path === '/api/chat/stream')[1].body as { viewContext: unknown }).viewContext)
+      .toMatchObject({ editorHasUnsavedChanges: true,
+        editorDraft: { title: 'Guide', kind: 'markdown', content: '# My unsaved draft' } });
+    server.canvas.blocks[0] = { ...server.canvas.blocks[0], content: '# New saved guide', contentHash: 'third-version' };
+    secondReply.resolve({ message: 'Checked the guide.', changed: true });
+    await waitFor(() => expect(within(editor).getByText(/The saved document changed while this editor was open/)).toBeTruthy());
+    expect(editorText(editor)).toBe('# My unsaved draft');
+    expect(within(editor).getByRole('button', { name: 'Save block' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(within(editor).getByRole('button', { name: 'Load saved version' }));
+    expect(editorText(editor)).toBe('# New saved guide');
   });
 
   it('creates a Markdown block, searches it, and opens its editor from the result', async () => {

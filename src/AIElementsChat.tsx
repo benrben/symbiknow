@@ -7,7 +7,7 @@ import { streamCanvasChat, type AgentStep, type ChatTurn, type Verification } fr
 import type { AnswerCanvasResult, AnswerCanvasTurn, CanvasNavigationTarget, ChatViewContext, ResearchCanvasPatch, ResearchSurfaceChoice } from '../shared/answer-canvas';
 import type { CanvasBlock, CanvasDocument } from '../shared/types';
 import { chatSuggestions } from './chat-suggestions';
-import { chatScopeOptions, type ChatScope } from './chat-context';
+import { chatScopeOptions, requestContextForScope, type ChatScope } from './chat-context';
 import { SymbiAvatar, type SymbiState } from './SymbiAvatar';
 import type { CanvasChanges, CanvasEdit } from './canvas-changes';
 import './ai-chat.css';
@@ -21,6 +21,7 @@ type AIElementsChatProps = {
   jevAvailable?: boolean;
   model: string;
   promptRequest?: { text: string; sequence: number; mergeDraft?: MergeDraftRequest };
+  focusRequest?: number;
   onMergeDraft?: (markdown: string, request: MergeDraftRequest) => void;
   onOpenSettings: () => void;
   onCanvasChanged: (canvasId: string, beforeBlocks: CanvasBlock[]) => Promise<CanvasChanges>;
@@ -243,12 +244,13 @@ type ChatComposerProps = Pick<AIElementsChatProps, 'canvasId' | 'hasApiKey' | 'm
   onInput: (value: string) => void;
   onSubmit: (value: string) => void;
   onStop: () => void;
+  placeholder?: string;
 };
 
-function ChatComposer({ canvasId, hasApiKey, model, input, status, onInput, onSubmit, onStop }: ChatComposerProps) {
+function ChatComposer({ canvasId, hasApiKey, model, input, status, onInput, onSubmit, onStop, placeholder }: ChatComposerProps) {
   return <div className="ai-chat__composer">
     <PromptInput onSubmit={({ text }) => onSubmit(text)}>
-      <PromptInputBody><PromptInputTextarea aria-label="Message Symbi" value={input} onChange={event => onInput(event.currentTarget.value)} placeholder={canvasId ? 'Ask Symbi about this canvas…' : 'Open a canvas to start chatting…'}/></PromptInputBody>
+      <PromptInputBody><PromptInputTextarea aria-label="Message Symbi" value={input} onChange={event => onInput(event.currentTarget.value)} placeholder={placeholder ?? (canvasId ? 'Ask Symbi about this canvas…' : 'Open a canvas to start chatting…')}/></PromptInputBody>
       <PromptInputFooter><span>{hasApiKey ? model : 'Set up chat in Settings'}</span><PromptInputSubmit status={status} onStop={onStop} disabled={!input.trim() && status === 'ready'}/></PromptInputFooter>
     </PromptInput>
   </div>;
@@ -338,7 +340,7 @@ function TurnMessage({ turn, status, latestId, avatarState, question, undoingBlo
   </Message>;
 }
 
-export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, hasApiKey, jevAvailable = false, model, promptRequest, onMergeDraft, onOpenSettings,
+export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, hasApiKey, jevAvailable = false, model, promptRequest, focusRequest, onMergeDraft, onOpenSettings,
   onCanvasChanged, onShowBlock, onNavigate, onReturnNavigation, onUndoCreatedBlock, onUndoEditedBlock, onCanvasSources, onCanvasPatch, onCanvasAnswer, onCanvasTurnEnd, onOpenAnswerCanvas, onAvatarStateChange }: AIElementsChatProps) {
   const [input, setInput] = useState(() => {
     try { return window.sessionStorage.getItem('symbiknow:chat-draft') ?? ''; }
@@ -375,6 +377,12 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
       : latestTurn?.content ? 'speaking' : 'thinking');
 
   useEffect(() => { onAvatarStateChange?.(avatarState); }, [avatarState, onAvatarStateChange]);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    setScope('view');
+    document.querySelector<HTMLTextAreaElement>('.chat-panel textarea[aria-label="Message Symbi"]')?.focus();
+  }, [focusRequest]);
 
   useEffect(() => () => { activeRef.current?.abort(); if (finishTimer.current) clearTimeout(finishTimer.current); }, []);
   useEffect(() => {
@@ -490,7 +498,7 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
     const next = [...turnsRef.current, { id: ++nextId.current, role: 'user' as const, content: text, activities: [] }];
     setInput('');
     const conversation = appendAssistant(next, mergeDraft);
-    void runConversation(conversation, canvas?.blocks ?? [], canvasId, activeScope.context, mergeDraft);
+    void runConversation(conversation, canvas?.blocks ?? [], canvasId, requestContextForScope(viewContext, activeScope), mergeDraft);
   }
 
   function retry() {
@@ -498,7 +506,7 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
     const history = turnsRef.current.slice(0, -1);
     const conversation = appendAssistant(history, mergeDraft);
     setInput('');
-    void runConversation(conversation, canvas?.blocks ?? [], canvasId, activeScope.context, mergeDraft);
+    void runConversation(conversation, canvas?.blocks ?? [], canvasId, requestContextForScope(viewContext, activeScope), mergeDraft);
   }
 
   async function undoCreated(turnId: number, block: CanvasBlock) {
@@ -577,6 +585,7 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
           onClick={() => { setScope(option.id); setScopeOpen(false); }}><strong>{option.label}</strong><span>{option.detail}</span></button>)}
       </div>}
     </div>
-    <ChatComposer canvasId={canvasId} hasApiKey={hasApiKey} model={model} input={input} status={status} onInput={setInput} onSubmit={submit} onStop={() => activeRef.current?.abort()}/>
+    <ChatComposer canvasId={canvasId} hasApiKey={hasApiKey} model={model} input={input} status={status} onInput={setInput} onSubmit={submit} onStop={() => activeRef.current?.abort()}
+      placeholder={viewContext.editorDraft || viewContext.editingBlockId ? 'Ask Symbi to review or edit this document…' : undefined}/>
   </div>;
 }

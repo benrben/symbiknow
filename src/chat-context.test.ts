@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chatScopeOptions, currentViewLabel } from './chat-context';
+import { chatScopeOptions, currentViewLabel, requestContextForScope } from './chat-context';
 import type { CanvasDocument } from '../shared/types';
 
 const canvas: CanvasDocument = { id: 'planning', name: 'Planning', workspaceId: 'team', blocks: [{
@@ -23,5 +23,20 @@ describe('chat context scope', () => {
       }],
     }]);
     expect(options.at(-1)?.context).toMatchObject({ viewMode: 'answer', answerSourceIds: ['qa'] });
+  });
+
+  it('names a new unsaved draft as the current assistant context', () => {
+    const view = { selectedBlockIds: [], editorHasUnsavedChanges: true,
+      editorDraft: { title: 'New outline', kind: 'markdown' as const, content: '# Outline' } };
+    expect(chatScopeOptions(canvas, view, [])[0]).toMatchObject({ detail: 'Draft · New outline', context: view });
+  });
+
+  it('protects an unsaved editor document when the assistant scope changes', () => {
+    const view = { selectedBlockIds: ['qa'], editingBlockId: 'qa', editorHasUnsavedChanges: true,
+      editorDraft: { title: 'QA report', kind: 'markdown' as const, content: 'Unsaved findings' } };
+    const options = chatScopeOptions(canvas, view, []);
+    expect(requestContextForScope(view, options[1])).toMatchObject({ selectedBlockIds: [],
+      editingBlockId: 'qa', editorHasUnsavedChanges: true });
+    expect(requestContextForScope(view, options[1]).editorDraft).toBeUndefined();
   });
 });

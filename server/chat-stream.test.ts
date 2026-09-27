@@ -495,6 +495,27 @@ describe('Deep Agent chat stream', () => {
       .toMatchObject({ title: 'Release checklist', kind: 'slides' });
   });
 
+  it('uses the current unsaved draft for advice and refuses to overwrite its saved document', async () => {
+    const store = await storeFixture();
+    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
+    const original = (await store.getCanvas('product-roadmap')).blocks.find(block => block.id === 'launch-checklist')!.content;
+    const factory: DeepAgentFactory = (_settings, tools, prompt) => async function* (messages) {
+      expect(prompt).toContain('My unfinished checklist');
+      expect(prompt).toContain('Propose changes in chat');
+      await expect(tools.find(item => item.name === 'edit_doc')!.invoke({
+        blockId: 'launch-checklist', content: '# Replaced',
+      })).rejects.toMatchObject({ status: 409 });
+      yield { messages: [...messages, new AIMessage('Your draft needs a clearer first step.')] };
+    };
+    const session = await createChatStream(store, { ...body,
+      viewContext: { selectedBlockIds: ['launch-checklist'], readerBlockId: 'launch-checklist',
+        editingBlockId: 'launch-checklist', editorHasUnsavedChanges: true,
+        editorDraft: { title: 'Launch checklist', kind: 'markdown', content: '# My unfinished checklist' } },
+    }, factory, approvedDecider);
+    for await (const chunk of session.tokens(new AbortController().signal)) { void chunk; }
+    expect((await store.getCanvas('product-roadmap')).blocks.find(block => block.id === 'launch-checklist')!.content).toBe(original);
+  });
+
   it('offers Jev analysis and applies each requested canvas automation through real storage', async () => {
     const store = await storeFixture();
     await store.updateSettings({ apiKey: 'openrouter-key', model: 'vendor/model', reviewers: 'Alice, Bob' });
@@ -860,6 +881,21 @@ describe('Deep Agent chat stream', () => {
     const response = await fetch(base + '/api/chat/stream', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: 'OpenRouter request failed. Check the model and API key in Settings.' });
+  });
+
+  it.each([
+    [401, 'The API key was rejected. Check it in Settings.'],
+    [402, 'The account has insufficient credits. Check billing with the provider.'],
+    [429, 'The provider rate limit was reached. Retry shortly.'],
+  ])('shows a safe provider reason for upstream status %i', async (status, reason) => {
+    const store = await storeFixture();
+    await store.updateSettings({ apiKey: 'private-key', model: 'vendor/model' });
+    const factory: DeepAgentFactory = () => async function* () {
+      throw Object.assign(new Error('private-key details'), { status });
+    };
+    const session = await createChatStream(store, body, factory, approvedDecider);
+    await expect(async () => { for await (const chunk of session.tokens(new AbortController().signal)) void chunk; })
+      .rejects.toMatchObject({ status: 502, message: `OpenRouter request failed (${status}). ${reason}` });
   });
 
   it('runs a real Deep Agents tool turn with a fake LangChain model', async () => {

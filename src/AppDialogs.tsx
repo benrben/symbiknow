@@ -13,7 +13,7 @@ import type { BlockKind, CanvasBlock } from '../shared/types';
 export function ModalOverlay({ model }: { model: AppModel }) {
   const { dialog, busy, setDialog } = model;
   return <div className="overlay modal-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !busy) setDialog(null); }}>
-    <div className={'modal ' + (dialog === 'settings' ? 'settings-modal' : dialog === 'block' ? 'editor-modal block-modal' : dialog === 'versions' ? 'editor-modal' : '')} role="dialog" aria-modal="true" aria-label={modalLabel(dialog)}>
+    <div className={'modal ' + (dialog === 'settings' ? 'settings-modal' : dialog === 'block' ? 'editor-modal block-modal' : dialog === 'versions' ? 'editor-modal' : '')} role="dialog" aria-modal={dialog === 'block' && model.showChat ? 'false' : 'true'} aria-label={modalLabel(dialog)}>
       <ModalHeading model={model}/>
       <ModalContent model={model}/>
     </div>
@@ -72,7 +72,10 @@ function DeleteWorkspaceForm({ model }: { model: AppModel }) {
 
 function ModalHeading({ model }: { model: AppModel }) {
   const { eyebrow, title } = modalHeading(model.dialog, model.draftBlock);
-  return <div className="modal-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div><button className="icon-button" aria-label="Close dialog" onClick={() => model.setDialog(null)} disabled={model.busy}><Icon name="close" size={19}/></button></div>;
+  return <div className="modal-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div><div className="modal-heading__actions">
+    {model.dialog === 'block' && <button type="button" className="secondary-button document-assistant-trigger" onClick={model.openDocumentAssistant}><Icon name="spark" size={15}/> Ask Symbi</button>}
+    <button className="icon-button" aria-label="Close dialog" onClick={() => model.setDialog(null)} disabled={model.busy}><Icon name="close" size={19}/></button>
+  </div></div>;
 }
 
 function BlockForm({ model }: { model: AppModel }) {
@@ -86,10 +89,15 @@ function BlockForm({ model }: { model: AppModel }) {
     finally { setImporting(false); }
   }
   const lockUntil = draftLock ? new Date(draftLock.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  const savedBlock = model.canvas?.blocks.find(block => block.id === draftBlock.id);
+  const savedVersionChanged = Boolean(savedBlock && draftBlock.contentHash && savedBlock.contentHash !== draftBlock.contentHash);
   return <form onSubmit={saveBlock} className="modal-form">
     <div className="form-row"><label>Title<input required value={draftBlock.title} onChange={event => setDraftBlock(current => renamedBlockDraft(current, event.target.value))}/></label><label>Loader<select value={draftBlock.kind} onChange={event => { const kind = event.target.value as BlockKind; setDraftBlock(current => updatedBlockDraft(current, kind)); }}><option value="markdown">Markdown</option><option value="slides">Slides</option><option value="website">Full website</option><option value="mdx">MDX components</option></select></label></div>
     {draftLock && draftBlock.id && <div className="editor-lock" role="status"><span><strong>{draftLock.owner}</strong> is editing this file until {lockUntil}{draftLock.note ? ` — ${draftLock.note}` : ''}. Saving now will be refused.</span>
       <button type="button" className="secondary-button" onClick={() => void takeOverLock(draftBlock.id!)}>Take over</button></div>}
+    {savedVersionChanged && savedBlock && <div className="editor-external-change" role="status"><span>The saved document changed while this editor was open. Your draft is still here. Copy it before loading the saved version.</span>
+      <button type="button" className="secondary-button" onClick={() => setDraftBlock({ id: savedBlock.id, title: savedBlock.title, kind: savedBlock.kind,
+        content: savedBlock.content, contentHash: savedBlock.contentHash })}>Load saved version</button></div>}
     {draftBlock.id && <div className="editor-file-actions"><a className="secondary-button" href={`/api${blockPath(canvasId, draftBlock.id)}/download`}>Download .md</a><label className="secondary-button">Upload edited file<input type="file" accept=".md,.mdx,.html,text/markdown,text/html" hidden onChange={event => { const file = event.currentTarget.files?.[0]; if (file) void loadEditedFile(file); event.currentTarget.value = ''; }}/></label></div>}
     <div className="editor-view-bar"><span>{view === 'preview' ? 'Live preview' : view === 'split' ? 'Source and live preview' : 'Document content'} <span className="editor-shortcut"><kbd>⌘</kbd><kbd>E</kbd> to switch</span></span><ViewToggle mode={view} onChange={setView}/></div>
     <div className={`editor-workspace editor-workspace--${view}`}>
@@ -97,7 +105,7 @@ function BlockForm({ model }: { model: AppModel }) {
       {view !== 'source' && <BlockDraftPreview model={model}/>}
     </div>
     <div className="editor-footnote">Each block is saved as its own Markdown file with its own Git history. Website blocks use frontmatter to select a generator and source folder.</div>
-    <div className="modal-actions">{draftBlock.id && <button type="button" className="danger-button" onClick={() => void deleteBlock()} disabled={busy}><Icon name="trash" size={16}/> Delete</button>}<span className="actions-spacer"/><button type="button" className="secondary-button" onClick={() => setDialog(null)}>Cancel</button><button className="primary-button" disabled={busy || importing}>{importing ? 'Loading file…' : 'Save block'}</button></div>
+    <div className="modal-actions">{draftBlock.id && <button type="button" className="danger-button" onClick={() => void deleteBlock()} disabled={busy}><Icon name="trash" size={16}/> Delete</button>}<span className="actions-spacer"/><button type="button" className="secondary-button" onClick={() => setDialog(null)}>Cancel</button><button className="primary-button" disabled={busy || importing || savedVersionChanged}>{importing ? 'Loading file…' : 'Save block'}</button></div>
   </form>;
 }
 
@@ -139,7 +147,7 @@ export function FullPageReader({ model }: { model: AppModel }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [model, next, previous]);
   if (!block) return null;
-  return <div className="page-reader" role="dialog" aria-modal="true" aria-label={`${block.title} full page`}>
+  return <div className="page-reader" role="dialog" aria-modal={model.showChat ? 'false' : 'true'} aria-label={`${block.title} full page`}>
     <header className="page-reader__header">
       <button className="page-reader__back" onClick={model.closeReader} autoFocus>← Back to canvas</button>
       <span className="page-reader__location">{model.canvas?.name} <span>/</span> {model.readingPath ? `${model.readingPath.name} / ` : ''}{block.title}</span>
@@ -151,6 +159,7 @@ export function FullPageReader({ model }: { model: AppModel }) {
         <button className="icon-button" aria-label="Next document" title={next ? `Next: ${next.title}` : 'Last document'} disabled={!next} onClick={() => next && model.showReaderDocument(next.id)}>›</button>
       </nav>
       <div className="page-reader__actions">
+        <button className="secondary-button document-assistant-trigger" onClick={model.openDocumentAssistant}><Icon name="spark" size={15}/> Ask Symbi</button>
         <button className="secondary-button" onClick={() => { model.closeReader(); model.openVersionHistory(block); }}>File history</button>
         <a className="secondary-button" href={`/api${blockPath(model.canvasId, block.id)}/download`}>Download .md</a>
         <button className="primary-button" onClick={() => { model.closeReader(); model.openBlock(block); }}>Edit document</button>

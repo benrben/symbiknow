@@ -2,23 +2,33 @@ import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { Compartment, EditorState } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { markdown } from '@codemirror/lang-markdown';
 import { html } from '@codemirror/lang-html';
+import { tags } from '@lezer/highlight';
 import './editor.css';
 
 export type EditorMode = 'source' | 'split' | 'preview';
 
 const theme = EditorView.theme({
-  '&': { height: '100%', fontSize: '12.5px', backgroundColor: '#fbfcff' },
+  '&': { height: '100%', fontSize: '12.5px', color: 'var(--sk-text)', backgroundColor: 'var(--sk-surface)' },
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', lineHeight: '1.65' },
-  '.cm-content': { padding: '14px 0', caretColor: '#3e55c3' },
-  '.cm-gutters': { backgroundColor: '#f3f5fb', color: '#a3adc0', border: 'none', borderRight: '1px solid #e6eaf3' },
-  '.cm-activeLine': { backgroundColor: '#eef2ff80' },
-  '.cm-activeLineGutter': { backgroundColor: '#e6ebfb', color: '#3e55c3' },
-  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': { backgroundColor: '#d5defd !important' },
-  '.cm-cursor': { borderLeftColor: '#3e55c3', borderLeftWidth: '2px' },
+  '.cm-content': { padding: '14px 0', caretColor: 'var(--sk-link)' },
+  '.cm-gutters': { backgroundColor: 'var(--sk-surface-soft)', color: 'var(--sk-muted)', border: 'none', borderRight: '1px solid var(--sk-border)' },
+  '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--sk-blue) 12%, transparent)' },
+  '.cm-activeLineGutter': { backgroundColor: 'var(--sk-surface-soft)', color: 'var(--sk-link)' },
+  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': { backgroundColor: 'color-mix(in srgb, var(--sk-blue) 35%, transparent) !important' },
+  '.cm-cursor': { borderLeftColor: 'var(--sk-link)', borderLeftWidth: '2px' },
 });
+
+const syntaxTheme = HighlightStyle.define([
+  { tag: tags.heading, color: 'var(--sk-text)', fontWeight: '700' },
+  { tag: tags.strong, color: 'var(--sk-text)', fontWeight: '700' },
+  { tag: tags.emphasis, color: 'var(--sk-text)', fontStyle: 'italic' },
+  { tag: [tags.link, tags.url, tags.tagName, tags.attributeName], color: 'var(--sk-link)' },
+  { tag: [tags.punctuation, tags.meta, tags.comment], color: 'var(--sk-muted)' },
+]);
 
 function isHtmlDocument(content: string): boolean {
   return /^---\r?\nformat:\s*html\s*\r?\n---/i.test(content);
@@ -44,7 +54,7 @@ export function MarkdownEditor({ value, onChange, label, onToggleView }: {
     const editor = new EditorView({
       parent: host.current!,
       state: EditorState.create({ doc: value, extensions: [
-        basicSetup, EditorView.lineWrapping, theme,
+        basicSetup, EditorView.lineWrapping, theme, syntaxHighlighting(syntaxTheme),
         language.current.of(htmlDocument ? html() : markdown()),
         EditorView.contentAttributes.of({ 'aria-label': label, spellcheck: 'true' }),
         keymap.of([{ key: 'Mod-e', preventDefault: true, run: () => { onToggleRef.current?.(); return true; } }]),

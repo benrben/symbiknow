@@ -56,12 +56,24 @@ export function chatSuggestions(canvas: CanvasDocument | null, view: ChatViewCon
   ];
   if (focused) {
     const title = shortTitle(focused.title);
+    if (view.editingBlockId === focused.id) return [
+      { title: `Review ${title} for clarity`, detail: 'Check structure and wording' },
+      { title: `What is missing from ${title}?`, detail: 'Check gaps against related documents' },
+      view.editorHasUnsavedChanges
+        ? { title: `Suggest edits for ${title} without saving`, detail: 'Keep your unsaved draft in the editor' }
+        : { title: `Edit ${title} for clarity`, detail: 'Update the saved document' },
+    ];
     return [
       { title: `Explain ${title} in context`, detail: 'Connect this document to the canvas' },
       { title: `Which documents support or challenge ${title}?`, detail: 'Explore related evidence' },
       { title: `What should happen next for ${title}?`, detail: 'Find useful next actions' },
     ];
   }
+  if (view.editorDraft) return [
+    { title: 'Review this draft', detail: 'Check structure and wording' },
+    { title: 'What is missing from this draft?', detail: 'Find gaps before saving' },
+    { title: 'Suggest a clearer version', detail: 'Keep the changes in chat until you choose them' },
+  ];
   if (view.searchQuery?.trim()) return [
     { title: `Which sources best answer “${shortTitle(view.searchQuery.trim())}”?`, detail: 'Compare the search results' },
     { title: 'What did this search miss?', detail: 'Look across the workspace' },

@@ -5,6 +5,9 @@ export interface ChatViewContext {
   visibleBlockIds?: string[];
   viewMode?: 'overview' | 'titles' | 'documents' | 'answer';
   readerBlockId?: string;
+  editingBlockId?: string;
+  editorHasUnsavedChanges?: boolean;
+  editorDraft?: { title: string; kind: BlockKind; content: string; truncated?: boolean };
   focusBlockId?: string;
   searchQuery?: string;
   viewport?: { x: number; y: number; zoom: number };

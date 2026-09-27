@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Canvas, type BlockPosition } from './Canvas';
 import { AnswerCanvas } from './AnswerCanvas';
 import type { AnswerCanvasResult, AnswerCanvasTurn, AnswerCanvasViewFocus, AnswerSource, CanvasNavigationTarget, CanvasViewFocus, ChatViewContext, ResearchCanvasPatch, ResearchLayout } from '../shared/answer-canvas';
@@ -136,6 +136,10 @@ function useAppModel() {
   const [busy, setBusy] = useState(false);
   const [settings, setSettings] = useState<ChatSettings>(defaultSettings);
   const [showChat, setShowChat] = useState(() => !window.matchMedia?.('(max-width: 620px)').matches);
+  const [documentAssistantWidth, setDocumentAssistantWidth] = useState(() => {
+    const saved = Number(window.localStorage.getItem('symbiknow.assistant.document-width'));
+    return Number.isFinite(saved) && saved >= 320 ? saved : Math.max(500, Math.round(window.innerWidth * .5));
+  });
   const [chatSession, setChatSession] = useState(0);
   const [assistantView, setAssistantView] = useState<AssistantView>('chat');
   const [symbiState, setSymbiState] = useState<SymbiState>('idle');
@@ -151,6 +155,7 @@ function useAppModel() {
   const [groupSuggestionsOpen, setGroupSuggestionsOpen] = useState(false);
   const [previewGroups, setPreviewGroups] = useState<Record<string, string> | null>(null);
   const [chatPromptRequest, setChatPromptRequest] = useState<{ text: string; sequence: number; mergeDraft?: MergeDraftRequest }>();
+  const [assistantFocusRequest, setAssistantFocusRequest] = useState(0);
   const [answerTurns, setAnswerTurns] = useState<AnswerCanvasTurn[]>([]);
   const [researchState, setResearchState] = useState<{ edits: ResearchCanvasEdits; history: ResearchCanvasEdits[] }>(() => ({ edits: emptyResearchEdits(), history: [] }));
   const [researchSaveCount, setResearchSaveCount] = useState(0);
@@ -454,6 +459,17 @@ function useAppModel() {
     setDialog('block');
   }
 
+  function openDocumentAssistant() {
+    setShowChat(true);
+    setAssistantView('chat');
+    setAssistantFocusRequest(current => current + 1);
+  }
+
+  function updateDocumentAssistantWidth(width: number) {
+    setDocumentAssistantWidth(width);
+    window.localStorage.setItem('symbiknow.assistant.document-width', String(width));
+  }
+
   function openReader(blockId: string) {
     setReadingPath(null);
     const block = canvas?.blocks.find(item => item.id === blockId);
@@ -702,6 +718,15 @@ function useAppModel() {
     try {
       const updated = await loadCanvas(id);
       const before = new Map(beforeBlocks.map(block => [block.id, block]));
+      if (updated && id === canvasId && dialog === 'block') {
+        setDraftBlock(current => {
+          const original = current.id ? before.get(current.id) : undefined;
+          const saved = updated.blocks.find(block => block.id === current.id);
+          if (!original || !saved || (current.contentHash && current.contentHash !== original.contentHash)
+            || current.title !== original.title || current.kind !== original.kind || current.content !== original.content) return current;
+          return { ...current, title: saved.title, kind: saved.kind, content: saved.content, contentHash: saved.contentHash };
+        });
+      }
       return { created: updated?.blocks.filter(block => !before.has(block.id)) ?? [],
         updated: updated?.blocks.flatMap(block => {
           const original = before.get(block.id);
@@ -1039,7 +1064,7 @@ function useAppModel() {
   return {
     workspaces, canvasId, setCanvasId, selectCanvas, canvas, crossLinkLabels, loading, error, setError, readerId, openReader, openCrossLink, showReaderDocument, closeReader, readingPath, versionBlockId,
     dialog, setDialog, draftName, setDraftName, canvasToDelete, requestDeleteCanvas, deleteCanvas, workspaceToDelete, requestDeleteWorkspace, deleteWorkspace, draftBlock, setDraftBlock, draftLock, takeOverLock,
-    busy, settings, setSettings, showChat, setShowChat, chatSession, newChat, assistantView, setAssistantView, symbiState, setSymbiState, insightsJevState, setInsightsJevState,
+    busy, settings, setSettings, showChat, setShowChat, documentAssistantWidth, updateDocumentAssistantWidth, chatSession, newChat, assistantView, setAssistantView, assistantFocusRequest, openDocumentAssistant, symbiState, setSymbiState, insightsJevState, setInsightsJevState,
     searchOpen, authRequired, signIn, focusRequest, setFocusRequest, groupFocusRequest, showBlockOnCanvas, navigateFromChat, returnFromChatNavigation, activeSearchId,
     setSearchOpen, searchQuery, setSearchQuery, searchHits, searching, searchResultQuery, uploadRef,
     groupSuggestionsOpen, setGroupSuggestionsOpen, previewGroups, setPreviewGroups, chatPromptRequest, duplicateRequest, findDuplicatesOfBlock, mergeReview, setMergeReview, mergeBusy, applyMergeReview, mergeUndo, undoMerge, viewportRequest,
@@ -1084,7 +1109,10 @@ export function App() {
   useLayoutEffect(() => { applyTheme(theme); }, [theme]);
   const toggleTheme = () => setTheme(current => current === 'dark' ? 'light' : 'dark');
   if (model.authRequired) return <LoginScreen onSignIn={model.signIn} theme={theme} onToggleTheme={toggleTheme}/>;
-  return <div className={'app-shell' + (model.answerCanvasOpen ? ' is-researching' : '')}>
+  const documentFocused = model.dialog === 'block' || (!model.dialog && Boolean(model.readerId));
+  return <div className={'app-shell' + (model.answerCanvasOpen ? ' is-researching' : '')
+    + (documentFocused ? ' is-document-focused' : '') + (documentFocused && model.showChat ? ' has-document-chat' : '')}
+    style={{ '--document-chat-width': `${model.documentAssistantWidth}px` } as CSSProperties}>
     <Sidebar model={model}/>
     <MainColumn model={model} theme={theme} onToggleTheme={toggleTheme}/>
     <AssistantPanel model={model}/>
@@ -1236,14 +1264,26 @@ function AssistantPanel({ model }: { model: AppModel }) {
   }, [model.showChat, model.assistantView]);
   const researchBlocks = useMemo(() => editedResearchGraph(model.answerTurns, model.researchLayout, model.researchState.edits).blocks,
     [model.answerTurns, model.researchLayout, model.researchState.edits]);
+  const editingBlock = model.dialog === 'block' && model.draftBlock.id
+    ? model.canvas?.blocks.find(block => block.id === model.draftBlock.id) : undefined;
+  const documentBlockId = model.dialog === 'block' ? model.draftBlock.id : model.readerId || undefined;
+  const editorHasUnsavedChanges = model.dialog === 'block' && (!editingBlock || model.draftBlock.title !== editingBlock.title
+    || model.draftBlock.kind !== editingBlock.kind || model.draftBlock.content !== editingBlock.content);
   const viewContext: ChatViewContext = useMemo(() => ({
-    selectedBlockIds: model.selectedBlockIds,
-    visibleBlockIds: model.answerCanvasOpen ? [] : model.visibleBlockIds,
-    viewMode: model.answerCanvasOpen ? 'answer' : model.canvasViewFocus.level === 'documents' ? 'documents'
+    selectedBlockIds: model.dialog === 'block' ? documentBlockId ? [documentBlockId] : []
+      : documentBlockId ? [documentBlockId] : model.selectedBlockIds,
+    visibleBlockIds: model.dialog === 'block' ? documentBlockId ? [documentBlockId] : []
+      : documentBlockId ? [documentBlockId] : model.answerCanvasOpen ? [] : model.visibleBlockIds,
+    viewMode: documentBlockId ? 'documents' : model.dialog === 'block' ? 'overview'
+      : model.answerCanvasOpen ? 'answer' : model.canvasViewFocus.level === 'documents' ? 'documents'
       : model.canvasViewFocus.level === 'overview' ? 'overview' : 'titles',
     activeGroup: model.answerCanvasOpen ? undefined : model.canvasViewFocus.activeGroup,
     visibleGroups: model.answerCanvasOpen ? undefined : model.canvasViewFocus.visibleGroups,
-    readerBlockId: model.readerId || undefined,
+    readerBlockId: documentBlockId,
+    editingBlockId: editingBlock?.id,
+    editorHasUnsavedChanges: model.dialog === 'block' ? editorHasUnsavedChanges : undefined,
+    editorDraft: editorHasUnsavedChanges ? { title: model.draftBlock.title, kind: model.draftBlock.kind,
+      content: model.draftBlock.content.slice(0, 16000), truncated: model.draftBlock.content.length > 16000 } : undefined,
     focusBlockId: model.focusRequest?.canvasId === model.canvasId ? model.focusRequest.blockId : undefined,
     searchQuery: model.searchOpen ? model.searchQuery : undefined,
     viewport: model.journey.current?.viewport,
@@ -1259,8 +1299,9 @@ function AssistantPanel({ model }: { model: AppModel }) {
       focusedBlockTitle: researchBlocks.find(block => block.id === model.answerCanvasViewFocus.selectedBlockId)?.title,
       focusedSourceId: model.answerTurns.flatMap(turn => turn.sources).find(source => `${source.canvasId}:${source.blockId}` === model.answerCanvasViewFocus.selectedSourceKey)?.blockId,
     } : undefined,
-  }), [model.selectedBlockIds, model.visibleBlockIds, model.readerId, model.focusRequest, model.canvasId, model.searchOpen, model.searchQuery,
-    model.journey.current?.viewport, model.answerCanvasOpen, model.answerTurns, model.canvasViewFocus, model.answerCanvasViewFocus, researchBlocks]);
+  }), [model.selectedBlockIds, model.visibleBlockIds, model.dialog, model.draftBlock, documentBlockId, editingBlock?.id, editorHasUnsavedChanges,
+    model.focusRequest, model.canvasId, model.searchOpen, model.searchQuery, model.journey.current?.viewport,
+    model.answerCanvasOpen, model.answerTurns, model.canvasViewFocus, model.answerCanvasViewFocus, researchBlocks]);
   const openSettings = useStableEvent(() => model.setDialog('settings'));
   const canvasChanged = useStableEvent((canvasId: string, beforeBlocks: CanvasBlock[]) => model.refreshCanvasAfterChat(canvasId, beforeBlocks));
   const showChatBlock = useStableEvent((block: CanvasBlock, targetCanvasId?: string) => model.showBlockOnCanvas(targetCanvasId ?? model.canvasId, block.id, block.title));
@@ -1287,11 +1328,13 @@ function AssistantPanel({ model }: { model: AppModel }) {
     'jev-analyzing': 'Jev is analyzing the canvas…', 'jev-verifying': 'Jev is checking the answer…',
     'jev-applying': 'Jev is applying your changes…',
   };
-  return <ResizableAssistant hidden={!model.showChat}>
-    <div className="chat-header"><SymbiAvatar state={visibleSymbiState}/><div><strong>Symbi</strong><span>{symbiCaption[visibleSymbiState]}</span></div>{model.answerTurns.length > 0 && <button className="chat-header__research-return" title="Open research canvas" aria-label="Open research canvas" onClick={() => model.setAnswerCanvasOpen(true)}><Icon name="grid" size={15}/><span>Research canvas</span></button>}{model.assistantView === 'chat' && <button className="icon-button" title="New chat" aria-label="New chat" onClick={model.newChat}><Icon name="plus" size={18}/></button>}<button className="icon-button" title="Symbi settings" aria-label="Symbi settings" onClick={() => model.setDialog('settings')}><Icon name="settings" size={18}/></button></div>
+  return <ResizableAssistant hidden={!model.showChat}
+    documentWidth={model.dialog === 'block' || (!model.dialog && model.readerId) ? model.documentAssistantWidth : undefined}
+    onDocumentWidthChange={model.updateDocumentAssistantWidth}>
+    <div className="chat-header"><SymbiAvatar state={visibleSymbiState}/><div><strong>Symbi</strong><span>{symbiCaption[visibleSymbiState]}</span></div>{model.answerTurns.length > 0 && <button className="chat-header__research-return" title="Open research canvas" aria-label="Open research canvas" onClick={() => model.setAnswerCanvasOpen(true)}><Icon name="grid" size={15}/><span>Research canvas</span></button>}{model.assistantView === 'chat' && <button className="icon-button" title="New chat" aria-label="New chat" onClick={model.newChat}><Icon name="plus" size={18}/></button>}<button className="icon-button" title="Symbi settings" aria-label="Symbi settings" onClick={() => model.setDialog('settings')}><Icon name="settings" size={18}/></button>{(model.dialog === 'block' || model.readerId) && <button className="icon-button" title="Close Symbi panel" aria-label="Close Symbi panel" onClick={() => model.setShowChat(false)}><Icon name="close" size={18}/></button>}</div>
     <div className="assistant-tabs" role="tablist" aria-label="Assistant views">{(['chat', 'insights', 'tasks'] as const).map(view =>
       <button key={view} role="tab" aria-selected={model.assistantView === view} onClick={() => model.setAssistantView(view)}>{view === 'chat' ? 'Chat' : view === 'insights' ? 'Insights' : 'Tasks'}</button>)}</div>
-    <div className="assistant-view" hidden={model.assistantView !== 'chat'}>{chatMounted && <Suspense fallback={<div className="assistant-view__loading">Opening chat…</div>}><ChatView key={model.chatSession} canvasId={model.canvasId} canvas={model.canvas} viewContext={viewContext} answerTurns={model.answerTurns} hasApiKey={model.settings.hasApiKey} jevAvailable={model.settings.hasJevApiKey && (model.settings.agentPlugins?.includes('jev_insights') ?? true)} model={model.settings.model} promptRequest={model.chatPromptRequest} onMergeDraft={receiveMergeDraft} onOpenSettings={openSettings} onCanvasChanged={canvasChanged} onShowBlock={showChatBlock} onNavigate={navigateFromChat} onReturnNavigation={returnFromChatNavigation} onUndoCreatedBlock={undoAgentCreatedBlock} onUndoEditedBlock={undoAgentEditedBlock} onCanvasSources={model.addAnswerSources} onCanvasPatch={model.applyResearchPatch} onCanvasAnswer={model.updateAnswerText} onCanvasTurnEnd={model.settleAnswerTurn} onOpenAnswerCanvas={() => model.setAnswerCanvasOpen(true)} onAvatarStateChange={model.setSymbiState}/></Suspense>}</div>
+    <div className="assistant-view" hidden={model.assistantView !== 'chat'}>{chatMounted && <Suspense fallback={<div className="assistant-view__loading">Opening chat…</div>}><ChatView key={model.chatSession} canvasId={model.canvasId} canvas={model.canvas} viewContext={viewContext} answerTurns={model.answerTurns} hasApiKey={model.settings.hasApiKey} jevAvailable={model.settings.hasJevApiKey && (model.settings.agentPlugins?.includes('jev_insights') ?? true)} model={model.settings.model} promptRequest={model.chatPromptRequest} focusRequest={model.assistantFocusRequest} onMergeDraft={receiveMergeDraft} onOpenSettings={openSettings} onCanvasChanged={canvasChanged} onShowBlock={showChatBlock} onNavigate={navigateFromChat} onReturnNavigation={returnFromChatNavigation} onUndoCreatedBlock={undoAgentCreatedBlock} onUndoEditedBlock={undoAgentEditedBlock} onCanvasSources={model.addAnswerSources} onCanvasPatch={model.applyResearchPatch} onCanvasAnswer={model.updateAnswerText} onCanvasTurnEnd={model.settleAnswerTurn} onOpenAnswerCanvas={() => model.setAnswerCanvasOpen(true)} onAvatarStateChange={model.setSymbiState}/></Suspense>}</div>
     <div className="assistant-view" hidden={model.assistantView !== 'insights'}>{insightsMounted && <Suspense fallback={<div className="assistant-view__loading">Opening insights…</div>}><InsightsView canvas={model.canvas} hasApiKey={model.settings.hasJevApiKey} groupBy={model.settings.groupBy} onOpenSettings={openSettings} onApply={applyInsight} onOpenBlock={openInsightBlock} onMergeDraft={mergeDraft} onDraftGap={draftGap} onStartPath={startPath} duplicateRequest={model.duplicateRequest} onChanged={changed} onJevActivityChange={model.setInsightsJevState}/></Suspense>}</div>
     <div className="assistant-view" hidden={model.assistantView !== 'tasks'}>{tasksMounted && <Suspense fallback={<div className="assistant-view__loading">Opening tasks…</div>}><TasksView canvas={model.canvas} visible={model.showChat && model.assistantView === 'tasks'} onOpenBlock={openInsightBlock}/></Suspense>}</div>
   </ResizableAssistant>;

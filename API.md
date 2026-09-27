@@ -10,6 +10,8 @@ Send `x-symbiknow-actor: <name>` to name the author of document revisions, locks
 | POST | `/workspaces` | `{ name }` | `WorkspaceSummary` |
 | GET | `/canvases/:canvasId` | — | `CanvasDocument` |
 | POST | `/canvases/:canvasId/insights` | `{ query: string }` | `InsightReport` |
+| POST | `/canvases/:canvasId/duplicates` | `{ blockId?: string, crossCanvas?: boolean }` | Reviewable duplicate suggestions and merge plans |
+| POST | `/canvases/:canvasId/cross-connections` | `{}` | Suggested links across canvases in the workspace |
 | POST | `/canvases/:canvasId/insights/feedback` | `{ itemId, category, confidence: 0–1, decision: 'applied' \| 'dismissed' }` | `{ itemId, category, confidence, decision, at }` |
 | GET | `/settings/jev-feedback` | — | `{ category, bucket, applied, dismissed, applyRate }[]` |
 | POST | `/canvases/:canvasId/automations` | `{ kind: 'regroup' \| 'layout' \| 'connection' \| 'purpose' \| 'work_area' \| 'reviewer', groupBy?: 'work_area' \| 'purpose' \| 'lane' }` | `{ kind, applied, groupBy?, groups?: { key, count }[] }` |
@@ -44,7 +46,17 @@ Send `x-symbiknow-actor: <name>` to name the author of document revisions, locks
 | DELETE | `/mcp/tokens/:id` | — | `ChatSettings` |
 | GET / POST / DELETE | `/session` | POST `{ token }` | `{ authRequired, authenticated }`; POST sets the session cookie |
 | POST | `/chat` | `{ canvasId, messages: ChatMessage[] }` | `ChatReply` |
-| POST | `/chat/stream` | `{ canvasId, messages: OpenAI chat messages[] }` | OpenAI Chat Completions SSE stream of live tokens, plus `agent_step` (tool activity), `answer_reset` (text so far was a note before a tool call), `verification` (`{ status: 'checking' \| 'supported' \| 'unsupported' \| 'unavailable', score? }`), and `error` (`{ message }`) events; validation errors are JSON |
+| POST | `/chat/stream` | `{ canvasId, messages: OpenAI chat messages[], viewContext?: ChatViewContext, previewMerge?, intentToken? }` | OpenAI Chat Completions SSE stream of live tokens, plus `agent_step`, `answer_reset`, `verification`, `answer_canvas`, `research_canvas_patch`, `presentation_choice`, `canvas_navigation`, and `error` events; validation errors are JSON |
+
+## Session research canvas events
+
+`viewContext` describes what the browser currently shows: selected and visible block IDs, the active and visible groups, search text, reader or focused block, viewport zoom, and the focused answer or source when the session research canvas is open. It guides source ranking, navigation, answer placement, and follow-up suggestions. The context is advisory; the server checks documents and permissions before acting.
+
+With a TypeSafe Jev key, a research question can produce an `answer_canvas` event containing `{ query, canvasId, selection, sources, layout?, surface? }`. Each source has its canvas and block IDs, title, excerpt, relevance score, and optional content hash. `selection` is `jev` or `local`. Jev chooses `surface: 'chat' | 'canvas' | 'clarify'`; a short answer can stay in chat, and an ambiguous request can produce `presentation_choice` with three prompt options. A `canvas_navigation` event names the document or group to reveal.
+
+For a canvas answer, `research_canvas_patch` contains `{ query, layout?, blocks, edges }`. A block has an ID, semantic type (`text`, `diagram`, `task`, or `section`), title, content, source IDs, and an optional loader kind (`markdown`, `html`, `slides`, `mdx`, or `website`). Edges use `from`, `to`, and an optional label. Source IDs are `canvasId:blockId` references to selected documents. Clients add patches to the current chat session's graph; another question does not replace prior turns. The browser renders citations inside answer blocks and checks cited source hashes for changes. This temporary graph is client session state, not a stored canvas. **Save canvas** creates a regular workspace canvas through the existing canvas and block routes; **Export Markdown** is a client-side download. **New chat** or a page reload clears unsaved research.
+
+## Jev and document storage
 
 Jev requests use a pinned model, `jev-1.13.0` by default (override with `TYPESAFE_MODEL`), retry once on a `429` or `529` response honoring `Retry-After`, and are validated locally before sending: question ids, option counts, and a combined state-plus-question size under 32,000 estimated tokens, else `413` without calling Jev. Noul questions use `true`/`false` criteria keys. Each `ActionKind` in `ChatSettings.jevPolicy` has one scale, a Noul probability or a Choice/Score confidence; the newer kinds are `tag`, `merge_safe`, `stale`, `steps`, `conflict`, `gap`, `reflected`, `layout`, `move`, and `route`. Duplicate, cross-canvas, and tag suggestions send one Jev request per document or pair. `GET /jev/usage` appends each call's usage under `DATA_DIR/jev-usage/<YYYY-MM>.jsonl` and totals this month and today; `GET /jev/calibration` aggregates reviewed suggestion feedback (`POST /canvases/:canvasId/insights/feedback`) into a suggested Show threshold per policy kind, requiring at least 20 decisions at or above a 60% apply rate.
 

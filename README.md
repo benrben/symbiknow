@@ -84,6 +84,14 @@ Open **Settings** (one page with a section list): **Models**, **Agents**, **Secr
 
 The assistant uses [Deep Agents](https://docs.langchain.com/oss/javascript/deepagents/overview) for tools and [AI Elements](https://docs.langchain.com/oss/python/langchain/frontend/integrations/ai-elements) for the chat interface. Answers stream token by token. Text the model writes before calling a tool moves into the collapsible activity list, so the final answer stays clean. After an answer, Jev checks it against the canvas documents in the background and shows a **Matches canvas docs** or **check the sources** badge under it; the answer itself is never delayed or altered. **Copy** copies the Markdown answer. **New chat** clears the conversation. Drag the left edge of the chat panel to resize it; the width is saved locally. A run can make up to 9,999 tool calls; cancellation and provider errors still stop it.
 
+## Research canvas and view-aware chat
+
+The assistant knows the canvas, group, document, selection, or research block currently in view. The **Using** control below chat lets you choose **Current view**, **Whole canvas**, **Selected documents**, or **Research canvas** when available. Suggested questions change with that focus. Ask it to open a relevant document or group and it can take you there; the chat keeps a return action, and **Research canvas** in the chat header reopens the session's map after you move elsewhere.
+
+For a question that needs several connected findings, Jev can select useful source documents and choose a session research canvas. Short answers stay in chat. If the best surface is unclear, the assistant offers **Build a research canvas**, **Work on this view**, and **Take me to the source**. You can also ask directly to “create a temporary research canvas” or “answer briefly in chat.” Canvas routing and Jev source selection need a TypeSafe Jev key. A chat model is needed to draw and write the answer.
+
+The research canvas keeps growing across follow-up questions in the same chat. The agent can add connected Markdown, diagrams, tasks, slides, HTML, or supported MDX blocks, and cite selected source documents inside the blocks. Sources are links to the original documents, rather than extra evidence cards. Pick **Roadmap**, **Kanban**, **Architecture**, or **Mind map** under **View & export**. You can pan, zoom, search, read, edit, add, move, connect, upload, and undo in the same canvas UI; its focus and suggested follow-ups change as you zoom or select a block. **Save canvas** creates a regular workspace canvas with its blocks and links; **Export Markdown** downloads a readable copy. Unsaved research stays in the current browser session and is cleared by **New chat** or a page reload. See the [research canvas guide](docs/research-canvas.md) for the full workflow.
+
 ## Jev canvas insights
 
 Open **Insights** from the top bar or the assistant panel.
@@ -167,8 +175,12 @@ The page also exposes its actions through [WebMCP](https://webmcp.dev/) for an a
 
 ## Checks
 
+Install Chromium once for the browser scenarios (`npx playwright install --with-deps chromium` on Linux):
+
 ```sh
-npm run build
+npx playwright install chromium
 npm run lint
+npm run typecheck
 npm test
+npx cucumber-js
 ```

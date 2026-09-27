@@ -6,13 +6,13 @@
 
 ![SymbiKnow dark identity board](./symbiknow-identity-board-dark.png)
 
-**Recommendation:** **SymbiKnow** (SIM-bee-no). The name combines *symbiosis* and *know*: people and AI contribute to one body of knowledge. Its first-use descriptor must always be plain: **“An infinite canvas where people and AI organize ideas and build knowledge together.”** The short line is **“Make knowledge together.”**
+**Name:** **SymbiKnow** (SIM-bee-no). The name combines *symbiosis* and *know*: people and AI contribute to one body of knowledge. Its first-use descriptor must always be plain: **“An infinite canvas where people and AI organize ideas and build knowledge together.”** The short line is **“Make knowledge together.”**
 
 This identity is implemented in the product UI and project documentation in this checkout. It is not a claim that a legal name or trademark has been cleared. The editable [light](./symbiknow-identity-board.svg) and [dark](./symbiknow-identity-board-dark.svg) boards, [logo](./symbiknow-logo.svg), and [favicon](./symbiknow-favicon.svg) are design sources. The [light PNG](./symbiknow-identity-board.png) and [dark PNG](./symbiknow-identity-board-dark.png) are presentation images.
 
 ## The product truth
 
-The [repository README](../README.md), code, and running UI show an infinite canvas of separate Markdown files, visual links and groups, a document reader/editor, per-document Git history with named people and agents, shared tasks, an AI assistant, Jev suggestions, and MCP tools for external agents. People and agents work in the same visible workspace, and a document's history shows who changed it. The product can be self-hosted.
+The [repository README](../README.md), code, and running UI show an infinite canvas of separate Markdown files, visual links and groups, a document reader/editor, per-document Git history with named people and agents, shared tasks, an AI assistant, Jev suggestions, and MCP tools for external agents. The assistant can build a [session research canvas](../docs/research-canvas.md) from cited sources, then save it as a regular canvas. People and agents work in the same visible workspace, and a document's history shows who changed it. The product can be self-hosted.
 
 Implemented UI captures: [light canvas](./symbiknow-app-light.png), [dark canvas](./symbiknow-app-dark.png), [populated dark canvas](./symbiknow-app-dark-populated.png), and [mobile dark canvas](./symbiknow-app-mobile-dark.png).
 
@@ -41,7 +41,7 @@ Implemented UI captures: [light canvas](./symbiknow-app-light.png), [dark canvas
 
 | Candidate | Decision | Reason |
 | --- | --- | --- |
-| **SymbiKnow** | **Select for concept** | Encodes the human–AI relationship and knowledge; exact-name search found no apparent existing brand. |
+| **SymbiKnow** | **Adopted product name** | Encodes the human–AI relationship and knowledge; the public source repository uses this name. |
 | KnowPair | Reject | An existing [KnowPair knowledge-sharing project](https://www.cake.me/resumes/goli5408-2nd?locale=zh-CN) was found. |
 | KnowWeave | Reject | An active [AI knowledge graph company](https://www.knowweave.com/en-gb/index.html) uses it. |
 | KnowTandem | Reject | The base word “Tandem” is crowded among [AI products](https://tandem.inc/research/from-reactive-tools-to-proactive-partners-in-hardware-engineering); it also suggests only a pair. |

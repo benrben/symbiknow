@@ -2,6 +2,10 @@
 
 **Make knowledge together.** SymbiKnow is an infinite canvas where people and AI organize ideas and build knowledge together. Spread documents across the canvas, connect related work, and see who contributed and what changed. People work in the browser; AI agents join through the assistant or MCP.
 
+[![Watch the 1-minute SymbiKnow tour](brand/symbiknow-launch-poster.jpg)](brand/symbiknow-launch.mp4)
+
+*One minute: teams and their agents share one brain, Jev connects what one team already solved to the team that needs it, and every change stays named and restorable.*
+
 This is the source repository for [SymbiKnow](https://github.com/benrben/symbiknow). It is public for viewing; the original source and brand assets are [all rights reserved](LICENSE). Third-party packages and fonts keep their own licenses.
 
 Each card keeps its source in a separate `.md` file. The canvas stores positions, sizes, groups, and links, while each document has reviewable Git history. Shared tasks help people and agents coordinate. The browser renders Markdown, Mermaid, code, slides, media, MDX, and websites. Both light and dark mode are supported.

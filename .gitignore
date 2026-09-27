@@ -1,17 +1,35 @@
+# Dependencies and generated builds
 node_modules/
 .venv/
 dist/
 coverage/
-data/
+*.tsbuildinfo
+.vite/
+
+# Local workspace data and credentials
+/data/
 .env
 .env.*
 !.env.example
 .npmrc
+
+# Test reports and temporary diagnostics
 *.log
-.quality/*
-!.quality/run-tests.mjs
+/playwright-report/
+/test-results/
+/.quality/*
+!/.quality/run-tests.mjs
+
+# Editor and operating system files
 .DS_Store
-design/
-JEV_FIXES_HANDOFF.md
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Local design and media drafts
+/design/
+/brag-output/
+/JEV_FIXES_HANDOFF.md
 /*.png
 /*.excalidraw

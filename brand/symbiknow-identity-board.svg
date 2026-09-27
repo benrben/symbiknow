@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2400" height="1600" viewBox="0 0 2400 1600" role="img" aria-label="SymbiKnow light brand identity proposal showing people and AI on an infinite knowledge canvas">
+  <defs>
+    <style>
+      text{font-family:'DM Sans',Arial,sans-serif;fill:#172B31}
+      .display{font-family:'Space Grotesk','DM Sans',sans-serif;font-weight:700;letter-spacing:-.055em}
+      .head{font-family:'Space Grotesk','DM Sans',sans-serif;font-weight:700;letter-spacing:-.035em}
+      .mono{font-family:'IBM Plex Mono',monospace;letter-spacing:.04em}
+      .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:20px;letter-spacing:.14em}
+      .muted{fill:#52666A}
+      .light{fill:#F7F5EF}
+      .white{fill:#FFFFFF}
+      text[fill="#FFFFFF"]{fill:#FFFFFF}
+      text[fill="#BDD1CE"]{fill:#BDD1CE}
+    </style>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#D6DEDC"/></pattern>
+    <clipPath id="screen"><rect x="1010" y="196" width="1290" height="754" rx="25"/></clipPath>
+    <clipPath id="canvas-area"><rect x="1228" y="266" width="813" height="684"/></clipPath>
+    <g id="mark">
+      <path d="M65 29 C37 29 22 47 22 78 C22 109 37 127 65 127" fill="none" stroke="#EF906F" stroke-width="17" stroke-linecap="round"/>
+      <path d="M95 29 C123 29 138 47 138 78 C138 109 123 127 95 127" fill="none" stroke="#738AF1" stroke-width="17" stroke-linecap="round"/>
+      <rect x="62" y="51" width="36" height="54" rx="8" fill="#BCE7C9"/>
+      <path d="M71 68h18M71 78h18M71 88h12" stroke="#172B31" stroke-width="3.5" stroke-linecap="round"/>
+    </g>
+    <g id="mark-mono">
+      <path d="M65 29 C37 29 22 47 22 78 C22 109 37 127 65 127" fill="none" stroke="#172B31" stroke-width="17" stroke-linecap="round"/>
+      <path d="M95 29 C123 29 138 47 138 78 C138 109 123 127 95 127" fill="none" stroke="#172B31" stroke-width="17" stroke-linecap="round"/>
+      <rect x="62" y="51" width="36" height="54" rx="8" fill="#172B31"/>
+      <path d="M71 68h18M71 78h18M71 88h12" stroke="#F7F5EF" stroke-width="3.5" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <rect width="2400" height="1600" fill="#F7F5EF"/>
+  <rect width="2400" height="13" fill="#172B31"/>
+  <text x="95" y="89" class="eyebrow">SYMBIKNOW / BRAND DIRECTION</text>
+  <text x="2300" y="89" text-anchor="end" class="eyebrow">SEPTEMBER 2026 · 01</text>
+  <line x1="95" y1="126" x2="2300" y2="126" stroke="#BBC9C6" stroke-width="2"/>
+
+  <text x="95" y="201" class="eyebrow muted">01 / THE PROMISE</text>
+  <rect x="95" y="237" width="176" height="176" rx="34" fill="#172B31"/>
+  <g transform="translate(103 246)"><use xlink:href="#mark"/></g>
+  <text x="95" y="560" class="display" font-size="139">symbiknow</text>
+  <text x="95" y="644" class="head" font-size="52">Make knowledge together.</text>
+  <text x="95" y="710" font-size="29" class="muted">An infinite canvas for people and AI</text>
+  <text x="95" y="752" font-size="29" class="muted">to organize and build knowledge together.</text>
+  <rect x="95" y="816" width="812" height="144" rx="20" fill="#E6EDE8"/>
+  <circle cx="137" cy="863" r="8" fill="#EF906F"/>
+  <circle cx="157" cy="863" r="8" fill="#738AF1"/>
+  <text x="187" y="871" class="eyebrow">BRAND ESSENCE</text>
+  <text x="139" y="923" class="head" font-size="47">Shared understanding.</text>
+  <text x="95" y="1010" font-size="23" class="muted">Human judgment + agent capacity + a common source.</text>
+
+  <text x="1010" y="177" class="eyebrow muted">02 / INFINITE CANVAS · LIGHT MODE</text>
+  <rect x="1010" y="196" width="1290" height="754" rx="25" fill="#FFFFFF" stroke="#B7C7C3" stroke-width="2"/>
+  <g clip-path="url(#screen)">
+    <rect x="1010" y="196" width="1290" height="754" fill="#FFFFFF"/>
+    <rect x="1010" y="266" width="218" height="684" fill="#172B31"/>
+    <rect x="1228" y="266" width="813" height="684" fill="#F8F8F5"/>
+    <rect x="1228" y="266" width="813" height="684" fill="url(#dots)"/>
+    <g clip-path="url(#canvas-area)" opacity=".7">
+      <rect x="1182" y="455" width="120" height="108" rx="14" fill="#FFFFFF" stroke="#D4E0DB" stroke-width="2"/>
+      <path d="M1243 488h39m-39 17h34m-34 17h28" stroke="#A4B8B2" stroke-width="4" stroke-linecap="round"/>
+      <rect x="1987" y="590" width="175" height="126" rx="14" fill="#FFFFFF" stroke="#D4E0DB" stroke-width="2"/>
+      <path d="M2008 622h107m-107 17h93m-93 17h101" stroke="#A4B8B2" stroke-width="4" stroke-linecap="round"/>
+      <path d="M1300 785 C1230 825 1220 840 1165 873M1825 767 C1950 790 1978 752 2094 725" fill="none" stroke="#9EC6B4" stroke-width="3" stroke-dasharray="8 9"/>
+    </g>
+    <rect x="2041" y="266" width="259" height="684" fill="#FFFFFF"/>
+    <line x1="2041" y1="266" x2="2041" y2="950" stroke="#DEE7E4" stroke-width="2"/>
+    <rect x="1010" y="196" width="1290" height="70" fill="#FFFFFF"/>
+    <line x1="1010" y1="266" x2="2300" y2="266" stroke="#E2E9E6" stroke-width="2"/>
+    <rect x="1033" y="211" width="40" height="40" rx="9" fill="#172B31"/>
+    <g transform="translate(1035 213) scale(.225)"><use xlink:href="#mark"/></g>
+    <text x="1085" y="238" class="head" font-size="27">symbiknow</text>
+    <text x="1425" y="239" font-size="21" class="muted">Research / Launch plan</text>
+    <rect x="2166" y="211" width="111" height="42" rx="11" fill="#BCE7C9"/>
+    <text x="2221" y="239" text-anchor="middle" font-weight="700" font-size="19">Add idea</text>
+
+    <text x="1034" y="318" class="mono" font-size="15" fill="#BDD1CE">WORKSPACE</text>
+    <rect x="1027" y="345" width="185" height="48" rx="11" fill="#344B4E"/>
+    <circle cx="1049" cy="369" r="7" fill="#BCE7C9"/>
+    <text x="1066" y="376" font-size="19" fill="#FFFFFF">Launch plan</text>
+    <text x="1041" y="441" font-size="18" fill="#BDD1CE">Research</text>
+    <text x="1041" y="484" font-size="18" fill="#BDD1CE">Decisions</text>
+    <text x="1041" y="527" font-size="18" fill="#BDD1CE">Delivery</text>
+    <line x1="1035" y1="565" x2="1201" y2="565" stroke="#486063"/>
+    <text x="1034" y="604" class="mono" font-size="15" fill="#BDD1CE">WAYS TO WORK</text>
+    <text x="1041" y="651" font-size="18" fill="#FFFFFF">Canvas</text>
+    <text x="1041" y="693" font-size="18" fill="#BDD1CE">Documents</text>
+    <text x="1041" y="735" font-size="18" fill="#BDD1CE">Tasks</text>
+    <text x="1041" y="777" font-size="18" fill="#BDD1CE">History</text>
+    <circle cx="1042" cy="913" r="6" fill="#BCE7C9"/>
+    <text x="1059" y="919" font-size="15" fill="#BDD1CE">People + agents</text>
+
+    <text x="1270" y="332" class="head" font-size="36">Launch plan</text>
+    <text x="1271" y="366" font-size="19" class="muted">Infinite canvas · connected knowledge</text>
+    <text x="1955" y="331" text-anchor="end" class="mono muted" font-size="15">DRAG TO EXPLORE ↗</text>
+    <path d="M1498 552 C1498 613 1513 637 1603 677" fill="none" stroke="#EF906F" stroke-width="4"/>
+    <path d="M1845 552 C1845 612 1789 638 1715 677" fill="none" stroke="#738AF1" stroke-width="4"/>
+    <circle cx="1498" cy="552" r="6" fill="#EF906F"/>
+    <circle cx="1845" cy="552" r="6" fill="#738AF1"/>
+    <circle cx="1603" cy="677" r="6" fill="#EF906F"/>
+    <circle cx="1715" cy="677" r="6" fill="#738AF1"/>
+
+    <rect x="1262" y="402" width="321" height="151" rx="17" fill="#FFFFFF" stroke="#D4E0DB" stroke-width="2"/>
+    <rect x="1262" y="402" width="321" height="9" rx="5" fill="#EF906F"/>
+    <circle cx="1290" cy="444" r="9" fill="#EF906F"/>
+    <text x="1311" y="451" class="mono" font-size="16">MAYA · PERSON</text>
+    <text x="1288" y="494" class="head" font-size="25">Customer signals</text>
+    <text x="1288" y="529" font-size="17" class="muted">Interview notes · source file</text>
+
+    <rect x="1666" y="402" width="321" height="151" rx="17" fill="#FFFFFF" stroke="#D4E0DB" stroke-width="2"/>
+    <rect x="1666" y="402" width="321" height="9" rx="5" fill="#738AF1"/>
+    <circle cx="1694" cy="444" r="9" fill="#738AF1"/>
+    <text x="1715" y="451" class="mono" font-size="16">RESEARCH AGENT</text>
+    <text x="1692" y="494" class="head" font-size="25">Signal summary</text>
+    <text x="1692" y="529" font-size="17" class="muted">Linked to 4 source notes</text>
+
+    <rect x="1497" y="678" width="328" height="159" rx="17" fill="#FFFFFF" stroke="#B9D8C5" stroke-width="2"/>
+    <rect x="1497" y="678" width="328" height="9" rx="5" fill="#BCE7C9"/>
+    <circle cx="1527" cy="722" r="8" fill="#EF906F"/>
+    <circle cx="1543" cy="722" r="8" fill="#738AF1"/>
+    <text x="1563" y="729" class="mono" font-size="16">SHARED KNOWLEDGE</text>
+    <text x="1525" y="771" class="head" font-size="26">Launch decision</text>
+    <text x="1525" y="807" font-size="17" class="muted">Sources · tasks · revision history</text>
+    <rect x="1261" y="854" width="150" height="72" rx="10" fill="#FFFFFF" stroke="#D4E0DB"/>
+    <rect x="1276" y="868" width="118" height="43" rx="4" fill="#F2F5F1"/>
+    <circle cx="1293" cy="883" r="4" fill="#EF906F"/>
+    <circle cx="1341" cy="895" r="4" fill="#738AF1"/>
+    <circle cx="1373" cy="878" r="4" fill="#BCE7C9"/>
+    <rect x="1285" y="875" width="60" height="25" rx="3" fill="none" stroke="#52666A" stroke-width="2"/>
+    <rect x="1903" y="871" width="106" height="45" rx="10" fill="#FFFFFF" stroke="#D4E0DB"/>
+    <text x="1956" y="900" text-anchor="middle" class="mono" font-size="17">− 80% +</text>
+
+    <text x="2065" y="325" class="head" font-size="28">Working together</text>
+    <text x="2065" y="365" font-size="18" class="muted">Visible contributions</text>
+    <circle cx="2074" cy="416" r="8" fill="#EF906F"/>
+    <text x="2095" y="423" font-size="18">Maya added notes</text>
+    <text x="2095" y="450" font-size="16" class="muted">Customer signals</text>
+    <line x1="2067" y1="478" x2="2272" y2="478" stroke="#E0E8E5"/>
+    <circle cx="2074" cy="520" r="8" fill="#738AF1"/>
+    <text x="2095" y="527" font-size="18">Agent summarized</text>
+    <text x="2095" y="554" font-size="16" class="muted">4 source notes</text>
+    <line x1="2067" y1="583" x2="2272" y2="583" stroke="#E0E8E5"/>
+    <text x="2067" y="632" class="head" font-size="22">Next step</text>
+    <text x="2067" y="670" font-size="17">Review the decision</text>
+    <text x="2067" y="697" font-size="17" class="muted">and its sources</text>
+    <rect x="2065" y="736" width="168" height="47" rx="11" fill="#172B31"/>
+    <text x="2149" y="766" text-anchor="middle" font-size="17" fill="#FFFFFF" font-weight="700">Open history</text>
+  </g>
+  <text x="1010" y="993" class="mono muted" font-size="18">CONCEPT UI / INFINITE CANVAS · NAMED CONTRIBUTIONS · INSPECTABLE SOURCES</text>
+
+  <line x1="95" y1="1055" x2="2300" y2="1055" stroke="#BBC9C6" stroke-width="2"/>
+  <text x="95" y="1101" class="eyebrow muted">03 / THE PALETTE</text>
+  <g transform="translate(95 1130)">
+    <rect width="407" height="130" rx="15" fill="#172B31"/>
+    <text x="0" y="169" class="head" font-size="23">DEEP INK</text><text x="0" y="197" class="mono muted" font-size="18">#172B31</text>
+  </g>
+  <g transform="translate(544 1130)">
+    <rect width="407" height="130" rx="15" fill="#F7F5EF" stroke="#ACBFBA" stroke-width="2"/>
+    <text x="0" y="169" class="head" font-size="23">WARM CANVAS</text><text x="0" y="197" class="mono muted" font-size="18">#F7F5EF</text>
+  </g>
+  <g transform="translate(993 1130)">
+    <rect width="407" height="130" rx="15" fill="#EF906F"/>
+    <text x="0" y="169" class="head" font-size="23">HUMAN CORAL</text><text x="0" y="197" class="mono muted" font-size="18">#EF906F</text>
+  </g>
+  <g transform="translate(1442 1130)">
+    <rect width="407" height="130" rx="15" fill="#738AF1"/>
+    <text x="0" y="169" class="head" font-size="23">AGENT BLUE</text><text x="0" y="197" class="mono muted" font-size="18">#738AF1</text>
+  </g>
+  <g transform="translate(1891 1130)">
+    <rect width="407" height="130" rx="15" fill="#BCE7C9"/>
+    <text x="0" y="169" class="head" font-size="23">SHARED MINT</text><text x="0" y="197" class="mono muted" font-size="18">#BCE7C9</text>
+  </g>
+  <line x1="95" y1="1360" x2="2300" y2="1360" stroke="#BBC9C6" stroke-width="2"/>
+  <text x="95" y="1403" class="eyebrow muted">04 / IDENTITY IN USE</text>
+  <rect x="95" y="1426" width="485" height="122" rx="15" fill="#172B31"/>
+  <g transform="translate(107 1434) scale(.68)"><use xlink:href="#mark"/></g>
+  <text x="223" y="1494" class="head" font-size="37" fill="#FFFFFF">symbiknow</text>
+  <rect x="611" y="1426" width="405" height="122" rx="15" fill="#FFFFFF" stroke="#CCD9D5"/>
+  <g transform="translate(624 1436) scale(.66)"><use xlink:href="#mark-mono"/></g>
+  <text x="737" y="1495" class="head" font-size="35">symbiknow</text>
+  <rect x="1047" y="1426" width="571" height="122" rx="15" fill="#E6EDE8"/>
+  <text x="1075" y="1464" class="mono" font-size="17">VOICE</text>
+  <text x="1075" y="1505" class="head" font-size="30">“Let's build on that.”</text>
+  <rect x="1649" y="1426" width="649" height="122" rx="15" fill="#FFFFFF" stroke="#CCD9D5"/>
+  <text x="1679" y="1464" class="mono" font-size="17">TYPOGRAPHY</text>
+  <text x="1679" y="1505" class="head" font-size="29">Space Grotesk  /  DM Sans</text>
+</svg>

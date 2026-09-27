@@ -1,0 +1,139 @@
+feature: Discovering and organizing a large canvas
+scenarios:
+  - name: Nested groups and tags survive reload and appear in search
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I add a Markdown block called "API plan" containing "Endpoint choices"
+      - and: I assign the new document to nested group "custom:research/benchmarks" with tag "api"
+      - then: reloading the canvas keeps the nested group and tag
+      - and: searching for "API plan" reports its canvas, group, and title match
+
+  - name: Search remains on the canvas and reveals a match in one action
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I add a Markdown block called "API plan" containing "Endpoint choices"
+      - and: I open the current canvas in a browser
+      - and: I search the canvas for "API plan"
+      - then: I see a match counter while the canvas stays visible
+      - when: I show the "API plan" search result on the canvas
+      - then: the "API plan" card is highlighted and search stays open
+
+  - name: Group connections appear on a movable canvas with real document previews
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I add a Markdown block called "Real note" containing "This note has real details"
+      - and: I assign the new document to nested group "custom:research/notes" with tag "example"
+      - and: I add a Markdown block called "Other note" containing "A related document"
+      - and: I assign the new document to nested group "custom:planning/notes" with tag "example"
+      - and: I connect "Real note" to "Other note"
+      - and: I open the current canvas in a browser
+      - and: I zoom out to the group overview
+      - then: I can see the group connection on the canvas and move the view
+      - when: I browse the group list
+      - then: the group preview shows the "Real note" title
+      - when: I open the Research group
+      - then: the Notes subgroup appears on the canvas
+      - when: I open the Notes subgroup
+      - then: the canvas shows the real document preview
+
+  - name: Large canvases open through supergroups, groups, subgroups, and files
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I fill it with linked groups and nested research documents
+      - and: I open the current canvas in a browser
+      - and: I zoom out to the group overview
+      - then: I see supergroups connected on the canvas
+      - when: I zoom in over the Research supergroup
+      - then: I see its Research group on the canvas
+      - when: I zoom in over the Research group
+      - then: I see connected Notes and Benchmarks subgroups
+      - when: I zoom in over the Notes subgroup
+      - then: the canvas shows the research document card
+      - when: I zoom out to the subgroup map
+      - then: I see connected Notes and Benchmarks subgroups
+
+  - name: Connection focus and layout preview leave saved positions alone until applied
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I add a Markdown block called "Source" containing "The source"
+      - and: I add a Markdown block called "Target" containing "The target"
+      - and: I connect "Source" to "Target"
+      - and: I open the current canvas in a browser
+      - and: I select the "Source" card
+      - then: I see connection focus and its linked document
+      - when: I preview and cancel arrange by connections
+      - then: reloading the canvas keeps the original positions
+
+  - name: Suggested tag groups can be accepted and undone
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I add a Markdown block called "API plan" containing "Endpoint choices"
+      - and: I assign the new document to nested group "custom:research/benchmarks" with tag "api"
+      - and: I open the current canvas in a browser
+      - and: I preview and accept tag grouping
+      - then: reloading the canvas puts "API plan" in a tag group
+      - when: I undo the suggested grouping
+      - then: reloading the canvas keeps the nested group and tag
+
+  - name: Bookmarks and canvas history let me return to a named place
+    steps:
+      - given: a fresh workspace
+      - when: I create a second canvas called "Second canvas"
+      - and: I open the current canvas in a browser
+      - and: I save a bookmark called "Starting point"
+      - and: I navigate to "Second canvas" and back
+      - then: the "Starting point" bookmark remains after reloading
+
+  - name: Follow-up answers extend one live evidence canvas
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I add a Markdown block called "Launch evidence" containing "The mobile release has two failing tests"
+      - and: I configure chat for the conversation canvas
+      - and: I open the current canvas in a browser
+      - and: I ask "What blocks the launch?" with selected evidence
+      - then: the conversation canvas has 1 answers and one reusable source
+      - when: I visit another canvas and continue the conversation
+      - and: I ask "Map which tests failed and how they block the launch" with selected evidence
+      - and: I can reopen the accumulated conversation canvas
+      - then: the conversation canvas has 2 answers and one reusable source
+      - and: the research canvas shows its answer structure with secondary controls tucked away
+      - when: I switch to dark mode
+      - then: the research canvas uses dark surfaces and retains every block
+      - when: I ask a direct factual question in chat
+      - then: the direct answer stays in chat and adds no research block
+      - and: the assistant shows its current scope and a way to turn the answer into a map
+
+  - name: A connection failure keeps the chat draft and offers recovery
+    steps:
+      - given: a fresh workspace
+      - when: I open the current canvas in a browser
+      - and: I keep a chat draft while the canvas API becomes unreachable
+      - then: I can reconnect without losing the chat draft
+
+  - name: Temporary research uses the normal canvas actions
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I add a Markdown block called "Launch evidence" containing "The mobile release has two failing tests"
+      - and: I configure chat for the conversation canvas
+      - and: I open the current canvas in a browser
+      - and: I ask "What blocks the launch?" with selected evidence
+      - then: the conversation canvas has 1 answers and one reusable source
+      - and: I can add, read, search, undo, and save with the normal canvas controls
+
+  - name: Agent research blocks use every canvas document loader
+    steps:
+      - given: a fresh workspace
+      - when: I create an empty canvas for group automations
+      - and: I add a Markdown block called "Launch evidence" containing "The mobile release has two failing tests"
+      - and: I configure chat for the conversation canvas
+      - and: I open the current canvas in a browser
+      - and: I ask for rich research blocks
+      - then: I can view and save the rich blocks with their original formats

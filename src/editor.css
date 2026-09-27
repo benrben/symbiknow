@@ -1,0 +1,34 @@
+.code-editor { height: 100%; min-height: 0; overflow: hidden; border: 1px solid #dfe5f0; border-radius: 12px; background: #fbfcff; transition: border-color .15s, box-shadow .15s; }
+.code-editor:focus-within { border-color: #9aaaf3; box-shadow: 0 0 0 3px #6e84f41f; }
+
+.view-toggle { --toggle-index: 0; position: relative; display: inline-grid; grid-template-columns: repeat(3, 1fr); padding: 3px; border-radius: 12px; background: #eef1f8; border: 1px solid #e2e7f2; isolation: isolate; }
+.view-toggle__thumb { position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: 9px; background: #fff; box-shadow: 0 2px 10px #243b7724, 0 0 0 1px #dfe5f5; transform: translateX(calc(var(--toggle-index) * 100%)); transition: transform .28s cubic-bezier(.3, 1.35, .5, 1); }
+.view-toggle button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 82px; border: 0; border-radius: 9px; padding: 7px 12px; color: #7b879d; background: transparent; font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: color .2s; }
+.view-toggle button[aria-pressed='true'] { color: #3e55c3; }
+.view-toggle button:focus-visible { outline: 2px solid #8294f5; outline-offset: 1px; }
+.view-toggle__icon { width: 13px; height: 10px; border: 1.6px solid currentColor; border-radius: 3px; }
+.view-toggle__icon--split { background: linear-gradient(90deg, transparent 45%, currentColor 45% 60%, transparent 60%); }
+.view-toggle__icon--preview { border-radius: 50% / 60%; position: relative; }
+.view-toggle__icon--preview::after { content: ''; position: absolute; inset: 2px 3.5px; border-radius: 50%; background: currentColor; }
+@media (prefers-reduced-motion: reduce) { .view-toggle__thumb { transition: none; } }
+
+.editor-workspace { display: grid; gap: 12px; height: min(56vh, 520px); min-height: 320px; margin-top: 8px; }
+.editor-workspace--split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.editor-workspace .editor-preview { height: 100%; margin-top: 0; }
+.editor-shortcut { color: #98a3b8; font-weight: 600; }
+.editor-shortcut kbd { padding: 1px 5px; border: 1px solid #dfe4ef; border-bottom-width: 2px; border-radius: 5px; background: #fff; font: 600 10px ui-monospace, monospace; }
+.editor-lock { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 9px 12px; border-radius: 10px; color: #7a4a06; background: #fff7e8; border: 1px solid #f6dfb2; font-size: 12px; }
+.editor-lock button { margin-left: auto; }
+@media (max-width: 760px) { .editor-workspace--split { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
+
+/* The block editor fills the window: fixed heading and actions, and the editing area takes the rest. */
+.block-modal { display: flex; flex-direction: column; height: calc(100vh - 50px); overflow: hidden !important; }
+.block-modal .modal-heading { flex: none; padding-bottom: 8px; }
+.block-modal .modal-form { display: flex; flex-direction: column; flex: 1; min-height: 0; padding-bottom: 20px; }
+.block-modal .form-row label { margin-top: 8px; }
+.block-modal .editor-workspace { flex: 1; height: auto; min-height: 200px; }
+.block-modal .modal-actions { flex: none; margin-top: 14px; }
+.block-modal .editor-footnote { flex: none; }
+.editor-file-actions { align-items: center; }
+.modal-form .editor-file-actions label.secondary-button { flex-direction: row; margin: 0; min-height: 31px; font-size: 11px; }
+@media (max-height: 620px) { .block-modal { height: auto; overflow-y: auto !important; } .block-modal .editor-workspace { flex: none; height: 320px; } }

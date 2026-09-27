@@ -1,0 +1,17 @@
+node_modules/
+.venv/
+dist/
+coverage/
+data/
+.env
+.env.*
+!.env.example
+.npmrc
+*.log
+.quality/*
+!.quality/run-tests.mjs
+.DS_Store
+design/
+JEV_FIXES_HANDOFF.md
+/*.png
+/*.excalidraw

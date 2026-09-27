@@ -1,0 +1,4 @@
+[mcp_servers.symbiknow]
+command = "npm"
+args = ["run", "mcp"]
+env = { CANVAS_API_URL = "http://127.0.0.1:8787/api", SYMBIKNOW_AGENT_NAME = "Codex" }

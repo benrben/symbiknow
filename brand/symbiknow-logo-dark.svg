@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="180" viewBox="0 0 820 180" role="img" aria-label="SymbiKnow logo for dark backgrounds">
+  <rect x="2" y="2" width="176" height="176" rx="34" fill="#172B31"/>
+  <path d="M73 31 C45 31 30 49 30 80 C30 111 45 129 73 129" fill="none" stroke="#EF906F" stroke-width="17" stroke-linecap="round"/>
+  <path d="M103 31 C131 31 146 49 146 80 C146 111 131 129 103 129" fill="none" stroke="#738AF1" stroke-width="17" stroke-linecap="round"/>
+  <rect x="70" y="53" width="36" height="54" rx="8" fill="#BCE7C9"/>
+  <path d="M79 70h18M79 80h18M79 90h12" stroke="#172B31" stroke-width="3.5" stroke-linecap="round"/>
+  <text x="210" y="125" fill="#EAF1ED" font-family="Space Grotesk,Arial,sans-serif" font-size="122" font-weight="700" letter-spacing="-7">symbiknow</text>
+</svg>

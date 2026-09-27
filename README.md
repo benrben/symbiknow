@@ -50,7 +50,7 @@ npm start
 
 The server listens on `PORT` (default `8787`) and stores content under `DATA_DIR` (default `./data`). The app creates an example workspace on first run.
 
-The repository includes [example environment settings](.env.example). Supply them through your shell or deployment platform; the app does not load `.env` automatically. Keep real keys and `DATA_DIR` out of Git. Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and `npx cucumber-js` before a change; [CI](.github/workflows/ci.yml) runs those checks on pushes and pull requests.
+The repository includes [example environment settings](.env.example). Supply them through your shell or deployment platform; the app does not load `.env` automatically. Keep real keys and `DATA_DIR` out of Git. Run `npm run lint`, `npm run typecheck`, `npm test`, and `npx cucumber-js` before a change; `npm test` builds the app before testing, and [CI](.github/workflows/ci.yml) runs the same checks on pushes and pull requests.
 
 ## Self-hosting
 

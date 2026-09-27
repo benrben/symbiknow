@@ -77,11 +77,17 @@ The older `ALLTEAM_ACCESS_TOKEN`, `ALLTEAM_MCP_TOKEN`, and `ALLTEAM_AGENT_NAME` 
 
 ## Revision history and branches
 
-Each document has its own local Git history under `DATA_DIR/.versions/<block-id>`. Saving that document's source creates a revision whose author is whoever made the change: `Browser`, the chat `SymbiKnow assistant`, `Jev`, or an MCP agent such as `Claude Code - <token name>` or `Codex - <token name>`. Existing revision authors keep their original names. Open **File history** on a canvas card or in its full-page reader to see authors and commits, create or switch branches, merge another branch, and restore an older revision as a new commit. These actions change only that document file; canvas positions, links, and other documents stay in place. A conflicting merge is aborted and leaves the file unchanged. Deleting a document records who deleted it as a final commit, and the last content stays in that history for recovery. Settings and API credentials are never added to the document repositories.
+Each document has its own local Git history under `DATA_DIR/.versions/<block-id>`. Saving that document's source creates a revision whose author is whoever made the change: `Browser`, the chat assistant `Symbi`, `Jev`, or an MCP agent such as `Claude Code - <token name>` or `Codex - <token name>`. Existing revision authors keep their original names, including older `SymbiKnow assistant` entries. Open **File history** on a canvas card or in its full-page reader to see authors and commits, create or switch branches, merge another branch, and restore an older revision as a new commit. These actions change only that document file; canvas positions, links, and other documents stay in place. A conflicting merge is aborted and leaves the file unchanged. Deleting a document records who deleted it as a final commit, and the last content stays in that history for recovery. Settings and API credentials are never added to the document repositories.
 
 To remove an entire canvas, use the trash button beside its name in the workspace sidebar and confirm. This permanently deletes that canvas's documents, tasks, and file histories, removes links to it from other canvases, and opens another canvas in the workspace. If it was the last canvas, create a new one from the empty state.
 
-## SymbiKnow assistant
+To remove a workspace, use the trash button beside its name and confirm. This permanently deletes every canvas in that workspace with their documents, tasks, and file histories. The app opens a surviving workspace, or offers to create one if none remain.
+
+## Symbi, the assistant
+
+The **04 Ribbon** icon is the SymbiKnow project mark, used in the app chrome, favicon, and wordmark. **Symbi** is a separate robot guide inspired by a dark rounded screen, mint face and antenna, and coral and blue headphones. The robot blinks at rest; shows thought bubbles while thinking; scans while searching; tracks lines while reading; moves its arms and lights while building; leans toward a destination while navigating; spins a gear for other tools; talks while answering; and reacts to completion or errors. These states follow actual chat tool events. Jev has separate antenna, eye, headphone, screen scan, and chest-light motion for choosing context, analyzing, checking an answer, and applying changes. Chat and Insights name the active step. Motion stops when the user prefers reduced motion.
+
+Open the [interactive Symbi preview](brand/symbi-avatar-demo.html) to try its conversation and motion states. See the [dark](brand/symbi-avatar-preview-dark.png) and [light](brand/symbi-avatar-preview-light.png) captures for a quick look. The preview uses scripted sample answers; the app uses the configured chat model and canvas tools.
 
 Open **Settings** (one page with a section list): **Models**, **Agents**, **Secrets**, **MCP servers**, **MCP connections**, **Plugins & loaders**, and **TypeSafe Jev**.
 

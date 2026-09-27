@@ -6,7 +6,7 @@
 
 ![SymbiKnow dark identity board](./symbiknow-identity-board-dark.png)
 
-**Name:** **SymbiKnow** (SIM-bee-no). The name combines *symbiosis* and *know*: people and AI contribute to one body of knowledge. Its first-use descriptor must always be plain: **“An infinite canvas where people and AI organize ideas and build knowledge together.”** The short line is **“Make knowledge together.”**
+**Name:** **SymbiKnow** (SIM-bee-no). The name combines *symbiosis* and *know*: people and AI contribute to one body of knowledge. Its first-use descriptor must always be plain: **“An infinite canvas where people and AI organize ideas and build knowledge together.”** The short line is **“Make knowledge together.”** The assistant inside the product is named **Symbi**.
 
 This identity is implemented in the product UI and project documentation in this checkout. It is not a claim that a legal name or trademark has been cleared. The editable [light](./symbiknow-identity-board.svg) and [dark](./symbiknow-identity-board-dark.svg) boards, [logo](./symbiknow-logo.svg), and [favicon](./symbiknow-favicon.svg) are design sources. The [light PNG](./symbiknow-identity-board.png) and [dark PNG](./symbiknow-identity-board-dark.png) are presentation images.
 
@@ -37,7 +37,7 @@ Implemented UI captures: [light canvas](./symbiknow-app-light.png), [dark canvas
 
 ## Name and availability
 
-**SymbiKnow** is more distinctive than a plain phrase such as “Know Together,” while *know* keeps the subject recognizable. It needs the first-use descriptor because *symbi* alone does not tell a new visitor this is a knowledge workspace. Write **SymbiKnow** in prose and **symbiknow** in the wordmark and product chrome. Do not shorten it to “Symbi.”
+**SymbiKnow** is more distinctive than a plain phrase such as “Know Together,” while *know* keeps the subject recognizable. It needs the first-use descriptor because *symbi* alone does not tell a new visitor this is a knowledge workspace. Write **SymbiKnow** in prose and **symbiknow** in the wordmark and product chrome. **Symbi** names the assistant, never the product.
 
 | Candidate | Decision | Reason |
 | --- | --- | --- |
@@ -91,15 +91,19 @@ The homepage should show a concrete sequence on a pannable canvas: **person adds
 
 The mark uses two equal open forms around one document. The coral and blue sides represent distinct contributors; the mint page is the common knowledge they build. Equal size avoids implying that the agent is only an invisible helper or that it owns the work. It is an abstract collaboration mark, not a literal robot or human face.
 
+The SymbiKnow project mark is [04 Ribbon](./symbi-options/ribbon.svg): coral and blue loops around a mint center. It appears in the [favicon](./symbiknow-favicon.svg), product wordmark, and app chrome. **Symbi** is a separate robot character based on the supplied reference: a dark rounded screen, mint eyes and antenna, and coral and blue headphones. Its small head is used in chat; the larger welcome view includes the torso. Real chat tool events drive distinct search, read, canvas work, navigation, and other-tool animations. Thinking has thought bubbles and eye movement; answering animates the mouth. Completion and errors have brief reactions. Jev motion is tied to source routing, analysis, verification, and applying changes, with distinct antenna, eye, headphone, screen scan, and chest-light behavior. Reduced-motion settings remove looping motion while keeping state labels visible. The [five-option gallery](./symbi-icon-options.html) preserves the project-mark alternatives considered before choosing 04.
+
+[Try the interactive Symbi preview](./symbi-avatar-demo.html) or see it in [dark](./symbi-avatar-preview-dark.png) and [light](./symbi-avatar-preview-light.png).
+
 | Variant | Use |
 | --- | --- |
 | Full-color icon + wordmark | [Light-surface logo](./symbiknow-logo.svg) for website, app masthead, and reports. |
 | Light wordmark + icon | [Dark-surface logo](./symbiknow-logo-dark.svg) for dark navigation, splash screens, and video end cards. |
 | Icon on Deep Ink | App icon, social avatar, loading state. |
 | Single-color mark | Small print and surfaces where color is unavailable. |
-| Simplified [favicon](./symbiknow-favicon.svg) | 16–32 px browser tab; the small document lines are removed. |
+| [Ribbon favicon](./symbiknow-favicon.svg) | 16–32 px browser tab and app icon. |
 
-Use a minimum clear space equal to the width of the central page on every side of the mark. Keep the coral on the left and blue on the right in the master; do not use either color by itself as shorthand for “a person” or “an agent” without a text label. The [SVG logo](./symbiknow-logo.svg) is a concept master that needs optical refinement and small-size testing before launch.
+Use clear space around the mark at least as wide as the mint diamond. Keep coral and blue in the master. The robot belongs to assistant surfaces; use the Ribbon for product identity. The [SVG logo](./symbiknow-logo.svg) is a concept master that needs optical refinement and small-size testing before launch.
 
 ### Color system
 
@@ -168,7 +172,7 @@ The real packaging is digital: icon, first screen, invite, share preview, onboar
 **Campaign line:** “People and AI. One infinite canvas.”
 **Alternative proof line:** “Every contribution has a place. Every decision has a trail.”
 
-**Mascot:** none. An anthropomorphic character would make the AI relationship less clear and could obscure whose judgment and work is represented. The paired mark can move and change state without becoming a character.
+**Assistant character:** Symbi is the robot guide in assistant surfaces. The paired Ribbon remains the project mark. Use text to name the person or agent behind each change; the robot's expression must not replace that attribution.
 
 **Audio:** no default UI sounds. If a launch video needs a sonic signature, use two distinct soft notes converging into one sustained chord, under one second, with a warm mallet and a clean synth. This echoes the visual structure without pretending the software has a voice. In-product sound should be opt-in for explicit actions and always paired with visual feedback.
 

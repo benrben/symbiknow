@@ -92,6 +92,18 @@ When('I create an empty canvas for group automations', async function () {
   this.canvasId = result.body.id;
 });
 
+When('I create a temporary workspace with two canvases', async function () {
+  const created = await request(this, '/api/workspaces', 'POST', { name: 'Temporary team' });
+  assert.equal(created.status, 201);
+  this.temporaryWorkspaceId = created.body.id;
+  const first = await request(this, `/api/workspaces/${this.temporaryWorkspaceId}/canvases`, 'POST', { name: 'Temporary notes' });
+  const second = await request(this, `/api/workspaces/${this.temporaryWorkspaceId}/canvases`, 'POST', { name: 'More notes' });
+  assert.equal(first.status, 201);
+  assert.equal(second.status, 201);
+  this.canvasId = first.body.id;
+  this.secondTemporaryCanvasId = second.body.id;
+});
+
 When('I open SymbiKnow in a browser', async function () {
   await ensureBrowserBuild();
   this.browser = await chromium.launch({ headless: true });
@@ -245,6 +257,25 @@ When('I delete the current canvas in the browser', async function () {
   await dialog.getByText('This cannot be undone.', { exact: false }).waitFor();
   await dialog.getByRole('button', { name: 'Delete canvas' }).click();
   await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
+});
+
+When('I delete the temporary workspace in the browser', async function () {
+  await this.page.getByRole('button', { name: 'Delete workspace: Temporary team' }).click();
+  const dialog = this.page.getByRole('dialog', { name: 'Delete workspace' });
+  await dialog.getByText('2 canvases', { exact: false }).waitFor();
+  await dialog.getByRole('button', { name: 'Delete workspace' }).click();
+  await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
+});
+
+Then('the deleted workspace and both canvases are gone after reloading', async function () {
+  await this.page.reload({ waitUntil: 'networkidle' });
+  await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
+  const workspaces = await request(this, '/api/workspaces');
+  assert.equal(workspaces.body.some(workspace => workspace.id === this.temporaryWorkspaceId), false);
+  assert.equal((await request(this, `/api/canvases/${this.canvasId}`)).status, 404);
+  assert.equal((await request(this, `/api/canvases/${this.secondTemporaryCanvasId}`)).status, 404);
+  await assert.rejects(readFile(join(this.dataDir, this.block.file), 'utf8'), { code: 'ENOENT' });
+  assert.deepEqual(this.pageErrors, []);
 });
 
 Then('the deleted canvas is gone after reloading', async function () {
@@ -511,17 +542,17 @@ When('I send a chat message then press New chat', async function () {
       body: `data: ${JSON.stringify({ choices: [{ delta: { content: reply } }] })}\n\ndata: [DONE]\n\n` });
   });
   await this.page.goto(this.baseUrl, { waitUntil: 'networkidle' });
-  await this.page.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }).fill('First question');
+  await this.page.getByRole('textbox', { name: 'Message Symbi' }).fill('First question');
   await this.page.getByRole('button', { name: 'Submit' }).click();
   await this.page.getByText('First answer.').waitFor();
   await this.page.getByRole('button', { name: 'New chat' }).click();
-  await this.page.getByRole('heading', { name: 'Build knowledge together' }).waitFor();
+  await this.page.getByRole('heading', { name: 'Hi, I’m Symbi.' }).waitFor();
   assert.equal(await this.page.getByText('First answer.').count(), 0);
   assert.deepEqual(this.pageErrors, []);
 });
 
 Then('the next chat request contains only the new message', async function () {
-  await this.page.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }).fill('Second question');
+  await this.page.getByRole('textbox', { name: 'Message Symbi' }).fill('Second question');
   await this.page.getByRole('button', { name: 'Submit' }).click();
   await this.page.getByText('Second answer.').waitFor();
   assert.equal(this.chatRequests.length, 2);
@@ -536,7 +567,7 @@ When('I drag the chat divider wider', async function () {
   this.pageErrors = [];
   this.page.on('pageerror', error => this.pageErrors.push(error.message));
   await this.page.goto(this.baseUrl, { waitUntil: 'networkidle' });
-  const panel = this.page.getByRole('complementary', { name: 'SymbiKnow assistant' });
+  const panel = this.page.getByRole('complementary', { name: 'Symbi assistant' });
   const handle = this.page.getByRole('separator', { name: 'Resize chat panel' });
   const before = await panel.boundingBox();
   const grip = await handle.boundingBox();
@@ -553,7 +584,7 @@ When('I drag the chat divider wider', async function () {
 
 Then('the chat panel keeps its new width after reloading', async function () {
   await this.page.reload({ waitUntil: 'networkidle' });
-  const panel = this.page.getByRole('complementary', { name: 'SymbiKnow assistant' });
+  const panel = this.page.getByRole('complementary', { name: 'Symbi assistant' });
   const reloadedWidth = (await panel.boundingBox()).width;
   assert.ok(Math.abs(reloadedWidth - this.resizedWidth) < 2);
   assert.deepEqual(this.pageErrors, []);

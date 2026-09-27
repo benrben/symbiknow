@@ -48,6 +48,93 @@ describe('cross-canvas connections', () => {
     expect(items[0].evidence?.map(entry => entry.questionId)).toEqual(['c0_related', 'x0_strength', 'x0_relation', 'x0_direction']);
   });
 
+  it('asks Jev about related documents when their wording has no lexical overlap', async () => {
+    const first = canvas('canvas-a', 'Service reliability', [block('retry-plan', 'Throttle recovery',
+      'Delay retries after overload responses.')]);
+    const second = canvas('canvas-b', 'Release operations', [block('limit-rule', 'Rate limit policy',
+      'Pause requests when throttling occurs.')]);
+    const decider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([id, question]) =>
+      [id, answer(question, id.startsWith('c') || id.endsWith('_strength') ? 4 : id.endsWith('_relation') ? 'same_topic' : 'a_to_b')]));
+    const index = new SimilarityIndex();
+    const items = await findCrossConnections({ canvases: [first, second], index, apiKey: 'test', decider });
+    expect(index.neighbors('retry-plan', 3, { sameCanvas: false, crossCanvas: true })).toEqual([]);
+    expect(items[0]?.action).toMatchObject({ type: 'cross_link', fromBlockId: 'retry-plan',
+      to: { canvasId: 'canvas-b', blockId: 'limit-rule' } });
+  });
+
+  it('uses Jev to shortlist semantic matches on larger canvases', async () => {
+    const first = canvas('canvas-a', 'Operations', [
+      block('a0', 'Throttle recovery', 'Delay retries after overload responses.'),
+      block('a1', 'Incident duty', 'Escalation rota for outages.'),
+      block('a2', 'Service budget', 'Quarterly spending plan.'),
+      block('a3', 'Launch note', 'Release announcement draft.'),
+    ]);
+    const second = canvas('canvas-b', 'Policies', [
+      block('b0', 'Hiring policy', 'Interview process for candidates.'),
+      block('b1', 'Travel policy', 'Approval process for trips.'),
+      block('b2', 'Archive policy', 'Keep old records for audits.'),
+      block('b3', 'Rate limit policy', 'Pause requests when throttling occurs.'),
+    ]);
+    const calls: string[] = [];
+    const decider: JevDecider = async (_key, state, questions) => {
+      const questionIds = Object.keys(questions);
+      calls.push(questionIds[0]);
+      const summaries = state as { sources?: Array<{ title: string }>; targets?: Array<{ title: string }> };
+      return Object.fromEntries(Object.entries(questions).map(([id, question]) => {
+        const source = summaries.sources?.[Number(id.slice(1))];
+        const targetIndex = summaries.targets?.findIndex(target => target.title === 'Rate limit policy') ?? -1;
+        const selected = source?.title === 'Throttle recovery' && targetIndex >= 0 ? `t${targetIndex}` : 'none';
+        return [id, answer(question, id.startsWith('c') || id.endsWith('_strength') ? 4
+          : id.endsWith('_relation') ? 'same_topic' : id.endsWith('_direction') ? 'a_to_b' : selected)];
+      }));
+    };
+    const index = new SimilarityIndex();
+    const items = await findCrossConnections({ canvases: [first, second], index, apiKey: 'test', decider });
+    expect(index.neighbors('a0', 3, { sameCanvas: false, crossCanvas: true })).toEqual([]);
+    expect(calls).toContain('s0');
+    expect(items.some(item => item.action?.type === 'cross_link' && item.action.fromBlockId === 'a0'
+      && item.action.to.blockId === 'b3')).toBe(true);
+  });
+
+  it('checks the last document on a small related canvas even when one source has many targets', async () => {
+    const first = canvas('canvas-a', 'Reliability', [block('a', 'Throttle recovery', 'Delay retries after overload responses.')]);
+    const second = canvas('canvas-b', 'Policies', Array.from({ length: 9 }, (_, index) =>
+      block(`b${index}`, index === 8 ? 'Rate limit policy' : `Policy ${index}`,
+        index === 8 ? 'Pause requests when throttling occurs.' : `Rule number ${index} for staff.`)));
+    const decider: JevDecider = async (_key, state, questions) => {
+      const targetTitle = (state as { b?: { title: string } }).b?.title;
+      return Object.fromEntries(Object.entries(questions).map(([id, question]) => [id, answer(question,
+        id.startsWith('c') ? 4 : id.endsWith('_strength') ? targetTitle === 'Rate limit policy' ? 4 : 0
+          : id.endsWith('_relation') ? 'same_topic' : 'a_to_b')]));
+    };
+    const items = await findCrossConnections({ canvases: [first, second], index: new SimilarityIndex(), apiKey: 'test', decider });
+    expect(items).toHaveLength(1);
+    expect(items[0].action).toMatchObject({ type: 'cross_link', fromBlockId: 'a',
+      to: { canvasId: 'canvas-b', blockId: 'b8' } });
+  });
+
+  it('keeps the strongest Jev shortlist choice across target batches', async () => {
+    const first = canvas('canvas-a', 'Reliability', [block('a', 'Throttle recovery', 'Delay retries after overload responses.')]);
+    const second = canvas('canvas-b', 'Policies', Array.from({ length: 31 }, (_, index) =>
+      block(`b${index}`, `Rule ${index}`, `Staff instruction ${index}.`)));
+    const judged: string[] = [];
+    const decider: JevDecider = async (_key, state, questions) => {
+      const data = state as { sourceCanvas?: string; targets?: Array<{ title: string }>; b?: { title: string } };
+      if (data.b) judged.push(data.b.title);
+      return Object.fromEntries(Object.entries(questions).map(([id, question]) => {
+        if (id.startsWith('s')) {
+          const finalBatch = data.targets?.some(target => target.title === 'Rule 30');
+          return [id, answer(question, data.sourceCanvas === 'Reliability' ? 't0' : 'none', finalBatch ? 0.95 : 0.6)];
+        }
+        return [id, answer(question, id.startsWith('c') || id.endsWith('_strength') ? 4
+          : id.endsWith('_relation') ? 'same_topic' : 'a_to_b')];
+      }));
+    };
+    const items = await findCrossConnections({ canvases: [first, second], index: new SimilarityIndex(), apiKey: 'test', decider });
+    expect(judged).toEqual(['Rule 30']);
+    expect(items[0].action).toMatchObject({ type: 'cross_link', to: { blockId: 'b30' } });
+  });
+
   it('drops unrelated canvas pairs before document questions', async () => {
     const canvases = [canvas('a', 'API', [block('doc-a', 'Rate limits', common)]),
       canvas('b', 'Finance', [block('doc-b', 'Billing', common)])];

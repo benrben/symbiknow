@@ -4,7 +4,10 @@ import type { CanvasDocument, GroupBy } from '../shared/types';
 import { canvasGrouping, type AutomationKind, type InsightAction, type InsightCategory, type InsightItem, type InsightReport, type RankedBlock, type ReadingPath } from '../shared/insights';
 import { groupByLabels, groupTone } from '../shared/groups';
 import { api } from './api';
+import type { SymbiState } from './SymbiAvatar';
 import './insights.css';
+
+type JevActivityState = Extract<SymbiState, 'jev-analyzing' | 'jev-applying'>;
 
 type InsightsPanelProps = {
   canvas: CanvasDocument | null;
@@ -19,6 +22,7 @@ type InsightsPanelProps = {
   /** Reload the canvas after a server-side automation changed it. */
   onChanged?: () => Promise<void> | void;
   groupBy?: GroupBy;
+  onJevActivityChange?: (state: JevActivityState | null) => void;
 };
 
 type AutomationResult = { kind: AutomationKind; applied: number; groupBy?: GroupBy; groups?: Array<{ key: string; count: number }> };
@@ -259,7 +263,7 @@ function actionDescription(action: InsightAction): string {
   return `Update task ${action.taskId}`;
 }
 
-function WorkspaceAutomations({ canvas, hasApiKey, onChanged }: Pick<InsightsPanelProps, 'canvas' | 'hasApiKey' | 'onChanged'>) {
+function WorkspaceAutomations({ canvas, hasApiKey, onChanged, onActivityChange }: Pick<InsightsPanelProps, 'canvas' | 'hasApiKey' | 'onChanged'> & { onActivityChange: (state: JevActivityState | null) => void }) {
   const workspaceId = canvas?.workspaceId ?? '';
   const [kind, setKind] = useState<WorkspaceKind>('tidy');
   const [preview, setPreview] = useState<ChangeSet | null>(null);
@@ -269,6 +273,8 @@ function WorkspaceAutomations({ canvas, hasApiKey, onChanged }: Pick<InsightsPan
   const [error, setError] = useState('');
   const [applied, setApplied] = useState(false);
   const [undone, setUndone] = useState(false);
+  useEffect(() => onActivityChange(busy === 'preview' ? 'jev-analyzing' : busy ? 'jev-applying' : null), [busy, onActivityChange]);
+  useEffect(() => () => onActivityChange(null), [onActivityChange]);
   useEffect(() => { setPreview(null); setSelected(new Set()); setMessage(''); setError(''); setApplied(false); setUndone(false); }, [workspaceId]);
 
   async function previewChanges() {
@@ -348,8 +354,8 @@ function WorkspaceAutomations({ canvas, hasApiKey, onChanged }: Pick<InsightsPan
   </section>;
 }
 
-function DuplicateFinder({ canvas, hasApiKey, dismissedIds, onDismiss, onOpenBlock, onMergeDraft, duplicateRequest }: Pick<InsightsPanelProps, 'canvas' | 'hasApiKey' | 'onOpenBlock' | 'onMergeDraft' | 'duplicateRequest'> & {
-  dismissedIds: Set<string>; onDismiss: (item: InsightItem) => void;
+function DuplicateFinder({ canvas, hasApiKey, dismissedIds, onDismiss, onOpenBlock, onMergeDraft, duplicateRequest, onActivityChange }: Pick<InsightsPanelProps, 'canvas' | 'hasApiKey' | 'onOpenBlock' | 'onMergeDraft' | 'duplicateRequest'> & {
+  dismissedIds: Set<string>; onDismiss: (item: InsightItem) => void; onActivityChange: (state: JevActivityState | null) => void;
 }) {
   const canvasId = canvas?.id ?? '';
   const [crossCanvas, setCrossCanvas] = useState(false);
@@ -357,6 +363,8 @@ function DuplicateFinder({ canvas, hasApiKey, dismissedIds, onDismiss, onOpenBlo
   const [items, setItems] = useState<DuplicateCandidate[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => onActivityChange(loading ? 'jev-analyzing' : null), [loading, onActivityChange]);
+  useEffect(() => () => onActivityChange(null), [onActivityChange]);
   useEffect(() => { setItems(null); setError(''); setBlockId(''); }, [canvasId]);
   useEffect(() => {
     if (duplicateRequest?.canvasId === canvasId && canvas?.blocks.some(block => block.id === duplicateRequest.blockId)) {
@@ -459,7 +467,7 @@ function automationUnavailable(canvas: CanvasDocument | null, hasApiKey: boolean
   return !canvas?.id || !hasApiKey || !canvas.blocks.length || loading || Boolean(applyingId);
 }
 
-export function InsightsPanel({ canvas, hasApiKey, onOpenSettings, onApply, onOpenBlock, onMergeDraft, onDraftGap, onStartPath, duplicateRequest, onChanged, groupBy: initialGroupBy = 'work_area' }: InsightsPanelProps) {
+export function InsightsPanel({ canvas, hasApiKey, onOpenSettings, onApply, onOpenBlock, onMergeDraft, onDraftGap, onStartPath, duplicateRequest, onChanged, onJevActivityChange, groupBy: initialGroupBy = 'work_area' }: InsightsPanelProps) {
   const canvasId = canvas?.id ?? '';
   const [groupBy, setGroupBy] = useState<GroupBy>(initialGroupBy);
   useEffect(() => setGroupBy(initialGroupBy), [initialGroupBy]);
@@ -472,6 +480,11 @@ export function InsightsPanel({ canvas, hasApiKey, onOpenSettings, onApply, onOp
   const [error, setError] = useState('');
   const [errorAction, setErrorAction] = useState(false);
   const [automationMessage, setAutomationMessage] = useState('');
+  const [workspacePhase, setWorkspacePhase] = useState<JevActivityState | null>(null);
+  const [duplicatePhase, setDuplicatePhase] = useState<JevActivityState | null>(null);
+  const jevPhase: JevActivityState | null = workspacePhase ?? duplicatePhase ?? (applyingId ? 'jev-applying' : loading ? 'jev-analyzing' : null);
+  useEffect(() => { onJevActivityChange?.(jevPhase); }, [jevPhase, onJevActivityChange]);
+  useEffect(() => () => onJevActivityChange?.(null), [onJevActivityChange]);
   const requestVersion = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
   const latestCanvasId = useRef(canvasId);
@@ -629,12 +642,12 @@ export function InsightsPanel({ canvas, hasApiKey, onOpenSettings, onApply, onOp
   const currentReport = report?.canvasId === canvasId ? report : null;
 
   return <div className="insights-panel">
-    <div className="insights-panel__intro"><div className="insights-panel__icon"><Sparkles size={20} aria-hidden="true"/></div><div><h2>Canvas insights</h2><p>Explore your docs, then choose which changes to apply.</p></div></div>
+    <div className="insights-panel__intro"><div className="insights-panel__icon"><Sparkles size={20} aria-hidden="true"/></div><div><h2>Canvas insights</h2><p>Explore your docs, then choose which changes to apply.</p>{jevPhase && <span className="insights-panel__jev-status" aria-live="polite">Jev is {jevPhase === 'jev-applying' ? 'applying the canvas changes' : 'analyzing the documents'}…</span>}</div></div>
     <SetupBanner hasApiKey={hasApiKey} onOpenSettings={onOpenSettings}/>
     <AnalysisForm canvasId={canvasId} hasApiKey={hasApiKey} loading={loading || Boolean(applyingId)} hasReport={Boolean(currentReport)} query={query} onQuery={setQuery} onAnalyze={() => void analyze()}/>
     <AutomationButtons disabled={automationUnavailable(canvas, hasApiKey, loading, applyingId)} running={applyingId} onRun={automation => void runAutomation(automation)}/>
-    <WorkspaceAutomations canvas={canvas} hasApiKey={hasApiKey} onChanged={onChanged}/>
-    <DuplicateFinder canvas={canvas} hasApiKey={hasApiKey} dismissedIds={dismissedIds} onDismiss={item => void dismiss(item)} onOpenBlock={onOpenBlock} onMergeDraft={onMergeDraft} duplicateRequest={duplicateRequest}/>
+    <WorkspaceAutomations canvas={canvas} hasApiKey={hasApiKey} onChanged={onChanged} onActivityChange={setWorkspacePhase}/>
+    <DuplicateFinder canvas={canvas} hasApiKey={hasApiKey} dismissedIds={dismissedIds} onDismiss={item => void dismiss(item)} onOpenBlock={onOpenBlock} onMergeDraft={onMergeDraft} duplicateRequest={duplicateRequest} onActivityChange={setDuplicatePhase}/>
     {automationMessage && <p className="insights-automations__result" role="status">{automationMessage}</p>}
     <ErrorBanner error={error} errorAction={errorAction} onRetry={() => void analyze()}/>
     {canvas && canvas.blocks.length > 0 && <GroupDashboard canvas={canvas} report={currentReport} groupBy={groupBy} onGroupBy={setGroupBy} onOpenBlock={onOpenBlock}

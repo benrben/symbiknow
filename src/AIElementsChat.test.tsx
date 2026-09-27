@@ -25,7 +25,7 @@ function viewProps() {
 }
 
 function send(message: string) {
-  fireEvent.change(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }), { target: { value: message } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: message } });
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
 }
 
@@ -46,6 +46,69 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('AI Elements agent activity', () => {
+  it('moves Symbi through finding sources, answering, and a brief completed state', async () => {
+    const stream = controlledStream();
+    const onAvatarStateChange = vi.fn();
+    vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
+    render(<AIElementsChat {...viewProps()} onAvatarStateChange={onAvatarStateChange}/>);
+    expect(onAvatarStateChange).toHaveBeenLastCalledWith('idle');
+
+    send('What changed?');
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('thinking'));
+    await act(async () => { stream.push('data: {"choices":[{"delta":{"content":"The owner changed."}}]}\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('speaking'));
+    await act(async () => { stream.push('data: [DONE]\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('done'));
+  });
+
+  it('shows distinct Jev motion only for active routing, analysis, verification, and action work', async () => {
+    const stream = controlledStream();
+    const onAvatarStateChange = vi.fn();
+    vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
+    render(<AIElementsChat {...viewProps()} jevAvailable onAvatarStateChange={onAvatarStateChange}/>);
+    send('Analyze and organize this canvas');
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('jev-routing'));
+    expect(screen.getByText('Jev is choosing the right context…')).toBeTruthy();
+    await act(async () => { stream.push('event: agent_step\ndata: {"type":"tool_start","id":"analysis","name":"analyze_canvas","message":"Analyzing"}\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('jev-analyzing'));
+    await act(async () => { stream.push('event: agent_step\ndata: {"type":"tool_end","id":"analysis","name":"analyze_canvas","message":"Analyzed"}\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('thinking'));
+    await act(async () => { stream.push('event: agent_step\ndata: {"type":"tool_start","id":"action","name":"organize_canvas","message":"Organizing"}\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('jev-applying'));
+    await act(async () => { stream.push('event: agent_step\ndata: {"type":"tool_end","id":"action","name":"organize_canvas","message":"Organized"}\n\n'); });
+    await act(async () => { stream.push('data: {"choices":[{"delta":{"content":"Canvas organized."}}]}\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('speaking'));
+    await act(async () => { stream.push('event: verification\ndata: {"status":"checking"}\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('jev-verifying'));
+    await act(async () => { stream.push('event: verification\ndata: {"status":"supported"}\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('speaking'));
+    await act(async () => { stream.push('data: [DONE]\n\n'); });
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('done'));
+  });
+
+  it('changes Symbi motion with the active search, reading, canvas, navigation, and other tools', async () => {
+    const stream = controlledStream();
+    const onAvatarStateChange = vi.fn();
+    vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
+    render(<AIElementsChat {...viewProps()} onAvatarStateChange={onAvatarStateChange}/>);
+    send('Find, read, map, and open the plan');
+    const steps = [
+      ['search_docs', 'searching', 'Searching documents…'],
+      ['read_doc', 'reading', 'Reading the source…'],
+      ['draw_research_canvas', 'working', 'Updating the canvas…'],
+      ['show_doc_on_canvas', 'navigating', 'Opening the right place…'],
+      ['external_tool', 'tooling', 'Working with a tool…'],
+    ] as const;
+    for (const [name, state, label] of steps) {
+      await act(async () => { stream.push(`event: agent_step\ndata: ${JSON.stringify({ type: 'tool_start', id: name, name, message: `Running ${name}` })}\n\n`); });
+      await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith(state));
+      expect(screen.getByText(label)).toBeTruthy();
+      await act(async () => { stream.push(`event: agent_step\ndata: ${JSON.stringify({ type: 'tool_end', id: name, name, message: `Finished ${name}` })}\n\n`); });
+      await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('thinking'));
+    }
+    await act(async () => { stream.push('data: [DONE]\n\n'); });
+  });
+
   it('shows the current document and sends an explicit whole-canvas scope', async () => {
     const block: CanvasBlock = { id: 'qa', file: 'qa.md', kind: 'markdown', title: 'QA report', content: 'Tests failed',
       x: 0, y: 0, width: 300, height: 200, links: [] };
@@ -268,11 +331,11 @@ describe('AI Elements agent activity', () => {
     render(<AIElementsChat {...viewProps()}/>);
     send('Which tests failed?');
     expect((await screen.findByRole('alert')).textContent).toContain('Canvas server is unavailable');
-    expect((screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }) as HTMLTextAreaElement).value).toBe('Which tests failed?');
+    expect((screen.getByRole('textbox', { name: 'Message Symbi' }) as HTMLTextAreaElement).value).toBe('Which tests failed?');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     expect(await screen.findByText('Connected again.')).toBeTruthy();
-    expect((screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }) as HTMLTextAreaElement).value).toBe('');
+    expect((screen.getByRole('textbox', { name: 'Message Symbi' }) as HTMLTextAreaElement).value).toBe('');
   });
 
   it('shows live thinking and tool calls, then folds completed steps above the answer', async () => {
@@ -445,8 +508,8 @@ describe('AI Elements agent activity', () => {
     const props = viewProps();
     const { rerender } = render(<AIElementsChat {...props}/>);
     send('First request');
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }), { target: { value: 'Second request' } });
-    fireEvent.submit(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }).closest('form')!);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: 'Second request' } });
+    fireEvent.submit(screen.getByRole('textbox', { name: 'Message Symbi' }).closest('form')!);
     expect(fetch).toHaveBeenCalledTimes(1);
     await act(async () => { stream.push('data: [DONE]\n\n'); });
     rerender(<AIElementsChat {...props} hasApiKey={false}/>);

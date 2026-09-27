@@ -43,6 +43,7 @@ function fixture(options: {
   chatNavigation?: CanvasNavigationTarget;
   failCanvas?: boolean;
   failCanvasDelete?: boolean;
+  failWorkspaceDelete?: boolean;
   failSearch?: boolean;
   failBlockUpdate?: boolean;
   failBlockDelete?: boolean;
@@ -76,6 +77,15 @@ function fixture(options: {
       const created: WorkspaceSummary = { id: 'new-team-' + (workspaces.length + 1), name: String(body?.name), canvases: [] };
       workspaces.push(created);
       return Response.json(created);
+    }
+    const workspaceRoute = requestPath.match(/^\/api\/workspaces\/([^/]+)$/);
+    if (workspaceRoute && method === 'DELETE') {
+      if (options.failWorkspaceDelete) return Response.json({ error: 'Workspace could not be deleted' }, { status: 503 });
+      const index = workspaces.findIndex(workspace => workspace.id === workspaceRoute[1]);
+      if (index < 0) return Response.json({ error: 'Workspace missing' }, { status: 404 });
+      for (const item of workspaces[index].canvases) canvases.delete(item.id);
+      workspaces.splice(index, 1);
+      return Response.json({ ok: true });
     }
     if (requestPath === '/api/settings' && method === 'GET') return Response.json(settings);
     if (requestPath === '/api/settings' && method === 'PUT') {
@@ -248,6 +258,41 @@ afterEach(() => {
 });
 
 describe('App composition', () => {
+  it('confirms workspace deletion and moves to a surviving workspace, then the empty state', async () => {
+    const server = fixture();
+    server.workspaces.push({ id: 'design', name: 'Design team', canvases: [{ id: 'design-notes', name: 'Design notes' }] });
+    server.canvases.set('design-notes', { id: 'design-notes', name: 'Design notes', workspaceId: 'design', blocks: [] });
+    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
+    render(<App/>);
+    expect(await screen.findByRole('region', { name: 'Planning infinite canvas' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete workspace: Product team' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete workspace' });
+    expect(within(dialog).getByText(/1 canvas, including all documents/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(server.workspaces).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete workspace: Product team' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete workspace' })).getByRole('button', { name: 'Delete workspace' }));
+    expect(await screen.findByRole('region', { name: 'Design notes infinite canvas' })).toBeTruthy();
+    expect(server.canvases.has('planning')).toBe(false);
+    expect(window.location.search).toContain('canvas=design-notes');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete workspace: Design team' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete workspace' })).getByRole('button', { name: 'Delete workspace' }));
+    expect(await screen.findByRole('button', { name: 'Create workspace' })).toBeTruthy();
+    expect(window.location.search).toBe('');
+  });
+
+  it('keeps the workspace and confirmation open when deletion fails', async () => {
+    const server = fixture({ failWorkspaceDelete: true });
+    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
+    render(<App/>);
+    expect(await screen.findByRole('region', { name: 'Planning infinite canvas' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete workspace: Product team' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete workspace' })).getByRole('button', { name: 'Delete workspace' }));
+    expect(await within(screen.getByRole('dialog', { name: 'Delete workspace' })).findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Workspace could not be deleted'));
+    expect(server.workspaces).toHaveLength(1);
+    expect(server.canvases.has('planning')).toBe(true);
+  });
+
   it('confirms canvas deletion, keeps the current view on failure, and moves to a surviving canvas', async () => {
     const server = fixture();
     server.workspaces[0].canvases.push({ id: 'research', name: 'Research' });
@@ -344,7 +389,7 @@ describe('App composition', () => {
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
     expect(document.querySelector('.chat-panel')?.hasAttribute('hidden')).toBe(true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle AI assistant' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle Symbi' }));
     expect(document.querySelector('.chat-panel')?.hasAttribute('hidden')).toBe(false);
   });
 
@@ -524,7 +569,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle AI assistant' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle Symbi' }));
     expect(document.querySelector('.chat-panel')?.hasAttribute('hidden')).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: /Search documents/ }));
     fireEvent.change(screen.getByPlaceholderText('Search every Markdown file…'), { target: { value: 'Outline' } });
@@ -550,7 +595,7 @@ describe('App composition', () => {
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
 
-    const compose = await screen.findByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+    const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: 'Summarize this canvas' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
@@ -667,7 +712,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
     const send = (message: string) => {
       fireEvent.change(compose, { target: { value: message } });
       fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
@@ -695,13 +740,13 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }), { target: { value: 'First question' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: 'First question' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect(await screen.findByText('First answer.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
     expect(screen.queryByText('First answer.')).toBeNull();
-    expect(screen.getByText('Build knowledge together')).toBeTruthy();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }), { target: { value: 'Second question' } });
+    expect(screen.getByText('Hi, I’m Symbi.')).toBeTruthy();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: 'Second question' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect(await screen.findByText('Second answer.')).toBeTruthy();
     const requests = server.requests.filter(request => request.path === '/api/chat/stream');
@@ -715,7 +760,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'One infinite canvas for people and AI' })).toBeTruthy();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }), { target: { value: 'Hello' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: 'Hello' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect((await screen.findByRole('alert')).textContent).toContain('Open a canvas before using the assistant.');
     expect(server.requests.some(request => request.path === '/api/chat/stream')).toBe(false);
@@ -729,7 +774,7 @@ describe('App composition', () => {
     }));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }), { target: { value: 'Hello' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: 'Hello' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect((await screen.findByRole('alert')).textContent).toContain('Something went wrong. Please try again.');
   });
@@ -739,7 +784,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }), { target: { value: 'Summarize' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: 'Summarize' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect(await screen.findByText('Canvas summarized.')).toBeTruthy();
     expect((await screen.findByRole('alert')).textContent).toContain('Canvas unavailable');
@@ -760,7 +805,7 @@ describe('App composition', () => {
     }));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: 'First request' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect(await screen.findByRole('button', { name: 'Stop' })).toBeTruthy();
@@ -801,7 +846,7 @@ describe('App composition', () => {
     expect(await screen.findByText('No matching documents.')).toBeTruthy();
     fireEvent.keyDown(screen.getByPlaceholderText('Search every Markdown file…'), { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Search documents' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle AI assistant' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle Symbi' }));
     expect(document.querySelector('.chat-panel')?.hasAttribute('hidden')).toBe(true);
   });
 
@@ -862,13 +907,13 @@ describe('App composition', () => {
     fireEvent.click(screen.getByRole('button', { name: /Help me plan this canvas/ }));
     expect(await screen.findByText('Canvas summarized.')).toBeTruthy();
     expect(server.requests.filter(request => request.path === '/api/chat/stream')).toHaveLength(1);
-    const compose = screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }) as HTMLTextAreaElement;
+    const compose = screen.getByRole('textbox', { name: 'Message Symbi' }) as HTMLTextAreaElement;
     fireEvent.change(compose, { target: { value: 'Find connections between these documents' } });
     fireEvent.keyDown(compose, { key: 'Enter', shiftKey: true });
     expect(server.requests.filter(request => request.path === '/api/chat/stream')).toHaveLength(1);
     fireEvent.keyDown(compose, { key: 'Enter' });
     await waitFor(() => expect(server.requests.filter(request => request.path === '/api/chat/stream')).toHaveLength(2));
-    fireEvent.click(screen.getByRole('button', { name: 'Assistant settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Symbi settings' }));
     expect(screen.getByRole('dialog', { name: 'Settings' })).toBeTruthy();
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Settings' })).getByRole('button', { name: 'Close dialog' }));
     expect(screen.queryByRole('dialog', { name: 'Settings' })).toBeNull();
@@ -890,7 +935,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: answerCanvas.query } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     const board = await screen.findByRole('region', { name: 'Research canvas' });
@@ -929,7 +974,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: source.query } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     const board = await screen.findByRole('region', { name: 'Research canvas' });
@@ -959,7 +1004,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = await screen.findByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+    const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: 'Map launch risks' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     await screen.findByRole('region', { name: 'Research canvas' });
@@ -1088,7 +1133,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: 'Create a launch note' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     await waitFor(() => expect(server.requests.some(request => request.path === '/api/chat/stream')).toBe(true));
@@ -1109,7 +1154,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: 'Update QA' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     await waitFor(() => expect(server.requests.filter(request => request.path === '/api/chat/stream')).toHaveLength(1));
@@ -1144,7 +1189,7 @@ describe('App composition', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Planning' }));
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }), { target: { value: 'Status?' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: 'Status?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     await waitFor(() => expect(server.requests.filter(request => request.path === '/api/chat/stream')).toHaveLength(1));
     fireEvent.click(screen.getByRole('button', { name: 'Second canvas' }));

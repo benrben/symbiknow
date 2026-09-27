@@ -12,6 +12,7 @@
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web\"",
     "dev:web": "vite --host 127.0.0.1",
     "dev:server": "tsx watch server/index.ts",
+    "prebuild": "tsx scripts/sync-symbi-avatar-preview.ts",
     "mcp": "tsx server/mcp.ts",
     "build": "tsc --noEmit && vite build",
     "pretest": "npm run build",

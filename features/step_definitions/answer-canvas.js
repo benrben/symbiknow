@@ -38,9 +38,9 @@ When('I ask {string} with selected evidence', async function (question) {
         `${chatOnly ? '' : `event: answer_canvas\ndata: ${JSON.stringify(event)}\n\nevent: research_canvas_patch\ndata: ${JSON.stringify(patch)}\n\n`}data: ${JSON.stringify({ choices: [{ delta: { content: answer } }] })}\n\ndata: [DONE]\n\n` });
     });
   }
-  await this.page.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }).fill(question);
+  await this.page.getByRole('textbox', { name: 'Message Symbi' }).fill(question);
   await this.page.getByRole('button', { name: 'Submit' }).click();
-  await this.page.getByRole('complementary', { name: 'SymbiKnow assistant' })
+  await this.page.getByRole('complementary', { name: 'Symbi assistant' })
     .getByRole('button', { name: /Open research canvas · 3 new blocks/ }).last().waitFor();
 });
 
@@ -108,7 +108,7 @@ Then('the research canvas shows its answer structure with secondary controls tuc
 });
 
 When('I ask a direct factual question in chat', async function () {
-  await this.page.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }).fill('Which tests failed?');
+  await this.page.getByRole('textbox', { name: 'Message Symbi' }).fill('Which tests failed?');
   await this.page.getByRole('button', { name: 'Submit' }).click();
 });
 
@@ -121,7 +121,7 @@ Then('the direct answer stays in chat and adds no research block', async functio
 });
 
 Then('the assistant shows its current scope and a way to turn the answer into a map', async function () {
-  const assistant = this.page.getByRole('complementary', { name: 'SymbiKnow assistant' });
+  const assistant = this.page.getByRole('complementary', { name: 'Symbi assistant' });
   await assistant.getByRole('button', { name: 'Choose assistant context' }).waitFor();
   assert.match(await assistant.getByRole('button', { name: 'Choose assistant context' }).textContent(), /Research canvas/u);
   assert.equal(await assistant.getByRole('button', { name: 'Turn this into a map' }).isVisible(), true);
@@ -221,7 +221,7 @@ When('I ask for rich research blocks', async function () {
       + `event: research_canvas_patch\ndata: ${JSON.stringify(patch)}\n\n`
       + `data: ${JSON.stringify({ choices: [{ delta: { content: 'I mapped each format.' } }] })}\n\ndata: [DONE]\n\n` });
   });
-  await this.page.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }).fill('Show me every format on a temporary research canvas');
+  await this.page.getByRole('textbox', { name: 'Message Symbi' }).fill('Show me every format on a temporary research canvas');
   await this.page.getByRole('button', { name: 'Submit' }).click();
   await this.page.getByRole('region', { name: 'Research canvas' }).getByText('6 documents · 1 cited source', { exact: false }).waitFor();
 });
@@ -261,7 +261,7 @@ Then('I can view and save the rich blocks with their original formats', async fu
 });
 
 When('I keep a chat draft while the canvas API becomes unreachable', async function () {
-  const draft = this.page.getByRole('textbox', { name: 'Message the SymbiKnow assistant' });
+  const draft = this.page.getByRole('textbox', { name: 'Message Symbi' });
   await draft.fill('Help me investigate the failed release');
   await this.page.waitForFunction(() => sessionStorage.getItem('symbiknow:chat-draft') === 'Help me investigate the failed release');
   await this.page.route('**/api/workspaces', route => route.abort('failed'));
@@ -270,12 +270,12 @@ When('I keep a chat draft while the canvas API becomes unreachable', async funct
 
 Then('I can reconnect without losing the chat draft', async function () {
   await this.page.getByRole('button', { name: 'Reconnect' }).waitFor();
-  assert.equal(await this.page.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }).inputValue(),
+  assert.equal(await this.page.getByRole('textbox', { name: 'Message Symbi' }).inputValue(),
     'Help me investigate the failed release');
   await this.page.unroute('**/api/workspaces');
   await this.page.getByRole('button', { name: 'Reconnect' }).click();
   await this.page.getByRole('heading', { name: 'Product Roadmap' }).first().waitFor();
-  assert.equal(await this.page.getByRole('textbox', { name: 'Message the SymbiKnow assistant' }).inputValue(),
+  assert.equal(await this.page.getByRole('textbox', { name: 'Message Symbi' }).inputValue(),
     'Help me investigate the failed release');
   assert.deepEqual(this.pageErrors, []);
 });

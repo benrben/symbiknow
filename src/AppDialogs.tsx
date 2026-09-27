@@ -22,6 +22,7 @@ export function ModalOverlay({ model }: { model: AppModel }) {
 
 function modalLabel(dialog: Dialog) {
   if (dialog === 'delete-canvas') return 'Delete canvas';
+  if (dialog === 'delete-workspace') return 'Delete workspace';
   if (dialog === 'settings') return 'Settings';
   if (dialog === 'block') return 'Block editor';
   if (dialog === 'versions') return 'History and branches';
@@ -30,6 +31,7 @@ function modalLabel(dialog: Dialog) {
 
 function ModalContent({ model }: { model: AppModel }) {
   if (model.dialog === 'delete-canvas') return <DeleteCanvasForm model={model}/>;
+  if (model.dialog === 'delete-workspace') return <DeleteWorkspaceForm model={model}/>;
   if (model.dialog === 'settings') return <SettingsPage settings={model.settings} busy={model.busy} onSave={model.saveSettings} onCancel={() => model.setDialog(null)} onSettings={model.setSettings}/>;
   if (model.dialog === 'block') return <BlockForm model={model}/>;
   if (model.dialog === 'versions') {
@@ -41,6 +43,7 @@ function ModalContent({ model }: { model: AppModel }) {
 
 function modalHeading(dialog: Dialog, draft: BlockDraft) {
   if (dialog === 'delete-canvas') return { eyebrow: 'REMOVE CANVAS', title: 'Delete canvas?' };
+  if (dialog === 'delete-workspace') return { eyebrow: 'REMOVE WORKSPACE', title: 'Delete workspace?' };
   if (dialog === 'settings') return { eyebrow: 'WORKSPACE SETTINGS', title: 'Connections and agents' };
   if (dialog === 'block') return { eyebrow: 'MARKDOWN FILE', title: draft.id ? 'Edit block' : 'New block' };
   if (dialog === 'versions') return { eyebrow: 'DOCUMENT HISTORY', title: 'File revisions and branches' };
@@ -54,6 +57,16 @@ function DeleteCanvasForm({ model }: { model: AppModel }) {
     <p>Delete <strong>{target.name}</strong> and all its documents, tasks, and file histories? This cannot be undone.</p>
     {model.error && <p className="delete-canvas-error" role="alert">{model.error}</p>}
     <div className="modal-actions"><button type="button" className="secondary-button" onClick={() => model.setDialog(null)} disabled={model.busy} autoFocus>Cancel</button><button type="button" className="danger-button delete-canvas-confirm" onClick={() => void model.deleteCanvas()} disabled={model.busy}><Icon name="trash" size={16}/>{model.busy ? 'Deleting…' : 'Delete canvas'}</button></div>
+  </div>;
+}
+
+function DeleteWorkspaceForm({ model }: { model: AppModel }) {
+  const target = model.workspaceToDelete;
+  if (!target) return null;
+  return <div className="modal-form">
+    <p>Delete <strong>{target.name}</strong> and its {target.canvases.length} {target.canvases.length === 1 ? 'canvas' : 'canvases'}, including all documents, tasks, and file histories? This cannot be undone.</p>
+    {model.error && <p className="delete-canvas-error" role="alert">{model.error}</p>}
+    <div className="modal-actions"><button type="button" className="secondary-button" onClick={() => model.setDialog(null)} disabled={model.busy} autoFocus>Cancel</button><button type="button" className="danger-button delete-workspace-confirm" onClick={() => void model.deleteWorkspace()} disabled={model.busy}><Icon name="trash" size={16}/>{model.busy ? 'Deleting…' : 'Delete workspace'}</button></div>
   </div>;
 }
 

@@ -44,6 +44,18 @@ beforeEach(() => vi.stubGlobal('fetch', vi.fn()));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('Canvas insights panel', () => {
+  it('reports Jev activity while analysis is in flight and clears it when complete', async () => {
+    const pending = deferred<InsightReport>();
+    vi.mocked(fetch).mockImplementation(async () => Response.json(await pending.promise));
+    const onJevActivityChange = vi.fn();
+    render(<InsightsPanel {...props({ onJevActivityChange })}/>);
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
+    await waitFor(() => expect(onJevActivityChange).toHaveBeenLastCalledWith('jev-analyzing'));
+    expect(screen.getByText('Jev is analyzing the documents…')).toBeTruthy();
+    pending.resolve(report);
+    await waitFor(() => expect(onJevActivityChange).toHaveBeenLastCalledWith(null));
+  });
+
   it('shows document groups by work area, purpose, or lane, with every document reachable', async () => {
     const many: CanvasDocument = { ...canvas, blocks: [
       ...canvas.blocks.map(block => ({ ...block, workArea: 'sales' })),

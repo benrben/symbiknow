@@ -41,7 +41,7 @@ type AgentStreamItem = AgentSnapshot | ['values', AgentSnapshot] | ['messages', 
 type AgentRun = (messages: BaseMessage[], signal: AbortSignal) => Promise<AsyncIterable<AgentStreamItem>> | AsyncIterable<AgentStreamItem>;
 export type DeepAgentFactory = (settings: ModelSettings, tools: StructuredToolInterface[], systemPrompt: string) => AgentRun;
 
-const assistantActor = 'SymbiKnow assistant';
+const assistantActor = 'Symbi';
 
 function chatContext(history: ConversationMessage[]): ChatContext {
   const previous = history.slice(0, -1).reverse();

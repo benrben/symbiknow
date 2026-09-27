@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Symbi Constellation icon</title>
+  <rect x="1" y="1" width="62" height="62" rx="17" fill="#13262c" stroke="#355258" stroke-width="1"/>
+  <g class="core" fill="none" stroke="#bce7c9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 20 L42 18 L27 32 L45 43 L20 47 L27 32" opacity=".8"/>
+    <circle cx="42" cy="18" r="3.5" fill="#bce7c9" stroke="none"/>
+    <circle cx="27" cy="32" r="5.5" fill="#bce7c9" stroke="none"/>
+    <circle cx="20" cy="47" r="3.5" fill="#bce7c9" stroke="none"/>
+  </g>
+  <circle class="accent-a" cx="18" cy="20" r="5" fill="#ef906f"/>
+  <circle class="accent-b" cx="45" cy="43" r="5" fill="#738af1"/>
+  <circle cx="27" cy="32" r="1.8" fill="#18393b"/>
+</svg>

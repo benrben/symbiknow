@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, ChevronDown, Circle, Copy, LoaderCircle, ShieldCheck, Sparkles, Square, Wrench } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, Circle, Copy, LoaderCircle, ShieldCheck, Square, Wrench } from 'lucide-react';
 import { Conversation, ConversationContent, ConversationScrollButton } from './components/ai-elements/conversation';
 import { Message, MessageContent, MessageResponse } from './components/ai-elements/message';
 import { PromptInput, PromptInputBody, PromptInputFooter, PromptInputSubmit, PromptInputTextarea } from './components/ai-elements/prompt-input';
@@ -8,6 +8,7 @@ import type { AnswerCanvasResult, AnswerCanvasTurn, CanvasNavigationTarget, Chat
 import type { CanvasBlock, CanvasDocument } from '../shared/types';
 import { chatSuggestions } from './chat-suggestions';
 import { chatScopeOptions, type ChatScope } from './chat-context';
+import { SymbiAvatar, type SymbiState } from './SymbiAvatar';
 import type { CanvasChanges, CanvasEdit } from './canvas-changes';
 import './ai-chat.css';
 
@@ -17,6 +18,7 @@ type AIElementsChatProps = {
   viewContext: ChatViewContext;
   answerTurns: AnswerCanvasTurn[];
   hasApiKey: boolean;
+  jevAvailable?: boolean;
   model: string;
   promptRequest?: { text: string; sequence: number; mergeDraft?: MergeDraftRequest };
   onMergeDraft?: (markdown: string, request: MergeDraftRequest) => void;
@@ -32,6 +34,7 @@ type AIElementsChatProps = {
   onCanvasAnswer: (id: number, answer: string) => void;
   onCanvasTurnEnd: (id: number, status: 'complete' | 'stopped') => void;
   onOpenAnswerCanvas: () => void;
+  onAvatarStateChange?: (state: SymbiState) => void;
 };
 
 export type MergeDraftRequest = { keepBlockId: string; mergeBlockIds: string[]; intentToken?: string };
@@ -42,6 +45,40 @@ type DisplayTurn = ChatTurn & { id: number; activities: Activity[]; verification
   mergeDraft?: MergeDraftRequest; answerCanvas?: AnswerCanvasResult; researchPatch?: ResearchCanvasPatch;
   presentationChoice?: ResearchSurfaceChoice; navigation?: CanvasNavigationTarget };
 type ChatStatus = 'ready' | 'submitted' | 'streaming';
+
+const jevAnalysisTools = new Set(['analyze_canvas', 'find_duplicates', 'connect_across_canvases', 'score_documents']);
+const jevActionTools = new Set(['merge_documents', 'organize_canvas', 'regroup_canvas', 'connect_documents',
+  'label_purposes', 'classify_work_areas', 'assign_reviewers']);
+const searchTools = new Set(['search_docs', 'search_canvas']);
+const readingTools = new Set(['read_doc', 'read_block', 'read_file', 'list_tasks']);
+const navigationTools = new Set(['show_doc_on_canvas', 'show_group_on_canvas']);
+const workingTools = new Set(['draw_research_canvas', 'create_doc', 'edit_doc', 'move_block', 'link_blocks', 'delete_doc',
+  'create_task', 'update_task']);
+
+function activeToolState(turn?: DisplayTurn): SymbiState | null {
+  const tool = [...(turn?.activities ?? [])].reverse().find(activity => activity.type === 'tool' && activity.status === 'active');
+  if (!tool) return null;
+  if (jevActionTools.has(tool?.name ?? '')) return 'jev-applying';
+  if (jevAnalysisTools.has(tool?.name ?? '')) return 'jev-analyzing';
+  if (searchTools.has(tool.name ?? '')) return 'searching';
+  if (readingTools.has(tool.name ?? '')) return 'reading';
+  if (navigationTools.has(tool.name ?? '')) return 'navigating';
+  if (workingTools.has(tool.name ?? '')) return 'working';
+  return 'tooling';
+}
+
+function activityStatus(state: SymbiState): string | null {
+  if (state === 'searching') return 'Searching documents…';
+  if (state === 'reading') return 'Reading the source…';
+  if (state === 'working') return 'Updating the canvas…';
+  if (state === 'navigating') return 'Opening the right place…';
+  if (state === 'tooling') return 'Working with a tool…';
+  if (state === 'jev-routing') return 'Jev is choosing the right context…';
+  if (state === 'jev-analyzing') return 'Jev is analyzing this canvas…';
+  if (state === 'jev-verifying') return 'Jev is checking the answer…';
+  if (state === 'jev-applying') return 'Jev is applying the change…';
+  return null;
+}
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
@@ -211,7 +248,7 @@ type ChatComposerProps = Pick<AIElementsChatProps, 'canvasId' | 'hasApiKey' | 'm
 function ChatComposer({ canvasId, hasApiKey, model, input, status, onInput, onSubmit, onStop }: ChatComposerProps) {
   return <div className="ai-chat__composer">
     <PromptInput onSubmit={({ text }) => onSubmit(text)}>
-      <PromptInputBody><PromptInputTextarea aria-label="Message the SymbiKnow assistant" value={input} onChange={event => onInput(event.currentTarget.value)} placeholder={canvasId ? 'Ask anything about this canvas…' : 'Open a canvas to start chatting…'}/></PromptInputBody>
+      <PromptInputBody><PromptInputTextarea aria-label="Message Symbi" value={input} onChange={event => onInput(event.currentTarget.value)} placeholder={canvasId ? 'Ask Symbi about this canvas…' : 'Open a canvas to start chatting…'}/></PromptInputBody>
       <PromptInputFooter><span>{hasApiKey ? model : 'Set up chat in Settings'}</span><PromptInputSubmit status={status} onStop={onStop} disabled={!input.trim() && status === 'ready'}/></PromptInputFooter>
     </PromptInput>
   </div>;
@@ -244,8 +281,8 @@ function CopyButton({ text }: { text: string }) {
   </button>;
 }
 
-function TurnMessage({ turn, status, latestId, question, undoingBlockId, onShowBlock, onOpenAnswerCanvas, onChooseSurface,
-  onReturnNavigation, onUndoCreated, onUndoEdited }: { turn: DisplayTurn; status: ChatStatus; latestId?: number; undoingBlockId: string | null;
+function TurnMessage({ turn, status, latestId, avatarState, question, undoingBlockId, onShowBlock, onOpenAnswerCanvas, onChooseSurface,
+  onReturnNavigation, onUndoCreated, onUndoEdited }: { turn: DisplayTurn; status: ChatStatus; latestId?: number; avatarState: SymbiState; undoingBlockId: string | null;
   onShowBlock: (block: CanvasBlock, canvasId?: string) => void; onOpenAnswerCanvas: () => void; onChooseSurface: (prompt: string) => void;
   onReturnNavigation: () => void; onUndoCreated: (turnId: number, block: CanvasBlock) => void;
   onUndoEdited: (turnId: number, edit: CanvasEdit) => void;
@@ -254,9 +291,10 @@ function TurnMessage({ turn, status, latestId, question, undoingBlockId, onShowB
   const streaming = status !== 'ready' && turn.id === latestId;
   const answering = streaming && Boolean(turn.content) && turn.verification === undefined;
   return <Message from="assistant" className="ai-chat__assistant-turn">
-    <div className="ai-chat__avatar" aria-hidden="true"><Sparkles size={14}/></div>
+    <SymbiAvatar size="small" state={turn.id === latestId ? avatarState : 'idle'} decorative/>
     <MessageContent className="ai-chat__assistant-content">
-      <span className="ai-chat__sr-name">SymbiKnow assistant</span>
+      <span className="ai-chat__sr-name">Symbi</span>
+      {streaming && activityStatus(avatarState) && <span className="ai-chat__work-status" role="status"><span className="ai-chat__work-status-dot"/>{activityStatus(avatarState)}</span>}
       <AgentActivity activities={turn.activities} streaming={streaming}/>
       <div className={`ai-chat__answer${answering ? ' ai-chat__answer--streaming' : ''}`}>
         {turn.answerCanvas || turn.researchPatch ? <p>Research added to the canvas. Open it to explore the blocks, diagrams, links, and citations.</p>
@@ -300,8 +338,8 @@ function TurnMessage({ turn, status, latestId, question, undoingBlockId, onShowB
   </Message>;
 }
 
-export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, hasApiKey, model, promptRequest, onMergeDraft, onOpenSettings,
-  onCanvasChanged, onShowBlock, onNavigate, onReturnNavigation, onUndoCreatedBlock, onUndoEditedBlock, onCanvasSources, onCanvasPatch, onCanvasAnswer, onCanvasTurnEnd, onOpenAnswerCanvas }: AIElementsChatProps) {
+export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, hasApiKey, jevAvailable = false, model, promptRequest, onMergeDraft, onOpenSettings,
+  onCanvasChanged, onShowBlock, onNavigate, onReturnNavigation, onUndoCreatedBlock, onUndoEditedBlock, onCanvasSources, onCanvasPatch, onCanvasAnswer, onCanvasTurnEnd, onOpenAnswerCanvas, onAvatarStateChange }: AIElementsChatProps) {
   const [input, setInput] = useState(() => {
     try { return window.sessionStorage.getItem('symbiknow:chat-draft') ?? ''; }
     catch { return ''; }
@@ -309,6 +347,7 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
   const [turns, setTurns] = useState<DisplayTurn[]>([]);
   const [status, setStatus] = useState<ChatStatus>('ready');
   const [error, setError] = useState('');
+  const [justFinished, setJustFinished] = useState(false);
   const [scope, setScope] = useState<ChatScope>('view');
   const [scopeOpen, setScopeOpen] = useState(false);
   const [undoingBlockId, setUndoingBlockId] = useState<string | null>(null);
@@ -320,6 +359,7 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
   const lastPromptSequence = useRef<number | null>(null);
   const pendingPrompts = useRef<Array<{ text: string; sequence: number; mergeDraft?: MergeDraftRequest }>>([]);
   const settingsRequested = useRef(false);
+  const finishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestCanvasTurn = answerTurns.at(-1);
   const lastAnswerCanvas: AnswerCanvasResult | null = latestCanvasTurn?.sources.length ? {
     canvasId, query: latestCanvasTurn.query, selection: latestCanvasTurn.selection ?? 'local', sources: latestCanvasTurn.sources,
@@ -327,8 +367,16 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
   const scopes = chatScopeOptions(canvas, viewContext, answerTurns);
   const activeScope = scopes.find(option => option.id === scope) ?? scopes[0];
   const suggestions = chatSuggestions(canvas, activeScope.context, lastAnswerCanvas);
+  const latestTurn = turns.at(-1);
+  const avatarState: SymbiState = error ? 'error'
+    : status === 'ready' ? justFinished ? 'done' : 'idle'
+    : latestTurn?.verification?.status === 'checking' ? 'jev-verifying'
+    : activeToolState(latestTurn) ?? (status === 'submitted' && jevAvailable ? 'jev-routing'
+      : latestTurn?.content ? 'speaking' : 'thinking');
 
-  useEffect(() => () => { activeRef.current?.abort(); }, []);
+  useEffect(() => { onAvatarStateChange?.(avatarState); }, [avatarState, onAvatarStateChange]);
+
+  useEffect(() => () => { activeRef.current?.abort(); if (finishTimer.current) clearTimeout(finishTimer.current); }, []);
   useEffect(() => {
     try { window.sessionStorage.setItem('symbiknow:chat-draft', input); }
     catch { /* Chat still works when session storage is unavailable. */ }
@@ -369,6 +417,8 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
     const controller = new AbortController();
     activeRef.current = controller;
     setError('');
+    setJustFinished(false);
+    if (finishTimer.current) clearTimeout(finishTimer.current);
     setStatus('submitted');
     try {
       await streamCanvasChat({
@@ -408,6 +458,8 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
       });
       commit(discardIntentToken(settledAssistant(turnsRef.current, assistantId, 'complete'), assistantId));
       onCanvasTurnEnd(assistantId, 'complete');
+      setJustFinished(true);
+      finishTimer.current = setTimeout(() => { setJustFinished(false); finishTimer.current = null; }, 900);
       if (mergeDraft) {
         const answer = turnsRef.current.find(turn => turn.id === assistantId)?.content ?? '';
         const markdown = markdownDraft(answer);
@@ -502,8 +554,8 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
     {!hasApiKey && <div className="ai-chat__setup"><span>Connect a chat model in Settings to talk with this canvas.</span><button type="button" onClick={onOpenSettings}>Open Settings</button></div>}
     <Conversation className="ai-chat__conversation">
       <ConversationContent className="ai-chat__messages">
-        {turns.length === 0 && <div className="ai-chat__welcome"><div className="ai-chat__welcome-icon"><Sparkles size={22} aria-hidden="true"/></div><h2>Build knowledge together</h2><p>Ask your agent to connect ideas, organize sources, and move shared work forward. Every edit stays in the document’s history.</p></div>}
-        {turns.map((turn, index) => <TurnMessage key={turn.id} turn={turn} status={status} latestId={latestId}
+        {turns.length === 0 && <div className="ai-chat__welcome"><SymbiAvatar size="large" decorative/><h2>Hi, I’m Symbi.</h2><p>{canvasId ? 'Ask me to find sources, connect ideas, or build a map of what matters. I’ll show you where the answer came from.' : 'Open a canvas and ask me to find sources, connect ideas, or build a map of what matters.'}</p></div>}
+        {turns.map((turn, index) => <TurnMessage key={turn.id} turn={turn} status={status} latestId={latestId} avatarState={avatarState}
           undoingBlockId={undoingBlockId} onReturnNavigation={onReturnNavigation} onUndoCreated={(id, block) => void undoCreated(id, block)}
           onUndoEdited={(id, edit) => void undoEdited(id, edit)}
           question={turn.role === 'assistant' ? turns.slice(0, index).reverse().find(item => item.role === 'user')?.content : undefined} onShowBlock={onShowBlock}

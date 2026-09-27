@@ -47,7 +47,7 @@ export function ResizableAssistant({ hidden, children }: { hidden: boolean; chil
     event.preventDefault();
   }
 
-  return <aside className="chat-panel" hidden={hidden} aria-label="SymbiKnow assistant" style={{ '--assistant-width': `${width}px` } as CSSProperties}>
+  return <aside className="chat-panel" hidden={hidden} aria-label="Symbi assistant" style={{ '--assistant-width': `${width}px` } as CSSProperties}>
     <div className="chat-resize-handle" role="separator" aria-label="Resize chat panel" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={maximumWidth()} aria-valuenow={boundedWidth(width)} tabIndex={0} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag} onKeyDown={resizeWithKeys}/>
     {children}
   </aside>;

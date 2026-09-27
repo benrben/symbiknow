@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Five icon directions for Symbi</title>
+  <style>
+    @font-face { font-family: "Space Grotesk"; src: url("../public/fonts/Space-Grotesk.ttf"); }
+    @font-face { font-family: "DM Sans"; src: url("../public/fonts/DM-Sans.ttf"); }
+    * { box-sizing: border-box; }
+    body { --bg:#0d191d; --surface:#1b2e33; --surface2:#14252a; --line:#385158; --ink:#eaf1ed; --muted:#a9bfbb; --mint:#bce7c9; --accent:#ef906f; margin:0; min-height:100vh; background:var(--bg); color:var(--ink); font-family:"DM Sans",sans-serif; }
+    body[data-theme="light"] { --bg:#f6f5ef; --surface:#ffffff; --surface2:#eef2ee; --line:#d1dcd5; --ink:#173139; --muted:#576d70; --mint:#267559; --accent:#b8543b; }
+    button { font:inherit; cursor:pointer; }
+    .shell { max-width:1260px; margin:auto; padding:34px 24px 72px; }
+    .top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:43px; }
+    .brand { display:flex; align-items:center; gap:9px; font:700 16px "Space Grotesk",sans-serif; letter-spacing:-.05em; }
+    .brand img { width:27px; height:27px; }
+    .top-actions { display:flex; gap:8px; }
+    .top-actions button, .states button { border:1px solid var(--line); border-radius:9px; padding:9px 12px; background:var(--surface); color:var(--ink); font-size:12px; }
+    .top-actions button:hover, .states button:hover { border-color:var(--mint); }
+    .eyebrow { color:var(--mint); font-size:10px; letter-spacing:.17em; text-transform:uppercase; font-weight:800; }
+    h1 { margin:10px 0 10px; font:700 clamp(36px,5vw,62px)/1.02 "Space Grotesk",sans-serif; letter-spacing:-.075em; }
+    .intro { max-width:690px; margin:0 0 24px; color:var(--muted); font-size:15px; line-height:1.6; }
+    .controls { display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin:0 0 23px; }
+    .controls > span { color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; }
+    .states { display:flex; flex-wrap:wrap; gap:6px; }
+    .states button[aria-pressed="true"] { color:#152d2e; background:#bce7c9; border-color:#bce7c9; font-weight:800; }
+    .grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:15px; }
+    .card { grid-column:span 2; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--line); border-radius:17px; background:var(--surface); min-width:0; transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+    .card:nth-child(4), .card:nth-child(5) { grid-column:span 3; }
+    .card:hover { transform:translateY(-3px); box-shadow:0 17px 40px #07131636; }
+    .card.is-picked { border-color:#bce7c9; box-shadow:0 0 0 2px #bce7c933; }
+    .card-top { display:flex; justify-content:space-between; align-items:center; padding:16px 18px 0; }
+    .number { font:700 15px "Space Grotesk",sans-serif; color:var(--mint); }
+    .type { color:var(--muted); font-size:9px; letter-spacing:.13em; text-transform:uppercase; font-weight:800; }
+    .icon-stage { min-height:160px; display:grid; place-items:center; margin:14px 16px 0; border:1px solid var(--line); border-radius:12px; background:radial-gradient(circle at center, #466f6433, transparent 58%),var(--surface2); }
+    body[data-theme="light"] .icon-stage { background:radial-gradient(circle at center, #c5e4d488, transparent 60%),var(--surface2); }
+    .icon-stage svg { width:110px; height:110px; overflow:visible; filter:drop-shadow(0 14px 18px #07131670); }
+    .icon-stage svg .core, .icon-stage svg .accent-a, .icon-stage svg .accent-b { transform-origin:32px 32px; }
+    body[data-state="idle"] .icon-stage svg .core { animation:float 4.8s ease-in-out infinite; }
+    body[data-state="thinking"] .icon-stage svg .accent-a { animation:scan-a 1.1s ease-in-out infinite alternate; }
+    body[data-state="thinking"] .icon-stage svg .accent-b { animation:scan-b 1.1s ease-in-out -.55s infinite alternate; }
+    body[data-state="answering"] .icon-stage svg .core { animation:answer .55s ease-in-out infinite alternate; }
+    body[data-state="done"] .icon-stage svg { animation:done .55s cubic-bezier(.22,1,.36,1) both; }
+    body[data-state="error"] .icon-stage svg .accent-a, body[data-state="error"] .icon-stage svg .accent-b { opacity:.35; }
+    @keyframes float { 50% { transform:translateY(-1.8px); } }
+    @keyframes scan-a { to { transform:translate(-2px,-1px); filter:brightness(1.45); } }
+    @keyframes scan-b { to { transform:translate(2px,1px); filter:brightness(1.45); } }
+    @keyframes answer { to { transform:scale(1.09); } }
+    @keyframes done { 0% { transform:scale(.9); } 65% { transform:scale(1.06); } 100% { transform:scale(1); } }
+    .card-body { flex:1; padding:16px 18px 20px; }
+    .card-body h2 { margin:0 0 7px; font:700 21px "Space Grotesk",sans-serif; letter-spacing:-.05em; }
+    .card-body p { min-height:45px; margin:0; color:var(--muted); font-size:12px; line-height:1.5; }
+    .motion-note { display:flex; align-items:center; gap:7px; min-height:30px; margin-top:12px; color:var(--ink); font-size:10px; font-weight:700; }
+    .pulse-dot { width:5px; height:5px; border-radius:50%; background:#bce7c9; flex:none; }
+    .card-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 18px; border-top:1px solid var(--line); }
+    .sizes { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:10px; }
+    .sizes span { margin-left:4px; }
+    .card-footer button { flex:none; padding:8px 11px; border:1px solid var(--line); border-radius:8px; color:var(--ink); background:var(--surface2); font-size:11px; font-weight:700; }
+    .card-footer button:hover, .card-footer button[aria-pressed="true"] { border-color:#bce7c9; background:#bce7c9; color:#173139; }
+    .selection { min-height:24px; margin-top:18px; color:var(--muted); font-size:12px; }
+    .selection strong { color:var(--ink); }
+    .downloads { display:flex; flex-wrap:wrap; gap:12px; margin-top:6px; }
+    .downloads a { color:var(--mint); font-size:12px; font-weight:700; text-decoration:none; }
+    .downloads a:hover { text-decoration:underline; }
+    body[data-motion="off"] .icon-stage svg, body[data-motion="off"] .icon-stage svg * { animation:none !important; }
+    @media (prefers-reduced-motion:reduce) { .icon-stage svg, .icon-stage svg * { animation:none !important; } .card { transition:none; } }
+    @media (max-width:900px) { .card, .card:nth-child(4), .card:nth-child(5) { grid-column:span 3; } }
+    @media (max-width:610px) { .shell { padding:20px 14px 40px; } .top { margin-bottom:31px; } .top-actions button { padding:8px; font-size:10px; } .card, .card:nth-child(4), .card:nth-child(5) { grid-column:span 6; } .card-body p { min-height:0; } .controls { display:block; } .states { margin-top:9px; } }
+  </style>
+</head>
+<body data-theme="dark" data-state="idle" data-motion="on">
+  <main class="shell">
+    <div class="top"><div class="brand"><img src="./symbiknow-favicon.svg" alt="">symbiknow</div><div class="top-actions"><button id="theme" type="button">Light mode</button><button id="motion" type="button" aria-pressed="false">Reduce motion</button></div></div>
+    <span class="eyebrow">Project icon study</span>
+    <h1>Five marks for SymbiKnow.</h1>
+    <p class="intro">Same product colors. Five project icon directions. 04 Ribbon is the selected SymbiKnow mark. <a href="./symbi-avatar-demo.html">Meet Symbi, the robot assistant ↗</a></p>
+    <div class="controls"><span>See the motion</span><div class="states" role="group" aria-label="Animation state"><button type="button" data-state-button="idle" aria-pressed="true">At rest</button><button type="button" data-state-button="thinking" aria-pressed="false">Finding sources</button><button type="button" data-state-button="answering" aria-pressed="false">Answering</button><button type="button" data-state-button="done" aria-pressed="false">Done</button><button type="button" data-state-button="error" aria-pressed="false">Error</button></div></div>
+    <div class="grid"><article class="card" data-option="navigator">
+      <div class="card-top"><span class="number">01</span><span class="type">Clear direction</span></div>
+      <div class="icon-stage"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SymbiKnow Navigator icon">
+  <rect x="1" y="1" width="62" height="62" rx="17" fill="#13262c" stroke="#355258" stroke-width="1"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#4c7272" stroke-width="1" opacity=".55"/>
+  <path class="accent-a" d="M16 24 A19 19 0 0 1 25 15" fill="none" stroke="#ef906f" stroke-width="4.5" stroke-linecap="round"/>
+  <path class="accent-b" d="M48 40 A19 19 0 0 1 39 49" fill="none" stroke="#738af1" stroke-width="4.5" stroke-linecap="round"/>
+  <g class="core">
+    <path d="M32 14 L43 44 L32 38 L21 44 Z" fill="#bce7c9"/>
+    <path d="M32 22 L37 37 L32 34 L27 37 Z" fill="#18393b"/>
+  </g>
+</svg>
+</div>
+      <div class="card-body"><h2>Navigator</h2><p>A north-pointing marker for an assistant that gets you to the right place.</p><div class="motion-note"><span class="pulse-dot"></span>The compass points toward the answer.</div></div>
+      <div class="card-footer"><div class="sizes"><img src="./symbi-options/navigator.svg" alt="" width="32" height="32"><img src="./symbi-options/navigator.svg" alt="" width="20" height="20"><span>32px / 20px</span></div><button type="button" data-pick="navigator" aria-pressed="false">Pick this</button></div>
+    </article>
+<article class="card" data-option="link">
+      <div class="card-top"><span class="number">02</span><span class="type">Shared intelligence</span></div>
+      <div class="icon-stage"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SymbiKnow Link icon">
+  <rect x="1" y="1" width="62" height="62" rx="17" fill="#13262c" stroke="#355258" stroke-width="1"/>
+  <path class="accent-a" d="M38 21 L34 17 C31 14 27 14 24 17 L15 26 C12 29 12 33 15 36 L21 42" fill="none" stroke="#ef906f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="accent-b" d="M26 43 L30 47 C33 50 37 50 40 47 L49 38 C52 35 52 31 49 28 L43 22" fill="none" stroke="#738af1" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g class="core">
+    <path d="M24 39 L40 25" fill="none" stroke="#bce7c9" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="24" cy="39" r="2.5" fill="#e8faea"/>
+    <circle cx="40" cy="25" r="2.5" fill="#e8faea"/>
+  </g>
+</svg>
+</div>
+      <div class="card-body"><h2>Link</h2><p>Two paths connect through one mint bridge. Strongest tie to your connected knowledge idea.</p><div class="motion-note"><span class="pulse-dot"></span>The two paths close around a source.</div></div>
+      <div class="card-footer"><div class="sizes"><img src="./symbi-options/link.svg" alt="" width="32" height="32"><img src="./symbi-options/link.svg" alt="" width="20" height="20"><span>32px / 20px</span></div><button type="button" data-pick="link" aria-pressed="false">Pick this</button></div>
+    </article>
+<article class="card" data-option="constellation">
+      <div class="card-top"><span class="number">03</span><span class="type">Connected context</span></div>
+      <div class="icon-stage"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SymbiKnow Constellation icon">
+  <rect x="1" y="1" width="62" height="62" rx="17" fill="#13262c" stroke="#355258" stroke-width="1"/>
+  <g class="core" fill="none" stroke="#bce7c9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 20 L42 18 L27 32 L45 43 L20 47 L27 32" opacity=".8"/>
+    <circle cx="42" cy="18" r="3.5" fill="#bce7c9" stroke="none"/>
+    <circle cx="27" cy="32" r="5.5" fill="#bce7c9" stroke="none"/>
+    <circle cx="20" cy="47" r="3.5" fill="#bce7c9" stroke="none"/>
+  </g>
+  <circle class="accent-a" cx="18" cy="20" r="5" fill="#ef906f"/>
+  <circle class="accent-b" cx="45" cy="43" r="5" fill="#738af1"/>
+  <circle cx="27" cy="32" r="1.8" fill="#18393b"/>
+</svg>
+</div>
+      <div class="card-body"><h2>Constellation</h2><p>A small graph of ideas and sources. Most expressive when the agent is researching.</p><div class="motion-note"><span class="pulse-dot"></span>The active nodes light in sequence.</div></div>
+      <div class="card-footer"><div class="sizes"><img src="./symbi-options/constellation.svg" alt="" width="32" height="32"><img src="./symbi-options/constellation.svg" alt="" width="20" height="20"><span>32px / 20px</span></div><button type="button" data-pick="constellation" aria-pressed="false">Pick this</button></div>
+    </article>
+<article class="card" data-option="ribbon">
+      <div class="card-top"><span class="number">04</span><span class="type">Ownable character</span></div>
+      <div class="icon-stage"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SymbiKnow Ribbon icon">
+  <rect x="1" y="1" width="62" height="62" rx="17" fill="#13262c" stroke="#355258" stroke-width="1"/>
+  <path class="accent-a" d="M45 19 C36 13 22 15 19 25 C16 34 25 37 32 33" fill="none" stroke="#ef906f" stroke-width="7" stroke-linecap="round"/>
+  <path class="accent-b" d="M32 33 C39 29 48 32 45 41 C42 51 28 53 19 45" fill="none" stroke="#738af1" stroke-width="7" stroke-linecap="round"/>
+  <g class="core">
+    <path d="M32 25 L39 32 L32 39 L25 32 Z" fill="#bce7c9"/>
+    <circle cx="32" cy="32" r="2" fill="#18393b"/>
+  </g>
+</svg>
+</div>
+      <div class="card-body"><h2>Ribbon</h2><p>A continuous S-shaped gesture. The most distinct mark if Symbi becomes a character.</p><div class="motion-note"><span class="pulse-dot"></span>The two halves flow into one thought.</div></div>
+      <div class="card-footer"><div class="sizes"><img src="./symbi-options/ribbon.svg" alt="" width="32" height="32"><img src="./symbi-options/ribbon.svg" alt="" width="20" height="20"><span>32px / 20px</span></div><button type="button" data-pick="ribbon" aria-pressed="false">Pick this</button></div>
+    </article>
+<article class="card" data-option="converge">
+      <div class="card-top"><span class="number">05</span><span class="type">Fast action</span></div>
+      <div class="icon-stage"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SymbiKnow Converge icon">
+  <rect x="1" y="1" width="62" height="62" rx="17" fill="#13262c" stroke="#355258" stroke-width="1"/>
+  <path class="accent-a" d="M17 19 L29 32 L17 45" fill="none" stroke="#ef906f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="accent-b" d="M47 19 L35 32 L47 45" fill="none" stroke="#738af1" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g class="core">
+    <path d="M32 23 L41 32 L32 41 L23 32 Z" fill="#bce7c9"/>
+    <path d="M32 27 L37 32 L32 37 L27 32 Z" fill="#18393b"/>
+    <circle cx="32" cy="32" r="2" fill="#e8faea"/>
+  </g>
+</svg>
+</div>
+      <div class="card-body"><h2>Converge</h2><p>Two strong vectors meet at one decision. Crisp at tiny chat-header sizes.</p><div class="motion-note"><span class="pulse-dot"></span>The vectors meet at the center.</div></div>
+      <div class="card-footer"><div class="sizes"><img src="./symbi-options/converge.svg" alt="" width="32" height="32"><img src="./symbi-options/converge.svg" alt="" width="20" height="20"><span>32px / 20px</span></div><button type="button" data-pick="converge" aria-pressed="false">Pick this</button></div>
+    </article></div>
+    <p class="selection" id="selection" role="status">Selected project mark: <strong>04 Ribbon</strong>. Use the buttons to compare the other ideas.</p>
+    <div class="downloads"><a download href="./symbi-options/navigator.svg">Navigator SVG ↗</a> <a download href="./symbi-options/link.svg">Link SVG ↗</a> <a download href="./symbi-options/constellation.svg">Constellation SVG ↗</a> <a download href="./symbi-options/ribbon.svg">Ribbon SVG ↗</a> <a download href="./symbi-options/converge.svg">Converge SVG ↗</a></div>
+  </main>
+  <script>
+    document.querySelectorAll('[data-state-button]').forEach(button => button.addEventListener('click', () => {
+      document.body.dataset.state = button.dataset.stateButton;
+      document.querySelectorAll('[data-state-button]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    }));
+    document.querySelectorAll('[data-pick]').forEach(button => button.addEventListener('click', () => {
+      const slug = button.dataset.pick;
+      const card = button.closest('.card');
+      document.querySelectorAll('.card').forEach(item => item.classList.toggle('is-picked', item === card));
+      document.querySelectorAll('[data-pick]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      document.getElementById('selection').innerHTML = `Comparing: <strong>${card.querySelector('h2').textContent}</strong>. 04 Ribbon is the project mark used in the app.`;
+    }));
+    document.getElementById('theme').addEventListener('click', event => { const light = document.body.dataset.theme !== 'light'; document.body.dataset.theme = light ? 'light' : 'dark'; event.currentTarget.textContent = light ? 'Dark mode' : 'Light mode'; });
+    document.getElementById('motion').addEventListener('click', event => { const off = document.body.dataset.motion !== 'off'; document.body.dataset.motion = off ? 'off' : 'on'; event.currentTarget.setAttribute('aria-pressed', String(off)); event.currentTarget.textContent = off ? 'Enable motion' : 'Reduce motion'; });
+    document.querySelector('[data-option="ribbon"]').classList.add('is-picked');
+    document.querySelector('[data-pick="ribbon"]').setAttribute('aria-pressed', 'true');
+  </script>
+</body>
+</html>

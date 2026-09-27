@@ -250,6 +250,12 @@ async function streamingChat(context: RouteContext): Promise<boolean> {
 }
 
 async function workspaceCanvas(context: RouteContext): Promise<boolean> {
+  const deleted = context.route.match(/^\/api\/workspaces\/([^/]+)$/);
+  if (deleted && context.method === 'DELETE') {
+    await context.store.deleteWorkspace(deleted[1]);
+    sendJson(context.response, 200, { ok: true });
+    return true;
+  }
   const match = context.route.match(/^\/api\/workspaces\/([^/]+)\/canvases$/);
   if (!match || context.method !== 'POST') return false;
   sendJson(context.response, 201, await context.store.createCanvas(match[1], await readBody(context.request)));

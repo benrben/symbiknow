@@ -25,7 +25,7 @@ describe('resizable assistant', () => {
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 600 });
     fireEvent.pointerUp(handle, { pointerId: 1 });
     expect(window.localStorage.getItem('symbiknow.assistant.width')).toBe('600');
-    expect(screen.getByRole('complementary', { name: 'SymbiKnow assistant' }).getAttribute('style')).toContain('600px');
+    expect(screen.getByRole('complementary', { name: 'Symbi assistant' }).getAttribute('style')).toContain('600px');
     cleanup();
     showAt(1440);
     expect(screen.getByRole('separator', { name: 'Resize chat panel' }).getAttribute('aria-valuenow')).toBe('600');

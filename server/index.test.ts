@@ -32,6 +32,17 @@ afterEach(async () => {
 });
 
 describe('HTTP route dispatch', () => {
+  it('deletes a workspace through the API', async () => {
+    const { base } = await serverFixture();
+    const created = await request(base, '/api/workspaces', 'POST', { name: 'Temporary' });
+    const workspaceId = (await created.json() as { id: string }).id;
+    const canvas = await request(base, `/api/workspaces/${workspaceId}/canvases`, 'POST', { name: 'Notes' });
+    const canvasId = (await canvas.json() as { id: string }).id;
+    expect((await request(base, `/api/workspaces/${workspaceId}`, 'DELETE')).status).toBe(200);
+    expect((await request(base, `/api/canvases/${canvasId}`)).status).toBe(404);
+    expect((await request(base, `/api/workspaces/${workspaceId}`, 'DELETE')).status).toBe(404);
+    expect((await request(base, '/api/workspaces').then(response => response.json()) as Array<{ id: string }>).some(item => item.id === workspaceId)).toBe(false);
+  });
   it('deletes a canvas through the API and keeps the workspace usable', async () => {
     const { base } = await serverFixture();
     const workspace = (await request(base, '/api/workspaces').then(response => response.json()) as Array<{ id: string }>)[0];

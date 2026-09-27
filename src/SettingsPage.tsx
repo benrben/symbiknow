@@ -438,7 +438,7 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
           <small>{profiles.find(profile => profile.id === draft.agentProfile)?.instructions}</small></label>
         <div className="settings-subheading">Custom profiles</div>
         <ProfileEditor profiles={draft.customProfiles} onChange={value => update('customProfiles', value)}/>
-        <label>System prompt<textarea rows={4} value={draft.systemPrompt} onChange={event => update('systemPrompt', event.target.value)} placeholder="How should the SymbiKnow assistant work?"/></label>
+        <label>System prompt<textarea rows={4} value={draft.systemPrompt} onChange={event => update('systemPrompt', event.target.value)} placeholder="How should Symbi work?"/></label>
       </Section>
 
       <Section id="secrets" title="Secrets" description="Named values for outside MCP servers and integrations. Saved with the rest of the settings.">

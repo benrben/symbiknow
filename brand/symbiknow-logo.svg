@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="820" height="180" viewBox="0 0 820 180" role="img" aria-label="SymbiKnow logo">
-  <rect x="2" y="2" width="176" height="176" rx="34" fill="#172B31"/>
-  <path d="M73 31 C45 31 30 49 30 80 C30 111 45 129 73 129" fill="none" stroke="#EF906F" stroke-width="17" stroke-linecap="round"/>
-  <path d="M103 31 C131 31 146 49 146 80 C146 111 131 129 103 129" fill="none" stroke="#738AF1" stroke-width="17" stroke-linecap="round"/>
-  <rect x="70" y="53" width="36" height="54" rx="8" fill="#BCE7C9"/>
-  <path d="M79 70h18M79 80h18M79 90h12" stroke="#172B31" stroke-width="3.5" stroke-linecap="round"/>
+  <g transform="translate(2 2) scale(2.75)"><rect x="1" y="1" width="62" height="62" rx="17" fill="#13262c" stroke="#355258" stroke-width="1"/>
+  <path d="M45 19 C36 13 22 15 19 25 C16 34 25 37 32 33" fill="none" stroke="#ef906f" stroke-width="7" stroke-linecap="round"/>
+  <path d="M32 33 C39 29 48 32 45 41 C42 51 28 53 19 45" fill="none" stroke="#738af1" stroke-width="7" stroke-linecap="round"/>
+  <path d="M32 25 L39 32 L32 39 L25 32 Z" fill="#bce7c9"/>
+  <circle cx="32" cy="32" r="2" fill="#18393b"/></g>
   <text x="210" y="125" fill="#172B31" font-family="Space Grotesk,Arial,sans-serif" font-size="122" font-weight="700" letter-spacing="-7">symbiknow</text>
 </svg>

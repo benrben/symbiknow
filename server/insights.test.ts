@@ -44,6 +44,28 @@ beforeEach(async () => {
 afterEach(async () => { await rm(directory, { recursive: true, force: true }); });
 
 describe('canvas insights', () => {
+  it('saves Jev cross-canvas connections when related documents use different words', async () => {
+    const workspace = await store.createWorkspace({ name: 'Service links' });
+    const first = await store.createCanvas(workspace.id, { name: 'Reliability' });
+    const second = await store.createCanvas(workspace.id, { name: 'Operations' });
+    const source = await store.createBlock(first.id, { title: 'Throttle recovery',
+      content: 'Delay retries after overload responses.' });
+    const target = await store.createBlock(second.id, { title: 'Rate limit policy',
+      content: 'Pause requests when throttling occurs.' });
+    const decider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([id, question]) => {
+      if (question.type === 'score') return [id, { type: 'score', score: 4, confidence: 0.95,
+        probabilities: { '0': 0, '1': 0, '2': 0, '3': 0, '4': 1 } }];
+      if (question.type !== 'choice') throw new Error('Expected a Jev choice');
+      const choice = id.endsWith('_relation') ? 'same_topic' : 'a_to_b';
+      return [id, { type: 'choice', choice, confidence: 0.95,
+        probabilities: Object.fromEntries(Object.keys(question.criteria).map(key => [key, Number(key === choice)])) }];
+    }));
+    expect(await runCanvasAutomation(store, first.id, 'cross_connect', decider)).toMatchObject({ applied: 1 });
+    expect((await store.getCanvas(first.id)).blocks.find(block => block.id === source.id)?.crossLinks).toEqual([
+      expect.objectContaining({ canvasId: second.id, blockId: target.id, relation: 'same_topic' }),
+    ]);
+  });
+
   it('uses a custom work area alongside the built-in choices', async () => {
     await store.updateSettings({ workAreas: 'Field Engineering, Sales Strategy' });
     const decider: JevDecider = async (key, state, questions) => {

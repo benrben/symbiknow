@@ -122,6 +122,32 @@ describe('canvas storage', () => {
     await expect(store.deleteCanvas('../bad')).rejects.toMatchObject({ status: 400 });
   });
 
+  it('removes a workspace with every canvas and document while preserving other workspaces', async () => {
+    const store = await makeStore();
+    const workspace = await store.createWorkspace({ name: 'Disposable' });
+    const first = await store.createCanvas(workspace.id, { name: 'First' });
+    const second = await store.createCanvas(workspace.id, { name: 'Second' });
+    const note = await store.createBlock(first.id, { title: 'Finding', content: 'Private temporary finding' });
+    await store.documentHistory(first.id, note.id);
+    await store.createTask(second.id, { title: 'Review' }, 'Browser');
+    await mkdir(path.dirname(store.jevCacheFile(first.id)), { recursive: true });
+    await writeFile(store.jevCacheFile(first.id), '{}');
+    expect((await store.search('Private temporary finding')).map(hit => hit.blockId)).toContain(note.id);
+
+    await store.deleteWorkspace(workspace.id);
+    expect((await store.listWorkspaces()).map(item => item.id)).toEqual(['acme-team']);
+    await expect(store.getCanvas(first.id)).rejects.toMatchObject({ status: 404 });
+    await expect(store.getCanvas(second.id)).rejects.toMatchObject({ status: 404 });
+    await expect(stat(path.join(store.root, note.file))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(path.join(store.root, '.versions', note.id))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(path.join(store.root, 'tasks', `${second.id}.json`))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(store.jevCacheFile(first.id))).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await store.search('Private temporary finding')).toEqual([]);
+    expect((await store.getCanvas('product-roadmap')).name).toBe('Product Roadmap');
+    await expect(store.deleteWorkspace(workspace.id)).rejects.toMatchObject({ status: 404 });
+    await expect(store.deleteWorkspace('../bad')).rejects.toMatchObject({ status: 400 });
+  });
+
   it('places new documents in free slots, including assistant supplied coordinates', async () => {
     const store = await makeStore();
     const workspace = await store.createWorkspace({ name: 'Placement' });

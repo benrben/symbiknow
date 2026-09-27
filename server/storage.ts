@@ -431,6 +431,31 @@ export class CanvasStore {
     });
   }
 
+  async deleteWorkspace(workspaceId: string): Promise<void> {
+    if (!validId(workspaceId)) throw new ApiError(400, 'Invalid workspace ID');
+    await this.serialize(async () => {
+      const workspaces = await this.listWorkspaces();
+      const workspace = workspaces.find(item => item.id === workspaceId);
+      if (!workspace) throw new ApiError(404, 'Workspace not found');
+      const canvases = await Promise.all(workspace.canvases.map(async item => {
+        const canvas = await this.readJson<StoredCanvas>(this.canvasFile(item.id));
+        const hashes = await Promise.all(canvas.blocks.map(async block => contentHash(await this.readDocument(block.file))));
+        return { canvas, hashes, journals: await this.canvasJournals(item.id) };
+      }));
+      await atomicJson(this.workspacesFile(), workspaces.filter(item => item.id !== workspaceId));
+      for (const { canvas, hashes, journals } of canvases) {
+        await rm(this.canvasFile(canvas.id), { force: true });
+        await Promise.all(canvas.blocks.flatMap(block => [
+          rm(this.docFile(block.file), { force: true }),
+          rm(path.join(this.root, '.versions', block.id), { recursive: true, force: true }),
+        ]));
+        await Promise.all([this.tasksFile(canvas.id), this.jevCacheFile(canvas.id), ...journals]
+          .map(file => rm(file, { force: true })));
+        this.forgetCanvasMemory(canvas, hashes);
+      }
+    });
+  }
+
   async getCanvas(id: string, includeArchived = false): Promise<CanvasDocument> {
     if (!validId(id)) throw new ApiError(400, 'Invalid canvas ID');
     let canvas: StoredCanvas;

@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="SymbiKnow icon">
-  <rect width="64" height="64" rx="14" fill="#172B31"/>
-  <path d="M26 13 C16 13 11 20 11 32 C11 44 16 51 26 51" fill="none" stroke="#EF906F" stroke-width="6" stroke-linecap="round"/>
-  <path d="M38 13 C48 13 53 20 53 32 C53 44 48 51 38 51" fill="none" stroke="#738AF1" stroke-width="6" stroke-linecap="round"/>
-  <rect x="26" y="22" width="12" height="20" rx="3" fill="#BCE7C9"/>
+  <rect x="1" y="1" width="62" height="62" rx="17" fill="#13262c" stroke="#355258" stroke-width="1"/>
+  <path d="M45 19 C36 13 22 15 19 25 C16 34 25 37 32 33" fill="none" stroke="#ef906f" stroke-width="7" stroke-linecap="round"/>
+  <path d="M32 33 C39 29 48 32 45 41 C42 51 28 53 19 45" fill="none" stroke="#738af1" stroke-width="7" stroke-linecap="round"/>
+  <path d="M32 25 L39 32 L32 39 L25 32 Z" fill="#bce7c9"/>
+  <circle cx="32" cy="32" r="2" fill="#18393b"/>
 </svg>

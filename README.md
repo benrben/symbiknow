@@ -2,7 +2,10 @@
 
 **Make knowledge together.** SymbiKnow is an infinite canvas where people and AI organize ideas and build knowledge together. Spread documents across the canvas, connect related work, and see who contributed and what changed. People work in the browser; AI agents join through the assistant or MCP.
 
-[![Watch the 1-minute SymbiKnow tour](brand/symbiknow-launch-poster.jpg)](brand/symbiknow-launch.mp4)
+
+
+https://github.com/user-attachments/assets/5ee3e2dc-f1d4-4a9a-8868-2f70ed5c20d2
+
 
 *One minute: teams and their agents share one brain, Jev connects what one team already solved to the team that needs it, and every change stays named and restorable.*
 

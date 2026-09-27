@@ -239,6 +239,22 @@ When('I delete the new document', async function () {
   assert.equal(result.status, 200);
 });
 
+When('I delete the current canvas in the browser', async function () {
+  await this.page.getByRole('button', { name: 'Delete canvas: Group automations' }).click();
+  const dialog = this.page.getByRole('dialog', { name: 'Delete canvas' });
+  await dialog.getByText('This cannot be undone.', { exact: false }).waitFor();
+  await dialog.getByRole('button', { name: 'Delete canvas' }).click();
+  await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
+});
+
+Then('the deleted canvas is gone after reloading', async function () {
+  await this.page.reload({ waitUntil: 'networkidle' });
+  await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
+  assert.equal((await request(this, `/api/canvases/${this.canvasId}`)).status, 404);
+  await assert.rejects(readFile(join(this.dataDir, this.block.file), 'utf8'), { code: 'ENOENT' });
+  assert.deepEqual(this.pageErrors, []);
+});
+
 Then('reloading the canvas does not restore the deleted document', async function () {
   const result = await request(this, `/api/canvases/${this.canvasId}`);
   assert.equal(result.status, 200);
@@ -410,7 +426,7 @@ When('I open Insights with two Jev groups and three suggested connections', asyn
   await this.page.route(`**/api/canvases/${this.canvasId}/insights`, route => route.fulfill({ status: 200,
     contentType: 'application/json', body: JSON.stringify(report) }));
   await this.page.goto(this.baseUrl, { waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Group automations' }).click();
+  await this.page.getByRole('button', { name: 'Group automations', exact: true }).click();
   await this.page.getByRole('button', { name: 'Insights' }).click();
 });
 
@@ -451,7 +467,7 @@ Then('reloading the canvas shows two groups and three new edges', async function
   const edgeCount = canvas.blocks.reduce((count, block) => count + block.links.length, 0);
   assert.equal(edgeCount - this.initialEdgeCount, 3);
   await this.page.reload({ waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Group automations' }).click();
+  await this.page.getByRole('button', { name: 'Group automations', exact: true }).click();
   await this.page.getByLabel(/Overview group, \d+ documents/).waitFor();
   await this.page.getByLabel(/Active work group, \d+ documents/).waitFor();
   assert.deepEqual(this.pageErrors, []);

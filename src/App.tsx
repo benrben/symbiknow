@@ -129,6 +129,7 @@ function useAppModel() {
   const [error, setError] = useState('');
   const [dialog, setDialog] = useState<Dialog>(null);
   const [draftName, setDraftName] = useState('');
+  const [canvasToDelete, setCanvasToDelete] = useState<{ id: string; name: string; workspaceId: string } | null>(null);
   const [draftBlock, setDraftBlock] = useState<BlockDraft>(initialDraft);
   const [busy, setBusy] = useState(false);
   const [settings, setSettings] = useState<ChatSettings>(defaultSettings);
@@ -175,6 +176,9 @@ function useAppModel() {
   const lastInteraction = useRef(Date.now());
   const activeCanvasId = useRef(canvasId);
   activeCanvasId.current = canvasId;
+  const workspacesRef = useRef(workspaces);
+  workspacesRef.current = workspaces;
+  const preferredWorkspaceId = useRef('');
   const dialogRef = useRef<Dialog>(dialog);
   dialogRef.current = dialog;
   const chatReturn = useRef<{ place: CanvasPlace; research: boolean } | null>(null);
@@ -218,11 +222,13 @@ function useAppModel() {
     setSearchOpen(false);
     setGroupSuggestionsOpen(false);
     navigateTo({ canvasId: id, canvasName: canvasName(id) });
+    preferredWorkspaceId.current = workspaces.find(workspace => workspace.canvases.some(item => item.id === id))?.id ?? preferredWorkspaceId.current;
   }
 
   async function refreshWorkspaces(preferredCanvasId: string) {
     const list = await api<WorkspaceSummary[]>('/workspaces');
     setWorkspaces(list);
+    preferredWorkspaceId.current = list.find(workspace => workspace.canvases.some(item => item.id === preferredCanvasId))?.id ?? preferredWorkspaceId.current;
     activeCanvasId.current = preferredCanvasId;
     setCanvasId(preferredCanvasId);
     setCanvas(canvasCache.current.get(preferredCanvasId) ?? null);
@@ -263,10 +269,12 @@ function useAppModel() {
       .then(([list, currentSettings]) => {
         if (!active) return;
         setWorkspaces(list);
+        workspacesRef.current = list;
         setSettings(currentSettings);
         const requested = urlParam('canvas');
         const known = list.some(workspace => workspace.canvases.some(item => item.id === requested));
         const initialId = known ? requested : list[0]?.canvases[0]?.id || '';
+        preferredWorkspaceId.current = list.find(workspace => workspace.canvases.some(item => item.id === initialId))?.id ?? list[0]?.id ?? '';
         activeCanvasId.current = initialId;
         setCanvasId(initialId);
       })
@@ -350,12 +358,15 @@ function useAppModel() {
   useEffect(() => {
     function onPopState() {
       const requested = urlParam('canvas');
-      if (requested && requested !== activeCanvasId.current) {
-        activeCanvasId.current = requested;
-        setCanvasId(requested);
-        setCanvas(canvasCache.current.get(requested) ?? null);
+      const known = workspacesRef.current.some(workspace => workspace.canvases.some(item => item.id === requested));
+      const next = known ? requested : workspacesRef.current.flatMap(workspace => workspace.canvases)[0]?.id ?? '';
+      if (!known) window.history.replaceState(null, '', locationFor(next));
+      if (next !== activeCanvasId.current) {
+        activeCanvasId.current = next;
+        setCanvasId(next);
+        setCanvas(canvasCache.current.get(next) ?? null);
       }
-      setReaderId(urlParam('doc'));
+      setReaderId(known ? urlParam('doc') : '');
     }
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -535,10 +546,53 @@ function useAppModel() {
   }
 
   async function createCanvas(name: string) {
-    const workspaceId = canvas?.workspaceId || workspaces[0]?.id;
+    const workspaceId = canvas?.workspaceId || preferredWorkspaceId.current || workspaces[0]?.id;
     if (!workspaceId) throw new Error('Create a workspace first.');
     const created = await api<CanvasDocument>('/workspaces/' + encodeURIComponent(workspaceId) + '/canvases', { method: 'POST', body: JSON.stringify({ name }) });
     await refreshWorkspaces(created.id);
+  }
+
+  function requestDeleteCanvas(id: string, name: string, workspaceId: string) {
+    setError('');
+    setCanvasToDelete({ id, name, workspaceId });
+    setDialog('delete-canvas');
+  }
+
+  async function deleteCanvas() {
+    if (!canvasToDelete) return;
+    const target = canvasToDelete;
+    await perform(async () => {
+      await api('/canvases/' + encodeURIComponent(target.id), { method: 'DELETE' });
+      canvasCache.current.delete(target.id);
+      canvasEtags.current.delete(target.id);
+      canvasLoadVersions.current.set(target.id, (canvasLoadVersions.current.get(target.id) ?? 0) + 1);
+      journey.forgetCanvas(target.id);
+      if (chatReturn.current?.place.canvasId === target.id) chatReturn.current = null;
+      setMergeUndo(current => current?.canvasId === target.id ? null : current);
+      setMergeReview(null);
+      const list = workspacesRef.current.map(workspace => ({ ...workspace,
+        canvases: workspace.canvases.filter(item => item.id !== target.id) }));
+      workspacesRef.current = list;
+      setWorkspaces(list);
+      setSearchHits(current => current.filter(hit => hit.canvasId !== target.id));
+      if (activeCanvasId.current === target.id) {
+        preferredWorkspaceId.current = target.workspaceId;
+        const next = list.find(workspace => workspace.id === target.workspaceId)?.canvases[0]
+          ?? list.flatMap(workspace => workspace.canvases)[0];
+        const nextId = next?.id ?? '';
+        window.history.replaceState(null, '', locationFor(nextId));
+        activeCanvasId.current = nextId;
+        setCanvasId(nextId);
+        setCanvas(nextId ? canvasCache.current.get(nextId) ?? null : null);
+        setReaderId('');
+        setReadingPath(null);
+        setAnswerCanvasOpen(false);
+        setFocusRequest(null);
+        setGroupFocusRequest(null);
+        setSelectedBlockIds([]);
+      }
+      setCanvasToDelete(null);
+    });
   }
 
   async function createNamed(event: FormEvent) {
@@ -933,7 +987,7 @@ function useAppModel() {
 
   return {
     workspaces, canvasId, setCanvasId, selectCanvas, canvas, crossLinkLabels, loading, error, setError, readerId, openReader, openCrossLink, showReaderDocument, closeReader, readingPath, versionBlockId,
-    dialog, setDialog, draftName, setDraftName, draftBlock, setDraftBlock, draftLock, takeOverLock,
+    dialog, setDialog, draftName, setDraftName, canvasToDelete, requestDeleteCanvas, deleteCanvas, draftBlock, setDraftBlock, draftLock, takeOverLock,
     busy, settings, setSettings, showChat, setShowChat, chatSession, newChat, assistantView, setAssistantView,
     searchOpen, authRequired, signIn, focusRequest, setFocusRequest, groupFocusRequest, showBlockOnCanvas, navigateFromChat, returnFromChatNavigation, activeSearchId,
     setSearchOpen, searchQuery, setSearchQuery, searchHits, searching, searchResultQuery, uploadRef,
@@ -993,11 +1047,11 @@ export function App() {
 }
 
 function Sidebar({ model }: { model: AppModel }) {
-  const { workspaces, canvasId, selectCanvas, setDialog, openNamedDialog } = model;
+  const { workspaces, canvasId, selectCanvas, requestDeleteCanvas, setDialog, openNamedDialog } = model;
   return <aside className="sidebar">
     <div className="brand"><BrandMark/><div><strong>symbiknow</strong><span>People + AI · infinite canvas</span></div></div>
     <div className="sidebar-section-label">WORKSPACES <button className="icon-button subtle" title="New workspace" aria-label="New workspace" onClick={() => openNamedDialog('workspace')}><Icon name="plus" size={16}/></button></div>
-    <div className="workspace-list">{workspaces.map(workspace => <div key={workspace.id} className="workspace-group"><div className="workspace-title"><span className="workspace-avatar">{workspace.name.slice(0, 1).toUpperCase()}</span><span>{workspace.name}</span></div><div className="canvas-links">{workspace.canvases.map(item => <button className={'canvas-link ' + (canvasId === item.id ? 'active' : '')} key={item.id} onClick={() => selectCanvas(item.id)}><Icon name="grid" size={15}/><span>{item.name}</span></button>)}</div></div>)}</div>
+    <div className="workspace-list">{workspaces.map(workspace => <div key={workspace.id} className="workspace-group"><div className="workspace-title"><span className="workspace-avatar">{workspace.name.slice(0, 1).toUpperCase()}</span><span>{workspace.name}</span></div><div className="canvas-links">{workspace.canvases.map(item => <div className={'canvas-link-row ' + (canvasId === item.id ? 'active' : '')} key={item.id}><button className="canvas-link" onClick={() => selectCanvas(item.id)}><Icon name="grid" size={15}/><span>{item.name}</span></button><button className="canvas-link-delete" title={`Delete canvas: ${item.name}`} aria-label={`Delete canvas: ${item.name}`} onClick={() => requestDeleteCanvas(item.id, item.name, workspace.id)}><Icon name="trash" size={15}/></button></div>)}</div></div>)}</div>
     <button className="sidebar-new" onClick={() => openNamedDialog('canvas')}><Icon name="plus" size={16}/> New canvas</button>
     <div className="sidebar-spacer"/>
     <div className="sidebar-bottom"><button onClick={() => setDialog('settings')}><Icon name="settings" size={17}/><span>Settings</span></button><div className="sidebar-status" title={window.location.host}><span className="status-dot"/>{/^(localhost|127\.0\.0\.1)(:|$)/.test(window.location.host) ? 'Local workspace' : window.location.host}</div></div>
@@ -1113,12 +1167,13 @@ function CanvasArea({ model, theme }: { model: AppModel; theme: Theme }) {
 }
 
 function EmptyCanvas({ model }: { model: AppModel }) {
-  const { canvasId, loading, openNamedDialog } = model;
+  const { canvasId, loading, openNamedDialog, workspaces } = model;
+  const hasWorkspace = workspaces.length > 0;
   return <main className="canvas-main"><div className="empty-state">
     <div className="empty-icon"><Icon name="grid" size={30}/></div>
-    <h2>{loading ? 'Loading your workspace…' : canvasId ? 'Loading canvas…' : 'One infinite canvas for people and AI'}</h2>
-    <p>{canvasId ? 'Opening the canvas and its Markdown files.' : 'Create a workspace and start building connected knowledge together.'}</p>
-    {!canvasId && !loading && <button className="primary-button" onClick={() => openNamedDialog('workspace')}><Icon name="plus" size={17}/> Create workspace</button>}
+    <h2>{loading ? 'Loading your workspace…' : canvasId ? 'Loading canvas…' : hasWorkspace ? 'Your workspace is ready for a canvas' : 'One infinite canvas for people and AI'}</h2>
+    <p>{canvasId ? 'Opening the canvas and its Markdown files.' : hasWorkspace ? 'Create a canvas to start building connected knowledge.' : 'Create a workspace and start building connected knowledge together.'}</p>
+    {!canvasId && !loading && <button className="primary-button" onClick={() => openNamedDialog(hasWorkspace ? 'canvas' : 'workspace')}><Icon name="plus" size={17}/> {hasWorkspace ? 'Create canvas' : 'Create workspace'}</button>}
   </div>{model.searchOpen && <CanvasSearch query={model.searchQuery} hits={model.searchHits} loading={model.searching || model.searchResultQuery !== model.searchQuery.trim()} currentCanvasId={canvasId}
     onQuery={model.setSearchQuery} onClose={() => model.setSearchOpen(false)} onReveal={hit => void model.revealSearchHit(hit)} onEdit={hit => void model.selectSearchHit(hit)}/>}</main>;
 }

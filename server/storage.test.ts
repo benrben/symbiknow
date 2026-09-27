@@ -88,6 +88,40 @@ describe('canvas storage', () => {
     expect((await store.search('calculator')).map(result => result.blockId)).toContain(second.id);
   });
 
+  it('removes a canvas and its files without damaging neighboring canvases', async () => {
+    const store = await makeStore();
+    const workspace = (await store.listWorkspaces())[0];
+    const doomed = await store.createCanvas(workspace.id, { name: 'Scratch' });
+    const note = await store.createBlock(doomed.id, { title: 'Disposable', content: 'Unique disposable finding' });
+    await store.documentHistory(doomed.id, note.id);
+    await store.updateBlock('product-roadmap', 'roadmap-overview', {
+      crossLinks: [{ canvasId: doomed.id, blockId: note.id }],
+    });
+    await store.createTask(doomed.id, { title: 'Review scratch' }, 'Browser');
+    await mkdir(path.dirname(store.jevCacheFile(doomed.id)), { recursive: true });
+    await writeFile(store.jevCacheFile(doomed.id), '{}');
+    const mergeJournal = path.join(store.root, 'jev-merges', 'sample.json');
+    const runJournal = path.join(store.root, 'jev-runs', 'sample.json');
+    await mkdir(path.dirname(mergeJournal), { recursive: true });
+    await mkdir(path.dirname(runJournal), { recursive: true });
+    await writeFile(mergeJournal, JSON.stringify({ canvasId: doomed.id, beforeContent: note.content }));
+    await writeFile(runJournal, JSON.stringify({ changes: [{ canvasId: doomed.id }], snapshot: note.content }));
+    expect((await store.search('Unique disposable finding')).map(hit => hit.blockId)).toContain(note.id);
+    await store.deleteCanvas(doomed.id);
+    expect((await store.listWorkspaces())[0].canvases.map(item => item.id)).toEqual(['product-roadmap']);
+    await expect(store.getCanvas(doomed.id)).rejects.toMatchObject({ status: 404 });
+    await expect(readFile(path.join(store.root, note.file), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(path.join(store.root, '.versions', note.id))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(store.jevCacheFile(doomed.id))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(path.join(store.root, 'tasks', `${doomed.id}.json`))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(mergeJournal)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(runJournal)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await store.getCanvas('product-roadmap')).blocks[0].crossLinks).toBeUndefined();
+    expect(await store.search('Unique disposable finding')).toEqual([]);
+    await expect(store.deleteCanvas(doomed.id)).rejects.toMatchObject({ status: 404 });
+    await expect(store.deleteCanvas('../bad')).rejects.toMatchObject({ status: 400 });
+  });
+
   it('places new documents in free slots, including assistant supplied coordinates', async () => {
     const store = await makeStore();
     const workspace = await store.createWorkspace({ name: 'Placement' });

@@ -9,6 +9,7 @@ Send `x-symbiknow-actor: <name>` to name the author of document revisions, locks
 | GET | `/workspaces` | — | `WorkspaceSummary[]` |
 | POST | `/workspaces` | `{ name }` | `WorkspaceSummary` |
 | GET | `/canvases/:canvasId` | — | `CanvasDocument` |
+| DELETE | `/canvases/:canvasId` | — | `{ ok: true }`; permanently removes the canvas, its documents, tasks, cache, and document histories |
 | POST | `/canvases/:canvasId/insights` | `{ query: string }` | `InsightReport` |
 | POST | `/canvases/:canvasId/duplicates` | `{ blockId?: string, crossCanvas?: boolean }` | Reviewable duplicate suggestions and merge plans |
 | POST | `/canvases/:canvasId/cross-connections` | `{}` | Suggested links across canvases in the workspace |

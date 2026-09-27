@@ -42,6 +42,7 @@ function fixture(options: {
   navigationReplyIndices?: number[];
   chatNavigation?: CanvasNavigationTarget;
   failCanvas?: boolean;
+  failCanvasDelete?: boolean;
   failSearch?: boolean;
   failBlockUpdate?: boolean;
   failBlockDelete?: boolean;
@@ -95,6 +96,13 @@ function fixture(options: {
       if (options.failCanvas || (options.failCanvasAfterFirst && canvasReads > 1)) return Response.json({ error: 'Canvas unavailable' }, { status: 503 });
       const document = canvases.get(canvasRoute[1]);
       return document ? Response.json(document) : Response.json({ error: 'Canvas missing' }, { status: 404 });
+    }
+    if (canvasRoute && method === 'DELETE') {
+      if (options.failCanvasDelete) return Response.json({ error: 'Canvas could not be deleted' }, { status: 503 });
+      if (!canvases.has(canvasRoute[1])) return Response.json({ error: 'Canvas missing' }, { status: 404 });
+      canvases.delete(canvasRoute[1]);
+      for (const workspace of workspaces) workspace.canvases = workspace.canvases.filter(item => item.id !== canvasRoute[1]);
+      return Response.json({ ok: true });
     }
     const insightsRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/insights$/);
     if (insightsRoute && method === 'POST') return Response.json({ ...options.insightsReport, canvasId: insightsRoute[1], query: String(body?.query ?? '') });
@@ -240,6 +248,46 @@ afterEach(() => {
 });
 
 describe('App composition', () => {
+  it('confirms canvas deletion, keeps the current view on failure, and moves to a surviving canvas', async () => {
+    const server = fixture();
+    server.workspaces[0].canvases.push({ id: 'research', name: 'Research' });
+    server.canvases.set('research', { id: 'research', name: 'Research', workspaceId: 'team', blocks: [] });
+    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
+    render(<App/>);
+    expect(await screen.findByRole('region', { name: 'Planning infinite canvas' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete canvas: Planning' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete canvas' });
+    expect(within(dialog).getByText(/cannot be undone/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(server.canvases.has('planning')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete canvas: Planning' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete canvas' })).getByRole('button', { name: 'Delete canvas' }));
+    expect(await screen.findByRole('region', { name: 'Research infinite canvas' })).toBeTruthy();
+    expect(server.canvases.has('planning')).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Planning' })).toBeNull();
+    expect(window.location.search).toContain('canvas=research');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete canvas: Research' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete canvas' })).getByRole('button', { name: 'Delete canvas' }));
+    expect(await screen.findByRole('button', { name: 'Create canvas' })).toBeTruthy();
+    expect(window.location.search).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Create canvas' }));
+    const createDialog = screen.getByRole('dialog', { name: 'Create new' });
+    fireEvent.change(within(createDialog).getByLabelText('Canvas name'), { target: { value: 'Next' } });
+    fireEvent.click(within(createDialog).getByRole('button', { name: 'Create' }));
+    expect(await screen.findByRole('heading', { name: 'Next' })).toBeTruthy();
+  });
+
+  it('leaves the canvas intact when deletion fails', async () => {
+    const server = fixture({ failCanvasDelete: true });
+    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
+    render(<App/>);
+    expect(await screen.findByRole('region', { name: 'Planning infinite canvas' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete canvas: Planning' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete canvas' })).getByRole('button', { name: 'Delete canvas' }));
+    expect(await within(screen.getByRole('dialog', { name: 'Delete canvas' })).findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Canvas could not be deleted'));
+    expect(screen.getByRole('dialog', { name: 'Delete canvas' })).toBeTruthy();
+    expect(server.canvases.has('planning')).toBe(true);
+  });
   it('shows a cached canvas immediately and revalidates it with an ETag on return', async () => {
     const server = fixture();
     server.workspaces[0].canvases.push({ id: 'research', name: 'Research' });
@@ -543,7 +591,7 @@ describe('App composition', () => {
     fireEvent.click(within(canvasDialog).getByRole('button', { name: 'Create' }));
     expect(await screen.findByRole('heading', { name: 'Launch map' })).toBeTruthy();
     expect(server.workspaces[0].canvases).toHaveLength(2);
-    fireEvent.click(screen.getByRole('button', { name: /Untitled canvas/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Untitled canvas' }));
     expect(await screen.findByRole('heading', { name: 'Untitled canvas' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }));
     const nextWorkspace = screen.getByRole('dialog', { name: 'Create new' });

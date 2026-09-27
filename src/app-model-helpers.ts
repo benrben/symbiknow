@@ -1,7 +1,7 @@
 import { uploadedSource } from '../shared/file-transfer';
 import type { BlockKind, CanvasBlock } from '../shared/types';
 
-export type Dialog = 'block' | 'workspace' | 'canvas' | 'settings' | 'versions' | null;
+export type Dialog = 'block' | 'workspace' | 'canvas' | 'delete-canvas' | 'settings' | 'versions' | null;
 export type BlockDraft = Pick<CanvasBlock, 'title' | 'kind' | 'content'> & { id?: string; contentHash?: string };
 
 export const starterContent: Record<BlockKind, string> = {

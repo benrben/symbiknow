@@ -66,6 +66,14 @@ Feature: Markdown canvas
     Then reloading the canvas does not restore the deleted document
     And the deleted Markdown file is gone
 
+  Scenario: Deleting a canvas from the sidebar removes its documents and returns to a surviving canvas
+    Given a fresh workspace
+    When I create an empty canvas for group automations
+    And I add a Markdown block called "Scratch note" containing "Disposable research"
+    And I open the current canvas in a browser
+    And I delete the current canvas in the browser
+    Then the deleted canvas is gone after reloading
+
   Scenario: Canvas insights require a TypeSafe Jev key
     Given a fresh workspace
     When I request canvas insights without an API key

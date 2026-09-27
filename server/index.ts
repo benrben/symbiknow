@@ -284,7 +284,13 @@ async function workspaceAutomation(context: RouteContext): Promise<boolean> {
 
 async function canvasDocument(context: RouteContext): Promise<boolean> {
   const match = context.route.match(/^\/api\/canvases\/([^/]+)$/);
-  if (!match || context.method !== 'GET') return false;
+  if (!match) return false;
+  if (context.method === 'DELETE') {
+    await context.store.deleteCanvas(match[1]);
+    sendJson(context.response, 200, { ok: true });
+    return true;
+  }
+  if (context.method !== 'GET') return false;
   const etag = await context.store.getCanvasRevision(match[1]);
   if (context.request.headers['if-none-match'] === etag) {
     context.response.writeHead(304, { etag, 'cache-control': 'no-store' });

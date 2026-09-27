@@ -72,6 +72,8 @@ The older `ALLTEAM_ACCESS_TOKEN`, `ALLTEAM_MCP_TOKEN`, and `ALLTEAM_AGENT_NAME` 
 
 Each document has its own local Git history under `DATA_DIR/.versions/<block-id>`. Saving that document's source creates a revision whose author is whoever made the change: `Browser`, the chat `SymbiKnow assistant`, `Jev`, or an MCP agent such as `Claude Code - <token name>` or `Codex - <token name>`. Existing revision authors keep their original names. Open **File history** on a canvas card or in its full-page reader to see authors and commits, create or switch branches, merge another branch, and restore an older revision as a new commit. These actions change only that document file; canvas positions, links, and other documents stay in place. A conflicting merge is aborted and leaves the file unchanged. Deleting a document records who deleted it as a final commit, and the last content stays in that history for recovery. Settings and API credentials are never added to the document repositories.
 
+To remove an entire canvas, use the trash button beside its name in the workspace sidebar and confirm. This permanently deletes that canvas's documents, tasks, and file histories, removes links to it from other canvases, and opens another canvas in the workspace. If it was the last canvas, create a new one from the empty state.
+
 ## SymbiKnow assistant
 
 Open **Settings** (one page with a section list): **Models**, **Agents**, **Secrets**, **MCP servers**, **MCP connections**, **Plugins & loaders**, and **TypeSafe Jev**.

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { BlockKind, CanvasBlock, CanvasDocument, CanvasTask, ChatSettings, CrossLink, DocumentGroup, DocumentLock, LinkRelation, SearchHit, WorkspaceSummary } from '../shared/types.js';
 import { validGroupKey } from '../shared/groups.js';
@@ -184,6 +184,12 @@ function searchExcerpt(text: string, matchAt: number, matchLength: number): stri
 function validLinks(links: unknown, blockId: string, blocks: CanvasBlock[]): links is string[] {
   return Array.isArray(links) && links.every(link =>
     typeof link === 'string' && validId(link) && link !== blockId && blocks.some(block => block.id === link));
+}
+
+function journalReferencesCanvas(journal: Record<string, unknown>, canvasId: string): boolean {
+  const entries = [journal.otherCanvases, journal.changes, journal.steps, journal.suggestions];
+  return journal.canvasId === canvasId || entries.some(value => Array.isArray(value) &&
+    value.some(item => item?.canvasId === canvasId || item?.change?.canvasId === canvasId));
 }
 
 function updatedBlock(previous: CanvasBlock, input: Record<string, unknown>, blocks: CanvasBlock[]): CanvasBlock {
@@ -482,6 +488,74 @@ export class CanvasStore {
       await atomicJson(this.workspacesFile(), workspaces);
       return { ...canvas, blocks: [] };
     });
+  }
+
+  async deleteCanvas(canvasId: string): Promise<void> {
+    if (!validId(canvasId)) throw new ApiError(400, 'Invalid canvas ID');
+    await this.serialize(async () => {
+      const workspaces = await this.listWorkspaces();
+      const workspace = workspaces.find(item => item.canvases.some(canvas => canvas.id === canvasId));
+      if (!workspace) throw new ApiError(404, 'Canvas not found');
+      const canvas = await this.readJson<StoredCanvas>(this.canvasFile(canvasId));
+      const contentHashes = await Promise.all(canvas.blocks.map(async block => contentHash(await this.readDocument(block.file))));
+      const journals = await this.canvasJournals(canvasId);
+      await this.removeInboundCanvasLinks(workspace, canvasId);
+      workspace.canvases = workspace.canvases.filter(item => item.id !== canvasId);
+      await atomicJson(this.workspacesFile(), workspaces);
+      await rm(this.canvasFile(canvasId), { force: true });
+      await Promise.all(canvas.blocks.flatMap(block => [
+        rm(this.docFile(block.file), { force: true }),
+        rm(path.join(this.root, '.versions', block.id), { recursive: true, force: true }),
+      ]));
+      await Promise.all([this.tasksFile(canvasId), this.jevCacheFile(canvasId), ...journals]
+        .map(file => rm(file, { force: true })));
+      this.forgetCanvasMemory(canvas, contentHashes);
+    });
+  }
+
+  private async removeInboundCanvasLinks(workspace: WorkspaceSummary, canvasId: string): Promise<void> {
+    for (const item of workspace.canvases.filter(item => item.id !== canvasId)) {
+      const other = await this.readJson<StoredCanvas>(this.canvasFile(item.id));
+      const blocks = other.blocks.map(block => {
+        const crossLinks = block.crossLinks?.filter(link => link.canvasId !== canvasId);
+        return crossLinks?.length === block.crossLinks?.length ? block : { ...block, crossLinks: crossLinks?.length ? crossLinks : undefined };
+      });
+      if (blocks.some((block, index) => block !== other.blocks[index])) await atomicJson(this.canvasFile(item.id), { ...other, blocks });
+    }
+  }
+
+  private forgetCanvasMemory(canvas: StoredCanvas, contentHashes: string[]): void {
+    for (const block of canvas.blocks) {
+      this.locks.forget(canvas.id, block.id);
+      this.documentMetadataCache.delete(block.id);
+      const file = this.docFile(block.file);
+      const cached = this.contentCache.get(file);
+      if (cached) { this.contentCacheBytes -= cached.bytes; this.contentCache.delete(file); }
+    }
+    for (const hash of contentHashes) {
+      const body = this.searchBodyCache.get(hash);
+      if (body !== undefined) { this.searchBodyCacheBytes -= Buffer.byteLength(body); this.searchBodyCache.delete(hash); }
+    }
+    this.similarityIndex(canvas.workspaceId).clearCanvas(canvas.id);
+  }
+
+  private async canvasJournals(canvasId: string): Promise<string[]> {
+    const matching: string[] = [];
+    // Journals can contain complete document snapshots. Discard ones that refer to this canvas.
+    for (const directory of ['jev-merges', 'jev-runs']) {
+      let files: string[];
+      try { files = await readdir(path.join(this.root, directory)); }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+        throw error;
+      }
+      for (const file of files.filter(name => name.endsWith('.json'))) {
+        const journalPath = path.join(this.root, directory, file);
+        const journal = await this.readJson<Record<string, unknown>>(journalPath);
+        if (journalReferencesCanvas(journal, canvasId)) matching.push(journalPath);
+      }
+    }
+    return matching;
   }
 
   async createBlock(canvasId: string, input: Record<string, unknown>, actor = 'api'): Promise<CanvasBlock> {

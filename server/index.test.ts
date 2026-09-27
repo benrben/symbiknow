@@ -32,6 +32,17 @@ afterEach(async () => {
 });
 
 describe('HTTP route dispatch', () => {
+  it('deletes a canvas through the API and keeps the workspace usable', async () => {
+    const { base } = await serverFixture();
+    const workspace = (await request(base, '/api/workspaces').then(response => response.json()) as Array<{ id: string }>)[0];
+    const created = await request(base, `/api/workspaces/${workspace.id}/canvases`, 'POST', { name: 'Temporary' });
+    const canvasId = (await created.json() as { id: string }).id;
+    expect((await request(base, `/api/canvases/${canvasId}`, 'DELETE')).status).toBe(200);
+    expect((await request(base, `/api/canvases/${canvasId}`)).status).toBe(404);
+    expect((await request(base, `/api/canvases/${canvasId}`, 'DELETE')).status).toBe(404);
+    expect((await request(base, '/api/canvases/product-roadmap')).status).toBe(200);
+    expect((await request(base, `/api/canvases/%2e%2e%2foutside`, 'DELETE')).status).toBe(400);
+  });
   it('uses a canvas ETag to skip unchanged polling responses and catches external edits', async () => {
     const { base, dataDir } = await serverFixture();
     const route = '/api/canvases/product-roadmap';

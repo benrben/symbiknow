@@ -65,6 +65,16 @@ export function useCanvasJourney() {
 
   function removeBookmark(id: string) { setBookmarks(current => current.filter(item => item.id !== id)); }
 
+  function forgetCanvas(canvasId: string) {
+    setJourney(current => {
+      const entries = current.entries.filter(place => place.canvasId !== canvasId);
+      const index = current.entries.slice(0, current.index + 1).filter(place => place.canvasId !== canvasId).length - 1;
+      return { entries, index: Math.min(index, entries.length - 1) };
+    });
+    setBookmarks(current => current.filter(item => item.canvasId !== canvasId));
+    setRecent(current => current.filter(item => item.canvasId !== canvasId));
+  }
+
   return { journey, current: journey.entries[journey.index], visit, updateViewport, moveHistory,
-    bookmarks, addBookmark, removeBookmark, recent, headerHidden, setHeaderHidden };
+    bookmarks, addBookmark, removeBookmark, forgetCanvas, recent, headerHidden, setHeaderHidden };
 }

@@ -30,6 +30,7 @@ Thumbs.db
 # Local design and media drafts
 /design/
 /brag-output/
+/brag-output-*/
 /JEV_FIXES_HANDOFF.md
 /*.png
 /*.excalidraw

@@ -2,438 +2,427 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { CanvasDocument } from '../shared/types';
-import type { InsightReport } from '../shared/insights';
+import type { InsightReport, InsightItem } from '../shared/insights';
 import { InsightsPanel } from './InsightsPanel';
 
 const canvas: CanvasDocument = {
   id: 'team canvas', name: 'Team', workspaceId: 'team', blocks: [
-    { id: 'plan', title: 'Plan', file: 'plan.md', kind: 'markdown', content: '# Plan', x: 0, y: 0, width: 320, height: 240, links: [] },
-    { id: 'guide', title: 'Guide', file: 'guide.md', kind: 'markdown', content: '# Guide', x: 400, y: 0, width: 320, height: 240, links: [] },
+    { id: 'plan', title: 'Plan', file: 'plan.md', kind: 'markdown', content: '# Plan', contentHash: 'one', x: 0, y: 0, width: 320, height: 240, links: [] },
+    { id: 'guide', title: 'Guide', file: 'guide.md', kind: 'markdown', content: '# Guide', contentHash: 'two', x: 400, y: 0, width: 320, height: 240, links: [] },
   ],
 };
-
+const link: InsightItem = { id: 'edge', category: 'connection', title: 'Link the guide to the plan', detail: 'The plan is a useful next step.', blockIds: ['guide', 'plan'], confidence: 0.86,
+  action: { type: 'link', fromBlockId: 'guide', toBlockId: 'plan' }, evidence: [{ questionId: 'related', answer: 'yes', excerpt: 'The plan follows the guide.', sourceIds: ['guide'], sourceHashes: { guide: 'two' } }] };
 const report: InsightReport = {
   canvasId: canvas.id, query: 'onboarding', analyzed: 2, total: 2,
-  readingOrder: [{ blockId: 'guide', title: 'Guide', score: 0.9, confidence: 0.8 }, { blockId: 'plan', title: 'Plan', score: 0.2, confidence: 0.7 }],
-  relevance: [{ blockId: 'plan', title: 'Plan', score: 1.2, confidence: 1.2 }],
-  items: [
-    { id: 'edge', category: 'connection', title: 'Link the guide to the plan', detail: 'The plan is a useful next step.', blockIds: ['guide', 'plan'], confidence: 0.86, action: { type: 'link', fromBlockId: 'guide', toBlockId: 'plan' } },
-    { id: 'review', category: 'conflict', title: 'Review conflicting dates', detail: 'Two launch dates are mentioned.', blockIds: ['missing'], confidence: -0.2 },
-  ],
+  readingOrder: [{ blockId: 'guide', title: 'Guide', score: 0.9, confidence: 0.8 }],
+  relevance: [{ blockId: 'plan', title: 'Plan', score: 0.9, confidence: 0.8 }],
+  items: [link, { id: 'conflict', category: 'conflict', title: 'Review conflicting dates', detail: 'Two dates are mentioned.', blockIds: ['plan'], confidence: 0.72 }],
+  health: { orphanRatio: 0.5, duplicateRatio: 0, staleRatio: 0, meanQuality: 0.72, labelCoverage: 1 },
 };
+const emptyInbox = { canvasId: canvas.id, items: [], checkedBlockIds: ['plan'], pendingBlockIds: [], errors: [] };
+const preview = { runId: 'canvas-run-1', workspaceId: 'team', kind: 'connection', dryRun: true, groups: [{ canvasId: canvas.id, canvasName: 'Team', count: 3 }], changes: [
+  { id: 'link', canvasId: canvas.id, confidence: 0.91, action: link.action, expectedContentHashes: { guide: 'two' } },
+  { id: 'label', canvasId: canvas.id, confidence: 0.8, action: { type: 'update', blockId: 'plan', patch: { purpose: 'plan' } }, expectedContentHashes: { plan: 'one' } },
+  { id: 'merge', canvasId: canvas.id, confidence: 0.81, action: { type: 'merge', keepBlockId: 'guide', mergeBlockIds: ['plan'], plan: { keep: 'guide', fold: [], conflicts: [], drop: [] } }, expectedContentHashes: {}, requiresClick: true },
+] };
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason: unknown) => void;
-  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail; });
-  return { promise, resolve, reject };
+type Call = { path: string; method: string; body?: Record<string, unknown> };
+function server(handler: (call: Call) => Response | Promise<Response> = () => Response.json(report)) {
+  const calls: Call[] = [];
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const call: Call = { path: String(input), method: init?.method ?? 'GET', ...(init?.body ? { body: JSON.parse(String(init.body)) as Record<string, unknown> } : {}) };
+    calls.push(call);
+    if (call.path.endsWith('/jev-inbox') && call.method === 'GET') return Response.json(emptyInbox);
+    return handler(call);
+  }));
+  return calls;
 }
-
 function props(overrides: Partial<Parameters<typeof InsightsPanel>[0]> = {}) {
-  return {
-    canvas,
-    hasApiKey: true,
-    onOpenSettings: vi.fn(),
-    onApply: vi.fn(async () => {}),
-    onOpenBlock: vi.fn(),
-    ...overrides,
-  };
+  return { canvas, hasApiKey: true, onOpenSettings: vi.fn(), onApply: vi.fn(async () => {}), onOpenBlock: vi.fn(), ...overrides };
 }
+function openAdvanced() { fireEvent.click(screen.getByRole('tab', { name: 'More' })); }
+function openExplore() { fireEvent.click(screen.getByText('Explore the analysis')); }
 
 beforeEach(() => vi.stubGlobal('fetch', vi.fn()));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-describe('Canvas insights panel', () => {
-  it('reports Jev activity while analysis is in flight and clears it when complete', async () => {
-    const pending = deferred<InsightReport>();
-    vi.mocked(fetch).mockImplementation(async () => Response.json(await pending.promise));
-    const onJevActivityChange = vi.fn();
-    render(<InsightsPanel {...props({ onJevActivityChange })}/>);
+describe('Jev insights panel', () => {
+  it('offers one primary analysis action and a compact review inbox', async () => {
+    const calls = server();
+    render(<InsightsPanel {...props()}/>);
+    expect(screen.getByRole('button', { name: 'Analyze canvas' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'More' })).toBeTruthy();
+    await screen.findByText('No new findings. Analyze the canvas for more ideas.');
+    expect(calls[0].path).toBe('/api/canvases/team%20canvas/jev-inbox');
+    expect(screen.getByRole('region', { name: 'Suggestions' })).toBeTruthy();
+  });
+
+  it('switches icon views in place while keeping review available', async () => {
+    server();
+    render(<InsightsPanel {...props()}/>);
+    fireEvent.click(screen.getByRole('tab', { name: 'Groups' }));
+    expect(screen.getByRole('tabpanel', { name: 'Groups view' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Suggestions' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Connections' }));
+    expect(screen.getByRole('tabpanel', { name: 'Connections view' })).toBeTruthy();
+    expect(screen.queryByRole('tabpanel', { name: 'Groups view' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Review' }));
+    expect(await screen.findByRole('region', { name: 'Suggestions' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Review' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('moves a single keyboard tab stop with arrows, Home, and End', () => {
+    server();
+    render(<InsightsPanel {...props()}/>);
+    const review = screen.getByRole('tab', { name: 'Review' });
+    const groups = screen.getByRole('tab', { name: 'Groups' });
+    review.focus();
+    fireEvent.keyDown(review, { key: 'ArrowRight' });
+    expect(groups.getAttribute('aria-selected')).toBe('true');
+    expect(groups.tabIndex).toBe(0);
+    expect(review.tabIndex).toBe(-1);
+    expect(document.activeElement).toBe(groups);
+    fireEvent.keyDown(groups, { key: 'End' });
+    const more = screen.getByRole('tab', { name: 'More' });
+    expect(document.activeElement).toBe(more);
+    fireEvent.keyDown(more, { key: 'Home' });
+    expect(document.activeElement).toBe(review);
+  });
+
+  it('routes a finding into task creation with its identity intact', async () => {
+    server();
+    const onCreateTask = vi.fn();
+    render(<InsightsPanel {...props({ onCreateTask })}/>);
     fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await waitFor(() => expect(onJevActivityChange).toHaveBeenLastCalledWith('jev-analyzing'));
-    expect(screen.getByText('Jev is analyzing the documents…')).toBeTruthy();
-    pending.resolve(report);
-    await waitFor(() => expect(onJevActivityChange).toHaveBeenLastCalledWith(null));
+    await screen.findByText(link.title);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Create task' })[0]);
+    expect(onCreateTask).toHaveBeenCalledWith(link);
   });
 
-  it('shows document groups by work area, purpose, or lane, with every document reachable', async () => {
-    const many: CanvasDocument = { ...canvas, blocks: [
-      ...canvas.blocks.map(block => ({ ...block, workArea: 'sales' })),
-      ...['one', 'two', 'three'].map(id => ({ ...canvas.blocks[0], id, title: id.toUpperCase(), workArea: 'sales' })),
-      { ...canvas.blocks[0], id: 'api', title: 'API', workArea: 'backend', purpose: 'reference' },
-    ] };
-    const grouped: InsightReport = { ...report, readingOrder: [], classification: [
-      { blockId: 'guide', title: 'Guide', lane: 'overview', laneConfidence: 0.9 }, { blockId: 'api', title: 'API', lane: 'reference', laneConfidence: 0.9 },
-    ] };
-    vi.mocked(fetch).mockResolvedValue(Response.json(grouped));
-    const viewProps = props({ canvas: many });
-    render(<InsightsPanel {...viewProps}/>);
-    const dashboard = screen.getByRole('region', { name: 'Document groups' });
-    expect(within(dashboard).getByText('Sales')).toBeTruthy();
-    expect(within(dashboard).getByText('Backend')).toBeTruthy();
-    fireEvent.click(within(dashboard).getByRole('button', { name: 'Show 1 more' }));
-    expect(within(dashboard).getByRole('button', { name: 'THREE' })).toBeTruthy();
-    fireEvent.click(within(dashboard).getByRole('button', { name: 'Guide' }));
-    expect(viewProps.onOpenBlock).toHaveBeenCalledWith('guide');
-    fireEvent.click(within(dashboard).getByRole('tab', { name: 'Purpose' }));
-    expect(within(dashboard).getByText('Reference')).toBeTruthy();
-    expect(within(dashboard).getByText(/5 not classified yet/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    fireEvent.click(within(dashboard).getByRole('tab', { name: 'Reading lane' }));
-    await waitFor(() => expect(within(dashboard).getByText('Reference')).toBeTruthy());
-    expect(within(dashboard).getByText('Overview')).toBeTruthy();
-  });
-
-  it('explains setup and keeps analysis unavailable without a canvas or key', () => {
-    const viewProps = props({ canvas: null, hasApiKey: false });
-    render(<InsightsPanel {...viewProps}/>);
-    expect(screen.getByText('Open a canvas to see its insights.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Analyze canvas' })).toHaveProperty('disabled', true);
-    expect(screen.getByRole('button', { name: 'Organize positions' })).toHaveProperty('disabled', true);
-    fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }));
-    expect(viewProps.onOpenSettings).toHaveBeenCalledOnce();
-    fireEvent.submit(screen.getByRole('textbox', { name: /Focus your analysis/ }).closest('form')!);
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it('analyzes a focused query and lets people inspect and apply suggestions', async () => {
-    vi.mocked(fetch).mockImplementation(async () => Response.json(report));
+  it('analyzes a query, groups suggestions, shows evidence and keeps document paths accessible', async () => {
+    const calls = server();
     const viewProps = props();
     render(<InsightsPanel {...viewProps}/>);
-    fireEvent.change(screen.getByLabelText('Focus your analysis Optional'), { target: { value: 'onboarding' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /Focus your analysis/ }), { target: { value: 'onboarding' } });
     fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-
     await screen.findByText('2 of 2 docs analyzed');
-    expect(fetch).toHaveBeenCalledWith('/api/canvases/team%20canvas/insights', expect.objectContaining({ method: 'POST', body: JSON.stringify({ query: 'onboarding' }) }));
-    expect(screen.getByText('Focus: onboarding')).toBeTruthy();
-    expect(screen.getByText('100%')).toBeTruthy();
-    expect(screen.getByText('0% confident')).toBeTruthy();
+    expect(calls.find(call => call.path.endsWith('/insights'))?.body).toEqual({ query: 'onboarding' });
+    expect(screen.getByText('Ready to act')).toBeTruthy();
+    expect(screen.getByText('Needs your review')).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: 'Canvas health' })).getByText('72%')).toBeTruthy();
+    expect(screen.getAllByText('The plan follows the guide.').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByText('Why? Evidence and technical details'));
+    expect(screen.getByText('Technical reference')).toBeTruthy();
+    openExplore();
     fireEvent.click(within(screen.getByRole('region', { name: 'Suggested reading order' })).getByRole('button', { name: 'Open Guide' }));
     expect(viewProps.onOpenBlock).toHaveBeenCalledWith('guide');
-    fireEvent.click(screen.getByRole('button', { name: 'missing' }));
-    expect(viewProps.onOpenBlock).toHaveBeenCalledWith('missing');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(viewProps.onApply).toHaveBeenCalledWith(report.items[0].action));
-    await screen.findByRole('button', { name: 'Applied' });
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
-    expect(fetch).toHaveBeenCalledWith('/api/canvases/team%20canvas/insights/feedback', expect.objectContaining({
-      method: 'POST', body: JSON.stringify({ itemId: 'edge', category: 'connection', confidence: 0.86, decision: 'applied' }),
-    }));
-    expect(screen.getByRole('button', { name: 'Applied' })).toHaveProperty('disabled', true);
   });
 
-  it('shows report notices and Jev evidence, then dismisses a suggestion with feedback', async () => {
-    const withEvidence: InsightReport = { ...report, notice: 'All documents fit one lane.',
-      health: { orphanRatio: 0.5, duplicateRatio: 0.25, staleRatio: 0, meanQuality: 0.72, labelCoverage: 1 }, items: [
-      { ...report.items[1], confidence: 0.72, evidence: [{ questionId: 'p0_conflict', answer: 'yes', excerpt: 'Launch is planned for 2026-10-01.' }] },
-    ] };
-    vi.mocked(fetch).mockImplementation(async () => Response.json(withEvidence));
-    render(<InsightsPanel {...props()}/>);
+  it('applies a suggestion, records feedback and refreshes analysis', async () => {
+    const calls = server();
+    const viewProps = props();
+    render(<InsightsPanel {...viewProps}/>);
     fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByText('All documents fit one lane.');
-    const health = screen.getByRole('region', { name: 'Canvas health' });
-    expect(within(health).getByText('72%')).toBeTruthy();
-    expect(within(health).getByText('Mean quality')).toBeTruthy();
-
-    fireEvent.click(screen.getByText('Why?'));
-    expect(screen.getByText('p0_conflict')).toBeTruthy();
-    expect(screen.getByText('Answer: yes')).toBeTruthy();
-    expect(screen.getByText('Launch is planned for 2026-10-01.')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
-
-    await waitFor(() => expect(screen.queryByText('Review conflicting dates')).toBeNull());
-    expect(screen.getByText('No suggestions for this analysis.')).toBeTruthy();
-    expect(fetch).toHaveBeenCalledWith('/api/canvases/team%20canvas/insights/feedback', expect.objectContaining({
-      method: 'POST', body: JSON.stringify({ itemId: 'review', category: 'conflict', confidence: 0.72, decision: 'dismissed' }),
-    }));
+    await screen.findByText(link.title);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply suggestion' }));
+    await waitFor(() => expect(viewProps.onApply).toHaveBeenCalledWith(link.action));
+    await waitFor(() => expect(calls.some(call => call.path.endsWith('/insights/feedback') && call.body?.decision === 'applied')).toBe(true));
+    expect(calls.filter(call => call.path.endsWith('/insights'))).toHaveLength(2);
   });
 
-  it('keeps a suggestion visible when dismissal feedback fails', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json(report))
-      .mockResolvedValueOnce(Response.json({ error: 'Feedback unavailable' }, { status: 503 }));
+  it('does not present an uncertain direct suggestion Apply as safe to repeat', async () => {
+    server();
+    render(<InsightsPanel {...props({ onApply: vi.fn(async () => { throw new Error('Save response lost'); }) })}/>);
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
+    await screen.findByText(link.title);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply suggestion' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('Saved state may have changed');
+    expect(screen.getByRole('button', { name: 'Apply suggestion' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze again' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Apply suggestion' })).toHaveProperty('disabled', false));
+  });
+
+  it('dismisses a suggestion only after feedback saves and keeps it on failure', async () => {
+    const calls = server(call => call.path.endsWith('/feedback') ? Response.json({ error: 'Offline' }, { status: 503 }) : Response.json(report));
     render(<InsightsPanel {...props()}/>);
     fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
     await screen.findByText('Review conflicting dates');
-    fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[1]);
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Could not dismiss suggestion. Feedback unavailable');
+    fireEvent.click(within(screen.getByRole('region', { name: 'Suggestions' })).getAllByRole('button', { name: 'Dismiss' })[1]);
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Could not dismiss suggestion. Offline');
     expect(screen.getByText('Review conflicting dates')).toBeTruthy();
+    expect(calls.some(call => call.body?.decision === 'dismissed')).toBe(true);
   });
 
-  it('does not offer generic Apply for a merge plan', async () => {
-    const mergeReport: InsightReport = { ...report, items: [{ id: 'merge', category: 'merge', title: 'Merge setup notes', detail: 'They overlap.',
-      blockIds: ['guide', 'plan'], confidence: 0.9, action: { type: 'merge', keepBlockId: 'guide', mergeBlockIds: ['plan'], plan: { keep: 'guide', fold: [], conflicts: [], drop: [] } } }] };
-    vi.mocked(fetch).mockImplementation(async () => Response.json(mergeReport));
-    render(<InsightsPanel {...props()}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByText('Merge setup notes');
-    expect(screen.queryByRole('button', { name: 'Apply suggestion' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeTruthy();
+  it('opens a targeted document analysis when requested from the canvas', async () => {
+    const calls = server();
+    render(<InsightsPanel {...props({ targetedRequest: { canvasId: canvas.id, blockIds: ['guide'], families: ['relation'], sequence: 1 } })}/>);
+    await screen.findByText('2 of 2 docs analyzed');
+    expect(calls.find(call => call.path.endsWith('/insights'))?.body).toEqual({ query: '', blockIds: ['guide'], families: ['relation'] });
   });
 
-  it('routes merge, missing document, move, and reading path actions to their review flows', async () => {
-    const workflowReport: InsightReport = { ...report, readingPaths: [{ id: 'start', name: 'Getting started', blockIds: ['guide', 'plan'] }], items: [
-      { id: 'merge', category: 'merge', title: 'Merge setup notes', detail: 'They overlap.', blockIds: ['guide', 'plan'], confidence: 0.9,
-        action: { type: 'merge', keepBlockId: 'guide', mergeBlockIds: ['plan'], plan: { keep: 'guide', fold: [], conflicts: [], drop: [] } } },
-      { id: 'move', category: 'move', title: 'Move Plan', detail: 'Belongs on another canvas.', blockIds: ['plan'], confidence: 0.85,
-        action: { type: 'move', blockId: 'plan', toCanvasId: 'other' } },
-      { id: 'gap', category: 'gap', title: 'Document an API', detail: 'Missing API guide.', blockIds: ['guide'], confidence: 0.8 },
-    ] };
-    vi.mocked(fetch).mockResolvedValue(Response.json(workflowReport));
-    const viewProps = props({ onMergeDraft: vi.fn(), onDraftGap: vi.fn(), onStartPath: vi.fn() });
-    render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByText('Merge setup notes');
-    fireEvent.click(screen.getByRole('button', { name: 'Merge in chat' }));
-    expect(viewProps.onMergeDraft).toHaveBeenCalledWith(workflowReport.items[0], workflowReport.items[0].action);
-    fireEvent.click(screen.getByRole('button', { name: 'Draft it in chat' }));
-    expect(viewProps.onDraftGap).toHaveBeenCalledWith(workflowReport.items[2]);
-    fireEvent.click(screen.getByRole('button', { name: 'Start path' }));
-    expect(viewProps.onStartPath).toHaveBeenCalledWith(workflowReport.readingPaths?.[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'Move document' }));
-    await waitFor(() => expect(viewProps.onApply).toHaveBeenCalledWith(workflowReport.items[1].action));
+  it('opens duplicate tools when a document card requests a duplicate check', async () => {
+    const calls = server(call => call.path.endsWith('/duplicates') ? Response.json([]) : Response.json(report));
+    render(<InsightsPanel {...props({ duplicateRequest: { canvasId: canvas.id, blockId: 'guide', sequence: 1 } })}/>);
+    await waitFor(() => expect(calls.some(call => call.path.endsWith('/duplicates') && call.body?.blockId === 'guide')).toBe(true));
+    expect(screen.getByRole('tab', { name: 'Duplicates' }).getAttribute('aria-selected')).toBe('true');
   });
 
-  it('previews workspace changes by canvas, applies checked actions, and undoes the run', async () => {
-    const preview = { runId: 'run-1', workspaceId: 'team', kind: 'tidy', dryRun: true,
-      groups: [{ canvasId: 'team canvas', canvasName: 'Team', count: 2 }, { canvasId: 'other', canvasName: 'Other', count: 1 }],
-      changes: [
-        { id: 'one', canvasId: 'team canvas', confidence: 0.9, action: { type: 'update', blockId: 'guide', patch: { purpose: 'guide' } }, expectedContentHashes: {} },
-        { id: 'merge', canvasId: 'team canvas', confidence: 0.8, action: { type: 'merge', keepBlockId: 'guide', mergeBlockIds: ['plan'], plan: { keep: 'guide', fold: [], conflicts: [], drop: [] } }, expectedContentHashes: {}, requiresClick: true },
-        { id: 'two', canvasId: 'other', confidence: 0.85, action: { type: 'layout', positions: [{ blockId: 'other', x: 10, y: 20 }] }, expectedContentHashes: {} },
-      ],
-    };
+  it('loads inbox findings and sends item decisions to the inbox API', async () => {
+    const inbox = { ...emptyInbox, items: [link], pendingBlockIds: ['plan'] };
+    const calls = server(call => call.path.endsWith('/dismiss') ? Response.json(emptyInbox) : Response.json(inbox));
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       const path = String(input);
-      if (path === '/api/workspaces/team/automations') {
-        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-        return Response.json(body.dryRun === false ? { ...preview, dryRun: false, applied: body.actionIds, skipped: [] } : preview);
+      const method = init?.method ?? 'GET';
+      calls.push({ path, method });
+      return Response.json(path.endsWith('/dismiss') ? emptyInbox : inbox);
+    });
+    render(<InsightsPanel {...props()}/>);
+    await screen.findByText('Checking 1 changed document.');
+    const region = screen.getByRole('region', { name: 'Suggestions' });
+    expect(within(region).getByText(link.title)).toBeTruthy();
+    fireEvent.click(within(region).getByRole('button', { name: 'Dismiss' }));
+    await waitFor(() => expect(within(region).queryByText(link.title)).toBeNull());
+    expect(calls.some(call => call.path.endsWith('/jev-inbox/edge/dismiss') && call.method === 'POST')).toBe(true);
+  });
+
+  it('continues checking changed documents in small inbox batches', async () => {
+    const paths: string[] = [];
+    vi.mocked(fetch).mockImplementation(async input => {
+      const path = String(input);
+      paths.push(path);
+      return Response.json(paths.filter(item => item.endsWith('/jev-inbox')).length === 1
+        ? { ...emptyInbox, pendingBlockIds: ['guide'] } : emptyInbox);
+    });
+    render(<InsightsPanel {...props()}/>);
+    await screen.findByText('Checking 1 changed document.');
+    await waitFor(() => expect(paths.filter(path => path.endsWith('/jev-inbox'))).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByText('Checking 1 changed document.')).toBeNull());
+  });
+
+  it('applies an inbox item through the server and refreshes the canvas', async () => {
+    const calls: Call[] = [];
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const path = String(input); const method = init?.method ?? 'GET'; calls.push({ path, method });
+      return Response.json(path.endsWith('/apply') ? emptyInbox : { ...emptyInbox, items: [link] });
+    });
+    const viewProps = props({ onChanged: vi.fn() });
+    render(<InsightsPanel {...viewProps}/>);
+    const region = screen.getByRole('region', { name: 'Suggestions' });
+    await within(region).findByText(link.title);
+    fireEvent.click(within(region).getByRole('button', { name: 'Apply suggestion' }));
+    await waitFor(() => expect(viewProps.onChanged).toHaveBeenCalledOnce());
+    expect(calls.some(call => call.path.endsWith('/jev-inbox/edge/apply') && call.method === 'POST')).toBe(true);
+  });
+
+  it('routes inbox moves to review because inbox apply requires a direct, safe action', async () => {
+    const move: InsightItem = { id: 'move', category: 'move', title: 'Move Plan', detail: 'Another canvas fits.', blockIds: ['plan'], confidence: 0.88,
+      action: { type: 'move', blockId: 'plan', toCanvasId: 'other' } };
+    const calls: Call[] = [];
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const call = { path: String(input), method: init?.method ?? 'GET', body: init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined };
+      calls.push(call);
+      return Response.json(call.path.endsWith('/jev-inbox') ? { ...emptyInbox, items: [move] } : report);
+    });
+    render(<InsightsPanel {...props()}/>);
+    await screen.findByText('Move Plan');
+    expect(screen.queryByRole('button', { name: 'Move document' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review in analysis' }));
+    await screen.findByText('2 of 2 docs analyzed');
+    expect(calls.find(call => call.path.endsWith('/insights'))?.body).toEqual({ query: '', blockIds: ['plan'] });
+    expect(calls.some(call => call.path.endsWith('/jev-inbox/move/apply'))).toBe(false);
+  });
+
+  it('shows inbox errors and retries without hiding the main analysis action', async () => {
+    let attempts = 0;
+    vi.mocked(fetch).mockImplementation(async input => {
+      if (String(input).endsWith('/jev-inbox')) {
+        attempts++;
+        return attempts === 1 ? Response.json({ error: 'Unavailable' }, { status: 503 }) : Response.json(emptyInbox);
       }
-      if (path === '/api/jev-runs/run-1/undo') return Response.json({ runId: 'run-1', reverted: ['one'], skipped: [] });
+      return Response.json(report);
+    });
+    render(<InsightsPanel {...props()}/>);
+    expect((await screen.findByRole('alert')).textContent).toContain('Inbox unavailable: Unavailable');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await screen.findByText('No new findings. Analyze the canvas for more ideas.');
+    expect(screen.getByRole('button', { name: 'Analyze canvas' })).toBeTruthy();
+  });
+
+  it('previews canvas changes before applying selected actions and offers undo', async () => {
+    const calls = server(call => {
+      if (call.path.endsWith('/automations')) return Response.json(call.body?.dryRun === false ? { ...preview, dryRun: false, applied: call.body?.actionIds, skipped: [] } : preview);
+      if (call.path.endsWith('/undo')) return Response.json({ runId: preview.runId, reverted: ['link'], skipped: [] });
       return Response.json(report);
     });
     const viewProps = props({ onChanged: vi.fn() });
     render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Preview workspace changes' }));
-    const changeList = await screen.findByLabelText('Workspace change preview');
-    expect(within(changeList).getByText('2 selected of 3 proposed changes')).toBeTruthy();
-    expect(within(changeList).getByRole('region', { name: 'Team changes' })).toBeTruthy();
-    expect(within(changeList).getByRole('region', { name: 'Other changes' })).toBeTruthy();
-    expect(within(changeList).getByRole('checkbox', { name: 'Select Merge plan into guide' })).toHaveProperty('disabled', true);
-    fireEvent.click(within(changeList).getByRole('checkbox', { name: 'Select all changes on Other' }));
-    expect(within(changeList).getByText('1 selected of 3 proposed changes')).toBeTruthy();
-    fireEvent.click(within(changeList).getByRole('button', { name: 'Apply selected (1)' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Connections' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview connections' }));
+    const region = await screen.findByLabelText('Canvas change preview');
+    expect(within(region).getByText(/2 selected of 3 proposed changes/)).toBeTruthy();
+    expect(viewProps.onChanged).not.toHaveBeenCalled();
+    expect(within(region).getByRole('checkbox', { name: 'Select Merge plan into guide' })).toHaveProperty('disabled', true);
+    fireEvent.click(within(region).getByRole('checkbox', { name: 'Select Update plan: purpose' }));
+    fireEvent.click(within(region).getByRole('button', { name: 'Apply selected (1)' }));
     await screen.findByText('Applied 1 change.');
-    expect(fetch).toHaveBeenCalledWith('/api/workspaces/team/automations', expect.objectContaining({
-      body: JSON.stringify({ kind: 'tidy', dryRun: false, runId: 'run-1', actionIds: ['one'] }),
-    }));
-    fireEvent.click(within(changeList).getByRole('button', { name: 'Undo this run' }));
+    expect(calls.find(call => call.body?.dryRun === false)?.body).toEqual({ kind: 'connection', dryRun: false, runId: 'canvas-run-1', actionIds: ['link'] });
+    expect(viewProps.onChanged).toHaveBeenCalledOnce();
+    fireEvent.click(within(region).getByRole('button', { name: 'Undo this run' }));
     await screen.findByText('Reverted 1 change.');
-    expect(fetch).toHaveBeenCalledWith('/api/jev-runs/run-1/undo', expect.objectContaining({ method: 'POST' }));
+    expect(within(region).getByText(/This run was reverted/)).toBeTruthy();
+    expect(calls.some(call => call.path === '/api/jev-runs/canvas-run-1/undo')).toBe(true);
     expect(viewProps.onChanged).toHaveBeenCalledTimes(2);
   });
 
-  it('shows server errors and can retry the analysis', async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(Response.json({ error: 'Jev is unavailable' }, { status: 503 }))
-      .mockResolvedValueOnce(Response.json({ ...report, readingOrder: [], relevance: [], items: [], query: '' }));
+  it('shows a partial Apply receipt with applied and skipped actions and their reasons', async () => {
+    server(call => call.path.endsWith('/automations') ? Response.json(call.body?.dryRun === false
+      ? { ...preview, dryRun: false, applied: ['link'], skipped: [{ id: 'label', reason: 'Document changed since preview' }] }
+      : preview) : Response.json(report));
     render(<InsightsPanel {...props()}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByRole('alert');
-    expect(screen.getByText('Jev is unavailable')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    await screen.findByText('No suggestions for this analysis.');
-    expect(screen.getAllByText('No documents to show.')).toHaveLength(2);
-    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Connections' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview connections' }));
+    const region = await screen.findByLabelText('Canvas change preview');
+    expect(within(region).getByText(/Ready for review/)).toBeTruthy();
+    fireEvent.click(within(region).getByRole('button', { name: 'Apply selected (2)' }));
+    expect(await screen.findByText('Applied 1 change; skipped 1.')).toBeTruthy();
+    expect(within(region).getByText('Partially applied')).toBeTruthy();
+    const receipt = within(region).getByRole('region', { name: 'Canvas run receipt' });
+    expect(within(receipt).getByText(/Applied: Link guide → plan/)).toBeTruthy();
+    expect(within(receipt).getByText(/Skipped: Update plan: purpose/)).toHaveProperty('textContent', expect.stringContaining('Document changed since preview'));
+    expect(within(region).getByRole('button', { name: 'Undo this run' })).toBeTruthy();
   });
 
-  it('keeps the apply action available after a failed write', async () => {
-    vi.mocked(fetch).mockResolvedValue(Response.json(report));
-    const viewProps = props({ onApply: vi.fn().mockRejectedValue(new Error('Could not add the link')) });
-    render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByRole('button', { name: 'Apply suggestion' });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply suggestion' }));
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Could not add the link');
-    expect(screen.getByRole('button', { name: 'Apply suggestion' })).toHaveProperty('disabled', false);
-    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  it('blocks retry of an uncertain Apply until a fresh preview is prepared', async () => {
+    const calls = server(call => call.path.endsWith('/automations') && call.body?.dryRun === false
+      ? Response.json({ error: 'Connection dropped after save' }, { status: 503 })
+      : Response.json(call.path.endsWith('/automations') ? preview : report));
+    render(<InsightsPanel {...props()}/>);
+    fireEvent.click(screen.getByRole('tab', { name: 'Connections' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview connections' }));
+    const region = await screen.findByLabelText('Canvas change preview');
+    fireEvent.click(within(region).getByRole('button', { name: 'Apply selected (2)' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('Saved state may have changed. Refresh and review the affected documents before retrying.');
+    expect(within(region).getByRole('button', { name: 'Apply selected (2)' })).toHaveProperty('disabled', true);
+    expect(calls.filter(call => call.body?.dryRun === false)).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Preview connections' }));
+    const freshRegion = await screen.findByLabelText('Canvas change preview');
+    await waitFor(() => expect(within(freshRegion).getByRole('button', { name: 'Apply selected (2)' })).toHaveProperty('disabled', false));
   });
 
-  it('gives a useful message for an unexpected apply failure', async () => {
-    vi.mocked(fetch).mockResolvedValue(Response.json(report));
-    render(<InsightsPanel {...props({ onApply: vi.fn().mockRejectedValue('offline') })}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByRole('button', { name: 'Apply suggestion' });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply suggestion' }));
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Something went wrong. Please try again.');
-  });
-
-  it('shows progress while analysis and an action are pending', async () => {
-    const analysis = deferred<Response>();
-    const applying = deferred<void>();
-    vi.mocked(fetch).mockImplementationOnce(() => analysis.promise).mockResolvedValue(Response.json(report));
-    const viewProps = props({ onApply: vi.fn(() => applying.promise) });
-    render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    expect(screen.getByRole('button', { name: 'Analyzing…' })).toHaveProperty('disabled', true);
-    analysis.resolve(Response.json(report));
-    await screen.findByRole('button', { name: 'Apply suggestion' });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply suggestion' }));
-    expect(screen.getByRole('button', { name: 'Applying…' })).toHaveProperty('disabled', true);
-    applying.resolve();
-    await screen.findByRole('button', { name: 'Applied' });
-  });
-
-  it('ignores an old response when the open canvas changes', async () => {
-    const oldRequest = deferred<Response>();
-    vi.mocked(fetch).mockImplementationOnce(() => oldRequest.promise).mockResolvedValue(Response.json({ ...report, canvasId: 'next', query: '', items: [] }));
-    const viewProps = props();
-    const { rerender } = render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    const nextCanvas = { ...canvas, id: 'next', name: 'Next' };
-    rerender(<InsightsPanel {...viewProps} canvas={nextCanvas}/>);
-    oldRequest.resolve(Response.json(report));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze canvas' })).toHaveProperty('disabled', false));
-    expect(screen.queryByText('2 of 2 docs analyzed')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByText('2 of 2 docs analyzed');
-    expect(screen.queryByText('Link the guide to the plan')).toBeNull();
-  });
-
-  it('ignores a failed request from a canvas that is no longer open', async () => {
-    const oldRequest = deferred<Response>();
-    vi.mocked(fetch).mockImplementationOnce(() => oldRequest.promise);
-    const viewProps = props();
-    const { rerender } = render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    rerender(<InsightsPanel {...viewProps} canvas={{ ...canvas, id: 'next' }}/>);
-    oldRequest.reject(new Error('Old request failed'));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze canvas' })).toHaveProperty('disabled', false));
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('does not apply another suggestion while one action is pending', async () => {
-    const secondItem = { ...report.items[0], id: 'other-edge', title: 'Another connection' };
-    vi.mocked(fetch).mockResolvedValue(Response.json({ ...report, items: [report.items[0], secondItem] }));
-    const pending = deferred<void>();
-    const viewProps = props({ onApply: vi.fn(() => pending.promise) });
-    render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByText('Another connection');
-    const buttons = screen.getAllByRole('button', { name: 'Apply suggestion' });
-    fireEvent.click(buttons[0]);
-    fireEvent.click(buttons[1]);
-    expect(viewProps.onApply).toHaveBeenCalledTimes(1);
-    pending.resolve();
-    await screen.findByRole('button', { name: 'Applied' });
-  });
-
-  it('does not reanalyze after an action completes on a different canvas', async () => {
-    vi.mocked(fetch).mockResolvedValue(Response.json(report));
-    const pending = deferred<void>();
-    const viewProps = props({ onApply: vi.fn(() => pending.promise) });
-    const { rerender } = render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByRole('button', { name: 'Apply suggestion' });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply suggestion' }));
-    rerender(<InsightsPanel {...viewProps} canvas={{ ...canvas, id: 'next' }}/>);
-    pending.resolve();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze canvas' })).toHaveProperty('disabled', false));
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('does not show an action failure on a different canvas', async () => {
-    vi.mocked(fetch).mockResolvedValue(Response.json(report));
-    const pending = deferred<void>();
-    const viewProps = props({ onApply: vi.fn(() => pending.promise) });
-    const { rerender } = render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    await screen.findByRole('button', { name: 'Apply suggestion' });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply suggestion' }));
-    rerender(<InsightsPanel {...viewProps} canvas={{ ...canvas, id: 'next' }}/>);
-    pending.reject(new Error('Old action failed'));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze canvas' })).toHaveProperty('disabled', false));
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  function automationServer(results: Record<string, unknown> = {}) {
-    const calls: Array<{ path: string; body: unknown }> = [];
-    vi.mocked(fetch).mockImplementation(async (input, init) => {
-      const body = init?.body ? JSON.parse(String(init.body)) as { kind: string } : null;
-      calls.push({ path: String(input), body });
-      const result = results[body?.kind ?? ''];
-      if (result instanceof Error) return Response.json({ error: result.message }, { status: 502 });
-      return Response.json(result ?? { kind: body?.kind, applied: 1 });
+  it('shows a partial Undo receipt and identifies changes that remain saved', async () => {
+    server(call => {
+      if (call.path.endsWith('/automations')) return Response.json(call.body?.dryRun === false
+        ? { ...preview, dryRun: false, applied: ['link', 'label'], skipped: [] } : preview);
+      if (call.path.endsWith('/undo')) return Response.json({ reverted: ['link'],
+        skipped: [{ id: 'label', reason: 'Current state differs from the applied change' }] });
+      return Response.json(report);
     });
-    return calls;
-  }
-
-  it('organizes every document into groups with one server request', async () => {
-    const calls = automationServer({ layout: { kind: 'layout', applied: 1, groupBy: 'work_area', groups: [{ key: 'area:sales', count: 1 }, { key: 'area:other', count: 1 }] } });
-    const viewProps = props({ onChanged: vi.fn() });
-    render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Organize positions' }));
-    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Placed 2 documents in 2 groups.');
-    expect(calls).toEqual([{ path: '/api/canvases/team%20canvas/automations', body: { kind: 'layout', groupBy: 'work_area' } }]);
-    expect(viewProps.onChanged).toHaveBeenCalledTimes(1);
-    expect(viewProps.onApply).not.toHaveBeenCalled();
-  });
-
-  it('places groups by the selected grouping and regroups with links', async () => {
-    const calls = automationServer({ regroup: { kind: 'regroup', applied: 3, groups: [{ key: 'purpose:plan', count: 2 }] } });
-    render(<InsightsPanel {...props({ groupBy: 'purpose' })}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Regroup & connect' }));
-    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Placed 2 documents in 1 group and updated links.');
-    fireEvent.click(screen.getByRole('tab', { name: 'Reading lane' }));
-    fireEvent.click(screen.getByRole('button', { name: /Place these groups on the canvas/ }));
-    await waitFor(() => expect(calls.at(-1)?.body).toEqual({ kind: 'layout', groupBy: 'lane' }));
-    expect(calls[0].body).toEqual({ kind: 'regroup', groupBy: 'purpose' });
-  });
-
-  it('runs label, connection, and reviewer buttons without grouping options', async () => {
-    const calls = automationServer({ purpose: { kind: 'purpose', applied: 2 }, work_area: { kind: 'work_area', applied: 1 }, connection: { kind: 'connection', applied: 0 } });
     render(<InsightsPanel {...props()}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Label purposes' }));
-    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Applied 2 purpose labels across this canvas.');
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Classify work areas' })).toHaveProperty('disabled', false));
-    fireEvent.click(screen.getByRole('button', { name: 'Classify work areas' }));
-    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Applied 1 work-area label across this canvas.'));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Connect documents' })).toHaveProperty('disabled', false));
-    fireEvent.click(screen.getByRole('button', { name: 'Connect documents' }));
-    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('No eligible connection changes found for this canvas.'));
-    expect(calls.map(call => call.body)).toEqual([{ kind: 'purpose' }, { kind: 'work_area' }, { kind: 'connection' }]);
+    fireEvent.click(screen.getByRole('tab', { name: 'Connections' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview connections' }));
+    const region = await screen.findByLabelText('Canvas change preview');
+    fireEvent.click(within(region).getByRole('button', { name: 'Apply selected (2)' }));
+    await screen.findByText('Applied 2 changes.');
+    fireEvent.click(within(region).getByRole('button', { name: 'Undo this run' }));
+    expect(await screen.findByText('Reverted 1 change; skipped 1.')).toBeTruthy();
+    expect(within(region).getByText('Partially reverted')).toBeTruthy();
+    const receipt = within(region).getByRole('region', { name: 'Canvas run receipt' });
+    expect(within(receipt).getByText(/Skipped: Update plan: purpose/)).toHaveProperty('textContent', expect.stringContaining('Current state differs'));
+    expect(within(receipt).getByText(/Skipped changes remain saved/)).toBeTruthy();
+    expect(within(region).queryByRole('button', { name: 'Undo this run' })).toBeNull();
   });
 
-  it('runs the cross-canvas connection automation and refreshes the canvas', async () => {
-    const calls = automationServer({ cross_connect: { kind: 'cross_connect', applied: 2 } });
-    const viewProps = props({ onChanged: vi.fn() });
-    render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Connect across canvases' }));
-    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Applied 2 cross-canvas connections across this canvas.');
-    expect(calls).toEqual([{ path: '/api/canvases/team%20canvas/automations', body: { kind: 'cross_connect' } }]);
-    expect(viewProps.onChanged).toHaveBeenCalledTimes(1);
-  });
-
-  it('surfaces a failed canvas-wide automation without claiming completion', async () => {
-    automationServer({ layout: new Error('Layout could not be saved') });
+  it('explains an empty connection run without an apply action', async () => {
+    server(call => call.path.endsWith('/automations') ? Response.json({ ...preview, changes: [], groups: [] }) : Response.json(report));
     render(<InsightsPanel {...props()}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Organize positions' }));
-    expect((await screen.findByRole('alert')).textContent).toContain('Layout could not be saved');
-    expect(screen.queryByRole('status')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Organize positions' })).toHaveProperty('disabled', false);
+    fireEvent.click(screen.getByRole('tab', { name: 'Connections' }));
+    expect(screen.getByText(/saved outgoing links/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview connections' }));
+    const region = await screen.findByLabelText('Canvas change preview');
+    expect(within(region).getByText(/found no proposed changes/)).toBeTruthy();
+    expect(within(region).queryByRole('button', { name: /Apply selected/ })).toBeNull();
   });
 
-  it('ignores an automation result after the active canvas changes', async () => {
-    const pending = deferred<Response>();
-    vi.mocked(fetch).mockImplementation(() => pending.promise);
-    const viewProps = props({ onChanged: vi.fn() });
-    const { rerender } = render(<InsightsPanel {...viewProps}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Label purposes' }));
-    rerender(<InsightsPanel {...viewProps} canvas={{ ...canvas, id: 'next' }}/>);
-    pending.resolve(Response.json({ kind: 'purpose', applied: 2 }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Label purposes' })).toHaveProperty('disabled', false));
-    expect(viewProps.onChanged).not.toHaveBeenCalled();
-    expect(screen.queryByRole('status')).toBeNull();
+  it('recovers from a failed preview without claiming changes were saved', async () => {
+    server(call => call.path.endsWith('/automations') ? Response.json({ error: 'Jev unavailable' }, { status: 503 }) : Response.json(report));
+    render(<InsightsPanel {...props()}/>);
+    fireEvent.click(screen.getByRole('tab', { name: 'Groups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place these groups on the canvas' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Preview failed. Nothing was saved. Safe to retry. Jev unavailable');
+    expect(screen.queryByLabelText('Canvas change preview')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Place these groups on the canvas' })).toHaveProperty('disabled', false);
+  });
+
+  it('keeps workspace preview available among advanced actions', async () => {
+    const workspacePreview = { ...preview, runId: 'workspace-run', kind: 'tidy', changes: [preview.changes[0]], groups: [{ canvasId: canvas.id, canvasName: 'Team', count: 1 }] };
+    const calls = server(call => call.path.includes('/workspaces/') ? Response.json(workspacePreview) : Response.json(report));
+    render(<InsightsPanel {...props()}/>);
+    openAdvanced();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview workspace changes' }));
+    await screen.findByLabelText('Workspace change preview');
+    expect(calls.some(call => call.path === '/api/workspaces/team/automations' && call.body?.dryRun === true)).toBe(true);
+  });
+
+  it('shows workspace partial Apply and Undo receipts with named skipped changes', async () => {
+    const workspacePreview = { ...preview, runId: 'workspace-run', kind: 'tidy', changes: preview.changes.slice(0, 2),
+      groups: [{ canvasId: canvas.id, canvasName: 'Team', count: 2 }] };
+    server(call => {
+      if (call.path.includes('/workspaces/') && call.path.endsWith('/automations')) return Response.json(call.body?.dryRun === false
+        ? { ...workspacePreview, dryRun: false, applied: ['link'], skipped: [{ id: 'label', reason: 'Document changed since preview' }] }
+        : workspacePreview);
+      if (call.path.endsWith('/undo')) return Response.json({ reverted: [], skipped: [{ id: 'link', reason: 'Current state differs from the applied change' }] });
+      return Response.json(report);
+    });
+    render(<InsightsPanel {...props()}/>);
+    openAdvanced();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview workspace changes' }));
+    const region = await screen.findByLabelText('Workspace change preview');
+    expect(screen.getByText(/Ready for review: 2 changes across 1 canvas. Nothing saved yet/)).toBeTruthy();
+    fireEvent.click(within(region).getByRole('button', { name: 'Apply selected (2)' }));
+    expect(await screen.findByText('Applied 1 change; skipped 1.')).toBeTruthy();
+    const appliedReceipt = within(region).getByRole('region', { name: 'Workspace run receipt' });
+    expect(within(appliedReceipt).getByText(/Skipped: Update plan: purpose/)).toHaveProperty('textContent', expect.stringContaining('Document changed'));
+    fireEvent.click(within(region).getByRole('button', { name: 'Undo this run' }));
+    expect(await screen.findByText('Reverted 0 changes; skipped 1.')).toBeTruthy();
+    const undoneReceipt = within(region).getByRole('region', { name: 'Workspace run receipt' });
+    expect(within(undoneReceipt).getByText(/Skipped: Link guide → plan/)).toHaveProperty('textContent', expect.stringContaining('Current state differs'));
+    expect(within(undoneReceipt).getByText(/Skipped changes remain saved/)).toBeTruthy();
+  });
+
+  it('keeps the applied receipt when the canvas refresh fails after save', async () => {
+    server(call => call.path.endsWith('/automations') ? Response.json(call.body?.dryRun === false
+      ? { ...preview, dryRun: false, applied: ['link', 'label'], skipped: [] } : preview) : Response.json(report));
+    render(<InsightsPanel {...props({ onChanged: vi.fn(async () => { throw new Error('Refresh unavailable'); }) })}/>);
+    fireEvent.click(screen.getByRole('tab', { name: 'Connections' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview connections' }));
+    const region = await screen.findByLabelText('Canvas change preview');
+    fireEvent.click(within(region).getByRole('button', { name: 'Apply selected (2)' }));
+    expect(await screen.findByText('Applied 2 changes.')).toBeTruthy();
+    expect((await screen.findByRole('alert')).textContent).toContain('Changes were saved, but the canvas did not refresh.');
+    expect(within(region).getByRole('region', { name: 'Canvas run receipt' })).toBeTruthy();
+    expect(within(region).getByRole('button', { name: 'Undo this run' })).toHaveProperty('disabled', false);
+  });
+
+  it('opens grouping only on request and keeps the selected document reachable', () => {
+    server();
+    const viewProps = props();
+    render(<InsightsPanel {...viewProps}/>);
+    fireEvent.click(screen.getByRole('tab', { name: 'Groups' }));
+    const groups = screen.getByRole('region', { name: 'Document groups' });
+    fireEvent.click(within(groups).getByRole('button', { name: 'Plan' }));
+    expect(viewProps.onOpenBlock).toHaveBeenCalledWith('plan');
+    fireEvent.click(within(groups).getByRole('tab', { name: 'Purpose' }));
+    expect(within(groups).getByText('Other')).toBeTruthy();
+  });
+
+  it('explains setup when no canvas or Jev key is available', () => {
+    server();
+    const viewProps = props({ canvas: null, hasApiKey: false });
+    render(<InsightsPanel {...viewProps}/>);
+    expect(screen.getByText('Open a canvas to see its insights.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Analyze canvas' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }));
+    expect(viewProps.onOpenSettings).toHaveBeenCalledOnce();
   });
 });

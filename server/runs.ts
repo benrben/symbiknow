@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { CanvasBlock, CanvasDocument } from '../shared/types.js';
+import type { CanvasBlock, CanvasDocument, GroupBy } from '../shared/types.js';
 import { automationActions, type AutomationKind, type InsightAction, type InsightItem } from '../shared/insights.js';
 import { analyzeCanvas, automationFamilies } from './insights.js';
 import { applyInsightAction } from './automation.js';
@@ -17,6 +17,7 @@ export type WorkspaceChange = { id: string; canvasId: string; confidence: number
   postMerge?: { kind: 'connection'; canvasId: string; blockIds: string[] } };
 export type WorkspaceSuggestion = { canvasId: string; item: InsightItem };
 export type ChangeSet = { runId: string; workspaceId: string; kind: WorkspaceAutomationKind; dryRun: boolean;
+  canvasId?: string; groupBy?: GroupBy;
   changes: WorkspaceChange[]; groups: { canvasId: string; canvasName: string; count: number }[];
   suggestions?: WorkspaceSuggestion[]; applied?: string[]; skipped?: { id: string; reason: string }[] };
 type Snapshot = { blocks: CanvasBlock[]; task?: { id: string; status: string; blockIds: string[] } };
@@ -97,7 +98,10 @@ async function restore(store: CanvasStore, change: WorkspaceChange, before: Snap
     if (source) await store.updateBlock(change.canvasId, source.id, { links: source.links, linkTypes: source.linkTypes ?? {} }, actor);
     if (action.type === 'link' && action.relation === 'supersedes') {
       const target = before.blocks.find(block => block.id === action.toBlockId);
-      if (target) await store.updateBlock(change.canvasId, target.id, { stale: target.stale ?? false }, actor);
+      const currentTarget = (await store.getCanvas(change.canvasId, true)).blocks.find(block => block.id === action.toBlockId);
+      if (target && currentTarget?.stale !== target.stale) {
+        await store.updateBlock(change.canvasId, target.id, { stale: target.stale ?? false }, actor);
+      }
     }
     return;
   }
@@ -136,9 +140,9 @@ function itemConfidence(action: InsightAction, items: InsightItem[]): number {
 }
 
 async function canvasChanges(store: CanvasStore, canvas: CanvasDocument, kind: AutomationKind,
-  decider: JevDecider): Promise<WorkspaceChange[]> {
+  decider: JevDecider, selectedGroupBy?: GroupBy): Promise<WorkspaceChange[]> {
   if (kind === 'cross_connect') return [];
-  const groupBy = (await store.getSettings()).groupBy ?? 'work_area';
+  const groupBy = selectedGroupBy ?? (await store.getSettings()).groupBy ?? 'work_area';
   const report = await analyzeCanvas(store, canvas.id, '', decider,
     { families: automationFamilies(kind, groupBy), reuseLabels: kind === 'layout' || kind === 'regroup', groupBy });
   return automationActions(report, canvas, kind, groupBy).map((action, index) =>
@@ -215,19 +219,19 @@ async function tidyChanges(store: CanvasStore, canvas: CanvasDocument, decider: 
 type Feeder = { confidence: number; ids: string[] };
 
 async function crossChanges(store: CanvasStore, canvases: CanvasDocument[], decider: JevDecider,
-  feeders: Map<string, Feeder> = new Map()): Promise<WorkspaceChange[]> {
+  feeders: Map<string, Feeder> = new Map(), sourceCanvasId?: string): Promise<WorkspaceChange[]> {
   if (canvases.length < 2) return [];
   const settings = await store.getSettings();
   const applyThreshold = effectiveJevPolicy(settings.jevPolicy).cross_link.apply;
   const apiKey = await store.getJevApiKey();
   if (!apiKey) throw new ApiError(400, 'Set a TypeSafe Jev API key in Settings before using insights');
   const items = await findCrossConnections({ canvases, index: store.similarityIndex(canvases[0].workspaceId),
-    apiKey, decider, policy: settings.jevPolicy });
+    apiKey, decider, policy: settings.jevPolicy, canvasId: sourceCanvasId });
   return items.flatMap((item, index) => {
     if (item.action?.type !== 'cross_link') return [];
     const action = item.action;
     const canvas = canvases.find(entry => entry.blocks.some(block => block.id === action.fromBlockId));
-    if (!canvas) return [];
+    if (!canvas || (sourceCanvasId && canvas.id !== sourceCanvasId)) return [];
     const inputs = [feeders.get(action.fromBlockId), feeders.get(action.to.blockId)]
       .filter((entry): entry is Feeder => Boolean(entry));
     const confidence = Math.min(item.confidence, ...inputs.map(entry => entry.confidence));
@@ -254,6 +258,26 @@ async function dedupeChanges(store: CanvasStore, canvases: CanvasDocument[], dec
       postMerge: { kind: 'connection' as const, canvasId: canvas.id, blockIds: [item.action.keepBlockId] } })));
   }
   return changes;
+}
+
+/** Save a reviewable preview for one canvas. Cross-canvas links originate on that canvas. */
+export async function previewCanvasRun(store: CanvasStore, canvasId: string, kind: AutomationKind,
+  decider: JevDecider = decideWithJev, selectedGroupBy?: GroupBy): Promise<ChangeSet> {
+  const canvas = await store.getCanvas(canvasId);
+  const workspace = (await store.listWorkspaces()).find(item => item.id === canvas.workspaceId);
+  if (!workspace) throw new ApiError(404, 'Workspace not found');
+  const groupBy = selectedGroupBy ?? (await store.getSettings()).groupBy ?? 'work_area';
+  const changes = kind === 'cross_connect'
+    ? await crossChanges(store, await Promise.all(workspace.canvases.map(item => store.getCanvas(item.id))), decider,
+      new Map(), canvasId)
+    : await canvasChanges(store, canvas, kind, decider, groupBy);
+  const result: ChangeSet = {
+    runId: randomUUID(), workspaceId: canvas.workspaceId, canvasId, kind, groupBy, dryRun: true,
+    changes: changes.map((change, index) => ({ ...change, id: `${canvasId}:${index}` })),
+    groups: [{ canvasId, canvasName: canvas.name, count: changes.length }],
+  };
+  await save(store, { ...result, createdAt: new Date().toISOString(), status: 'preview', steps: [] });
+  return result;
 }
 
 /** Compute changes and save a reviewable, hash-bound preview without applying them. */
@@ -303,38 +327,64 @@ export async function previewWorkspaceRun(store: CanvasStore, workspaceId: strin
   return result;
 }
 
-export async function applyWorkspaceRun(store: CanvasStore, runId: string, actionIds: string[], actor = 'Jev', workspaceId?: string): Promise<ChangeSet> {
+export async function applyCanvasRun(store: CanvasStore, canvasId: string, runId: string,
+  actionIds: string[], actor = 'Jev'): Promise<ChangeSet> {
+  return applyWorkspaceRun(store, runId, actionIds, actor, undefined, canvasId);
+}
+
+export async function applyWorkspaceRun(store: CanvasStore, runId: string, actionIds: string[], actor = 'Jev',
+  workspaceId?: string, canvasId?: string): Promise<ChangeSet> {
   const journal = await load(store, runId);
   if (workspaceId && journal.workspaceId !== workspaceId) throw new ApiError(400, 'Jev run belongs to another workspace');
+  if (workspaceId && journal.canvasId) throw new ApiError(400, 'Jev run belongs to a canvas');
+  if (canvasId && journal.canvasId !== canvasId) throw new ApiError(400, 'Jev run belongs to another canvas');
   if (journal.status !== 'preview') throw new ApiError(409, 'This preview was already applied');
   const allowed = new Set(journal.changes.map(change => change.id));
   if (actionIds.some(id => !allowed.has(id))) throw new ApiError(400, 'Unknown workspace action');
   const selected = new Set(actionIds);
   const applied: string[] = [];
   const skipped: { id: string; reason: string }[] = [];
-  for (const change of journal.changes.filter(item => selected.has(item.id))) {
-    if (change.requiresClick) {
-      skipped.push({ id: change.id, reason: 'Merge requires reviewed content; rerun connections after merging' }); continue;
+  let pending: { change: WorkspaceChange; before: Snapshot } | undefined;
+  try {
+    for (const change of journal.changes.filter(item => selected.has(item.id))) {
+      if (change.requiresClick) {
+        skipped.push({ id: change.id, reason: 'Merge requires reviewed content; rerun connections after merging' }); continue;
+      }
+      if (change.dependsOn?.some(id => !applied.includes(id))) {
+        skipped.push({ id: change.id, reason: 'Prerequisite action was not applied' }); continue;
+      }
+      const current = await store.getCanvas(change.canvasId, true);
+      const targetCanvas = change.action.type === 'cross_link'
+        ? await store.getCanvas(change.action.to.canvasId, true) : undefined;
+      const fresh = Object.entries(change.expectedContentHashes).every(([id, hash]) =>
+        (current.blocks.find(block => block.id === id)
+          ?? targetCanvas?.blocks.find(block => block.id === id))?.contentHash === hash);
+      if (!fresh) { skipped.push({ id: change.id, reason: 'Document changed since preview' }); continue; }
+      pending = { change, before: await snapshot(store, change) };
+      await applyInsightAction(store, change.canvasId, change.action, actor);
+      const after = await snapshot(store, change);
+      journal.steps.push({ ...pending, after });
+      pending = undefined;
+      await save(store, journal);
+      applied.push(change.id);
     }
-    if (change.dependsOn?.some(id => !applied.includes(id))) {
-      skipped.push({ id: change.id, reason: 'Prerequisite action was not applied' }); continue;
-    }
-    const current = await store.getCanvas(change.canvasId, true);
-    const targetCanvas = change.action.type === 'cross_link'
-      ? await store.getCanvas(change.action.to.canvasId, true) : undefined;
-    const fresh = Object.entries(change.expectedContentHashes).every(([id, hash]) =>
-      (current.blocks.find(block => block.id === id)
-        ?? targetCanvas?.blocks.find(block => block.id === id))?.contentHash === hash);
-    if (!fresh) { skipped.push({ id: change.id, reason: 'Document changed since preview' }); continue; }
-    const before = await snapshot(store, change);
-    await applyInsightAction(store, change.canvasId, change.action, actor);
-    const after = await snapshot(store, change);
-    journal.steps.push({ change, before, after });
+    journal.status = 'applied';
     await save(store, journal);
-    applied.push(change.id);
+  } catch (error) {
+    const rollbackErrors: unknown[] = [];
+    for (const step of [...(pending ? [pending] : []), ...[...journal.steps].reverse()]) {
+      try {
+        if (comparable(await snapshot(store, step.change)) !== comparable(step.before)) {
+          await restore(store, step.change, step.before, actor);
+        }
+      } catch (rollbackError) { rollbackErrors.push(rollbackError); }
+    }
+    journal.steps = [];
+    journal.status = 'preview';
+    try { await save(store, journal); } catch (saveError) { rollbackErrors.push(saveError); }
+    if (rollbackErrors.length) throw new AggregateError([error, ...rollbackErrors], 'Jev run failed and rollback was incomplete');
+    throw error;
   }
-  journal.status = 'applied';
-  await save(store, journal);
   return { ...journal, dryRun: false, applied, skipped };
 }
 

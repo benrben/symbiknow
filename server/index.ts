@@ -6,7 +6,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chat } from './chat.js';
 import { automationDescriptions, createChatStream, sendChatStream, type DeepAgentFactory, type IntentTokenScope } from './chat-stream.js';
-import { analyzeCanvas } from './insights.js';
+import { allFamilies, analyzeCanvas, type Family } from './insights.js';
+import { getJevInbox, dismissJevFinding, applyJevFinding } from './jev-inbox.js';
+import { previewDocumentIntake } from './jev-intake.js';
 import { runCanvasAutomation } from './automation.js';
 import type { AutomationKind } from '../shared/insights.js';
 import type { GroupBy } from '../shared/types.js';
@@ -19,11 +21,13 @@ import { listModels } from './providers.js';
 import { testExternal } from './external-mcp.js';
 import { feedbackSummary, jevCalibration, recordFeedback } from './feedback.js';
 import { jevUsageSummary, registerJevUsageLogging } from './jev-usage.js';
-import { applyWorkspaceRun, previewWorkspaceRun, undoWorkspaceRun, type WorkspaceAutomationKind } from './runs.js';
+import { applyCanvasRun, applyWorkspaceRun, previewCanvasRun, previewWorkspaceRun, undoWorkspaceRun, type WorkspaceAutomationKind } from './runs.js';
 import { findDuplicates } from './duplicates.js';
 import { findCrossConnections } from './cross-canvas.js';
 import { rankSearchHits } from './search-ranking.js';
 import { analyzeTaskInsights } from './task-insights.js';
+import { applyChatProposal, getChatProposal, undoChatProposal, ChatProposalConflict } from './chat-proposals.js';
+import { InvestigationStore } from './investigations.js';
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -115,6 +119,7 @@ async function sessionRoutes(context: RouteContext): Promise<boolean> {
 
 async function connectionRoutes(context: RouteContext): Promise<boolean> {
   const { store, request, response, method, route, url, fetcher } = context;
+  if (method === 'GET' && route === '/api/mcp/activity') { sendJson(response, 200, await store.mcpActivity()); return true; }
   if (method === 'GET' && route === '/api/mcp/info') {
     const origin = publicOrigin(request);
     sendJson(response, 200, { origin, endpoint: `${origin}/mcp`, publicUrlConfigured: Boolean(process.env.PUBLIC_URL),
@@ -122,8 +127,8 @@ async function connectionRoutes(context: RouteContext): Promise<boolean> {
     return true;
   }
   if (method === 'POST' && route === '/api/mcp/tokens') {
-    const { name } = await readBody(request);
-    sendJson(response, 201, await store.createMcpToken(name));
+    const { name, access, allowedCanvasIds, tools } = await readBody(request);
+    sendJson(response, 201, await store.createMcpToken(name, access, { allowedCanvasIds, tools }));
     return true;
   }
   const token = route.match(/^\/api\/mcp\/tokens\/([^/]+)$/);
@@ -217,6 +222,30 @@ async function searchAndChat(context: RouteContext): Promise<boolean> {
 
 async function streamingChat(context: RouteContext): Promise<boolean> {
   const { store, response, method, route, request, agentFactory, jevDecider, intentTokens } = context;
+  const proposalRead = route.match(/^\/api\/chat\/proposals\/([^/]+)$/);
+  if (proposalRead && method === 'GET') { sendJson(response, 200, getChatProposal(store, proposalRead[1])); return true; }
+  const proposalApply = route.match(/^\/api\/chat\/proposals\/([^/]+)\/apply$/);
+  if (proposalApply && method === 'POST') {
+    const body = await readBody(request);
+    if (body.changeIds !== undefined && (!Array.isArray(body.changeIds) || body.changeIds.some(id => typeof id !== 'string'))) {
+      throw new ApiError(400, 'changeIds must be an array of strings');
+    }
+    try { sendJson(response, 200, await applyChatProposal(store, proposalApply[1], body.changeIds as string[] | undefined)); }
+    catch (error) {
+      if (!(error instanceof ChatProposalConflict)) throw error;
+      sendJson(response, 409, { error: error.message, conflicts: error.conflicts });
+    }
+    return true;
+  }
+  const proposalUndo = route.match(/^\/api\/chat\/proposals\/([^/]+)\/undo$/);
+  if (proposalUndo && method === 'POST') {
+    try { sendJson(response, 200, await undoChatProposal(store, proposalUndo[1])); }
+    catch (error) {
+      if (!(error instanceof ChatProposalConflict)) throw error;
+      sendJson(response, 409, { error: error.message, conflicts: error.conflicts });
+    }
+    return true;
+  }
   if (method === 'POST' && route === '/api/chat/intents') {
     const { canvasId, action, blockIds } = await readBody(request);
     const allowed = new Set([...Object.values(automationDescriptions), 'substantial edit', 'delete document', 'merge documents']);
@@ -246,6 +275,26 @@ async function streamingChat(context: RouteContext): Promise<boolean> {
     }));
     return true;
   }
+  return false;
+}
+
+async function investigationRoutes(context: RouteContext): Promise<boolean> {
+  const { store, request, response, method, route } = context;
+  const investigations = new InvestigationStore(store);
+  if (route === '/api/investigations' && method === 'POST') {
+    sendJson(response, 201, await investigations.create(await readBody(request)));
+    return true;
+  }
+  if (route === '/api/investigations/list' && method === 'POST') {
+    sendJson(response, 200, await investigations.list(await readBody(request)));
+    return true;
+  }
+  const match = route.match(/^\/api\/investigations\/([^/]+)$/);
+  if (!match) return false;
+  const accessKey = typeof request.headers['x-investigation-key'] === 'string' ? request.headers['x-investigation-key'] : undefined;
+  if (method === 'GET') { sendJson(response, 200, await investigations.get(match[1], accessKey)); return true; }
+  if (method === 'PATCH') { sendJson(response, 200, await investigations.update(match[1], await readBody(request), accessKey)); return true; }
+  if (method === 'DELETE') { sendJson(response, 200, await investigations.delete(match[1], accessKey)); return true; }
   return false;
 }
 
@@ -312,11 +361,18 @@ async function canvasDocument(context: RouteContext): Promise<boolean> {
 
 async function versionRoutes(context: RouteContext): Promise<boolean> {
   const { route, method, request, response, store, actor } = context;
-  const match = route.match(/^\/api\/canvases\/([^/]+)\/blocks\/([^/]+)\/versions(?:\/(branches|switch|merge|restore))?$/);
+  const match = route.match(/^\/api\/canvases\/([^/]+)\/blocks\/([^/]+)\/versions(?:\/(branches|switch|merge|restore|preview))?$/);
   if (!match) return false;
   const [, canvasId, blockId, action] = match;
   if (!action && method === 'GET') {
     sendJson(response, 200, await store.documentHistory(canvasId, blockId)); return true;
+  }
+  if (action === 'preview' && method === 'GET') {
+    const kind = context.url.searchParams.get('kind');
+    if (kind !== 'switch' && kind !== 'merge' && kind !== 'restore') throw new ApiError(400, 'Preview kind is required');
+    const target = context.url.searchParams.get(kind === 'restore' ? 'revision' : 'name');
+    if (!target) throw new ApiError(400, kind === 'restore' ? 'Revision ID is required' : 'Branch name is required');
+    sendJson(response, 200, await store.previewDocumentVersion(canvasId, blockId, kind, target)); return true;
   }
   if (action === 'branches' && method === 'POST') {
     const body = await readBody(request);
@@ -351,8 +407,43 @@ async function canvasInsights(context: RouteContext): Promise<boolean> {
   const match = context.route.match(/^\/api\/canvases\/([^/]+)\/insights$/);
   if (!match || context.method !== 'POST') return false;
   const body = await readBody(context.request);
-  if (typeof body.query !== 'string' || body.query.length > 500) throw new ApiError(400, 'query must be a string of at most 500 characters');
-  sendJson(context.response, 200, await analyzeCanvas(context.store, match[1], body.query, context.jevDecider));
+  const query = body.query ?? '';
+  if (typeof query !== 'string' || query.length > 200) throw new ApiError(400, 'query must be a string of at most 200 characters');
+  if (body.blockIds !== undefined && (!Array.isArray(body.blockIds) || body.blockIds.length < 1 || body.blockIds.length > 2
+    || body.blockIds.some(id => typeof id !== 'string'))) throw new ApiError(400, 'blockIds must contain one or two document IDs');
+  if (body.families !== undefined && (!Array.isArray(body.families) || body.families.length > allFamilies.length
+    || body.families.some(family => typeof family !== 'string' || !allFamilies.includes(family as Family)))) {
+    throw new ApiError(400, 'families must contain supported Jev question families');
+  }
+  sendJson(context.response, 200, await analyzeCanvas(context.store, match[1], query, context.jevDecider,
+    { blockIds: body.blockIds as string[] | undefined, families: body.families as Family[] | undefined }));
+  return true;
+}
+
+async function jevInboxRoutes(context: RouteContext): Promise<boolean> {
+  const match = context.route.match(/^\/api\/canvases\/([^/]+)\/jev-inbox(?:\/([^/]+)\/(dismiss|apply))?$/);
+  if (!match) return false;
+  const [, canvasId, itemId, action] = match;
+  if (!action && context.method === 'GET') {
+    sendJson(context.response, 200, await getJevInbox(context.store, canvasId, context.jevDecider,
+      context.url.searchParams.get('retry') === '1'));
+    return true;
+  }
+  if (itemId && action === 'dismiss' && context.method === 'POST') {
+    sendJson(context.response, 200, await dismissJevFinding(context.store, canvasId, itemId));
+    return true;
+  }
+  if (itemId && action === 'apply' && context.method === 'POST') {
+    sendJson(context.response, 200, await applyJevFinding(context.store, canvasId, itemId, `Jev · ${context.actor}`));
+    return true;
+  }
+  return false;
+}
+
+async function intakePreviewRoute(context: RouteContext): Promise<boolean> {
+  const match = context.route.match(/^\/api\/canvases\/([^/]+)\/intake\/preview$/);
+  if (!match || context.method !== 'POST') return false;
+  sendJson(context.response, 200, await previewDocumentIntake(context.store, match[1], await readBody(context.request), context.jevDecider));
   return true;
 }
 
@@ -437,9 +528,21 @@ async function canvasLayout(context: RouteContext): Promise<boolean> {
 async function canvasAutomation(context: RouteContext): Promise<boolean> {
   const match = context.route.match(/^\/api\/canvases\/([^/]+)\/automations$/);
   if (!match || context.method !== 'POST') return false;
-  const { kind, groupBy } = await readBody(context.request);
+  const { kind, groupBy, dryRun, runId, actionIds } = await readBody(context.request);
   if (!['layout', 'connection', 'regroup', 'purpose', 'work_area', 'reviewer', 'cross_connect'].includes(String(kind))) throw new ApiError(400, 'Unknown canvas automation');
   if (groupBy !== undefined && !['work_area', 'purpose', 'lane'].includes(String(groupBy))) throw new ApiError(400, 'groupBy must be work_area, purpose, or lane');
+  if (dryRun === true) {
+    sendJson(context.response, 200, await previewCanvasRun(context.store, match[1], kind as AutomationKind, context.jevDecider,
+      groupBy as GroupBy | undefined));
+    return true;
+  }
+  if (dryRun === false) {
+    if (typeof runId !== 'string' || !Array.isArray(actionIds) || actionIds.some(id => typeof id !== 'string')) {
+      throw new ApiError(400, 'Apply selected changes from a canvas preview');
+    }
+    sendJson(context.response, 200, await applyCanvasRun(context.store, match[1], runId, actionIds as string[], `Jev · ${context.actor}`));
+    return true;
+  }
   sendJson(context.response, 200, await runCanvasAutomation(context.store, match[1], kind as AutomationKind, context.jevDecider,
     { groupBy: groupBy as GroupBy | undefined, actor: `Jev · ${context.actor}` }));
   return true;
@@ -501,8 +604,8 @@ async function appRoute(context: RouteContext): Promise<boolean> {
   return true;
 }
 
-const routeHandlers = [workspaceAndSettings, connectionRoutes, jevRoutes, searchAndChat, streamingChat, workspaceCanvas, workspaceAutomation, canvasDocument, versionRoutes,
-  canvasInsights, jevReadActions, canvasMerge, canvasBlockMove, canvasLayout, canvasAutomation, taskInsightRoutes, taskRoutes,
+const routeHandlers = [workspaceAndSettings, connectionRoutes, jevRoutes, searchAndChat, streamingChat, investigationRoutes, workspaceCanvas, workspaceAutomation, canvasDocument, versionRoutes,
+  canvasInsights, jevInboxRoutes, intakePreviewRoute, jevReadActions, canvasMerge, canvasBlockMove, canvasLayout, canvasAutomation, taskInsightRoutes, taskRoutes,
   lockRoutes, canvasBlocks, blockDocument, blockDownload, websiteAsset];
 
 async function dispatch(context: RouteContext): Promise<void> {

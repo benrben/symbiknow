@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { CanvasStore } from './storage.js';
-import { applyWorkspaceRun, previewWorkspaceRun, undoWorkspaceRun } from './runs.js';
+import { applyCanvasRun, applyWorkspaceRun, previewCanvasRun, previewWorkspaceRun, undoWorkspaceRun } from './runs.js';
+import { runCanvasAutomation } from './automation.js';
 import type { JevDecider } from './jev.js';
 
 const directories: string[] = [];
@@ -68,6 +69,93 @@ it('previews without writes, applies selected changes, then undoes them', async 
   const undone = await undoWorkspaceRun(store, preview.runId);
   expect(undone.reverted).toEqual(selected);
   expect(await store.getCanvas('product-roadmap')).toEqual(before);
+});
+
+it('previews a canvas without writes, applies selected labels, and undoes them', async () => {
+  const store = await freshStore();
+  const before = await store.getCanvas('product-roadmap');
+  const preview = await previewCanvasRun(store, before.id, 'purpose', decider);
+  expect(preview).toMatchObject({ canvasId: before.id, workspaceId: before.workspaceId, kind: 'purpose', dryRun: true });
+  expect(preview.changes.length).toBeGreaterThan(1);
+  expect(await store.getCanvas(before.id)).toEqual(before);
+
+  const selected = preview.changes[0];
+  const applied = await applyCanvasRun(store, before.id, preview.runId, [selected.id]);
+  expect(applied.applied).toEqual([selected.id]);
+  expect((await store.getCanvas(before.id)).blocks.filter(block => block.purpose === 'guide')).toHaveLength(1);
+  const undone = await undoWorkspaceRun(store, preview.runId);
+  expect(undone.reverted).toEqual([selected.id]);
+  expect(await store.getCanvas(before.id)).toEqual(before);
+});
+
+it('binds canvas previews to the canvas and skips changed document content', async () => {
+  const store = await freshStore();
+  const other = await store.createCanvas('acme-team', { name: 'Other canvas' });
+  const preview = await previewCanvasRun(store, 'product-roadmap', 'purpose', decider);
+  const selected = preview.changes[0];
+  await expect(applyCanvasRun(store, other.id, preview.runId, [selected.id]))
+    .rejects.toMatchObject({ status: 400 });
+  await expect(applyWorkspaceRun(store, preview.runId, [selected.id], 'Jev', 'acme-team'))
+    .rejects.toMatchObject({ status: 400 });
+  if (selected.action.type !== 'update') throw new Error('Expected purpose update');
+  await store.updateBlock('product-roadmap', selected.action.blockId, { content: '# Edited after preview' });
+  const result = await applyCanvasRun(store, 'product-roadmap', preview.runId, [selected.id]);
+  expect(result.applied).toEqual([]);
+  expect(result.skipped).toEqual([{ id: selected.id, reason: 'Document changed since preview' }]);
+});
+
+it('rolls back the one-click canvas automation when a later action fails', async () => {
+  const store = await freshStore();
+  const before = await store.getCanvas('product-roadmap');
+  let updates = 0;
+  const failingStore = new Proxy(store, { get(target, property) {
+    if (property === 'updateBlock') return async (...args: Parameters<CanvasStore['updateBlock']>) => {
+      if (++updates === 2) throw new Error('Simulated write failure');
+      return target.updateBlock(...args);
+    };
+    const value = Reflect.get(target, property, target) as unknown;
+    return typeof value === 'function' ? value.bind(target) : value;
+  } });
+  await expect(runCanvasAutomation(failingStore, before.id, 'purpose', decider))
+    .rejects.toThrow('Simulated write failure');
+  expect(updates).toBeGreaterThan(2); // The rollback restored the first applied action.
+  expect(await store.getCanvas(before.id)).toEqual(before);
+});
+
+it('rolls back the first write of a supersedes link when its stale marker fails', async () => {
+  const store = await freshStore();
+  const canvas = await store.createCanvas('acme-team', { name: 'Versioned notes' });
+  const newer = await store.createBlock(canvas.id, { title: 'Setup v2', content: '# Setup\nUse the new client.' });
+  const older = await store.createBlock(canvas.id, { title: 'Setup v1', content: '# Setup\nUse the old client.' });
+  await store.updateBlock(canvas.id, newer.id, { purpose: 'guide' });
+  await store.updateBlock(canvas.id, older.id, { purpose: 'guide' });
+  const before = await store.getCanvas(canvas.id);
+  const relationDecider: JevDecider = async (_key, _state, questions) => Object.fromEntries(
+    Object.entries(questions).map(([id, question]) => {
+      if (question.type === 'score') return [id, { type: 'score', score: 4, confidence: 0.95,
+        probabilities: { '0': 0, '1': 0, '2': 0, '3': 0, '4': 1 } }];
+      if (question.type === 'noul') return [id, { type: 'noul', noul: 0.95 }];
+      const selected = id.endsWith('_link') ? 'a_to_b' : id.endsWith('_supersedes') ? 'a_supersedes_b'
+        : id.endsWith('_rel_ab') ? 'supersedes' : Object.keys(question.criteria)[0];
+      return [id, { type: 'choice', choice: selected, confidence: 0.95,
+        probabilities: Object.fromEntries(Object.keys(question.criteria).map(key => [key, Number(key === selected)])) }];
+    }));
+  const preview = await previewCanvasRun(store, canvas.id, 'connection', relationDecider);
+  const link = preview.changes.find(change => change.action.type === 'link' && change.action.relation === 'supersedes');
+  expect(link).toBeDefined();
+  let failed = false;
+  const failingStore = new Proxy(store, { get(target, property) {
+    if (property === 'updateBlock') return async (...args: Parameters<CanvasStore['updateBlock']>) => {
+      if (!failed && args[2].stale === true) { failed = true; throw new Error('Stale marker write failed'); }
+      return target.updateBlock(...args);
+    };
+    const value = Reflect.get(target, property, target) as unknown;
+    return typeof value === 'function' ? value.bind(target) : value;
+  } });
+  await expect(applyCanvasRun(failingStore, canvas.id, preview.runId, [link!.id]))
+    .rejects.toThrow('Stale marker write failed');
+  expect(failed).toBe(true);
+  expect(await store.getCanvas(canvas.id)).toEqual(before);
 });
 
 it('skips a selected change when its source document changed after preview', async () => {

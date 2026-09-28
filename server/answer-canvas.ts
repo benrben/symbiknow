@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { AnswerCanvasResult, AnswerSource, ChatViewContext, ResearchLayout } from '../shared/answer-canvas.js';
 import { documentText } from '../shared/document-text.js';
+import { normalizeEvidence } from '../shared/evidence.js';
 import { excerpt } from '../shared/excerpt.js';
 import { groupPath, normalizedGroup } from '../shared/groups.js';
 import type { CanvasBlock, CanvasDocument } from '../shared/types.js';
@@ -148,11 +149,15 @@ export async function selectAnswerCanvas(store: CanvasStore, canvasId: string, q
     .filter(item => item.score >= (decision ? 0.38 : 0.08))
     .sort((a, b) => b.score - a.score || b.candidate.localScore - a.candidate.localScore)
     .slice(0, 7);
-  const sources: AnswerSource[] = ranked.map(({ candidate, score }) => ({
-    canvasId: candidate.canvas.id, canvasName: candidate.canvas.name,
-    blockId: candidate.block.id, title: candidate.block.title,
-    excerpt: sourceExcerpt(candidate.block.content, query), relevance: score,
-    contentHash: candidate.block.contentHash,
-  }));
+  const checkedAt = new Date().toISOString();
+  const sources: AnswerSource[] = ranked.map(({ candidate, score }) => {
+    const excerpt = sourceExcerpt(candidate.block.content, query);
+    const evidence = normalizeEvidence({ claim: `Candidate context for: ${query}`, passage: excerpt,
+      sourceText: candidate.block.content, canvasId: candidate.canvas.id, documentId: candidate.block.id,
+      documentTitle: candidate.block.title, contentHash: candidate.block.contentHash, checkedAt });
+    return { canvasId: candidate.canvas.id, canvasName: candidate.canvas.name,
+      blockId: candidate.block.id, title: candidate.block.title, excerpt, relevance: score,
+      contentHash: candidate.block.contentHash, ...(evidence ? { evidence } : {}) };
+  });
   return { query, canvasId, selection: decision ? 'jev' : 'local', sources, layout, surface };
 }

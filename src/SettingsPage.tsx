@@ -1,26 +1,27 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Bot, Check, Copy, KeyRound, Plug, PlugZap, Puzzle, Server, Sparkles, Trash2 } from 'lucide-react';
+import { Activity, Bot, KeyRound, Plug, PlugZap, Puzzle, Server, Sparkles, Trash2 } from 'lucide-react';
 import type { AgentPlugin, AgentProfile, ChatSettings, ExternalMcpServer, GroupBy, ModelProvider } from '../shared/types';
 import { groupByLabels } from '../shared/groups';
 import { defaultJevPolicy, effectiveJevPolicy, policyScale, type ActionKind, type JevPolicy } from '../shared/policy';
 import { api } from './api';
+import { ConnectAgents, type OpenActivityHistory } from './SettingsConnections';
 import './settings.css';
 
 export type SettingsPayload = Record<string, unknown>;
-type SectionId = 'models' | 'agents' | 'secrets' | 'servers' | 'connect' | 'plugins' | 'jev';
+type SectionId = 'models' | 'agents' | 'secrets' | 'servers' | 'connect' | 'activity' | 'plugins' | 'jev';
 type ModelOption = { id: string; name: string; tools?: boolean; context?: number };
-type McpInfo = { origin: string; endpoint: string; publicUrlConfigured: boolean; accessProtected: boolean; activeSessions: number };
+type TestedTool = { name: string; description?: string; capabilities?: string[] };
 type FeedbackBucket = { category: string; bucket: string; applied: number; dismissed: number; applyRate: number };
 type JevUsageTotals = { requests: number; questions: number; inputTokens: number; outputTokens: number; estimatedCostUsd: number };
 type JevUsageSummary = { model: string; month: JevUsageTotals; today: JevUsageTotals };
 type CalibrationSuggestion = { kind: ActionKind; suggestedShow: number | null; sampleSize: number; note?: string };
-
 const sections: Array<{ id: SectionId; label: string; icon: ReactNode }> = [
   { id: 'models', label: 'Models', icon: <Sparkles size={15}/> },
   { id: 'agents', label: 'Agents & secrets', icon: <Bot size={15}/> },
   { id: 'secrets', label: 'Secrets', icon: <KeyRound size={15}/> },
-  { id: 'servers', label: 'MCP servers', icon: <Server size={15}/> },
-  { id: 'connect', label: 'MCP connections', icon: <PlugZap size={15}/> },
+  { id: 'servers', label: 'External tools', icon: <Server size={15}/> },
+  { id: 'connect', label: 'Workspace access', icon: <PlugZap size={15}/> },
+  { id: 'activity', label: 'Agent activity', icon: <Activity size={15}/> },
   { id: 'plugins', label: 'Plugins & loaders', icon: <Puzzle size={15}/> },
   { id: 'jev', label: 'TypeSafe Jev', icon: <Plug size={15}/> },
 ];
@@ -106,21 +107,6 @@ function UsageSummary() {
   return <div className="connection-card" aria-label="Jev usage this month">
     <div className="connection-card__top"><strong>Usage</strong><span className="connection-card__status">{usage.model}</span></div>
     <p className="settings-note">This month: {usage.month.requests.toLocaleString()} requests, {tokens.toLocaleString()} tokens, ${usage.month.estimatedCostUsd.toFixed(4)} estimated.</p>
-  </div>;
-}
-
-function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-  return <button type="button" className="settings-copy" onClick={() => {
-    void navigator.clipboard?.writeText(text).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1400); }).catch(() => undefined);
-  }}>{copied ? <Check size={12} aria-hidden="true"/> : <Copy size={12} aria-hidden="true"/>}{copied ? 'Copied' : label}</button>;
-}
-
-function Snippet({ title, note, code }: { title: string; note?: ReactNode; code: string }) {
-  return <div className="connection-card">
-    <div className="connection-card__top"><strong>{title}</strong><CopyButton text={code}/></div>
-    {note && <p>{note}</p>}
-    <pre className="connection-snippet">{code}</pre>
   </div>;
 }
 
@@ -221,14 +207,14 @@ function SecretsEditor({ names, pending, onPending }: { names: string[]; pending
 
 function ServersEditor({ servers, secretNames, onChange }: { servers: ExternalMcpServer[]; secretNames: string[]; onChange: (servers: ExternalMcpServer[]) => void }) {
   const [draft, setDraft] = useState({ name: '', url: '', bearerSecret: '' });
-  const [results, setResults] = useState<Record<string, string>>({});
+  const [results, setResults] = useState<Record<string, { message: string; tools?: TestedTool[] }>>({});
   async function test(server: Pick<ExternalMcpServer, 'name' | 'url' | 'bearerSecret' | 'headers'> & { id?: string }, key: string) {
-    setResults(current => ({ ...current, [key]: 'Connecting…' }));
+    setResults(current => ({ ...current, [key]: { message: 'Connecting…' } }));
     try {
-      const result = await api<{ tools: Array<{ name: string }> }>('/mcp/servers/test', { method: 'POST', body: JSON.stringify(server) });
-      setResults(current => ({ ...current, [key]: `Reachable · ${result.tools.length} tools: ${result.tools.slice(0, 6).map(tool => tool.name).join(', ')}${result.tools.length > 6 ? '…' : ''}` }));
+      const result = await api<{ tools: TestedTool[] }>('/mcp/servers/test', { method: 'POST', body: JSON.stringify(server) });
+      setResults(current => ({ ...current, [key]: { message: `Connected · ${result.tools.length} tools`, tools: result.tools } }));
     } catch (failure) {
-      setResults(current => ({ ...current, [key]: failure instanceof Error ? failure.message : 'Could not connect.' }));
+      setResults(current => ({ ...current, [key]: { message: failure instanceof Error ? failure.message : 'Could not connect.' } }));
     }
   }
   return <div className="servers-editor">
@@ -240,13 +226,13 @@ function ServersEditor({ servers, secretNames, onChange }: { servers: ExternalMc
         <button type="button" className="secondary-button" onClick={() => void test(server, server.id)}>Test</button>
         <button type="button" className="icon-button" aria-label={`Remove ${server.name}`} onClick={() => onChange(servers.filter((_, position) => position !== index))}><Trash2 size={14}/></button>
       </div>
-      {results[server.id] && <p className="servers-editor__result" role="status">{results[server.id]}</p>}
+      {results[server.id] && <div className="servers-editor__result" role="status"><p>{results[server.id].message}</p>{results[server.id].tools?.map(tool => <span key={tool.name}>{tool.name}{tool.capabilities?.length ? ` · ${tool.capabilities.join(', ')}` : tool.description ? ` · ${tool.description}` : ''}</span>)}</div>}
     </div>)}
     <div className="servers-editor__new">
-      <input aria-label="MCP server name" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="Name, e.g. GitHub"/>
-      <input aria-label="MCP server URL" value={draft.url} onChange={event => setDraft({ ...draft, url: event.target.value })} placeholder="https://example.com/mcp"/>
-      <select aria-label="Authorization secret" value={draft.bearerSecret} onChange={event => setDraft({ ...draft, bearerSecret: event.target.value })}>
-        <option value="">No authorization</option>{secretNames.map(name => <option key={name} value={name}>Bearer {name}</option>)}</select>
+      <label>Server name<input aria-label="MCP server name" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="GitHub"/></label>
+      <label>Server URL<input aria-label="MCP server URL" type="url" value={draft.url} onChange={event => setDraft({ ...draft, url: event.target.value })} placeholder="https://example.com/mcp"/></label>
+      <label>Auth secret<select aria-label="Authorization secret" value={draft.bearerSecret} onChange={event => setDraft({ ...draft, bearerSecret: event.target.value })}>
+        <option value="">No authorization</option>{secretNames.map(name => <option key={name} value={name}>Bearer {name}</option>)}</select></label>
       <button type="button" className="secondary-button" disabled={!draft.url} onClick={() => void test({ ...draft, name: draft.name || 'MCP server', bearerSecret: draft.bearerSecret || undefined }, 'draft')}>Test</button>
       <button type="button" className="secondary-button" disabled={!draft.name.trim() || !/^https?:\/\//.test(draft.url)} onClick={() => {
         onChange([...servers, { id: draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'server', name: draft.name.trim(), url: draft.url.trim(), enabled: true,
@@ -254,90 +240,18 @@ function ServersEditor({ servers, secretNames, onChange }: { servers: ExternalMc
         setDraft({ name: '', url: '', bearerSecret: '' });
       }}>Add server</button>
     </div>
-    {results.draft && <p className="servers-editor__result" role="status">{results.draft}</p>}
+    {results.draft && <div className="servers-editor__result" role="status"><p>{results.draft.message}</p>{results.draft.tools?.map(tool => <span key={tool.name}>{tool.name}{tool.capabilities?.length ? ` · ${tool.capabilities.join(', ')}` : tool.description ? ` · ${tool.description}` : ''}</span>)}</div>}
     <small>Remote Streamable HTTP or SSE servers only. Save secrets first, then save settings after adding a server.</small>
   </div>;
 }
 
-function ConnectAgents({ settings, onSettings }: { settings: ChatSettings; onSettings: (settings: ChatSettings) => void }) {
-  const [info, setInfo] = useState<McpInfo | null>(null);
-  const [name, setName] = useState('');
-  const [created, setCreated] = useState<{ name: string; token: string } | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => { api<McpInfo>('/mcp/info').then(setInfo).catch(() => setInfo(null)); }, []);
-  const endpoint = info?.endpoint ?? `${window.location.origin}/mcp`;
-  const local = /\/\/(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(endpoint);
-  const token = created?.token ?? '<paste your token>';
-  const envToken = created ? token : '${SYMBIKNOW_MCP_TOKEN}';
-
-  async function createToken() {
-    if (!name.trim()) return;
-    setError('');
-    try {
-      const result = await api<{ token: string; settings: ChatSettings }>('/mcp/tokens', { method: 'POST', body: JSON.stringify({ name: name.trim() }) });
-      setCreated({ name: name.trim(), token: result.token });
-      setName('');
-      onSettings(result.settings);
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not create a token.'); }
-  }
-
-  async function revoke(id: string) {
-    try { onSettings(await api<ChatSettings>(`/mcp/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' })); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not revoke the token.'); }
-  }
-
-  const claudeJson = JSON.stringify({ mcpServers: { 'symbiknow': { type: 'http', url: endpoint, headers: { Authorization: `Bearer ${envToken}` } } } }, null, 2);
-  const claudeCli = `claude mcp add --transport http symbiknow ${endpoint} \\\n  --header "Authorization: Bearer ${token}"`;
-  const codexToml = `[mcp_servers.symbiknow]\nurl = "${endpoint}"\nbearer_token_env_var = "SYMBIKNOW_MCP_TOKEN"`;
-  const genericJson = JSON.stringify({ mcpServers: { 'symbiknow': { url: endpoint, headers: { Authorization: `Bearer ${token}` } } } }, null, 2);
-  const connectorUrl = `${endpoint}/t/${token}`;
-  const localStdio = JSON.stringify({ mcpServers: { 'symbiknow': { command: 'npm', args: ['run', 'mcp'], env: { CANVAS_API_URL: `${info?.origin ?? window.location.origin}/api` } } } }, null, 2);
-
-  return <>
-    <div className={`connection-banner${local ? ' connection-banner--warn' : ''}`}>
-      <strong>Endpoint</strong><code>{endpoint}</code><CopyButton text={endpoint}/>
-      <p>{local
-        ? 'This address only works on this computer. On your server, set PUBLIC_URL to the address agents use (for example https://symbiknow.example.com), bind with HOST=0.0.0.0 behind HTTPS, and set SYMBIKNOW_ACCESS_TOKEN to protect the workspace.'
-        : `Agents anywhere can connect over Streamable HTTP with a token.${info?.accessProtected ? ' The workspace is protected by an access token.' : ' Set SYMBIKNOW_ACCESS_TOKEN on the server so only your team can open the workspace.'}`}</p>
-    </div>
-
-    <div className="connection-card">
-      <div className="connection-card__top"><strong>Access tokens</strong><span className="connection-card__status">{settings.mcpTokens?.length ?? 0} active</span></div>
-      <p>Each agent or machine gets its own token. Its name appears as the author of that agent’s edits in file history.</p>
-      {/* Not a form: this sits inside the settings form, and forms cannot nest. */}
-      <div className="token-form">
-        <input aria-label="Token name" value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Ben’s laptop – Claude Code"
-          onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void createToken(); } }}/>
-        <button type="button" className="primary-button" disabled={!name.trim()} onClick={() => void createToken()}>Create token</button>
-      </div>
-      {created && <div className="token-created" role="status"><strong>Copy this token now — it won’t be shown again.</strong><code>{created.token}</code><CopyButton text={created.token}/></div>}
-      {error && <p className="version-panel__error" role="alert">{error}</p>}
-      <ul className="token-list">{settings.mcpTokens?.map(item => <li key={item.id}>
-        <span><strong>{item.name}</strong><small>{item.preview} · created {new Date(item.createdAt).toLocaleDateString()}{item.lastUsedAt ? ` · last used ${new Date(item.lastUsedAt).toLocaleString()}` : ' · not used yet'}</small></span>
-        <button type="button" className="secondary-button" onClick={() => void revoke(item.id)}>Revoke</button></li>)}</ul>
-    </div>
-
-    <Snippet title="Claude Code · .mcp.json" code={claudeJson}
-      note={<>Put this in your project’s <code>.mcp.json</code> (shared with the repo) and export <code>SYMBIKNOW_MCP_TOKEN</code> in your shell. Claude Code expands the variable when it connects.</>}/>
-    <Snippet title="Claude Code · one command" code={claudeCli} note="Or register it for yourself from any folder."/>
-    <Snippet title="Codex · ~/.codex/config.toml" code={codexToml} note={<>Add this block and export <code>SYMBIKNOW_MCP_TOKEN</code> before starting Codex.</>}/>
-    <Snippet title="Claude.ai / Claude Desktop · custom connector" code={connectorUrl}
-      note="Settings → Connectors → Add custom connector. Paste this URL; the token is part of the path because connectors cannot send headers. Treat the URL as a secret."/>
-    <Snippet title="Cursor, Windsurf, VS Code, and other mcp.json clients" code={genericJson}/>
-    <details className="connection-details"><summary>Local development on this machine (stdio)</summary>
-      <Snippet title="stdio · runs from a checkout of this repo" code={localStdio}
-        note="Only for agents on the same machine as a clone of this project. Remote agents should use the HTTP endpoint above."/>
-      <p className="settings-note">WebMCP lets an agent drive an open browser tab through the local <code>webmcp</code> bridge. It also only works on the same machine.</p>
-    </details>
-  </>;
-}
-
-export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
+export function SettingsPage({ settings, busy, onSave, onCancel, onSettings, onOpenHistory }: {
   settings: ChatSettings;
   busy: boolean;
   onSave: (payload: SettingsPayload) => Promise<void>;
   onCancel: () => void;
   onSettings: (settings: ChatSettings) => void;
+  onOpenHistory?: OpenActivityHistory;
 }) {
   const [draft, setDraft] = useState(() => ({
     provider: settings.provider ?? 'openrouter', model: settings.model, baseUrl: settings.baseUrl ?? '', systemPrompt: settings.systemPrompt,
@@ -348,6 +262,7 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
   }));
   const [apiKey, setApiKey] = useState('');
   const [jevApiKey, setJevApiKey] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [calibration, setCalibration] = useState<CalibrationSuggestion[]>([]);
   useEffect(() => {
     api<CalibrationSuggestion[]>('/jev/calibration').then(result => setCalibration(Array.isArray(result) ? result : [])).catch(() => setCalibration([]));
@@ -362,13 +277,25 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
 
   useEffect(() => {
     const root = scroller.current;
-    if (!root || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(entries => {
-      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (visible) setActive((visible.target as HTMLElement).dataset.section as SectionId);
-    }, { root, rootMargin: '0px 0px -65% 0px' });
-    root.querySelectorAll('[data-section]').forEach(section => observer.observe(section));
-    return () => observer.disconnect();
+    if (!root) return;
+    const scrollRoot = root;
+    function updateActiveSection() {
+      const rootBounds = scrollRoot.getBoundingClientRect();
+      const activationLine = rootBounds.top + rootBounds.height / 2;
+      let current: SectionId = sections[0].id;
+      for (const section of sections) {
+        const element = scrollRoot.querySelector<HTMLElement>(`[data-section="${section.id}"]`);
+        if (element && element.getBoundingClientRect().top <= activationLine) current = section.id;
+        else if (element) break;
+      }
+      setActive(current);
+    }
+    scrollRoot.addEventListener('scroll', updateActiveSection, { passive: true });
+    window.addEventListener('resize', updateActiveSection);
+    return () => {
+      scrollRoot.removeEventListener('scroll', updateActiveSection);
+      window.removeEventListener('resize', updateActiveSection);
+    };
   }, []);
 
   function jump(id: SectionId) {
@@ -403,7 +330,9 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
     };
     if (apiKey.trim()) payload.apiKey = apiKey.trim();
     if (jevApiKey.trim()) payload.jevApiKey = jevApiKey.trim();
-    await onSave(payload);
+    setSaveError('');
+    try { await onSave(payload); }
+    catch (failure) { setSaveError(failure instanceof Error ? failure.message : 'Could not save Settings.'); }
   }
 
   const profiles = [...builtInProfiles, ...draft.customProfiles];
@@ -415,10 +344,19 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
       <p>Keys and secrets stay on the canvas server. The browser only learns whether they are set.</p></nav>
     <div className="settings-page__main"><div className="settings-page__scroll" ref={scroller}>
       <Section id="models" title="Models" description="Choose who runs the chat agent. Any provider with tool calling works with Deep Agents.">
-        <div className="provider-grid" role="radiogroup" aria-label="Model provider">{(Object.keys(providerInfo) as ModelProvider[]).map(id => {
+        <div className="provider-grid" role="radiogroup" aria-label="Model provider" onKeyDown={event => {
+          if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
+          const radios = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
+          const current = radios.indexOf(document.activeElement as HTMLButtonElement);
+          if (current < 0) return;
+          event.preventDefault();
+          const delta = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+          const next = radios[(current + delta + radios.length) % radios.length];
+          next.click(); next.focus();
+        }}>{(Object.keys(providerInfo) as ModelProvider[]).map(id => {
           const info = providerInfo[id];
           const ready = id === settings.provider ? settings.hasApiKey : Boolean(settings.providerKeys?.[id]);
-          return <button type="button" role="radio" aria-checked={draft.provider === id} key={id} className={`provider-option${draft.provider === id ? ' is-selected' : ''}`}
+          return <button type="button" role="radio" aria-checked={draft.provider === id} tabIndex={draft.provider === id ? 0 : -1} key={id} className={`provider-option${draft.provider === id ? ' is-selected' : ''}`}
             onClick={() => { update('provider', id); setApiKey(''); }}>
             <span className="provider-logo">{info.glyph}</span><span><strong>{info.name}</strong><small>{info.description}</small></span>
             <span className={'provider-status ' + (ready ? 'connected' : '')}>{ready ? 'Connected' : 'Not set'}</span>
@@ -445,12 +383,12 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
         <SecretsEditor names={settings.secretNames ?? []} pending={secrets} onPending={setSecrets}/>
       </Section>
 
-      <Section id="servers" title="MCP servers" description="Connect outside MCP servers so the chat agent can use their tools, such as GitHub, Linear, or your own services.">
+      <Section id="servers" title="External tools Symbi can use" description="Connect outside MCP servers to give Symbi’s chat agent tools such as GitHub, Linear, or your own services. Changes here are pending until you save Settings.">
         <ServersEditor servers={draft.mcpServers} secretNames={secretNames} onChange={value => update('mcpServers', value)}/>
       </Section>
 
-      <Section id="connect" title="Connect agents to this canvas" description="Give Codex, Claude Code, Claude.ai, and other MCP clients the same documents, tasks, locks, and file history. Nothing needs to run on their machine.">
-        <ConnectAgents settings={settings} onSettings={onSettings}/>
+      <Section id="connect" title="Agents that can access this workspace" description="Create access tokens for Codex, Claude Code, Claude.ai, and other MCP clients. Token creation and revocation take effect immediately, independent of pending Settings changes.">
+        <ConnectAgents settings={settings} onSettings={onSettings} onOpenHistory={onOpenHistory}/>
       </Section>
 
       <Section id="plugins" title="Plugins & loaders" description="Choose which tool packs the chat agent can call. Canvas buttons and MCP clients keep their own controls.">
@@ -480,13 +418,13 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
             const suggestion = calibration.find(item => item.kind === kind);
             return <tr key={kind}>
             <th scope="row" style={{ textAlign: 'left', padding: 6, fontWeight: 500 }}>{policyLabels[kind]}</th>
-            <td style={{ padding: 6, color: '#6b7686' }}>{policyScale[kind] === 'probability' ? 'Probability' : 'Confidence'}</td>
+            <td style={{ padding: 6, color: 'var(--sk-muted)' }}>{policyScale[kind] === 'probability' ? 'Probability' : 'Confidence'}</td>
             {(['show', 'apply'] as const).map(field => <td key={field} style={{ padding: 6 }}>
               <input type="number" aria-label={`${policyLabels[kind]} ${field}`} min={0} max={1} step={0.01} value={draft.jevPolicy[kind][field]}
                 onChange={event => updateThreshold(kind, field, Number(event.target.value))}
-                style={{ width: 74, padding: '5px 7px', border: '1px solid #dce3ed', borderRadius: 6 }}/>
+                style={{ width: 74, padding: '5px 7px', border: '1px solid var(--sk-border)', borderRadius: 6 }}/>
             </td>)}
-            <td style={{ padding: 6, color: '#6b7686' }}>{!suggestion ? '—'
+            <td style={{ padding: 6, color: 'var(--sk-muted)' }}>{!suggestion ? '—'
               : suggestion.suggestedShow === null ? `${suggestion.note ?? 'Not enough data'} (n=${suggestion.sampleSize})`
               : <>{`Show ≥ ${suggestion.suggestedShow} (n=${suggestion.sampleSize})`}{' '}
                 <button type="button" className="secondary-button" onClick={() => useSuggestion(kind, suggestion.suggestedShow!)}>Use</button></>}
@@ -497,6 +435,6 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings }: {
         {!validJevPolicy(draft.jevPolicy) && <p role="alert">Each threshold must be between 0 and 1, and Show cannot exceed Apply.</p>}
         <FeedbackTable/>
       </Section>
-    </div><footer className="settings-page__footer"><span>Changes apply to the next chat and automation.</span><button type="button" className="secondary-button" onClick={onCancel}>Cancel</button><button className="primary-button" disabled={busy || !validJevPolicy(draft.jevPolicy)}>Save settings</button></footer></div>
+    </div><footer className="settings-page__footer"><span role={saveError ? 'alert' : 'status'}>{saveError || (busy ? 'Saving Settings…' : 'Changes here are pending until Settings is saved. Token actions take effect immediately.')}</span><button type="button" className="secondary-button" onClick={onCancel}>Cancel</button><button className="primary-button" disabled={busy || !validJevPolicy(draft.jevPolicy)}>{busy ? 'Saving…' : 'Save settings'}</button></footer></div>
   </form>;
 }

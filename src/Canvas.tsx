@@ -41,6 +41,7 @@ type CanvasNodeData = Record<string, unknown> & {
   onHistoryBlock: (block: CanvasBlock) => void;
   onOpenCrossLink: (canvasId: string, blockId: string) => void;
   onFindDuplicates: (blockId: string) => void;
+  onAnalyzeBlock: (blockId: string, focus: 'related' | 'conflicts' | 'labels') => void;
   crossLinkLabels?: Record<string, string>;
   onResize: (blockId: string, patch: Partial<CanvasBlock>) => void;
   onError: (message: string) => void;
@@ -79,7 +80,7 @@ function LockBadge({ block }: { block: CanvasBlock }) {
 }
 
 const DocumentNode = memo(function DocumentNode({ data, selected }: NodeProps<CanvasNode>) {
-  const { block, canvasId, onUpdateBlock, onOpenBlock, onReadBlock, onHistoryBlock, onOpenCrossLink, onFindDuplicates, onResize, onError } = data;
+  const { block, canvasId, onUpdateBlock, onOpenBlock, onReadBlock, onHistoryBlock, onOpenCrossLink, onFindDuplicates, onAnalyzeBlock, onResize, onError } = data;
   const [menuOpen, setMenuOpen] = useState(false);
   const quality = block.quality && Number.isFinite(block.quality.score) ? Math.max(0, Math.min(1, block.quality.score)) : undefined;
   const portals = block.crossLinks ?? [];
@@ -90,7 +91,7 @@ const DocumentNode = memo(function DocumentNode({ data, selected }: NodeProps<Ca
         isVisible={selected}
         minWidth={280}
         minHeight={200}
-        color="#698cfc"
+        color="var(--sk-focus)"
         onResizeEnd={(_, dimensions) => onResize(block.id, dimensions)}
       />
       <Handle type="target" position={Position.Left} className="canvas-handle" />
@@ -104,12 +105,12 @@ const DocumentNode = memo(function DocumentNode({ data, selected }: NodeProps<Ca
             {block.purpose && <em className="canvas-card__purpose" data-purpose={block.purpose} title={`Purpose: ${block.purpose}`}>{block.purpose}</em>}
             {block.workArea && <em className={`canvas-card__work-area canvas-card__work-area--${labelTone(block.workArea)}`} title={`Work area: ${workAreaLabel(block.workArea)}`}>{workAreaLabel(block.workArea)}</em>}
             {block.reviewer && <em className="canvas-card__reviewer" title={`Reviewer: ${block.reviewer}`}>Review: {block.reviewer}</em>}
-            {quality !== undefined && <span className="canvas-card__quality" title={`Document quality: ${Math.round(quality * 100)}%`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap', fontSize: 9, color: '#58687c' }}>
+            {quality !== undefined && <span className="canvas-card__quality" title={`Document quality: ${Math.round(quality * 100)}%`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap', fontSize: 9, color: 'var(--sk-muted)' }}>
               Quality <meter min={0} max={1} value={quality} aria-label={`Quality for ${block.title}`} style={{ width: 36, height: 7 }}/>{Math.round(quality * 100)}%
             </span>}
           </span>}
         </div>
-        {portals.length > 0 && data.detail !== 'titles' && <span className="canvas-card__portal-count" title={`${portals.length} cross-canvas ${portals.length === 1 ? 'link' : 'links'}`} style={{ borderRadius: 8, padding: '2px 5px', background: '#e6f3ff', color: '#236491', fontSize: 10, fontWeight: 700 }}>↗ {portals.length}</span>}
+        {portals.length > 0 && data.detail !== 'titles' && <span className="canvas-card__portal-count" title={`${portals.length} cross-canvas ${portals.length === 1 ? 'link' : 'links'}`} style={{ borderRadius: 8, padding: '2px 5px', background: 'var(--sk-surface-soft)', color: 'var(--sk-link)', fontSize: 10, fontWeight: 700 }}>↗ {portals.length}</span>}
         <span className="canvas-card__kind">{block.kind}</span>
         <button className="canvas-card__edit nodrag" title="Open full page" aria-label={`Read ${block.title} full page`} onClick={() => onReadBlock(block)}>↗</button>
         <button className="canvas-card__edit nodrag" title="File history" aria-label={`History for ${block.title}`} onClick={() => onHistoryBlock(block)}>⑂</button>
@@ -117,9 +118,13 @@ const DocumentNode = memo(function DocumentNode({ data, selected }: NodeProps<Ca
         <span className="nodrag" style={{ position: 'relative' }}>
           <button type="button" className="canvas-card__edit nodrag" title="Document actions" aria-label={`Actions for ${block.title}`}
             aria-expanded={menuOpen} onClick={event => { event.stopPropagation(); setMenuOpen(value => !value); }}>⋯</button>
-          {menuOpen && <span role="menu" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 20, minWidth: 166,
-            padding: 4, border: '1px solid #dce3ed', borderRadius: 8, background: '#fff', boxShadow: '0 8px 24px #1b2d5622' }}>
-            <button type="button" role="menuitem" className="nodrag" style={{ width: '100%', border: 0, padding: '7px 9px', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+          {menuOpen && <span role="menu" className="canvas-card__actions-menu" onKeyDown={event => {
+            if (event.key === 'Escape') { event.stopPropagation(); setMenuOpen(false); }
+          }}>
+            {([['related', 'Find related documents'], ['conflicts', 'Check for conflicts'], ['labels', 'Suggest labels']] as const).map(([focus, label]) =>
+              <button key={focus} type="button" role="menuitem" className="nodrag"
+                onClick={event => { event.stopPropagation(); setMenuOpen(false); onAnalyzeBlock(block.id, focus); }}>{label}</button>)}
+            <button type="button" role="menuitem" className="nodrag"
               onClick={event => { event.stopPropagation(); setMenuOpen(false); onFindDuplicates(block.id); }}>Find duplicates of this document</button>
           </span>}
         </span>
@@ -127,11 +132,11 @@ const DocumentNode = memo(function DocumentNode({ data, selected }: NodeProps<Ca
       {data.detail !== 'titles' && <div className="canvas-card__body nowheel nodrag" onDoubleClick={(event) => event.stopPropagation()}>
         <BlockContent block={block} canvasId={canvasId} onUpdateBlock={onUpdateBlock} onError={onError} />
       </div>}
-      {portals.length > 0 && data.detail !== 'titles' && <div className="canvas-card__portals nodrag" aria-label={`Related documents on other canvases for ${block.title}`} style={{ display: 'flex', gap: 4, padding: '5px 8px', overflowX: 'auto', borderTop: '1px solid #e8edf5' }}>
+      {portals.length > 0 && data.detail !== 'titles' && <div className="canvas-card__portals nodrag" aria-label={`Related documents on other canvases for ${block.title}`} style={{ display: 'flex', gap: 4, padding: '5px 8px', overflowX: 'auto', borderTop: '1px solid var(--sk-border)' }}>
         {portals.slice(0, 2).map(link => <button key={`${link.canvasId}:${link.blockId}`} type="button" className="canvas-card__portal nodrag"
           aria-label={`Open related document ${link.blockId} on canvas ${link.canvasId}`}
           title={`Open ${link.blockId} on canvas ${link.canvasId}`}
-          style={{ flex: '0 0 auto', border: '1px solid #c6dfed', borderRadius: 6, background: '#eef8ff', color: '#275b80', padding: '2px 5px', fontSize: 10, cursor: 'pointer' }}
+          style={{ flex: '0 0 auto', border: '1px solid var(--sk-border)', borderRadius: 6, background: 'var(--sk-surface-soft)', color: 'var(--sk-link)', padding: '2px 5px', fontSize: 10, cursor: 'pointer' }}
           onClick={event => { event.stopPropagation(); onOpenCrossLink(link.canvasId, link.blockId); }}>
           ↗ Other canvas: {data.crossLinkLabels?.[`${link.canvasId}:${link.blockId}`] ?? link.canvasId}
         </button>)}
@@ -177,6 +182,7 @@ function makeNodes(
   onHistoryBlock: CanvasNodeData['onHistoryBlock'],
   onOpenCrossLink: CanvasNodeData['onOpenCrossLink'],
   onFindDuplicates: CanvasNodeData['onFindDuplicates'],
+  onAnalyzeBlock: CanvasNodeData['onAnalyzeBlock'],
   onResize: CanvasNodeData['onResize'],
   onError: CanvasNodeData['onError'],
   highlightedId?: string,
@@ -188,7 +194,7 @@ function makeNodes(
     width: block.width,
     height: block.height,
     style: { width: block.width, height: block.height },
-    data: { block, canvasId, onUpdateBlock, onOpenBlock, onReadBlock, onHistoryBlock, onOpenCrossLink, onFindDuplicates, onResize, onError, highlighted: block.id === highlightedId },
+    data: { block, canvasId, onUpdateBlock, onOpenBlock, onReadBlock, onHistoryBlock, onOpenCrossLink, onFindDuplicates, onAnalyzeBlock, onResize, onError, highlighted: block.id === highlightedId },
   }));
 }
 
@@ -326,6 +332,7 @@ export interface CanvasProps {
   onHistoryBlock?: (block: CanvasBlock) => void;
   onOpenCrossLink?: (canvasId: string, blockId: string) => void;
   onFindDuplicates?: (blockId: string) => void;
+  onAnalyzeBlock?: (blockId: string, focus: 'related' | 'conflicts' | 'labels') => void;
   crossLinkLabels?: Record<string, string>;
   onMoveBlocks?: (positions: BlockPosition[]) => Promise<void>;
   focusRequest?: { blockId: string; sequence: number };
@@ -342,7 +349,7 @@ export interface CanvasProps {
   focusSelect?: boolean;
 }
 
-export function Canvas({ canvas, theme = 'light', onUpdateBlock, onDeleteBlock, onSelectBlock, onReadBlock = onSelectBlock, onHistoryBlock = onSelectBlock, onOpenCrossLink, onFindDuplicates, crossLinkLabels, onMoveBlocks, focusRequest, groupFocusRequest, searchQuery = '', searchMatchIds = [], activeSearchId, onSummarizeSelection, onSelectionChange, onViewportChange, viewportRequest, previewGroups, focusZoom, focusSelect = true }: CanvasProps) {
+export function Canvas({ canvas, theme = 'light', onUpdateBlock, onDeleteBlock, onSelectBlock, onReadBlock = onSelectBlock, onHistoryBlock = onSelectBlock, onOpenCrossLink, onFindDuplicates, onAnalyzeBlock, crossLinkLabels, onMoveBlocks, focusRequest, groupFocusRequest, searchQuery = '', searchMatchIds = [], activeSearchId, onSummarizeSelection, onSelectionChange, onViewportChange, viewportRequest, previewGroups, focusZoom, focusSelect = true }: CanvasProps) {
   const { id: canvasId, blocks } = canvas;
   const [message, setMessage] = useState('');
   const [highlightedId, setHighlightedId] = useState('');
@@ -568,6 +575,9 @@ export function Canvas({ canvas, theme = 'light', onUpdateBlock, onDeleteBlock, 
   const onFindDuplicatesRef = useRef(onFindDuplicates);
   onFindDuplicatesRef.current = onFindDuplicates;
   const findDuplicates = useCallback((blockId: string) => onFindDuplicatesRef.current?.(blockId), []);
+  const onAnalyzeBlockRef = useRef(onAnalyzeBlock);
+  onAnalyzeBlockRef.current = onAnalyzeBlock;
+  const analyzeBlock = useCallback((blockId: string, focus: 'related' | 'conflicts' | 'labels') => onAnalyzeBlockRef.current?.(blockId, focus), []);
 
   const reportError = useCallback((reason: string) => setMessage(reason), []);
   const updateBlockRef = useRef(onUpdateBlock);
@@ -623,9 +633,11 @@ export function Canvas({ canvas, theme = 'light', onUpdateBlock, onDeleteBlock, 
     if (!target) return;
     const timer = window.setTimeout(() => {
       if (!flowInstance.current) return;
+      const stage = surface.current?.querySelector('.canvas-flow-stage')?.getBoundingClientRect();
+      const fittingZoom = stage ? Math.min((stage.width - 24) / target.width, (stage.height - 24) / target.height) : 1;
       centeredFocusSequence.current = focusRequest.sequence;
       void flowInstance.current.setCenter(target.x + target.width / 2, target.y + target.height / 2,
-        { zoom: focusZoom ?? 1, duration: 350 });
+        { zoom: Math.max(0.28, Math.min(focusZoom ?? 1, fittingZoom)), duration: 350 });
     }, 180);
     return () => window.clearTimeout(timer);
   }, [focusRequest?.sequence, focusSelect, focusZoom, blocks]);
@@ -876,7 +888,7 @@ export function Canvas({ canvas, theme = 'light', onUpdateBlock, onDeleteBlock, 
   if (!nodeSource || nodeSource.canvasId !== canvasId || nodeSource.blocks !== blocks) {
     const canvasChanged = Boolean(nodeSource && nodeSource.canvasId !== canvasId);
     setNodeSource({ canvasId, blocks });
-    setNodes(makeNodes(canvasId, blocks, saveBlock, openBlock, readBlock, historyBlock, openCrossLink, findDuplicates, resizeBlock, reportError));
+    setNodes(makeNodes(canvasId, blocks, saveBlock, openBlock, readBlock, historyBlock, openCrossLink, findDuplicates, analyzeBlock, resizeBlock, reportError));
     setArrangePreview(false);
     setPullActive(false);
     if (canvasChanged) {
@@ -958,7 +970,7 @@ export function Canvas({ canvas, theme = 'light', onUpdateBlock, onDeleteBlock, 
         <Controls position="bottom-left" showInteractive={false} />
         <MiniMap position="bottom-right" nodeStrokeWidth={3} pannable zoomable nodeColor={node => node.type === 'groupFrame'
           ? ['#aebcf0', '#e9c48f', '#97d4cf', '#d1afe9', '#efb1c2', '#a9d7a8', '#9fc9ea', '#d8c49a'][Number((node.data as GroupNodeData).tone) || 0]
-          : (searchIds.has(node.id) ? '#f05b72' : theme === 'dark' ? '#738AF1' : '#BCE7C9')} />
+          : (searchIds.has(node.id) ? theme === 'dark' ? '#AFC0FF' : '#3858B8' : '#BCE7C9')} />
       </ReactFlow></div>
       <CanvasOverview canvasName={canvas.name} groups={groupFrames} blocks={viewBlocks} searchIds={searchIds} searchQuery={searchQuery} matchCount={searchMatchIds.length} overview={zoomLevel === 'overview'} drill={Boolean(drillGroup && !selectedIds.length)} onFocus={openHierarchyGroup} onZoomWheel={zoomOverview}/>
       {showDrillBoard && drillGroup && zoomLevel !== 'overview' && selectedIds.length === 0 && <CanvasDrillBoard group={drillGroup} groups={groupFrames} blocks={viewBlocks} onFocus={focusGroup} onSelect={selectBlock}/>}

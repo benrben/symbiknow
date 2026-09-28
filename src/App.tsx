@@ -5,6 +5,9 @@ import type { AnswerCanvasResult, AnswerCanvasTurn, AnswerCanvasViewFocus, Answe
 import { editedResearchGraph, emptyResearchEdits, savedResearchContent, type ResearchCanvasEdits } from './research-edits';
 import { sameDocument, type CanvasChanges, type CanvasEdit } from './canvas-changes';
 import type { MergeDraftRequest } from './AIElementsChat';
+import type { InvestigationResearchSnapshot } from './SavedInvestigations';
+import type { FindingTaskReference } from './TasksPanel';
+import { chatHistoryKey } from './chat-history';
 import { ResizableAssistant } from './ResizableAssistant';
 import { SymbiAvatar, type SymbiState } from './SymbiAvatar';
 import type { SettingsPayload } from './SettingsPage';
@@ -13,18 +16,21 @@ import { registerWebMCP } from './webmcp';
 import { applyTheme, preferredTheme, type Theme } from './theme';
 import { BrandMark, Icon, ThemeToggle } from './AppIcon';
 import { FullPageReader, MergeReviewDialog, ModalOverlay } from './AppDialogs';
+import { SmartIntakeDialog, type IntakeDraft, type IntakeSelection, type IntakeSuggestion } from './SmartIntakeDialog';
 import { blockPath, importedFile, initialDraft, locationFor, starterContent, urlParam, type BlockDraft, type Dialog } from './app-model-helpers';
 import { CanvasSearch } from './CanvasSearch';
 import { GroupSuggestions } from './GroupSuggestions';
+import { BrowseGroups } from './BrowseGroups';
 import { CanvasNavigation } from './CanvasNavigation';
 import { useCanvasJourney, type CanvasPlace, type CanvasViewport } from './useCanvasJourney';
 import type { InsightAction, InsightItem, ReadingPath } from '../shared/insights';
-import type { CanvasBlock, CanvasDocument, ChatSettings, SearchHit, WorkspaceSummary } from '../shared/types';
+import type { BlockKind, CanvasBlock, CanvasDocument, ChatSettings, SearchHit, WorkspaceSummary } from '../shared/types';
 
 type AssistantView = 'chat' | 'insights' | 'tasks';
 type ResearchActionRequest = { kind: 'add' | 'search' | 'groups' | 'upload'; sequence: number; files?: File[] };
 type MergeSource = { canvasId: string; item: InsightItem; action: Extract<InsightAction, { type: 'merge' }>; blocks: CanvasBlock[] };
 type MergeReview = MergeSource & { content: string };
+type PendingIntake = IntakeDraft & { files: File[]; imported: { kind: BlockKind; content: string } };
 
 const ChatView = lazy(() => import('./AIElementsChat').then(module => ({ default: memo(module.AIElementsChat) })));
 const InsightsView = lazy(() => import('./InsightsPanel').then(module => ({ default: memo(module.InsightsPanel) })));
@@ -62,6 +68,21 @@ function replaceBlock(document: CanvasDocument | null, canvasId: string, blockId
 }
 
 const defaultSettings: ChatSettings = { provider: 'openrouter', model: 'openai/gpt-4o-mini', systemPrompt: '', hasApiKey: false, hasJevApiKey: false, reviewers: '', workAreas: '' };
+const researchStorageKey = 'symbiknow:research-session';
+
+function restoredResearch(): { turns: AnswerCanvasTurn[]; edits: ResearchCanvasEdits; layout: ResearchLayout } {
+  const empty = { turns: [] as AnswerCanvasTurn[], edits: emptyResearchEdits(), layout: 'mindmap' as ResearchLayout };
+  try {
+    const value = JSON.parse(window.localStorage.getItem(researchStorageKey) ?? 'null') as Partial<typeof empty> | null;
+    if (!value || !Array.isArray(value.turns) || !value.turns.every(turn => Number.isInteger(turn.id)
+      && typeof turn.query === 'string' && typeof turn.answer === 'string' && Array.isArray(turn.sources))) return empty;
+    const edits = value.edits;
+    if (!edits || !Array.isArray(edits.added) || !edits.changed || !Array.isArray(edits.deleted)
+      || !Array.isArray(edits.addedEdges) || !Array.isArray(edits.deletedEdges)) return empty;
+    return { turns: value.turns.map(turn => ({ ...turn, status: turn.status === 'working' ? 'stopped' : turn.status })), edits,
+      layout: ['roadmap', 'kanban', 'architecture', 'mindmap'].includes(value.layout ?? '') ? value.layout! : 'mindmap' };
+  } catch { return empty; }
+}
 
 function errorText(error: unknown) { return error instanceof Error ? error.message : 'Something went wrong. Please try again.'; }
 
@@ -122,6 +143,7 @@ async function saveInsightAction(canvasId: string, action: InsightAction) {
 }
 
 function useAppModel() {
+  const [restoredSession] = useState(restoredResearch);
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [canvasId, setCanvasId] = useState('');
   const [canvas, setCanvas] = useState<CanvasDocument | null>(null);
@@ -141,7 +163,11 @@ function useAppModel() {
     return Number.isFinite(saved) && saved >= 320 ? saved : Math.max(500, Math.round(window.innerWidth * .5));
   });
   const [chatSession, setChatSession] = useState(0);
+  const [chatHasHistory, setChatHasHistory] = useState(false);
   const [assistantView, setAssistantView] = useState<AssistantView>('chat');
+  const [findingTaskRef, setFindingTaskRef] = useState<FindingTaskReference>();
+  const [activeInvestigation, setActiveInvestigation] = useState<{ id: string; canvasId: string }>();
+  const [investigationOpenRequest, setInvestigationOpenRequest] = useState<{ id: string; sequence: number }>();
   const [symbiState, setSymbiState] = useState<SymbiState>('idle');
   const [insightsJevState, setInsightsJevState] = useState<SymbiState | null>(null);
   const [authRequired, setAuthRequired] = useState(false);
@@ -151,22 +177,33 @@ function useAppModel() {
   const [searchHits, setSearchHits] = useState<SearchHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchResultQuery, setSearchResultQuery] = useState('');
+  const [searchError, setSearchError] = useState('');
+  const [searchRetry, setSearchRetry] = useState(0);
   const [activeSearchId, setActiveSearchId] = useState('');
   const [groupSuggestionsOpen, setGroupSuggestionsOpen] = useState(false);
+  const [browseGroupsOpen, setBrowseGroupsOpen] = useState(false);
+  const [jevGroupsRequest, setJevGroupsRequest] = useState(0);
   const [previewGroups, setPreviewGroups] = useState<Record<string, string> | null>(null);
   const [chatPromptRequest, setChatPromptRequest] = useState<{ text: string; sequence: number; mergeDraft?: MergeDraftRequest }>();
   const [assistantFocusRequest, setAssistantFocusRequest] = useState(0);
-  const [answerTurns, setAnswerTurns] = useState<AnswerCanvasTurn[]>([]);
-  const [researchState, setResearchState] = useState<{ edits: ResearchCanvasEdits; history: ResearchCanvasEdits[] }>(() => ({ edits: emptyResearchEdits(), history: [] }));
+  const [answerTurns, setAnswerTurns] = useState<AnswerCanvasTurn[]>(restoredSession.turns);
+  const [researchState, setResearchState] = useState<{ edits: ResearchCanvasEdits; history: ResearchCanvasEdits[] }>(() => ({ edits: restoredSession.edits, history: [] }));
   const [researchSaveCount, setResearchSaveCount] = useState(0);
   const [answerCanvasOpen, setAnswerCanvasOpen] = useState(false);
   const [researchActionRequest, setResearchActionRequest] = useState<ResearchActionRequest>();
-  const [researchLayout, setResearchLayout] = useState<ResearchLayout>('mindmap');
+  const [researchLayout, setResearchLayout] = useState<ResearchLayout>(restoredSession.layout);
+  useEffect(() => {
+    try { window.localStorage.setItem(researchStorageKey, JSON.stringify({ turns: answerTurns.slice(-30), edits: researchState.edits, layout: researchLayout })); }
+    catch { /* Keep the active research session in memory if browser storage is full. */ }
+  }, [answerTurns, researchState.edits, researchLayout]);
   const [answerCanvasViewFocus, setAnswerCanvasViewFocus] = useState<AnswerCanvasViewFocus>({ level: 'big-picture', visibleAnswerIds: [], visibleSourceKeys: [] });
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
   const [visibleBlockIds, setVisibleBlockIds] = useState<string[]>([]);
   const [canvasViewFocus, setCanvasViewFocus] = useState<CanvasViewFocus>({ level: 'documents', visibleGroups: [] });
   const [duplicateRequest, setDuplicateRequest] = useState<{ canvasId: string; blockId: string; sequence: number }>();
+  const [targetedRequest, setTargetedRequest] = useState<{ canvasId: string; blockIds: string[]; families: string[]; sequence: number }>();
+  const [pendingIntake, setPendingIntake] = useState<PendingIntake | null>(null);
+  const [intakeBusy, setIntakeBusy] = useState(false);
   const [mergeSource, setMergeSource] = useState<MergeSource | null>(null);
   const [mergeReview, setMergeReview] = useState<MergeReview | null>(null);
   const [mergeBusy, setMergeBusy] = useState(false);
@@ -177,7 +214,10 @@ function useAppModel() {
   const [focusRequest, setFocusRequest] = useState<{ canvasId: string; blockId: string; title: string; sequence: number } | null>(null);
   const [groupFocusRequest, setGroupFocusRequest] = useState<{ canvasId: string; group: string; sequence: number } | null>(null);
   const [readerId, setReaderId] = useState('');
+  const [sourceFocus, setSourceFocus] = useState<Extract<CanvasNavigationTarget, { kind: 'document' }> | null>(null);
+  const researchSourceReturn = useRef(false);
   const [versionBlockId, setVersionBlockId] = useState('');
+  const [versionRevision, setVersionRevision] = useState<string>();
   const uploadRef = useRef<HTMLInputElement>(null);
   const canvasCache = useRef(new Map<string, CanvasDocument>());
   const canvasEtags = useRef(new Map<string, string>());
@@ -230,6 +270,7 @@ function useAppModel() {
   function selectCanvas(id: string) {
     setSearchOpen(false);
     setGroupSuggestionsOpen(false);
+    setBrowseGroupsOpen(false);
     navigateTo({ canvasId: id, canvasName: canvasName(id) });
     preferredWorkspaceId.current = workspaces.find(workspace => workspace.canvases.some(item => item.id === id))?.id ?? preferredWorkspaceId.current;
   }
@@ -383,17 +424,18 @@ function useAppModel() {
 
   useEffect(() => {
     const query = searchQuery.trim();
+    setSearchError('');
     if (!query) { setSearchHits([]); setSearching(false); setSearchResultQuery(''); return; }
     setSearching(true);
     setSearchHits([]);
     let active = true;
     const timer = window.setTimeout(() => {
       api<SearchHit[]>('/search?q=' + encodeURIComponent(query))
-        .then(hits => { if (active) { setSearchHits(hits); setSearchResultQuery(query); setSearching(false); } })
-        .catch(failure => { if (active) { setSearchResultQuery(query); setSearching(false); setError(errorText(failure)); } });
+        .then(hits => { if (active) { setSearchHits(hits); setSearchResultQuery(query); setSearching(false); setSearchError(''); } })
+        .catch(failure => { if (active) { setSearchResultQuery(query); setSearching(false); setSearchError(errorText(failure)); } });
     }, 220);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [searchQuery]);
+  }, [searchQuery, searchRetry]);
 
   useEffect(() => {
     return registerWebMCP(() => activeCanvasId.current, () => {
@@ -404,7 +446,7 @@ function useAppModel() {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setSearchOpen(true); }
-      if (event.key === 'Escape') { setSearchOpen(false); closeReader(); if (!busy) setDialog(null); }
+      if (event.key === 'Escape' && !dialogRef.current) { setSearchOpen(false); closeReader(); }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -434,9 +476,11 @@ function useAppModel() {
   }
 
   function navigateFromChat(target: CanvasNavigationTarget) {
+    researchSourceReturn.current = false;
     chatReturn.current = { place: journey.current ?? { canvasId, canvasName: canvasName(canvasId) }, research: answerCanvasOpen };
     if (target.kind === 'document') {
       showBlockOnCanvas(target.canvasId, target.blockId, target.title);
+      if (target.excerpt) { setSourceFocus(target); setReaderId(target.blockId); }
       return;
     }
     setSearchOpen(false);
@@ -446,9 +490,12 @@ function useAppModel() {
   }
 
   function returnFromChatNavigation() {
+    researchSourceReturn.current = false;
     const previous = chatReturn.current;
     if (!previous) { moveJourney(-1); return; }
     chatReturn.current = null;
+    setSourceFocus(null);
+    setReaderId('');
     navigateTo(journey.moveHistory(-1) ?? previous.place, false);
     if (previous.research) setAnswerCanvasOpen(true);
   }
@@ -471,6 +518,8 @@ function useAppModel() {
   }
 
   function openReader(blockId: string) {
+    researchSourceReturn.current = false;
+    setSourceFocus(null);
     setReadingPath(null);
     const block = canvas?.blocks.find(item => item.id === blockId);
     if (block && canvas) journey.visit({ canvasId: canvas.id, canvasName: canvas.name, blockId, title: block.title, viewport: journey.current?.viewport });
@@ -493,15 +542,24 @@ function useAppModel() {
 
   /** Move to another document without adding history entries, so Back still returns to the canvas. */
   function showReaderDocument(blockId: string) {
+    setSourceFocus(null);
     setReaderId(blockId);
     window.history.replaceState(window.history.state, '', locationFor(activeCanvasId.current, blockId));
   }
 
   function closeReader() {
+    if (researchSourceReturn.current) { returnFromChatNavigation(); return; }
+    setSourceFocus(null);
     setReadingPath(null);
     if (!urlParam('doc')) { setReaderId(''); return; }
     if ((window.history.state as { reader?: boolean } | null)?.reader) window.history.back();
     else { setReaderId(''); window.history.replaceState(null, '', locationFor(activeCanvasId.current)); }
+  }
+
+  function openResearchSource(source: AnswerSource) {
+    navigateFromChat({ kind: 'document', canvasId: source.canvasId, blockId: source.blockId, title: source.title,
+      excerpt: source.evidence?.passage ?? source.excerpt, contentHash: source.evidence?.contentHash ?? source.contentHash });
+    researchSourceReturn.current = true;
   }
 
   async function takeOverLock(blockId: string) {
@@ -520,7 +578,21 @@ function useAppModel() {
 
   function openVersionHistory(block: CanvasBlock) {
     setVersionBlockId(block.id);
+    setVersionRevision(undefined);
     setDialog('versions');
+  }
+
+  async function openActivityHistory(targetCanvasId: string, blockId: string, revision: string) {
+    try {
+      const document = await api<CanvasDocument>('/canvases/' + encodeURIComponent(targetCanvasId));
+      const block = document.blocks.find(item => item.id === blockId);
+      if (!block) throw new Error('This document is no longer on the canvas. Its activity entry remains in the log.');
+      navigateTo({ canvasId: targetCanvasId, canvasName: document.name, blockId, title: block.title });
+      setCanvas(document);
+      setVersionBlockId(blockId);
+      setVersionRevision(revision);
+      setDialog('versions');
+    } catch (failure) { setError(errorText(failure)); }
   }
 
   async function saveBlock(event: FormEvent) {
@@ -689,6 +761,11 @@ function useAppModel() {
 
   async function uploadFiles(files: FileList | null) {
     if (!files || !canvasId) return;
+    if (settings.hasJevApiKey) {
+      await prepareIntake(Array.from(files), 0, canvasId);
+      if (uploadRef.current) uploadRef.current.value = '';
+      return;
+    }
     await perform(async () => {
       let last: CanvasBlock | undefined;
       for (const file of Array.from(files)) last = await uploadFile(file, canvasId);
@@ -698,10 +775,74 @@ function useAppModel() {
     if (uploadRef.current) uploadRef.current.value = '';
   }
 
+  async function prepareIntake(files: File[], index: number, sourceCanvasId: string) {
+    if (index >= files.length) { setPendingIntake(null); return; }
+    const file = files[index];
+    try {
+      const imported = await importedFile(file);
+      const title = file.name.replace(/\.(md|mdx|html)$/i, '');
+      setPendingIntake({ files, index, total: files.length, fileName: file.name, title, kind: imported.kind,
+        imported, sourceCanvasId, suggestion: null, previewing: true, error: '', errorStage: 'preview' });
+      try {
+        const suggestion = await api<IntakeSuggestion>(`/canvases/${encodeURIComponent(sourceCanvasId)}/intake/preview`, {
+          method: 'POST', body: JSON.stringify({ title, ...imported }),
+        });
+        setPendingIntake(current => current?.files === files && current.index === index
+          ? { ...current, suggestion, previewing: false } : current);
+      } catch (failure) {
+        setPendingIntake(current => current?.files === files && current.index === index
+          ? { ...current, previewing: false, error: errorText(failure), errorStage: 'preview' } : current);
+      }
+    } catch (failure) { setPendingIntake(null); setError(`Could not read ${file.name}: ${errorText(failure)}`); }
+  }
+
+  async function saveIntake(selection: IntakeSelection) {
+    const pending = pendingIntake;
+    if (!pending || intakeBusy) return;
+    setIntakeBusy(true);
+    let saved: CanvasBlock;
+    try {
+      const workspace = workspaces.find(item => item.canvases.some(entry => entry.id === pending.sourceCanvasId));
+      if (!workspace?.canvases.some(entry => entry.id === selection.canvasId)) throw new Error('Choose a canvas in this workspace.');
+      const target = await api<CanvasDocument>(`/canvases/${encodeURIComponent(selection.canvasId)}`);
+      const known = new Set(target.blocks.filter(block => !block.archived).map(block => block.id));
+      saved = await api<CanvasBlock>(`/canvases/${encodeURIComponent(selection.canvasId)}/blocks`, {
+        method: 'POST', body: JSON.stringify({ title: pending.title, ...pending.imported,
+          ...(selection.purpose ? { purpose: selection.purpose } : {}),
+          ...(selection.workArea ? { workArea: selection.workArea } : {}), tags: selection.tags,
+          links: selection.links.filter(id => known.has(id)) }),
+      });
+    } catch (failure) {
+      setPendingIntake(current => current ? { ...current, error: errorText(failure), errorStage: 'save' } : current);
+      setIntakeBusy(false);
+      return;
+    }
+    try {
+      await loadCanvas(selection.canvasId);
+    } catch (failure) {
+      setError(`${saved.title} was saved, but the canvas did not refresh: ${errorText(failure)}. Reopen the destination canvas to see it. Do not add this file again.`);
+    }
+    try {
+      if (pending.index + 1 < pending.files.length) await prepareIntake(pending.files, pending.index + 1, pending.sourceCanvasId);
+      else { setPendingIntake(null); showBlockOnCanvas(selection.canvasId, saved.id, saved.title); }
+    } catch (failure) { setError(`${saved.title} was saved, but the next upload could not be prepared: ${errorText(failure)}. Inspect the destination canvas before retrying.`); }
+    finally { setIntakeBusy(false); }
+  }
+
+  function skipIntake() {
+    if (!pendingIntake || intakeBusy) return;
+    void prepareIntake(pendingIntake.files, pendingIntake.index + 1, pendingIntake.sourceCanvasId);
+  }
+
   async function saveSettings(payload: SettingsPayload) {
-    await perform(async () => {
+    setBusy(true);
+    setError('');
+    try {
       setSettings(await api<ChatSettings>('/settings', { method: 'PUT', body: JSON.stringify(payload) }));
-    });
+      setDialog(null);
+    } catch (failure) {
+      throw failure;
+    } finally { setBusy(false); }
   }
 
   async function signIn(token: string): Promise<string> {
@@ -884,6 +1025,16 @@ function useAppModel() {
     setDuplicateRequest(current => ({ canvasId: canvas.id, blockId, sequence: (current?.sequence ?? 0) + 1 }));
   }
 
+  function analyzeDocument(blockId: string, focus: 'related' | 'conflicts' | 'labels') {
+    if (!canvas?.blocks.some(block => block.id === blockId)) return;
+    const families = focus === 'related' ? ['links'] : focus === 'conflicts'
+      ? ['similarity', 'stale', 'steps', 'gap'] : ['purpose', 'work_area', 'reviewer', 'tags'];
+    setShowChat(true);
+    setAssistantView('insights');
+    setTargetedRequest(current => ({ canvasId: canvas.id, blockIds: [blockId], families,
+      sequence: (current?.sequence ?? 0) + 1 }));
+  }
+
   function openInsightBlock(blockId: string) {
     if (canvas?.blocks.some(item => item.id === blockId)) openReader(blockId);
   }
@@ -906,6 +1057,13 @@ function useAppModel() {
       setActiveSearchId(block.id);
       showBlockOnCanvas(hit.canvasId, block.id, block.title, true);
     } catch (failure) { setError(errorText(failure)); }
+  }
+
+  function openSearchEvidence(hit: SearchHit) {
+    if (!hit.evidence) return;
+    navigateFromChat({ kind: 'document', canvasId: hit.evidence.navigation.canvasId,
+      blockId: hit.evidence.navigation.blockId, title: hit.title,
+      excerpt: hit.evidence.passage, contentHash: hit.evidence.contentHash });
   }
 
   function openNamedDialog(nextDialog: 'workspace' | 'canvas') {
@@ -985,14 +1143,27 @@ function useAppModel() {
   }
 
   function newChat() {
+    try { window.localStorage.removeItem(chatHistoryKey); window.localStorage.removeItem(researchStorageKey); }
+    catch { /* Reset in-memory state even if browser storage is unavailable. */ }
     setSymbiState('idle');
     setChatSession(value => value + 1);
+    setChatHasHistory(false);
+    setActiveInvestigation(undefined);
+    setInvestigationOpenRequest(undefined);
     setAnswerTurns([]);
     setResearchState({ edits: emptyResearchEdits(), history: [] });
     setResearchSaveCount(0);
     setAnswerCanvasOpen(false);
     setResearchLayout('mindmap');
     setAnswerCanvasViewFocus({ level: 'big-picture', visibleAnswerIds: [], visibleSourceKeys: [] });
+  }
+
+  function restoreResearchSnapshot(snapshot?: InvestigationResearchSnapshot) {
+    setAnswerTurns(snapshot?.turns.map(turn => ({ ...turn, status: turn.status === 'working' ? 'stopped' : turn.status })) ?? []);
+    setResearchState({ edits: snapshot?.edits ?? emptyResearchEdits(), history: [] });
+    setResearchLayout(snapshot?.layout ?? 'mindmap');
+    setAnswerCanvasViewFocus({ level: 'big-picture', visibleAnswerIds: [], visibleSourceKeys: [] });
+    setAnswerCanvasOpen(Boolean(snapshot?.turns.length));
   }
 
   function recheckAnswer() {
@@ -1061,23 +1232,29 @@ function useAppModel() {
       title: journey.current?.title, viewport: journey.current?.viewport });
   }
 
+  const searchCurrentContentHashes = Object.fromEntries([...canvasCache.current.values(), ...(canvas ? [canvas] : [])]
+    .flatMap(document => document.blocks.filter(block => block.contentHash)
+      .map(block => [`${document.id}:${block.id}`, block.contentHash!] as const)));
+
   return {
-    workspaces, canvasId, setCanvasId, selectCanvas, canvas, crossLinkLabels, loading, error, setError, readerId, openReader, openCrossLink, showReaderDocument, closeReader, readingPath, versionBlockId,
+    workspaces, canvasId, setCanvasId, selectCanvas, canvas, crossLinkLabels, loading, error, setError, readerId, sourceFocus, openReader, openCrossLink, showReaderDocument, closeReader, openResearchSource, readingPath, versionBlockId, versionRevision,
     dialog, setDialog, draftName, setDraftName, canvasToDelete, requestDeleteCanvas, deleteCanvas, workspaceToDelete, requestDeleteWorkspace, deleteWorkspace, draftBlock, setDraftBlock, draftLock, takeOverLock,
-    busy, settings, setSettings, showChat, setShowChat, documentAssistantWidth, updateDocumentAssistantWidth, chatSession, newChat, assistantView, setAssistantView, assistantFocusRequest, openDocumentAssistant, symbiState, setSymbiState, insightsJevState, setInsightsJevState,
+    busy, settings, setSettings, showChat, setShowChat, documentAssistantWidth, updateDocumentAssistantWidth, chatSession, newChat, chatHasHistory, setChatHasHistory, assistantView, setAssistantView, findingTaskRef, setFindingTaskRef, activeInvestigation, setActiveInvestigation, investigationOpenRequest, setInvestigationOpenRequest, assistantFocusRequest, openDocumentAssistant, symbiState, setSymbiState, insightsJevState, setInsightsJevState,
     searchOpen, authRequired, signIn, focusRequest, setFocusRequest, groupFocusRequest, showBlockOnCanvas, navigateFromChat, returnFromChatNavigation, activeSearchId,
-    setSearchOpen, searchQuery, setSearchQuery, searchHits, searching, searchResultQuery, uploadRef,
-    groupSuggestionsOpen, setGroupSuggestionsOpen, previewGroups, setPreviewGroups, chatPromptRequest, duplicateRequest, findDuplicatesOfBlock, mergeReview, setMergeReview, mergeBusy, applyMergeReview, mergeUndo, undoMerge, viewportRequest,
-    answerTurns, answerCanvasOpen, setAnswerCanvasOpen, answerCanvasViewFocus, setAnswerCanvasViewFocus,
+    setSearchOpen, searchQuery, setSearchQuery, searchHits, searching, searchResultQuery, searchError, searchCurrentContentHashes,
+    retrySearch: () => setSearchRetry(value => value + 1), uploadRef,
+    groupSuggestionsOpen, setGroupSuggestionsOpen, browseGroupsOpen, setBrowseGroupsOpen, jevGroupsRequest, setJevGroupsRequest, previewGroups, setPreviewGroups, chatPromptRequest, duplicateRequest, targetedRequest, findDuplicatesOfBlock, analyzeDocument, mergeReview, setMergeReview, mergeBusy, applyMergeReview, mergeUndo, undoMerge, viewportRequest,
+    pendingIntake, intakeBusy, saveIntake, skipIntake, cancelIntake: () => setPendingIntake(null),
+    answerTurns, answerCanvasOpen, setAnswerCanvasOpen, restoreResearchSnapshot, answerCanvasViewFocus, setAnswerCanvasViewFocus,
     researchLayout, setResearchLayout, saveResearchCanvas, researchState, changeResearchEdits, undoResearchEdit, researchSaveCount,
     researchActionRequest, requestResearchAction, summarizeCurrentResearch,
     addAnswerSources, applyResearchPatch, updateAnswerText,
     settleAnswerTurn, recheckAnswer, selectedBlockIds, visibleBlockIds, setVisibleBlockIds, canvasViewFocus, setCanvasViewFocus,
     journey, navigateTo, moveJourney, saveCurrentBookmark, selectedOnCanvas, summarizeSelection, summarizeResearchSelection,
-    updateBlock, deleteCanvasBlock, moveBlocks, openBlock, openVersionHistory, openNewBlock, openNamedDialog,
+    updateBlock, deleteCanvasBlock, moveBlocks, openBlock, openVersionHistory, openActivityHistory, openNewBlock, openNamedDialog,
     saveBlock, deleteBlock, createNamed, uploadFiles, importEditedFile, saveSettings, refreshCanvasAfterChat,
     undoAgentCreatedBlock, undoAgentEditedBlock, retryConnection,
-    selectSearchHit, revealSearchHit, applyInsight, openInsightBlock, startMergeDraft, receiveMergeDraft, draftGap, startReadingPath, refreshAfterVersionChange, loadCanvas,
+    selectSearchHit, revealSearchHit, openSearchEvidence, applyInsight, openInsightBlock, startMergeDraft, receiveMergeDraft, draftGap, startReadingPath, refreshAfterVersionChange, loadCanvas,
   };
 }
 
@@ -1118,10 +1295,12 @@ export function App() {
     <AssistantPanel model={model}/>
     {model.readerId && <FullPageReader model={model}/>}
     {model.mergeReview && <MergeReviewDialog model={model}/>}
-    {model.mergeUndo && <div role="status" style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 55, padding: '12px 16px', borderRadius: 9, background: '#edf3ff', boxShadow: '0 8px 25px #06153233' }}>
+    {model.mergeUndo && <div role="status" style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 55, padding: '12px 16px', borderRadius: 9, background: 'var(--sk-action-bg)', color: 'var(--sk-action)', boxShadow: '0 8px 25px var(--sk-shadow)' }}>
       Merged into {model.mergeUndo.title}. <button type="button" className="secondary-button" onClick={() => void model.undoMerge()} disabled={model.mergeBusy}>{model.mergeBusy ? 'Undoing…' : 'Undo merge'}</button>
     </div>}
     {model.dialog && <ModalOverlay model={model}/>}
+    {model.pendingIntake && <SmartIntakeDialog key={`${model.pendingIntake.fileName}:${model.pendingIntake.index}:${model.pendingIntake.previewing}`} draft={model.pendingIntake}
+      workspaces={model.workspaces} busy={model.intakeBusy} onSave={selection => void model.saveIntake(selection)} onSkip={model.skipIntake} onCancel={model.cancelIntake}/>}
   </div>;
 }
 
@@ -1130,10 +1309,10 @@ function Sidebar({ model }: { model: AppModel }) {
   return <aside className="sidebar">
     <div className="brand"><BrandMark/><div><strong>symbiknow</strong><span>People + AI · infinite canvas</span></div></div>
     <div className="sidebar-section-label">WORKSPACES <button className="icon-button subtle" title="New workspace" aria-label="New workspace" onClick={() => openNamedDialog('workspace')}><Icon name="plus" size={16}/></button></div>
-    <div className="workspace-list">{workspaces.map(workspace => <div key={workspace.id} className="workspace-group"><div className="workspace-title"><span className="workspace-avatar">{workspace.name.slice(0, 1).toUpperCase()}</span><span className="workspace-name">{workspace.name}</span><button type="button" className="workspace-delete" title={`Delete workspace: ${workspace.name}`} aria-label={`Delete workspace: ${workspace.name}`} onClick={() => requestDeleteWorkspace(workspace)}><Icon name="trash" size={15}/></button></div><div className="canvas-links">{workspace.canvases.map(item => <div className={'canvas-link-row ' + (canvasId === item.id ? 'active' : '')} key={item.id}><button className="canvas-link" onClick={() => selectCanvas(item.id)}><Icon name="grid" size={15}/><span>{item.name}</span></button><button className="canvas-link-delete" title={`Delete canvas: ${item.name}`} aria-label={`Delete canvas: ${item.name}`} onClick={() => requestDeleteCanvas(item.id, item.name, workspace.id)}><Icon name="trash" size={15}/></button></div>)}</div></div>)}</div>
-    <button className="sidebar-new" onClick={() => openNamedDialog('canvas')}><Icon name="plus" size={16}/> New canvas</button>
+    <div className="workspace-list">{workspaces.map(workspace => <div key={workspace.id} className="workspace-group"><div className="workspace-title"><span className="workspace-avatar">{workspace.name.slice(0, 1).toUpperCase()}</span><span className="workspace-name">{workspace.name}</span><button type="button" className="workspace-delete" title={`Delete workspace: ${workspace.name}`} aria-label={`Delete workspace: ${workspace.name}`} onClick={() => requestDeleteWorkspace(workspace)}><Icon name="trash" size={15}/></button></div><div className="canvas-links">{workspace.canvases.map(item => <div className={'canvas-link-row ' + (canvasId === item.id ? 'active' : '')} key={item.id}><button className="canvas-link" title={`Open canvas: ${item.name}`} aria-label={`Open canvas: ${item.name}`} onClick={() => selectCanvas(item.id)}><Icon name="grid" size={15}/><span>{item.name}</span></button><button className="canvas-link-delete" title={`Delete canvas: ${item.name}`} aria-label={`Delete canvas: ${item.name}`} onClick={() => requestDeleteCanvas(item.id, item.name, workspace.id)}><Icon name="trash" size={15}/></button></div>)}</div></div>)}</div>
+    <button className="sidebar-new" title="New canvas" aria-label="New canvas" onClick={() => openNamedDialog('canvas')}><Icon name="plus" size={16}/> New canvas</button>
     <div className="sidebar-spacer"/>
-    <div className="sidebar-bottom"><button onClick={() => setDialog('settings')}><Icon name="settings" size={17}/><span>Settings</span></button><div className="sidebar-status" title={window.location.host}><span className="status-dot"/>{/^(localhost|127\.0\.0\.1)(:|$)/.test(window.location.host) ? 'Local workspace' : window.location.host}</div></div>
+    <div className="sidebar-bottom"><button title="Settings" aria-label="Settings" onClick={() => setDialog('settings')}><Icon name="settings" size={17}/><span>Settings</span></button><div className="sidebar-status" title={window.location.host}><span className="status-dot"/>{/^(localhost|127\.0\.0\.1)(:|$)/.test(window.location.host) ? 'Local workspace' : window.location.host}</div></div>
   </aside>;
 }
 
@@ -1148,7 +1327,7 @@ function MainColumn({ model, theme, onToggleTheme }: { model: AppModel; theme: T
 }
 
 function Topbar({ model, theme, onToggleTheme }: { model: AppModel; theme: Theme; onToggleTheme: () => void }) {
-  const { workspaces, canvas, canvasId, setSearchOpen, setGroupSuggestionsOpen, uploadRef, uploadFiles, openNewBlock, showChat, setShowChat, setAssistantView } = model;
+  const { workspaces, canvas, canvasId, setSearchOpen, setGroupSuggestionsOpen, setBrowseGroupsOpen, uploadRef, uploadFiles, openNewBlock, showChat, setShowChat, setAssistantView } = model;
   const activeWorkspace = workspaces.find(workspace => workspace.id === canvas?.workspaceId || workspace.canvases.some(item => item.id === canvasId));
   return <header className="topbar">
     <div className="breadcrumb"><span>{activeWorkspace?.name || 'Workspace'}</span><Icon name="chevron" size={14}/><strong>{model.answerCanvasOpen ? 'Research canvas' : canvas?.name || 'Canvas'}</strong></div>
@@ -1169,10 +1348,10 @@ function Topbar({ model, theme, onToggleTheme }: { model: AppModel; theme: Theme
         if (model.answerCanvasOpen) model.summarizeCurrentResearch();
         else { setShowChat(true); setAssistantView('insights'); }
       }} disabled={!canvasId}><Icon name="spark" size={17}/> Insights</button>
-      <button className="toolbar-button" aria-label="Suggest groups" title="Suggest groups" onClick={() => {
+      <button className="toolbar-button" aria-label="Browse groups" title="Browse groups" onClick={() => {
         if (model.answerCanvasOpen) model.requestResearchAction('groups');
-        else { setSearchOpen(false); setGroupSuggestionsOpen(true); }
-      }} disabled={!canvasId}><Icon name="layers" size={17}/> Groups</button>
+        else { setSearchOpen(false); setGroupSuggestionsOpen(false); setBrowseGroupsOpen(true); }
+      }} disabled={!canvasId}><Icon name="layers" size={17}/> Browse groups</button>
       <button className={'chat-toggle ' + (showChat ? 'selected' : '')} aria-label="Toggle Symbi" title="Toggle Symbi" onClick={() => setShowChat(value => !value)}><Icon name="spark" size={18}/></button>
     </div>
   </header>;
@@ -1184,6 +1363,7 @@ function CanvasArea({ model, theme }: { model: AppModel; theme: Theme }) {
   const readBlock = useStableEvent((block: CanvasBlock) => model.openReader(block.id));
   const openCrossLink = useStableEvent((canvasId: string, blockId: string) => model.openCrossLink(canvasId, blockId));
   const findDuplicates = useStableEvent((blockId: string) => model.findDuplicatesOfBlock(blockId));
+  const analyzeBlock = useStableEvent((blockId: string, focus: 'related' | 'conflicts' | 'labels') => model.analyzeDocument(blockId, focus));
   const historyBlock = useStableEvent((block: CanvasBlock) => model.openVersionHistory(block));
   const selectionChanged = useStableEvent((blocks: CanvasBlock[]) => model.selectedOnCanvas(blocks));
   const summarizeSelection = useStableEvent((blocks: CanvasBlock[]) => model.summarizeSelection(blocks));
@@ -1207,9 +1387,9 @@ function CanvasArea({ model, theme }: { model: AppModel; theme: Theme }) {
   const searchMatchIds = useMemo(() => model.searchOpen && canvas
     ? model.searchHits.filter(hit => hit.canvasId === canvas.id).map(hit => hit.blockId) : [],
   [model.searchOpen, model.searchHits, canvas?.id]);
-  if (canvas) return <main className={`canvas-main${model.searchOpen ? ' is-searching' : ''}${model.groupSuggestionsOpen ? ' is-grouping' : ''}`}>
+  if (canvas) return <main className={`canvas-main${model.searchOpen ? ' is-searching' : ''}${model.groupSuggestionsOpen || model.browseGroupsOpen ? ' is-grouping' : ''}`}>
     {!model.journey.headerHidden && <div className="canvas-label"><span className="eyebrow">PEOPLE + AI · INFINITE CANVAS</span><h1>{canvas.name}</h1><p>An infinite canvas where people and AI organize ideas and build knowledge together.</p></div>}
-    <MemoCanvas canvas={canvas} theme={theme} crossLinkLabels={model.crossLinkLabels} onUpdateBlock={updateBlock} onDeleteBlock={deleteCanvasBlock} onSelectBlock={selectBlock} onReadBlock={readBlock} onOpenCrossLink={openCrossLink} onFindDuplicates={findDuplicates} onHistoryBlock={historyBlock} onMoveBlocks={model.moveBlocks}
+    <MemoCanvas canvas={canvas} theme={theme} crossLinkLabels={model.crossLinkLabels} onUpdateBlock={updateBlock} onDeleteBlock={deleteCanvasBlock} onSelectBlock={selectBlock} onReadBlock={readBlock} onOpenCrossLink={openCrossLink} onFindDuplicates={findDuplicates} onAnalyzeBlock={analyzeBlock} onHistoryBlock={historyBlock} onMoveBlocks={model.moveBlocks}
       focusRequest={model.focusRequest?.canvasId === canvas.id ? model.focusRequest : undefined}
       groupFocusRequest={model.groupFocusRequest?.canvasId === canvas.id ? model.groupFocusRequest : undefined}
       searchQuery={model.searchOpen ? model.searchQuery : ''} searchMatchIds={searchMatchIds} activeSearchId={model.activeSearchId}
@@ -1219,10 +1399,13 @@ function CanvasArea({ model, theme }: { model: AppModel; theme: Theme }) {
       bookmarks={model.journey.bookmarks} recent={model.journey.recent} headerHidden={model.journey.headerHidden}
       onBack={() => model.moveJourney(-1)} onForward={() => model.moveJourney(1)} onBookmark={model.saveCurrentBookmark}
       onRemoveBookmark={model.journey.removeBookmark} onNavigate={place => model.navigateTo(place)} onToggleHeader={() => model.journey.setHeaderHidden(value => !value)}/>
-    {model.searchOpen && <CanvasSearch query={model.searchQuery} hits={model.searchHits} loading={model.searching || model.searchResultQuery !== model.searchQuery.trim()} currentCanvasId={canvas.id}
-      onQuery={model.setSearchQuery} onClose={() => model.setSearchOpen(false)} onReveal={hit => void model.revealSearchHit(hit)} onEdit={hit => void model.selectSearchHit(hit)}/>}
+    {model.searchOpen && <CanvasSearch query={model.searchQuery} hits={model.searchHits} loading={model.searching || model.searchResultQuery !== model.searchQuery.trim()} error={model.searchError} onRetry={model.retrySearch} currentCanvasId={canvas.id} currentContentHashes={model.searchCurrentContentHashes}
+      onQuery={model.setSearchQuery} onClose={() => model.setSearchOpen(false)} onReveal={hit => void model.revealSearchHit(hit)} onEdit={hit => void model.selectSearchHit(hit)} onOpenEvidence={model.openSearchEvidence}/>}
     {model.groupSuggestionsOpen && <GroupSuggestions canvas={canvas} hasApiKey={model.settings.hasJevApiKey} onOpenSettings={() => model.setDialog('settings')}
       onApply={model.moveBlocks} onClose={() => model.setGroupSuggestionsOpen(false)} onPreview={model.setPreviewGroups}/>}
+    {model.browseGroupsOpen && <BrowseGroups canvas={canvas} onOpenBlock={blockId => { model.setBrowseGroupsOpen(false); model.openReader(blockId); }}
+      onOrganize={() => { model.setBrowseGroupsOpen(false); model.setShowChat(true); model.setAssistantView('insights'); model.setJevGroupsRequest(value => value + 1); }}
+      onClose={() => model.setBrowseGroupsOpen(false)}/>}
     {canvas.blocks.length === 0 && <div className="canvas-empty-prompt">
       <BrandMark/>
       <span className="eyebrow">START HERE</span>
@@ -1240,7 +1423,7 @@ function CanvasArea({ model, theme }: { model: AppModel; theme: Theme }) {
       onClose={() => model.setAnswerCanvasOpen(false)} onRecheck={model.recheckAnswer}
       onAskSelection={model.summarizeResearchSelection}
       onViewFocusChange={focus => model.setAnswerCanvasViewFocus(current => JSON.stringify(current) === JSON.stringify(focus) ? current : focus)}
-      onOpenSource={(source: AnswerSource) => model.showBlockOnCanvas(source.canvasId, source.blockId, source.title)}/>}
+      onOpenSource={model.openResearchSource}/>}
   </main>;
   return <EmptyCanvas model={model}/>;
 }
@@ -1253,12 +1436,22 @@ function EmptyCanvas({ model }: { model: AppModel }) {
     <h2>{loading ? 'Loading your workspace…' : canvasId ? 'Loading canvas…' : hasWorkspace ? 'Your workspace is ready for a canvas' : 'One infinite canvas for people and AI'}</h2>
     <p>{canvasId ? 'Opening the canvas and its Markdown files.' : hasWorkspace ? 'Create a canvas to start building connected knowledge.' : 'Create a workspace and start building connected knowledge together.'}</p>
     {!canvasId && !loading && <button className="primary-button" onClick={() => openNamedDialog(hasWorkspace ? 'canvas' : 'workspace')}><Icon name="plus" size={17}/> {hasWorkspace ? 'Create canvas' : 'Create workspace'}</button>}
-  </div>{model.searchOpen && <CanvasSearch query={model.searchQuery} hits={model.searchHits} loading={model.searching || model.searchResultQuery !== model.searchQuery.trim()} currentCanvasId={canvasId}
-    onQuery={model.setSearchQuery} onClose={() => model.setSearchOpen(false)} onReveal={hit => void model.revealSearchHit(hit)} onEdit={hit => void model.selectSearchHit(hit)}/>}</main>;
+  </div>{model.searchOpen && <CanvasSearch query={model.searchQuery} hits={model.searchHits} loading={model.searching || model.searchResultQuery !== model.searchQuery.trim()} error={model.searchError} onRetry={model.retrySearch} currentCanvasId={canvasId} currentContentHashes={model.searchCurrentContentHashes}
+    onQuery={model.setSearchQuery} onClose={() => model.setSearchOpen(false)} onReveal={hit => void model.revealSearchHit(hit)} onEdit={hit => void model.selectSearchHit(hit)} onOpenEvidence={model.openSearchEvidence}/>}</main>;
 }
 
 function AssistantPanel({ model }: { model: AppModel }) {
   const [visited, setVisited] = useState<AssistantView[]>([]);
+  const [confirmNewChat, setConfirmNewChat] = useState(false);
+  const [newChatSaving, setNewChatSaving] = useState(false);
+  const [newChatError, setNewChatError] = useState('');
+  const newChatDialogRef = useRef<HTMLElement>(null);
+  const newChatTriggerRef = useRef<HTMLButtonElement>(null);
+  const hadNewChatPrompt = useRef(false);
+  useEffect(() => {
+    if (confirmNewChat) hadNewChatPrompt.current = true;
+    else if (hadNewChatPrompt.current) { hadNewChatPrompt.current = false; newChatTriggerRef.current?.focus(); }
+  }, [confirmNewChat]);
   useEffect(() => {
     if (model.showChat) setVisited(current => current.includes(model.assistantView) ? current : [...current, model.assistantView]);
   }, [model.showChat, model.assistantView]);
@@ -1315,7 +1508,35 @@ function AssistantPanel({ model }: { model: AppModel }) {
   const mergeDraft = useStableEvent((item: InsightItem, action: Extract<InsightAction, { type: 'merge' }>) => model.startMergeDraft(item, action));
   const draftGap = useStableEvent((item: InsightItem) => model.draftGap(item));
   const startPath = useStableEvent((path: ReadingPath) => model.startReadingPath(path));
+  const createFindingTask = useStableEvent((item: InsightItem) => {
+    if (!model.canvas) return;
+    model.setFindingTaskRef({ id: item.id, title: item.title, canvasId: model.canvas.id, blockIds: item.blockIds,
+      detail: item.detail, evidence: item.evidence, references: item.references,
+      ...(model.activeInvestigation?.canvasId === model.canvas.id ? { investigationId: model.activeInvestigation.id } : {}),
+      suggestedOwner: item.action?.type === 'update' ? item.action.patch.reviewer : undefined });
+    model.setAssistantView('tasks');
+  });
+  const openFindingFromTask = useStableEvent((ref: FindingTaskReference) => {
+    model.setFindingTaskRef(ref);
+    model.setAssistantView('insights');
+    if (model.canvas?.id === ref.canvasId && ref.blockIds.length) model.analyzeDocument(ref.blockIds[0], 'related');
+  });
+  const openInvestigationFromTask = useStableEvent((id: string) => {
+    model.setAssistantView('chat');
+    model.setInvestigationOpenRequest(current => ({ id, sequence: (current?.sequence ?? 0) + 1 }));
+  });
   const receiveMergeDraft = useStableEvent((markdown: string, request: MergeDraftRequest) => model.receiveMergeDraft(markdown, request));
+  const startNewChat = () => {
+    if (model.chatHasHistory || model.answerTurns.length) { setNewChatError(''); setConfirmNewChat(true); }
+    else model.newChat();
+  };
+  const discardAndStart = () => { model.newChat(); setConfirmNewChat(false); };
+  const saveAndStart = async () => {
+    setNewChatSaving(true); setNewChatError('');
+    try { await model.saveResearchCanvas(model.researchLayout); discardAndStart(); }
+    catch (failure) { setNewChatError(errorText(failure)); }
+    finally { setNewChatSaving(false); }
+  };
   const chatMounted = visited.includes('chat') || (model.showChat && model.assistantView === 'chat');
   const insightsMounted = visited.includes('insights') || (model.showChat && model.assistantView === 'insights');
   const tasksMounted = visited.includes('tasks') || (model.showChat && model.assistantView === 'tasks');
@@ -1331,11 +1552,27 @@ function AssistantPanel({ model }: { model: AppModel }) {
   return <ResizableAssistant hidden={!model.showChat}
     documentWidth={model.dialog === 'block' || (!model.dialog && model.readerId) ? model.documentAssistantWidth : undefined}
     onDocumentWidthChange={model.updateDocumentAssistantWidth}>
-    <div className="chat-header"><SymbiAvatar state={visibleSymbiState}/><div><strong>Symbi</strong><span>{symbiCaption[visibleSymbiState]}</span></div>{model.answerTurns.length > 0 && <button className="chat-header__research-return" title="Open research canvas" aria-label="Open research canvas" onClick={() => model.setAnswerCanvasOpen(true)}><Icon name="grid" size={15}/><span>Research canvas</span></button>}{model.assistantView === 'chat' && <button className="icon-button" title="New chat" aria-label="New chat" onClick={model.newChat}><Icon name="plus" size={18}/></button>}<button className="icon-button" title="Symbi settings" aria-label="Symbi settings" onClick={() => model.setDialog('settings')}><Icon name="settings" size={18}/></button>{(model.dialog === 'block' || model.readerId) && <button className="icon-button" title="Close Symbi panel" aria-label="Close Symbi panel" onClick={() => model.setShowChat(false)}><Icon name="close" size={18}/></button>}</div>
+    <div className="chat-header"><SymbiAvatar state={visibleSymbiState}/><div><strong>Symbi</strong><span>{symbiCaption[visibleSymbiState]}</span></div>{model.answerTurns.length > 0 && <button className="chat-header__research-return" title="Open research canvas" aria-label="Open research canvas" onClick={() => model.setAnswerCanvasOpen(true)}><Icon name="grid" size={15}/><span>Research canvas</span></button>}{model.assistantView === 'chat' && <button ref={newChatTriggerRef} className="icon-button" title="New chat" aria-label="New chat" onClick={startNewChat}><Icon name="plus" size={18}/></button>}<button className="icon-button" title="Symbi settings" aria-label="Symbi settings" onClick={() => model.setDialog('settings')}><Icon name="settings" size={18}/></button><button className="icon-button" title="Close Symbi panel" aria-label="Close Symbi panel" onClick={() => model.setShowChat(false)}><Icon name="close" size={18}/></button></div>
     <div className="assistant-tabs" role="tablist" aria-label="Assistant views">{(['chat', 'insights', 'tasks'] as const).map(view =>
       <button key={view} role="tab" aria-selected={model.assistantView === view} onClick={() => model.setAssistantView(view)}>{view === 'chat' ? 'Chat' : view === 'insights' ? 'Insights' : 'Tasks'}</button>)}</div>
-    <div className="assistant-view" hidden={model.assistantView !== 'chat'}>{chatMounted && <Suspense fallback={<div className="assistant-view__loading">Opening chat…</div>}><ChatView key={model.chatSession} canvasId={model.canvasId} canvas={model.canvas} viewContext={viewContext} answerTurns={model.answerTurns} hasApiKey={model.settings.hasApiKey} jevAvailable={model.settings.hasJevApiKey && (model.settings.agentPlugins?.includes('jev_insights') ?? true)} model={model.settings.model} promptRequest={model.chatPromptRequest} focusRequest={model.assistantFocusRequest} onMergeDraft={receiveMergeDraft} onOpenSettings={openSettings} onCanvasChanged={canvasChanged} onShowBlock={showChatBlock} onNavigate={navigateFromChat} onReturnNavigation={returnFromChatNavigation} onUndoCreatedBlock={undoAgentCreatedBlock} onUndoEditedBlock={undoAgentEditedBlock} onCanvasSources={model.addAnswerSources} onCanvasPatch={model.applyResearchPatch} onCanvasAnswer={model.updateAnswerText} onCanvasTurnEnd={model.settleAnswerTurn} onOpenAnswerCanvas={() => model.setAnswerCanvasOpen(true)} onAvatarStateChange={model.setSymbiState}/></Suspense>}</div>
-    <div className="assistant-view" hidden={model.assistantView !== 'insights'}>{insightsMounted && <Suspense fallback={<div className="assistant-view__loading">Opening insights…</div>}><InsightsView canvas={model.canvas} hasApiKey={model.settings.hasJevApiKey} groupBy={model.settings.groupBy} onOpenSettings={openSettings} onApply={applyInsight} onOpenBlock={openInsightBlock} onMergeDraft={mergeDraft} onDraftGap={draftGap} onStartPath={startPath} duplicateRequest={model.duplicateRequest} onChanged={changed} onJevActivityChange={model.setInsightsJevState}/></Suspense>}</div>
-    <div className="assistant-view" hidden={model.assistantView !== 'tasks'}>{tasksMounted && <Suspense fallback={<div className="assistant-view__loading">Opening tasks…</div>}><TasksView canvas={model.canvas} visible={model.showChat && model.assistantView === 'tasks'} onOpenBlock={openInsightBlock}/></Suspense>}</div>
+    <div className="assistant-view" hidden={model.assistantView !== 'chat'}>{chatMounted && <Suspense fallback={<div className="assistant-view__loading">Opening chat…</div>}><ChatView key={model.chatSession} canvasId={model.canvasId} canvas={model.canvas} viewContext={viewContext} answerTurns={model.answerTurns} researchEdits={model.researchState.edits} researchLayout={model.researchLayout} investigationOpenRequest={model.investigationOpenRequest} onActiveInvestigationChange={model.setActiveInvestigation} hasApiKey={model.settings.hasApiKey} jevAvailable={model.settings.hasJevApiKey && (model.settings.agentPlugins?.includes('jev_insights') ?? true)} model={model.settings.model} promptRequest={model.chatPromptRequest} focusRequest={model.assistantFocusRequest} onMergeDraft={receiveMergeDraft} onOpenSettings={openSettings} onCanvasChanged={canvasChanged} onShowBlock={showChatBlock} onNavigate={navigateFromChat} onReturnNavigation={returnFromChatNavigation} onUndoCreatedBlock={undoAgentCreatedBlock} onUndoEditedBlock={undoAgentEditedBlock} onCanvasSources={model.addAnswerSources} onCanvasPatch={model.applyResearchPatch} onCanvasAnswer={model.updateAnswerText} onCanvasTurnEnd={model.settleAnswerTurn} onRestoreResearch={model.restoreResearchSnapshot} onOpenAnswerCanvas={() => model.setAnswerCanvasOpen(true)} onAvatarStateChange={model.setSymbiState} onHistoryChange={model.setChatHasHistory}/></Suspense>}</div>
+    <div className="assistant-view" hidden={model.assistantView !== 'insights'}>{insightsMounted && <Suspense fallback={<div className="assistant-view__loading">Opening insights…</div>}><InsightsView canvas={model.canvas} hasApiKey={model.settings.hasJevApiKey} groupBy={model.settings.groupBy} onOpenSettings={openSettings} onApply={applyInsight} onOpenBlock={openInsightBlock} onMergeDraft={mergeDraft} onDraftGap={draftGap} onStartPath={startPath} duplicateRequest={model.duplicateRequest} targetedRequest={model.targetedRequest} onChanged={changed} onJevActivityChange={model.setInsightsJevState} onCreateTask={createFindingTask} linkedFinding={model.findingTaskRef} groupsRequest={model.jevGroupsRequest}
+      onBrowseGroups={() => { model.setGroupSuggestionsOpen(false); model.setBrowseGroupsOpen(true); }}
+      onAdvancedGrouping={() => { model.setBrowseGroupsOpen(false); model.setGroupSuggestionsOpen(true); }}/></Suspense>}</div>
+    <div className="assistant-view" hidden={model.assistantView !== 'tasks'}>{tasksMounted && <Suspense fallback={<div className="assistant-view__loading">Opening tasks…</div>}><TasksView canvas={model.canvas} visible={model.showChat && model.assistantView === 'tasks'} onOpenBlock={openInsightBlock} findingRef={model.findingTaskRef} onFindingTaskCreated={() => model.setFindingTaskRef(undefined)} onOpenFinding={openFindingFromTask} onOpenInvestigation={openInvestigationFromTask}/></Suspense>}</div>
+    {confirmNewChat && <div className="ai-chat__new-session-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setConfirmNewChat(false); }}>
+      <section ref={newChatDialogRef} className="ai-chat__new-session" role="alertdialog" aria-modal="true" aria-label="Start a new chat" onKeyDown={event => {
+        if (event.key === 'Escape') { event.stopPropagation(); setConfirmNewChat(false); }
+        if (event.key !== 'Tab') return;
+        const buttons = [...(newChatDialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])];
+        if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1)?.focus(); }
+        else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0]?.focus(); }
+      }}>
+        <h2>Start a new chat?</h2><p>This clears the conversation, temporary research canvas, and proposal or Undo controls in this chat. Saved documents stay in place.</p>
+        {newChatError && <p role="alert">{newChatError}</p>}
+        <div className="ai-chat__new-session-actions"><button type="button" className="secondary-button" autoFocus disabled={newChatSaving} onClick={() => setConfirmNewChat(false)}>Keep working</button>
+          {model.answerTurns.length > 0 && <button type="button" className="secondary-button" disabled={newChatSaving} onClick={() => void saveAndStart()}>{newChatSaving ? 'Saving…' : 'Save research and start'}</button>}
+          <button type="button" className="danger-button" disabled={newChatSaving} onClick={discardAndStart}>Discard and start</button></div>
+      </section></div>}
   </ResizableAssistant>;
 }

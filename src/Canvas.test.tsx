@@ -266,6 +266,20 @@ describe('infinite canvas', () => {
     expect(onSelectBlock).toHaveBeenCalledTimes(2);
   });
 
+  it('offers focused Jev analysis from each document card', async () => {
+    const onAnalyzeBlock = vi.fn();
+    render(<Canvas canvas={canvas([block('a')])} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()}
+      onSelectBlock={vi.fn()} onAnalyzeBlock={onAnalyzeBlock}/>);
+    const card = await screen.findByTestId('node-a');
+    const actions = within(card).getByRole('button', { name: 'Actions for Document a' });
+    for (const [label, focus] of [['Find related documents', 'related'], ['Check for conflicts', 'conflicts'], ['Suggest labels', 'labels']] as const) {
+      fireEvent.click(actions);
+      fireEvent.click(within(card).getByRole('menuitem', { name: label }));
+      expect(onAnalyzeBlock).toHaveBeenLastCalledWith('a', focus);
+      expect(actions.getAttribute('aria-expanded')).toBe('false');
+    }
+  });
+
   it('persists card drag and resize, adds valid links, and groups deleted edges by source', async () => {
     const onUpdateBlock = vi.fn(async () => undefined);
     render(<Canvas canvas={canvas([block('a', ['b', 'c']), block('b'), block('c')])} onUpdateBlock={onUpdateBlock} onDeleteBlock={vi.fn()} onSelectBlock={vi.fn()}/>);
@@ -360,7 +374,7 @@ describe('infinite canvas', () => {
     expect(screen.getByText('Groups · 20%')).toBeTruthy();
     expect(currentFlow().panOnScroll).toBe(false);
     expect(currentFlow().zoomOnScroll).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Browse groups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show group list' }));
     const overview = screen.getByRole('navigation', { name: 'Group overview' });
     expect(within(overview).getByText('Document a')).toBeTruthy();
     expect(within(overview).getByText('Document b')).toBeTruthy();
@@ -427,7 +441,7 @@ describe('infinite canvas', () => {
     render(<Canvas canvas={canvas(docs)} searchQuery="api" searchMatchIds={['a']} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()} onSelectBlock={vi.fn()}/>);
     await waitFor(() => expect(currentFlow().nodes.filter(node => node.type === 'document')).toHaveLength(2));
     act(() => currentFlow().onMove({}, { x: 0, y: 0, zoom: 0.2 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Browse groups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show group list' }));
     const board = screen.getByRole('navigation', { name: 'Group overview' });
     expect(within(board).getByRole('button', { name: /Research/ }).className).toContain('is-search-match');
     expect(within(board).getByRole('button', { name: /Planning/ }).className).toContain('is-search-dimmed');
@@ -466,7 +480,7 @@ describe('infinite canvas', () => {
   it('opens a group document from the drill view in the inspector', async () => {
     render(<Canvas canvas={canvas([{ ...block('a'), group: 'custom:research' }, { ...block('b'), group: 'custom:research', x: 800 }])} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()} onSelectBlock={vi.fn()}/>);
     act(() => currentFlow().onMove({}, { x: 0, y: 0, zoom: 0.2 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Browse groups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show group list' }));
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Group overview' })).getByRole('button', { name: /Research/ }));
     act(() => currentFlow().onMove({}, { x: 0, y: 0, zoom: 0.8 }));
     expect(currentFlow().nodes.some(node => node.type === 'document')).toBe(true);

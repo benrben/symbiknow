@@ -19,7 +19,7 @@
 .editor-shortcut kbd { padding: 1px 5px; border: 1px solid #dfe4ef; border-bottom-width: 2px; border-radius: 5px; background: #fff; font: 600 10px ui-monospace, monospace; }
 .editor-lock { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 9px 12px; border-radius: 10px; color: #7a4a06; background: #fff7e8; border: 1px solid #f6dfb2; font-size: 12px; }
 .editor-lock button { margin-left: auto; }
-@media (max-width: 760px) { .editor-workspace--split { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
+@media (max-width: 900px) { .editor-workspace--split { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 1fr) minmax(160px, 1fr); overflow: auto; } }
 
 /* The block editor fills the window: fixed heading and actions, and the editing area takes the rest. */
 .block-modal { display: flex; flex-direction: column; height: calc(100vh - 50px); overflow: hidden !important; }
@@ -53,3 +53,41 @@
   .app-shell.has-document-chat .page-reader { right: 0; }
 }
 @media (max-height: 620px) { .block-modal { height: auto; overflow-y: auto !important; } .block-modal .editor-workspace { flex: none; height: 320px; } }
+@media (max-width: 900px) {
+  .block-modal { width: min(100%, calc(100vw - 24px)); height: calc(100dvh - 24px); }
+  .block-modal .modal-heading { padding: 16px 18px 8px; }
+  .block-modal .modal-form { padding: 0 18px 14px; overflow-y: auto; }
+  .block-modal .editor-workspace { min-height: 220px; }
+  .block-modal .modal-actions { position: sticky; bottom: -14px; z-index: 2; min-height: 56px; padding: 8px 0 10px; background: var(--sk-surface, #fff); }
+}
+@media (min-width: 781px) and (max-width: 1000px) {
+  .app-shell.has-document-chat.is-document-focused .chat-panel { top: 0; width: 300px; }
+  .app-shell.has-document-chat .modal-overlay,
+  .app-shell.has-document-chat .page-reader { right: 300px; }
+  .app-shell.has-document-chat .block-modal { width: calc(100vw - 324px); }
+  .app-shell.has-document-chat .page-reader__header { gap: 7px; }
+  .app-shell.has-document-chat .page-reader__actions { flex-wrap: wrap; }
+}
+
+/* Editor and upload/review dialogs share the same focus and semantic state colors. */
+.code-editor:focus-within { border-color: var(--sk-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sk-focus) 18%, transparent); }
+.view-toggle { background: var(--sk-surface-soft); border-color: var(--sk-border); }
+.view-toggle__thumb { background: var(--sk-surface); box-shadow: 0 2px 10px var(--sk-shadow), 0 0 0 1px var(--sk-border); }
+.view-toggle button { color: var(--sk-muted); }
+.view-toggle button[aria-pressed='true'] { color: var(--sk-link); }
+.view-toggle button:focus-visible { outline-color: var(--sk-focus); }
+.editor-shortcut { color: var(--sk-muted); }
+.editor-shortcut kbd { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
+.editor-lock { color: var(--sk-pending); background: var(--sk-pending-bg); border-color: var(--sk-pending); }
+.editor-external-change { border-color: var(--sk-pending); background: var(--sk-pending-bg); color: var(--sk-pending); }
+.block-modal, .block-modal :is(.modal-heading, .modal-form, .modal-actions) { color: var(--sk-text); }
+.block-modal :is(input, select, textarea):focus { border-color: var(--sk-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sk-focus) 18%, transparent); }
+.editor-file-actions .secondary-button { color: var(--sk-text); }
+.smart-intake__suggestions { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
+.smart-intake__suggestions :is(p, label) { color: var(--sk-text); }
+.smart-intake__suggestions input { accent-color: var(--sk-action-bg); }
+.smart-intake__summary { background: var(--sk-surface-soft); color: var(--sk-text); }
+.smart-intake [role='alert'] { border: 1px solid var(--sk-error); border-radius: 8px; padding: 9px 11px; background: var(--sk-error-bg); color: var(--sk-error); }
+.smart-intake__no-suggestions { border: 1px solid var(--sk-border); }
+.block-modal :is(button, input, select, textarea):focus-visible { outline-color: var(--sk-focus); }
+.block-modal button:disabled { color: var(--sk-muted); opacity: .72; }

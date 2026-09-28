@@ -8,6 +8,7 @@ import { estimateJevTokens, JEV_STATE_TOKEN_LIMIT, type JevAnswer, type JevDecid
 
 export interface FindDocumentationGapsInput {
   blocks: CanvasBlock[];
+  targetIds?: ReadonlySet<string>;
   apiKey: string;
   decider: JevDecider;
   policy?: Partial<JevPolicy>;
@@ -52,7 +53,7 @@ export async function findDocumentationGaps(input: FindDocumentationGapsInput): 
   const blocks = input.blocks.filter(block => !block.archived);
   const titles = blocks.map(block => block.title);
 
-  const results = await mapLimited(blocks, concurrency, async (block): Promise<InsightItem | undefined> => {
+  const results = await mapLimited(blocks.filter(block => !input.targetIds || input.targetIds.has(block.id)), concurrency, async (block): Promise<InsightItem | undefined> => {
     const index = blocks.indexOf(block);
     const document = { title: block.title, excerpt: excerpt(documentText(block.content), { budget: 1500, focus: 'claims' }) };
     const otherTitles = titles.filter((_, otherIndex) => otherIndex !== index);

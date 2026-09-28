@@ -31,6 +31,72 @@ function assignee(value: unknown): string | undefined {
   return name;
 }
 
+function findingRef(value: unknown, known: Set<string>): CanvasTask['findingRef'] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ApiError(400, 'findingRef must identify a finding');
+  const entry = value as Record<string, unknown>;
+  const evidence = entry.evidence === undefined ? undefined : findingEvidence(entry.evidence, known);
+  const references = entry.references === undefined ? undefined : evidenceReferences(entry.references, known);
+  const suggestedOwner = entry.suggestedOwner === undefined ? undefined : assignee(entry.suggestedOwner);
+  return { id: text(entry.id, 'findingRef.id', 160, true), title: text(entry.title, 'findingRef.title', 200, true),
+    canvasId: text(entry.canvasId, 'findingRef.canvasId', 160, true),
+    blockIds: blockIds(entry.blockIds, known),
+    ...(entry.detail === undefined ? {} : { detail: text(entry.detail, 'findingRef.detail', 4000) }),
+    ...(evidence ? { evidence } : {}), ...(references ? { references } : {}),
+    ...(suggestedOwner ? { suggestedOwner } : {}),
+    ...(entry.investigationId === undefined ? {} : { investigationId: text(entry.investigationId, 'findingRef.investigationId', 160, true) }),
+  };
+}
+
+function findingEvidence(value: unknown, known: Set<string>): NonNullable<CanvasTask['findingRef']>['evidence'] {
+  if (!Array.isArray(value) || value.length > 12) throw new ApiError(400, 'findingRef.evidence must contain up to 12 evidence items');
+  return value.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new ApiError(400, `findingRef.evidence[${index}] must be an object`);
+    const entry = item as Record<string, unknown>;
+    const sourceIds = entry.sourceIds === undefined ? undefined : blockIds(entry.sourceIds, known);
+    let sourceHashes: Record<string, string> | undefined;
+    if (entry.sourceHashes !== undefined) {
+      if (!entry.sourceHashes || typeof entry.sourceHashes !== 'object' || Array.isArray(entry.sourceHashes)) throw new ApiError(400, 'findingRef evidence sourceHashes must be an object');
+      const pairs = Object.entries(entry.sourceHashes as Record<string, unknown>);
+      if (pairs.length > 20 || pairs.some(([id, hash]) => !known.has(id) || typeof hash !== 'string' || hash.length > 128)) {
+        throw new ApiError(400, 'findingRef evidence sourceHashes must reference documents on this canvas');
+      }
+      sourceHashes = Object.fromEntries(pairs as [string, string][]);
+    }
+    return { questionId: text(entry.questionId, `findingRef.evidence[${index}].questionId`, 160, true),
+      answer: text(entry.answer, `findingRef.evidence[${index}].answer`, 2000),
+      excerpt: text(entry.excerpt, `findingRef.evidence[${index}].excerpt`, 2000),
+      ...(sourceIds ? { sourceIds } : {}), ...(sourceHashes ? { sourceHashes } : {}) };
+  });
+}
+
+function evidenceReferences(value: unknown, known: Set<string>): NonNullable<CanvasTask['findingRef']>['references'] {
+  if (!Array.isArray(value) || value.length > 12) throw new ApiError(400, 'findingRef.references must contain up to 12 references');
+  return value.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new ApiError(400, `findingRef.references[${index}] must be an object`);
+    const entry = item as Record<string, unknown>;
+    const navigation = entry.navigation as Record<string, unknown> | null;
+    if (!navigation || typeof navigation !== 'object' || navigation.kind !== 'document' || !known.has(String(navigation.blockId ?? ''))) {
+      throw new ApiError(400, 'findingRef evidence navigation must target a document on this canvas');
+    }
+    const canvasId = text(entry.canvasId, `findingRef.references[${index}].canvasId`, 160, true);
+    const documentId = text(entry.documentId, `findingRef.references[${index}].documentId`, 160, true);
+    if (!known.has(documentId) || navigation.blockId !== documentId || navigation.canvasId !== canvasId) {
+      throw new ApiError(400, 'findingRef evidence navigation must match its document');
+    }
+    const passageKind = entry.passageKind;
+    if (passageKind !== 'exact' && passageKind !== 'approximation') throw new ApiError(400, 'findingRef evidence passageKind must be exact or approximation');
+    const checkedAt = text(entry.checkedAt, `findingRef.references[${index}].checkedAt`, 64, true);
+    if (!Number.isFinite(Date.parse(checkedAt))) throw new ApiError(400, 'findingRef evidence checkedAt must be a date');
+    return { claim: text(entry.claim, `findingRef.references[${index}].claim`, 2000, true),
+      passage: text(entry.passage, `findingRef.references[${index}].passage`, 4000, true), passageKind,
+      ...(entry.passageLabel === undefined ? {} : { passageLabel: text(entry.passageLabel, 'findingRef evidence passageLabel', 200) }),
+      canvasId, documentId, ...(entry.documentTitle === undefined ? {} : { documentTitle: text(entry.documentTitle, 'findingRef evidence documentTitle', 200) }),
+      ...(entry.contentHash === undefined ? {} : { contentHash: text(entry.contentHash, 'findingRef evidence contentHash', 128) }),
+      ...(entry.revision === undefined ? {} : { revision: text(entry.revision, 'findingRef evidence revision', 160) }),
+      checkedAt: new Date(checkedAt).toISOString(), navigation: { kind: 'document' as const, canvasId, blockId: documentId } };
+  });
+}
+
 export function newTask(input: Record<string, unknown>, actor: string, known: Set<string>): CanvasTask {
   const now = new Date().toISOString();
   return {
@@ -38,6 +104,7 @@ export function newTask(input: Record<string, unknown>, actor: string, known: Se
     status: input.status === undefined ? 'todo' : status(input.status),
     ...(input.assignee === undefined ? {} : { assignee: assignee(input.assignee) }),
     blockIds: input.blockIds === undefined ? [] : blockIds(input.blockIds, known),
+    ...(input.findingRef === undefined ? {} : { findingRef: findingRef(input.findingRef, known) }),
     createdBy: actor, updatedBy: actor, createdAt: now, updatedAt: now, comments: [],
   };
 }

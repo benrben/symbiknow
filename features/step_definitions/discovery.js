@@ -78,7 +78,7 @@ Then('I can see the group connection on the canvas and move the view', async fun
 });
 
 When('I browse the group list', async function () {
-  await this.page.getByRole('button', { name: 'Browse groups' }).click();
+  await this.page.locator('.canvas-surface').getByRole('button', { name: 'Show group list', exact: true }).click();
   await this.page.getByRole('navigation', { name: 'Group overview' }).waitFor();
 });
 
@@ -238,7 +238,9 @@ Then('reloading the canvas keeps the original positions', async function () {
 });
 
 When('I preview and accept tag grouping', async function () {
-  await this.page.getByRole('button', { name: 'Suggest groups' }).click();
+  await this.page.getByRole('button', { name: 'Browse groups', exact: true }).click();
+  await this.page.getByRole('complementary', { name: 'Browse groups' }).getByRole('button', { name: 'Organize with Jev' }).click();
+  await this.page.getByRole('tabpanel', { name: 'Groups view' }).getByRole('button', { name: 'Customize grouping' }).click();
   await this.page.getByRole('tab', { name: 'By tags' }).click();
   await this.page.getByRole('button', { name: 'Show preview on canvas' }).click();
   await this.page.getByText('Previewing suggested groups').waitFor();
@@ -275,7 +277,7 @@ When('I save a bookmark called {string}', async function (name) {
 });
 
 When('I navigate to {string} and back', async function (name) {
-  await this.page.getByRole('button', { name, exact: true }).click();
+  await this.page.getByRole('button', { name: `Open canvas: ${name}`, exact: true }).click();
   await this.page.getByRole('heading', { name }).waitFor();
   await this.page.getByRole('button', { name: 'Back to previous canvas view' }).click();
   await this.page.locator('.canvas-label').getByRole('heading', { name: 'Product Roadmap' }).waitFor();

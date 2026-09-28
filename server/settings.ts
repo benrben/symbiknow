@@ -31,6 +31,15 @@ export type PrivateSettings = {
 export const providers: ModelProvider[] = ['openrouter', 'openai', 'anthropic', 'custom'];
 export const builtInProfiles = ['general', 'research', 'planner', 'builder'] as const;
 export const allPlugins: AgentPlugin[] = ['document_read', 'document_write', 'jev_insights', 'tasks', 'external_mcp'];
+export const mcpToolNames = [
+  'list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'create_doc', 'edit_doc', 'delete_doc', 'move_block',
+  'link_blocks', 'unlink_blocks', 'upload_file', 'download_file', 'claim_doc', 'release_doc', 'list_tasks',
+  'create_task', 'update_task', 'claim_task', 'comment_task', 'analyze_canvas', 'find_duplicates',
+  'merge_documents', 'undo_merge', 'connect_across_canvases', 'score_documents', 'run_workspace_automation',
+  'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision',
+] as const;
+export const readableMcpTools = new Set<string>(['list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'download_file',
+  'list_tasks', 'analyze_canvas', 'find_duplicates', 'connect_across_canvases', 'score_documents', 'list_versions']);
 export const defaultPlugins: AgentPlugin[] = ['document_read', 'document_write', 'jev_insights', 'tasks', 'external_mcp'];
 const groupings: GroupBy[] = ['work_area', 'purpose', 'lane'];
 const secretName = /^[A-Z][A-Z0-9_]{0,63}$/;
@@ -78,7 +87,9 @@ export function publicSettings(settings: PrivateSettings): ChatSettings {
     ...(settings.agentPlugins ? { agentPlugins: settings.agentPlugins } : {}),
     secretNames: Object.keys(settings.secrets ?? {}).sort(),
     mcpServers: settings.mcpServers ?? [],
-    mcpTokens: (settings.mcpTokens ?? []).map(({ id, name, preview, createdAt, lastUsedAt }) => ({ id, name, preview, createdAt, ...(lastUsedAt ? { lastUsedAt } : {}) })),
+    mcpTokens: (settings.mcpTokens ?? []).map(({ id, name, access, preview, createdAt, lastUsedAt, allowedCanvasIds, tools }) => ({ id, name,
+      access: access ?? 'write', preview, createdAt, ...(lastUsedAt ? { lastUsedAt } : {}),
+      ...(allowedCanvasIds ? { allowedCanvasIds } : {}), ...(tools ? { tools } : {}) })),
     groupBy: settings.groupBy ?? 'work_area',
   };
 }
@@ -248,10 +259,25 @@ export function updatedSettings(previous: PrivateSettings, input: Record<string,
   };
 }
 
-export function newMcpToken(name: unknown): { token: string; stored: StoredMcpToken } {
+export function newMcpToken(name: unknown, access: unknown = 'read', scope?: { allowedCanvasIds?: unknown; tools?: unknown }): { token: string; stored: StoredMcpToken } {
   const label = text(name, 'Token name', 60, true);
+  if (access !== 'read' && access !== 'propose' && access !== 'write') throw new ApiError(400, 'access must be read, propose, or write');
+  const canvasIds = scope?.allowedCanvasIds;
+  if (canvasIds !== undefined && (!Array.isArray(canvasIds) || !canvasIds.length || canvasIds.length > 100
+    || canvasIds.some(id => typeof id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(id))
+    || new Set(canvasIds).size !== canvasIds.length)) throw new ApiError(400, 'allowedCanvasIds must contain 1 to 100 distinct canvas IDs');
+  const tools = scope?.tools;
+  if (tools !== undefined && (!Array.isArray(tools) || !tools.length || tools.length > mcpToolNames.length
+    || tools.some(tool => typeof tool !== 'string' || !mcpToolNames.includes(tool as typeof mcpToolNames[number]))
+    || new Set(tools).size !== tools.length)) throw new ApiError(400, 'tools must contain distinct supported MCP tool names');
+  if (tools && (tools as string[]).some(tool => access !== 'write' && !readableMcpTools.has(tool)
+    && !(access === 'propose' && tool === 'run_workspace_automation'))) {
+    throw new ApiError(400, 'The selected tools exceed this token access level');
+  }
   const token = `atm_${randomBytes(24).toString('base64url')}`;
-  return { token, stored: { id: randomUUID(), name: label, hash: hashToken(token), preview: `…${token.slice(-4)}`, createdAt: new Date().toISOString() } };
+  return { token, stored: { id: randomUUID(), name: label, access, hash: hashToken(token), preview: `…${token.slice(-4)}`,
+    createdAt: new Date().toISOString(), ...(canvasIds ? { allowedCanvasIds: canvasIds as string[] } : {}),
+    ...(tools ? { tools: tools as string[] } : {}) } };
 }
 
 /** Replace `${secret:NAME}` references and add the bearer secret for an outside MCP server. */

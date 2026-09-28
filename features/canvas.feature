@@ -111,7 +111,7 @@ Feature: Markdown canvas
     And I add a Markdown block called "Group B2" containing "Work two"
     And I open Insights with two Jev groups and three suggested connections
     And I analyze the canvas and see two document groups
-    And I press the Regroup and connect automation
+    And I preview and apply group placement and connections
     Then reloading the canvas shows two groups and three new edges
 
   Scenario: Connect documents removes an edge Jev rejects
@@ -168,10 +168,10 @@ Feature: Markdown canvas
     And "Readme" links to "Setup v2"
     And the history of "Setup v1" still has its last content
 
-  Scenario: A confirmation after the assistant's proposal authorizes the change
+  Scenario: Chat confirmation leaves document deletion to the document controls
     Given a fresh workspace
     When the assistant asks to delete "Temporary Note" and I reply "yes"
-    Then "Temporary Note" is deleted
+    Then "Temporary Note" remains until I use its document controls
 
   Scenario: A cross-canvas connection opens the other canvas
     Given two canvases with related documents "Rate limits" and "Billing client"

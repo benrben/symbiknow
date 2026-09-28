@@ -36,6 +36,10 @@ describe('temporary answer canvas selection', () => {
     expect(answer.surface).toBe('chat');
     expect(answer.sources.map(source => source.blockId)).toEqual(['launch-checklist']);
     expect(answer.sources[0].excerpt).toContain('Launch checklist');
+    expect(answer.sources[0].evidence).toMatchObject({ claim: 'Candidate context for: What does the launch checklist say?',
+      canvasId: 'product-roadmap', documentId: 'launch-checklist', navigation: { kind: 'document',
+        canvasId: 'product-roadmap', blockId: 'launch-checklist' } });
+    expect(Number.isFinite(Date.parse(answer.sources[0].evidence!.checkedAt))).toBe(true);
     expect(await store.getCanvas('product-roadmap')).toEqual(before);
   });
 

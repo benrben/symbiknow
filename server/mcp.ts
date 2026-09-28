@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { storedDocument, uploadedSource } from '../shared/file-transfer.js';
 import type { CanvasBlock, CanvasDocument } from '../shared/types.js';
 import type { AutomationKind } from '../shared/insights.js';
+import { readableMcpTools } from './settings.js';
 
 const defaultApi = `http://127.0.0.1:${process.env.PORT || '8787'}/api`;
 const canvasId = z.string().min(1).describe('Canvas ID from list_canvases');
@@ -265,7 +266,86 @@ export type ProjectMcpOptions = {
   headers?: Record<string, string>;
   /** Suffix added to the connecting client's name, such as the MCP token name. */
   actorSuffix?: string;
+  /** Remote token capability. Existing stdio clients retain full access. */
+  access?: 'read' | 'propose' | 'write';
+  /** Limits a remote token to these canvases. Omitted means every canvas. */
+  allowedCanvasIds?: string[];
+  /** Limits a remote token to these named MCP tools. Omitted means its access-level default. */
+  tools?: string[];
+  /** Observes the actual remote tool handler without storing its arguments or result. */
+  onToolCall?: (event: { tool: string; args: unknown; startedAt: string; endedAt: string;
+    outcome: 'success' | 'error' | 'denied'; result?: unknown }) => Promise<void> | void;
 };
+
+export function canCallMcpTool(access: 'read' | 'propose' | 'write', name: string, tools?: string[]): boolean {
+  return (!tools || tools.includes(name))
+    && (access === 'write' || readableMcpTools.has(name) || (access === 'propose' && name === 'run_workspace_automation'));
+}
+
+function scopedResult(name: string, value: unknown, allowed: Set<string>): unknown {
+  if (name !== 'list_canvases' && name !== 'search_docs') return value;
+  const content = (value as { content?: Array<{ type?: string; text?: string }> })?.content;
+  const first = content?.[0];
+  if (!first || typeof first.text !== 'string') throw new Error('Could not safely filter scoped tool results.');
+  let parsed: unknown;
+  try { parsed = JSON.parse(first.text); } catch { throw new Error('Could not safely filter scoped tool results.'); }
+  if (!Array.isArray(parsed)) throw new Error('Could not safely filter scoped tool results.');
+  const filtered = name === 'search_docs' ? parsed.filter(hit => hit && typeof hit === 'object'
+    && allowed.has((hit as { canvasId?: string }).canvasId ?? ''))
+    : parsed.map(workspace => {
+      if (!workspace || typeof workspace !== 'object' || !Array.isArray((workspace as { canvases?: unknown }).canvases)) {
+        throw new Error('Could not safely filter scoped tool results.');
+      }
+      return { ...workspace, canvases: (workspace as { canvases: Array<{ id?: string }> }).canvases.filter(canvas => allowed.has(canvas.id ?? '')) };
+    }).filter(workspace => workspace.canvases.length);
+  return { ...value as Record<string, unknown>, content: [{ ...first, text: JSON.stringify(filtered) }, ...content!.slice(1)] };
+}
+
+/** Register only tools the remote token can use. The preview tool is guarded again at execution time. */
+function scopedRegistration(server: McpServer, options: ProjectMcpOptions,
+  workspaceCanvases: (workspaceId: string) => Promise<string[]>,
+  canvasPeers: (canvasId: string) => Promise<string[]>): McpServer {
+  const { access = 'write', tools, allowedCanvasIds, onToolCall: observe } = options;
+  if (access === 'write' && !observe && !tools && !allowedCanvasIds) return server;
+  return new Proxy(server, { get(target, property, receiver) {
+    if (property !== 'registerTool') return Reflect.get(target, property, receiver);
+    return (name: string, config: unknown, handler: (...args: unknown[]) => unknown) => {
+      if (!canCallMcpTool(access, name, tools)) return undefined;
+      const safeHandler = async (...args: unknown[]) => {
+        const startedAt = new Date().toISOString();
+        const input = args[0] as Record<string, unknown> | undefined;
+        let denied = access === 'propose' && name === 'run_workspace_automation' && input?.dryRun === false;
+        if (allowedCanvasIds) {
+          const allowed = new Set(allowedCanvasIds);
+          const direct = [input?.canvasId, input?.sourceCanvasId, input?.targetCanvasId].filter((id): id is string => typeof id === 'string');
+          if (direct.some(id => !allowed.has(id)) || name === 'undo_merge') denied = true;
+          if (name === 'run_workspace_automation') {
+            const members = typeof input?.workspaceId === 'string' ? await workspaceCanvases(input.workspaceId) : [];
+            if (!members.length || members.some(id => !allowed.has(id))) denied = true;
+          } else if (name === 'connect_across_canvases' || (name === 'find_duplicates' && input?.crossCanvas === true)) {
+            const members = typeof input?.canvasId === 'string' ? await canvasPeers(input.canvasId) : [];
+            if (!members.length || members.some(id => !allowed.has(id))) denied = true;
+          } else if (!['list_canvases', 'search_docs'].includes(name) && !direct.length) denied = true;
+        }
+        const publish = async (outcome: 'success' | 'error' | 'denied', value?: unknown) => {
+          try { await observe?.({ tool: name, args: args[0], startedAt, endedAt: new Date().toISOString(), outcome, result: value }); }
+          catch { console.error('MCP activity ledger could not record a tool call'); }
+        };
+        try {
+          if (denied) throw new Error('This token scope does not permit that tool or canvas.');
+          const raw = await handler(...args);
+          const value = allowedCanvasIds ? scopedResult(name, raw, new Set(allowedCanvasIds)) : raw;
+          await publish('success', value);
+          return value;
+        } catch (error) {
+          await publish(denied ? 'denied' : 'error');
+          throw error;
+        }
+      };
+      return Reflect.apply(target.registerTool, target, [name, config, safeHandler]);
+    };
+  } }) as McpServer;
+}
 
 export function createProjectMcpServer(apiBase = process.env.CANVAS_API_URL || defaultApi, fetcher: typeof fetch = fetch,
   options: ProjectMcpOptions = {}): McpServer {
@@ -279,11 +359,16 @@ export function createProjectMcpServer(apiBase = process.env.CANVAS_API_URL || d
   const api = new CanvasApi(apiBase.replace(/\/$/, ''), fetcher, () => ({
     'x-symbiknow-actor': actor(), ...(token ? { authorization: `Bearer ${token}` } : {}), ...options.headers,
   }));
-  registerDocumentTools(server, api);
-  registerFileTools(server, api, options.localFiles ?? true);
-  registerCoordinationTools(server, api);
-  registerJevTools(server, api);
-  registerVersionTools(server, api);
+  const workspaces = () => api.request<Array<{ id: string; canvases: Array<{ id: string }> }>>('/workspaces');
+  const registration = scopedRegistration(server, options,
+    async workspaceId => (await workspaces()).find(workspace => workspace.id === workspaceId)?.canvases.map(canvas => canvas.id) ?? [],
+    async targetId => (await workspaces()).find(workspace => workspace.canvases.some(canvas => canvas.id === targetId))
+      ?.canvases.map(canvas => canvas.id) ?? []);
+  registerDocumentTools(registration, api);
+  registerFileTools(registration, api, options.localFiles ?? true);
+  registerCoordinationTools(registration, api);
+  registerJevTools(registration, api);
+  registerVersionTools(registration, api);
   return server;
 }
 

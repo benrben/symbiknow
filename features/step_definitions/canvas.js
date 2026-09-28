@@ -426,8 +426,12 @@ When('I open Insights with a moderate-confidence Jev connection from {string} to
 });
 
 When('I press the Connect documents automation', async function () {
-  await this.page.getByRole('button', { name: 'Connect documents' }).click();
-  await this.page.getByRole('status').filter({ hasText: 'Applied 1 connection change' }).waitFor();
+  await this.page.getByRole('tab', { name: 'Connections' }).click();
+  await this.page.getByRole('button', { name: 'Preview connections' }).click();
+  const preview = this.page.getByRole('region', { name: 'Canvas change preview' });
+  await preview.waitFor();
+  await preview.getByRole('button', { name: /Apply selected/ }).click();
+  await this.page.getByRole('status').filter({ hasText: 'Applied 1 change.' }).waitFor();
   assert.deepEqual(this.pageErrors, []);
 });
 
@@ -456,19 +460,22 @@ When('I open Insights with two Jev groups and three suggested connections', asyn
   this.page.on('pageerror', error => this.pageErrors.push(error.message));
   await this.page.route(`**/api/canvases/${this.canvasId}/insights`, route => route.fulfill({ status: 200,
     contentType: 'application/json', body: JSON.stringify(report) }));
-  await this.page.goto(this.baseUrl, { waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Group automations', exact: true }).click();
+  await this.page.goto(`${this.baseUrl}/?canvas=${this.canvasId}`, { waitUntil: 'networkidle' });
   await this.page.getByRole('button', { name: 'Insights' }).click();
 });
 
 When('I press the Organize positions automation', async function () {
-  await this.page.getByRole('button', { name: 'Organize positions' }).click();
-  await this.page.getByRole('status').filter({ hasText: 'Applied 1 layout update' }).waitFor();
+  await this.page.getByRole('tab', { name: 'Groups' }).click();
+  await this.page.getByRole('button', { name: 'Place these groups on the canvas' }).click();
+  const preview = this.page.getByRole('region', { name: 'Canvas change preview' });
+  await preview.getByRole('button', { name: /Apply selected/ }).click();
+  await this.page.getByRole('status').filter({ hasText: 'Applied 1 change.' }).waitFor();
   assert.deepEqual(this.pageErrors, []);
 });
 
 When('I analyze the canvas and see two document groups', async function () {
   await this.page.getByRole('button', { name: 'Analyze canvas' }).click();
+  await this.page.getByRole('tab', { name: 'Groups' }).click();
   const dashboard = this.page.getByRole('region', { name: 'Document groups' });
   await dashboard.waitFor();
   await dashboard.getByText('Overview', { exact: true }).waitFor();
@@ -477,14 +484,22 @@ When('I analyze the canvas and see two document groups', async function () {
 });
 
 When('I press the Connect documents automation for three links', async function () {
-  await this.page.getByRole('button', { name: 'Connect documents' }).click();
-  await this.page.getByRole('status').filter({ hasText: 'Applied 3 connection changes' }).waitFor();
+  await this.page.getByRole('tab', { name: 'Connections' }).click();
+  await this.page.getByRole('button', { name: 'Preview connections' }).click();
+  await this.page.getByRole('region', { name: 'Canvas change preview' }).getByRole('button', { name: /Apply selected/ }).click();
+  await this.page.getByRole('status').filter({ hasText: 'Applied 3 changes.' }).waitFor();
   assert.deepEqual(this.pageErrors, []);
 });
 
-When('I press the Regroup and connect automation', async function () {
-  await this.page.getByRole('button', { name: 'Regroup & connect' }).click();
-  await this.page.getByRole('status').filter({ hasText: 'and updated links' }).waitFor();
+When('I preview and apply group placement and connections', async function () {
+  await this.page.getByRole('tab', { name: 'Groups' }).click();
+  await this.page.getByRole('button', { name: 'Place these groups on the canvas' }).click();
+  await this.page.getByRole('region', { name: 'Canvas change preview' }).getByRole('button', { name: /Apply selected/ }).click();
+  await this.page.getByRole('status').filter({ hasText: 'Applied ' }).waitFor();
+  await this.page.getByRole('tab', { name: 'Connections' }).click();
+  await this.page.getByRole('button', { name: 'Preview connections' }).click();
+  await this.page.getByRole('region', { name: 'Canvas change preview' }).getByRole('button', { name: /Apply selected/ }).click();
+  await this.page.getByRole('status').filter({ hasText: 'Applied 3 changes.' }).waitFor();
   assert.deepEqual(this.pageErrors, []);
 });
 
@@ -498,7 +513,6 @@ Then('reloading the canvas shows two groups and three new edges', async function
   const edgeCount = canvas.blocks.reduce((count, block) => count + block.links.length, 0);
   assert.equal(edgeCount - this.initialEdgeCount, 3);
   await this.page.reload({ waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Group automations', exact: true }).click();
   await this.page.getByLabel(/Overview group, \d+ documents/).waitFor();
   await this.page.getByLabel(/Active work group, \d+ documents/).waitFor();
   assert.deepEqual(this.pageErrors, []);
@@ -546,6 +560,7 @@ When('I send a chat message then press New chat', async function () {
   await this.page.getByRole('button', { name: 'Submit' }).click();
   await this.page.getByText('First answer.').waitFor();
   await this.page.getByRole('button', { name: 'New chat' }).click();
+  await this.page.getByRole('button', { name: 'Discard and start' }).click();
   await this.page.getByRole('heading', { name: 'Hi, I’m Symbi.' }).waitFor();
   assert.equal(await this.page.getByText('First answer.').count(), 0);
   assert.deepEqual(this.pageErrors, []);
@@ -641,6 +656,8 @@ Then('I can switch between source and a live HTML preview in the editor', async 
   assert.equal(await editor.getByLabel('Markdown source').evaluate(element =>
     [...element.querySelectorAll('.cm-line')].map(line => line.textContent).join('\n')), unsaved);
   await editor.getByRole('button', { name: 'Cancel' }).click();
+  await editor.getByRole('alertdialog', { name: 'Unsaved changes' }).getByRole('button', { name: 'Discard changes' }).click();
+  await editor.waitFor({ state: 'hidden' });
   assert.deepEqual(this.pageErrors, []);
 });
 
@@ -719,8 +736,9 @@ When('I open Insights with a 0.5-confidence Jev connection from {string} to {str
 });
 
 When('I press the Connect documents automation with no eligible link', async function () {
-  await this.page.getByRole('button', { name: 'Connect documents' }).click();
-  await this.page.getByRole('status').filter({ hasText: 'No eligible connection changes' }).waitFor();
+  await this.page.getByRole('tab', { name: 'Connections' }).click();
+  await this.page.getByRole('button', { name: 'Preview connections' }).click();
+  await this.page.getByRole('region', { name: 'Canvas change preview' }).getByText('0 selected of 0 proposed changes').waitFor();
   assert.deepEqual(this.pageErrors, []);
 });
 
@@ -798,6 +816,7 @@ When('I choose Merge in chat on the duplicate suggestion and apply the merge', a
   this.page.on('pageerror', error => this.pageErrors.push(error.message));
   await this.page.goto(`${this.baseUrl}/?canvas=${this.canvasId}`, { waitUntil: 'networkidle' });
   await this.page.getByRole('button', { name: 'Insights' }).click();
+  await this.page.getByRole('tab', { name: 'Duplicates' }).click();
   const finder = this.page.getByRole('region', { name: 'Find duplicates' });
   await finder.getByLabel('Document to check for duplicates').selectOption(this.mergeOriginal.id);
   await finder.getByRole('button', { name: 'Find duplicates' }).click();
@@ -848,12 +867,14 @@ When('the assistant asks to delete {string} and I reply {string}', async functio
     ] }) });
   const stream = await response.text();
   assert.equal(response.status, 200, stream);
-  assert.match(stream, /Deleted Temporary Note/);
+  assert.match(stream, /Chat cannot delete Temporary Note directly/);
+  assert.match(stream, /use Delete in its editor/);
+  assert.doesNotMatch(stream, /event: chat_proposal/);
 });
 
-Then('{string} is deleted', async function (title) {
+Then('{string} remains until I use its document controls', async function (title) {
   const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
-  assert.equal(canvas.blocks.some(block => block.title === title), false);
+  assert.equal(canvas.blocks.some(block => block.title === title), true);
 });
 
 Given('two canvases with related documents {string} and {string}', async function (firstTitle, secondTitle) {

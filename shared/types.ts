@@ -1,3 +1,4 @@
+import type { EvidenceReference } from './evidence.js';
 export type BlockKind = 'markdown' | 'slides' | 'website' | 'mdx';
 /** Reading lanes kept for older canvases; groups use `lane:`, `area:`, `purpose:`, or `custom:` paths. */
 export type DocumentLane = 'overview' | 'work' | 'reference' | 'followup';
@@ -58,6 +59,8 @@ export interface SearchHit {
   tags: string[];
   kind: BlockKind;
   matchIn: 'title' | 'body';
+  /** Provenance checked against the current saved document during this search. */
+  evidence?: EvidenceReference;
 }
 
 export interface WorkspaceSummary {
@@ -89,6 +92,9 @@ export interface ExternalMcpServer {
 export interface McpTokenInfo {
   id: string;
   name: string;
+  access?: 'read' | 'propose' | 'write';
+  allowedCanvasIds?: string[];
+  tools?: string[];
   preview: string;
   createdAt: string;
   lastUsedAt?: string;
@@ -141,6 +147,17 @@ export interface CanvasTask {
   status: TaskStatus;
   assignee?: string;
   blockIds: string[];
+  findingRef?: {
+    id: string;
+    title: string;
+    canvasId: string;
+    blockIds: string[];
+    detail?: string;
+    evidence?: Array<{ questionId: string; answer: string; excerpt: string; sourceIds?: string[]; sourceHashes?: Record<string, string> }>;
+    references?: EvidenceReference[];
+    suggestedOwner?: string;
+    investigationId?: string;
+  };
   createdBy: string;
   updatedBy: string;
   createdAt: string;

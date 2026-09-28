@@ -126,6 +126,10 @@ html[data-theme='dark'] .canvas-surface--overview .canvas-group { background: co
 .canvas-card__kind { margin-left: auto; border-radius: 6px; background: #eef3ff; padding: 4px 7px; color: #5571bb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .canvas-card__edit { flex: 0 0 auto; width: 25px; height: 25px; border: 1px solid #e2e8f1; border-radius: 6px; background: #fff; color: #617493; cursor: pointer; font-size: 14px; }
 .canvas-card__edit:hover { border-color: #9eb2e9; color: #4465c7; }
+.canvas-card__actions-menu { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; display: grid; min-width: 190px; padding: 4px; border: 1px solid var(--sk-border, #dce3ed); border-radius: 8px; background: var(--sk-surface, #fff); color: var(--sk-text, #17233b); box-shadow: 0 8px 24px var(--sk-shadow, #1b2d5622); }
+.canvas-card__actions-menu button { width: 100%; border: 0; border-radius: 5px; padding: 8px 9px; background: transparent; color: inherit; text-align: left; line-height: 1.35; cursor: pointer; }
+.canvas-card__actions-menu button:hover, .canvas-card__actions-menu button:focus-visible { background: var(--sk-surface-soft, #eef1f8); color: var(--sk-text, #17233b); }
+.canvas-card__actions-menu button:focus-visible { outline: 2px solid var(--sk-accent, #087f77); outline-offset: -2px; }
 .canvas-card--slides .canvas-card__kind { background: #fff0e7; color: #c36c2e; }
 .canvas-card--website .canvas-card__kind { background: #e6f8ef; color: #33875a; }
 .canvas-card--mdx .canvas-card__kind { background: #f4ebff; color: #7c54a8; }
@@ -310,3 +314,21 @@ html[data-theme='dark'] .loader-code pre.shiki span { color: #dbe8e6 !important;
 @container (max-width: 650px) { .canvas-overview-board__grid, .canvas-overview-board.is-spacious .canvas-overview-board__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .canvas-overview-board__title strong { font-size: 14px; } .canvas-surface--overview .react-flow__minimap { display: none; } .canvas-map-index.is-overview { bottom: 12px; } }
 @container (max-width: 380px) { .canvas-overview-board__grid { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .canvas-hint { display: none; } .canvas-surface .react-flow__minimap { display: none; } .canvas-surface--inspecting .canvas-flow-stage { right: 0; bottom: var(--canvas-inspector-height, 48%); } .canvas-surface--inspecting .canvas-toolbar { right: 12px; } .canvas-map-index, .canvas-surface--inspecting .canvas-map-index { top: auto; right: 12px; bottom: 12px; max-height: 100px; } .canvas-inspector { top: auto; right: 0; bottom: 0; width: 100%; height: var(--canvas-inspector-height, 48%); min-height: 190px; border-top: 1px solid var(--sk-border); border-left: 0; } .canvas-inspector__resize { top: 0; bottom: auto; left: 0; right: 0; width: auto; height: 12px; cursor: row-resize; } .canvas-inspector__resize::before { top: 3px; left: 50%; width: 44px; height: 4px; transform: translateX(-50%); } .canvas-focus-tools { top: 88px; max-width: calc(100% - 24px); } }
+
+/* Semantic colors for saved canvas documents and controls. */
+.canvas-surface, .canvas-surface .react-flow, .canvas-drill-layer { background-color: var(--sk-field); color: var(--sk-text); }
+.canvas-card, .canvas-card__header, .canvas-inspector, .canvas-drill-board, .canvas-hint, .canvas-map-index, .canvas-focus-tools { background: var(--sk-surface); color: var(--sk-text); border-color: var(--sk-border); }
+.canvas-card__identity small, .canvas-card__grip, .canvas-breadcrumb span, .canvas-preview-note, .loader-loading { color: var(--sk-muted); }
+.canvas-card.is-selected, .canvas-card.is-highlighted, .canvas-card.is-search-match { border-color: var(--sk-focus); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sk-focus) 28%, transparent), 0 16px 34px var(--sk-shadow); }
+.canvas-card__lock, .canvas-card__purpose:is([data-purpose="decision"], [data-purpose="proposal"], [data-purpose="plan"], [data-purpose="report"]), .canvas-card__work-area--2 { color: var(--sk-pending); background: var(--sk-pending-bg); border-color: var(--sk-pending) !important; }
+.canvas-card__kind, .canvas-card__reviewer { color: var(--sk-link); background: var(--sk-surface-soft); border-color: var(--sk-border) !important; }
+.canvas-card__edit, .canvas-toolbar button, .canvas-inspector button, .canvas-map-index button, .canvas-focus-tools button { color: var(--sk-text); background: var(--sk-surface); border-color: var(--sk-border); }
+.canvas-card__edit:hover, .canvas-toolbar button:hover, .canvas-inspector button:hover, .canvas-map-index button:hover, .canvas-focus-tools button:hover { color: var(--sk-link); border-color: var(--sk-focus); }
+.canvas-card__actions-menu, .canvas-card__actions-menu button { color: var(--sk-text); background: var(--sk-surface); }
+.canvas-card__actions-menu button:hover { background: var(--sk-surface-soft); }
+.canvas-card__actions-menu button:focus-visible, .canvas-inspector :is(button, input, select, textarea):focus-visible, .canvas-surface :is(button, input, select, summary):focus-visible { outline: 2px solid var(--sk-focus); outline-offset: 2px; }
+.canvas-map-index button b, .canvas-overview-board__matches { color: var(--sk-link); }
+.loader-error { color: var(--sk-error); background: var(--sk-error-bg); }
+.loader-code, .loader-slides__controls, .loader-website__footer, .mdx-calculator, .mdx-chart { color: var(--sk-text); background: var(--sk-surface-soft); border-color: var(--sk-border); }
+.loader-code pre, pre.loader-code, .loader-mdx-rendered { color: var(--sk-text); background: var(--sk-surface); }
+.loader-website__footer a { color: var(--sk-link); }

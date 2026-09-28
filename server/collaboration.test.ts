@@ -56,6 +56,26 @@ describe('agent collaboration', () => {
     expect((await call<CanvasTask[]>(base, route)).data).toEqual([]);
   });
 
+  it('validates and persists a finding evidence trail on a task', async () => {
+    const base = await app();
+    const route = '/api/canvases/product-roadmap/tasks';
+    const findingRef = { id: 'finding-1', title: 'Clarify launch policy', canvasId: 'product-roadmap', blockIds: ['launch-checklist'],
+      detail: 'The checklist omits the launch exception.',
+      evidence: [{ questionId: 'q-1', answer: 'No exception listed', excerpt: 'Exceptions are not described.', sourceIds: ['launch-checklist'],
+        sourceHashes: { 'launch-checklist': 'ab12' } }],
+      suggestedOwner: 'Morgan', investigationId: 'investigation-7' };
+    const created = await call<CanvasTask>(base, route, { method: 'POST', actor: 'Codex', body: {
+      title: 'Clarify launch policy', detail: findingRef.detail, assignee: findingRef.suggestedOwner, blockIds: findingRef.blockIds, findingRef,
+    } });
+    expect(created.status).toBe(201);
+    expect(created.data).toMatchObject({ assignee: 'Morgan', blockIds: ['launch-checklist'], findingRef });
+    expect((await call<CanvasTask[]>(base, route)).data[0].findingRef).toMatchObject(findingRef);
+    const invalid = await call(base, route, { method: 'POST', body: { title: 'Bad evidence', findingRef: {
+      ...findingRef, evidence: [{ questionId: 'q-2', answer: '', excerpt: 'Unknown source', sourceIds: ['missing-document'] }],
+    } } });
+    expect(invalid.status).toBe(400);
+  });
+
   it('locks document content for its owner and rejects stale writes', async () => {
     const base = await app();
     const doc = '/api/canvases/product-roadmap/blocks/launch-checklist';
@@ -98,7 +118,7 @@ describe('agent collaboration', () => {
     const base = await app();
     expect((await fetch(base + '/mcp', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }) })).status).toBe(401);
-    const created = await call<{ token: string; settings: ChatSettings }>(base, '/api/mcp/tokens', { method: 'POST', body: { name: 'laptop' } });
+    const created = await call<{ token: string; settings: ChatSettings }>(base, '/api/mcp/tokens', { method: 'POST', body: { name: 'laptop', access: 'write' } });
     expect(created.data.token).toMatch(/^atm_/);
     expect(JSON.stringify(created.data.settings)).not.toContain(created.data.token);
     const info = await call<{ endpoint: string }>(base, '/api/mcp/info');

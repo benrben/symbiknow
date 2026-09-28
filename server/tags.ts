@@ -18,6 +18,7 @@ export interface FindTagSuggestionsInput {
   vocabulary?: string;
   policy?: Partial<JevPolicy>;
   cache?: JevCache;
+  targetIds?: ReadonlySet<string>;
 }
 
 interface Candidate {
@@ -164,6 +165,8 @@ export async function findTagSuggestions(input: FindTagSuggestionsInput): Promis
   const tags = tagVocabulary(blocks, input.vocabulary);
   if (!tags.length) return [];
   const policy = effectiveJevPolicy(input.policy).tag;
-  const results = await mapLimited(blocks, concurrency, (block, position) => judgeDocument(block, position, blocks, tags, input, policy));
+  const targets = blocks.map((block, position) => ({ block, position }))
+    .filter(({ block }) => !input.targetIds || input.targetIds.has(block.id));
+  const results = await mapLimited(targets, concurrency, ({ block, position }) => judgeDocument(block, position, blocks, tags, input, policy));
   return results.flat();
 }

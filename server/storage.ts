@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { BlockKind, CanvasBlock, CanvasDocument, CanvasTask, ChatSettings, CrossLink, DocumentGroup, DocumentLock, LinkRelation, SearchHit, WorkspaceSummary } from '../shared/types.js';
+import { normalizeEvidence } from '../shared/evidence.js';
 import { validGroupKey } from '../shared/groups.js';
 import { documentText } from '../shared/document-text.js';
 import { loaderFor } from '../shared/file-transfer.js';
@@ -11,6 +12,7 @@ import { claimedTask, commentedTask, DocumentLocks, newTask, patchedTask } from 
 import { safeEqual, hashToken } from './auth.js';
 import { getSimilarityIndex, type SimilarityIndex } from './similarity.js';
 import { defaultPrivateSettings, jevKey, newMcpToken, providerKey, publicSettings, updatedSettings, type PrivateSettings } from './settings.js';
+import { appendMcpActivity, readMcpActivity, type McpActivityInput } from './mcp-activity.js';
 
 export { ApiError };
 
@@ -181,6 +183,14 @@ function searchExcerpt(text: string, matchAt: number, matchLength: number): stri
   return `${start > 0 ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`;
 }
 
+function literalSearchLine(content: string, searchableBody: string, needle: string): string | undefined {
+  return content.split(/\r?\n/).map(line => line.trim()).find(line => {
+    if (!line || line.length > 240 || !line.toLocaleLowerCase().includes(needle)) return false;
+    const normalized = line.replace(/[#*`]/g, '').replace(/\s+/g, ' ').trim();
+    return normalized.length > 0 && searchableBody.includes(normalized);
+  });
+}
+
 function validLinks(links: unknown, blockId: string, blocks: CanvasBlock[]): links is string[] {
   return Array.isArray(links) && links.every(link =>
     typeof link === 'string' && validId(link) && link !== blockId && blocks.some(block => block.id === link));
@@ -284,6 +294,7 @@ export class CanvasStore {
   private canvasFile(id: string): string { return path.join(this.root, 'canvases', `${id}.json`); }
   private tasksFile(id: string): string { return path.join(this.root, 'tasks', `${id}.json`); }
   private settingsFile(): string { return path.join(this.root, 'settings.json'); }
+  private mcpActivityFile(): string { return path.join(this.root, 'mcp-activity.json'); }
   private mergeFile(id: string): string { return path.join(this.root, 'jev-merges', `${id}.json`); }
   private docFile(file: string): string { return path.join(this.root, file); }
   private versionFile(blockId: string): DocumentVersions { return new DocumentVersions(path.join(this.root, '.versions', blockId)); }
@@ -590,11 +601,16 @@ export class CanvasStore {
     const origin = { x: coordinate(input.x, 'x', 100), y: coordinate(input.y, 'y', 100) };
     const group = optionalGroup(input.group, undefined);
     const tags = optionalTags(input.tags, undefined);
+    const purpose = optionalLabel(input.purpose, 'purpose', undefined);
+    const workArea = optionalLabel(input.workArea, 'workArea', undefined);
     return this.serialize(async () => {
       const canvas = await this.getCanvas(canvasId, true);
       const id = randomUUID();
+      const links = input.links ?? [];
+      if (!validLinks(links, id, canvas.blocks)) throw new ApiError(400, 'links must contain existing block IDs on this canvas');
       const position = freeBlockPosition(canvas.blocks, origin);
-      const block: CanvasBlock = { id, title, kind, content, ...position, width: 400, height: 320, links: [], file: `docs/${id}.md`, ...(group ? { group } : {}), ...(tags ? { tags } : {}) };
+      const block: CanvasBlock = { id, title, kind, content, ...position, width: 400, height: 320, links: links as string[], file: `docs/${id}.md`,
+        ...(group ? { group } : {}), ...(tags ? { tags } : {}), ...(purpose ? { purpose } : {}), ...(workArea ? { workArea } : {}) };
       await writeFile(this.docFile(block.file), content);
       await atomicJson(this.canvasFile(canvasId), { ...canvas, blocks: [...canvas.blocks, block].map(storedBlock) });
       const versions = this.versionFile(id);
@@ -850,6 +866,10 @@ export class CanvasStore {
     return this.serialize(async () => (await this.documentVersions(canvasId, blockId)).versions.status());
   }
 
+  async previewDocumentVersion(canvasId: string, blockId: string, kind: 'switch' | 'merge' | 'restore', target: string) {
+    return this.serialize(async () => (await this.documentVersions(canvasId, blockId)).versions.preview(kind, target));
+  }
+
   async createDocumentBranch(canvasId: string, blockId: string, name: string) {
     return this.serialize(async () => (await this.documentVersions(canvasId, blockId)).versions.createBranch(name));
   }
@@ -882,16 +902,23 @@ export class CanvasStore {
     const workspaces = await this.listWorkspaces();
     const canvasIds = workspaces.flatMap(workspace => workspace.canvases.map(canvas => canvas.id));
     const canvases = await Promise.all(canvasIds.map(id => this.getCanvas(id)));
+    const checkedAt = new Date().toISOString();
     const hits = canvases.flatMap(canvas => canvas.blocks.flatMap(block => {
       const body = this.searchableBody(block);
       const titleAt = block.title.toLocaleLowerCase().indexOf(needle);
       const bodyAt = body.toLocaleLowerCase().indexOf(needle);
       if (titleAt < 0 && bodyAt < 0) return [];
       const matchIn = titleAt >= 0 ? 'title' : 'body';
+      const excerpt = matchIn === 'title' ? searchExcerpt(block.title, titleAt, needle.length) : searchExcerpt(body, bodyAt, needle.length);
+      const literal = matchIn === 'body' ? literalSearchLine(block.content, body, needle) : undefined;
+      const evidence = normalizeEvidence({ claim: query.trim(), passage: literal ?? excerpt,
+        ...(literal || matchIn === 'title' && excerpt === block.title ? { sourceText: block.content } : {}),
+        canvasId: canvas.id, documentId: block.id, documentTitle: block.title,
+        contentHash: block.contentHash, checkedAt });
       return [{
         canvasId: canvas.id, canvasName: canvas.name, blockId: block.id, title: block.title,
-        excerpt: matchIn === 'title' ? searchExcerpt(block.title, titleAt, needle.length) : searchExcerpt(body, bodyAt, needle.length),
-        group: block.group, tags: block.tags ?? [], kind: block.kind, matchIn,
+        excerpt, group: block.group, tags: block.tags ?? [], kind: block.kind, matchIn,
+        ...(evidence ? { evidence } : {}),
       } satisfies SearchHit];
     }));
     return hits.sort((a, b) => Number(b.matchIn === 'title') - Number(a.matchIn === 'title') ||
@@ -924,6 +951,9 @@ export class CanvasStore {
   }
 
   async createTask(canvasId: string, input: Record<string, unknown>, actor: string): Promise<CanvasTask> {
+    if (input.findingRef && (input.findingRef as { canvasId?: unknown }).canvasId !== canvasId) {
+      throw new ApiError(400, 'findingRef must belong to this canvas');
+    }
     return this.changeTasks(canvasId, (tasks, known) => {
       const task = newTask(input, actor, known);
       return { tasks: [...tasks, task], result: task };
@@ -988,11 +1018,15 @@ export class CanvasStore {
     });
   }
 
-  async createMcpToken(name: unknown): Promise<{ token: string; settings: ChatSettings }> {
+  async createMcpToken(name: unknown, access: unknown = 'read', scope?: { allowedCanvasIds?: unknown; tools?: unknown }): Promise<{ token: string; settings: ChatSettings }> {
     return this.serialize(async () => {
       const settings = await this.privateSettings();
       if ((settings.mcpTokens ?? []).length >= 20) throw new ApiError(400, 'Revoke an old token before creating another (limit 20)');
-      const { token, stored } = newMcpToken(name);
+      const { token, stored } = newMcpToken(name, access, scope);
+      if (stored.allowedCanvasIds) {
+        const known = new Set((await this.listWorkspaces()).flatMap(workspace => workspace.canvases.map(canvas => canvas.id)));
+        if (stored.allowedCanvasIds.some(id => !known.has(id))) throw new ApiError(400, 'allowedCanvasIds must name existing canvases');
+      }
       const next = { ...settings, mcpTokens: [...(settings.mcpTokens ?? []), stored] };
       await atomicJson(this.settingsFile(), next, 0o600);
       return { token, settings: publicSettings(next) };
@@ -1009,14 +1043,27 @@ export class CanvasStore {
     });
   }
 
-  /** Returns the token name for a valid MCP token and records when it was last used. */
-  async verifyMcpToken(token: string): Promise<string | null> {
+  async mcpActivity() { return readMcpActivity(this.mcpActivityFile()); }
+
+  async mcpDocumentRevision(blockId: string): Promise<string | undefined> {
+    if (!validId(blockId)) return undefined;
+    try { return (await this.versionFile(blockId).status()).commits[0]?.id; }
+    catch { return undefined; } // A document may have no Git history yet; activity still records the call.
+  }
+
+  async recordMcpActivity(input: McpActivityInput) {
+    return this.serialize(() => appendMcpActivity(this.mcpActivityFile(), input));
+  }
+
+  /** Returns token identity and effective scope, updating last use for stored tokens. */
+  async mcpTokenIdentity(token: string): Promise<{ id: string; name: string; access: 'read' | 'propose' | 'write';
+    allowedCanvasIds?: string[]; tools?: string[] } | null> {
     if (!token) return null;
-    for (const fixed of [process.env.SYMBIKNOW_MCP_TOKEN, process.env.ALLTEAM_MCP_TOKEN]) {
-      if (fixed && safeEqual(token, fixed)) return 'env token';
+    for (const [id, fixed] of [['env-token-primary', process.env.SYMBIKNOW_MCP_TOKEN], ['env-token-legacy', process.env.ALLTEAM_MCP_TOKEN]] as const) {
+      if (fixed && safeEqual(token, fixed)) return { id, name: 'env token', access: 'write' };
     }
-    for (const fixed of [process.env.SYMBIKNOW_ACCESS_TOKEN, process.env.ALLTEAM_ACCESS_TOKEN]) {
-      if (fixed && safeEqual(token, fixed)) return 'access token';
+    for (const [id, fixed] of [['access-token-primary', process.env.SYMBIKNOW_ACCESS_TOKEN], ['access-token-legacy', process.env.ALLTEAM_ACCESS_TOKEN]] as const) {
+      if (fixed && safeEqual(token, fixed)) return { id, name: 'access token', access: 'write' };
     }
     const hash = hashToken(token);
     const settings = await this.privateSettings();
@@ -1029,6 +1076,13 @@ export class CanvasStore {
         await atomicJson(this.settingsFile(), { ...latest, mcpTokens }, 0o600);
       }).catch(() => undefined);
     }
-    return stored.name;
+    return { id: stored.id, name: stored.name, access: stored.access ?? 'write',
+      ...(stored.allowedCanvasIds ? { allowedCanvasIds: stored.allowedCanvasIds } : {}),
+      ...(stored.tools ? { tools: stored.tools } : {}) };
+  }
+
+  /** Kept for callers that only need the display name. */
+  async verifyMcpToken(token: string): Promise<string | null> {
+    return (await this.mcpTokenIdentity(token))?.name ?? null;
   }
 }

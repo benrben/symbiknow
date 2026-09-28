@@ -1,5 +1,6 @@
 import type { BlockKind, CanvasBlock, CanvasDocument, CanvasTask, CrossLink, DocumentGroup, DocumentLane, GroupBy, LinkRelation, TaskStatus } from './types.js';
 import { defaultJevPolicy, type JevPolicy } from './policy.js';
+import type { EvidenceReference } from './evidence.js';
 
 export type CanvasHealth = { orphanRatio: number; duplicateRatio: number; staleRatio: number; meanQuality: number | null; labelCoverage: number };
 export type ReadingPath = { id: string; name: string; blockIds: string[] };
@@ -29,7 +30,10 @@ export interface InsightItem {
   blockIds: string[];
   confidence: number;
   action?: InsightAction;
-  evidence?: { questionId: string; answer: string; excerpt: string }[];
+  evidence?: { questionId: string; answer: string; excerpt: string; sourceIds?: string[];
+    sourceHashes?: Record<string, string>; model?: string }[];
+  /** Source references checked during this analysis; checkedAt is the analysis time. */
+  references?: EvidenceReference[];
 }
 
 export type TaskSuggestion = InsightItem & { proposedAction: Extract<InsightAction, { type: 'task' }> };

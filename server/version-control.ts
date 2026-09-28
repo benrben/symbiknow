@@ -19,6 +19,16 @@ async function git(root: string, ...args: string[]): Promise<string> {
   }
 }
 
+async function gitContent(root: string, revision: string): Promise<string> {
+  try {
+    const { stdout } = await exec('git', ['show', `${revision}:${sourceFile}`], { cwd: root, maxBuffer: 8_000_000 });
+    return stdout;
+  } catch (error) {
+    const failure = error as Error & { stderr?: string };
+    throw new Error(failure.stderr?.trim() || failure.message);
+  }
+}
+
 function checkedBranch(value: string): string {
   if (!branchName.test(value) || value.includes('..') || value.includes('//') || value.endsWith('.lock')) {
     throw new ApiError(400, 'Invalid branch name');
@@ -71,6 +81,32 @@ export class DocumentVersions {
       return { id, parents: parents ? parents.split(' ') : [], message, createdAt, author };
     });
     return { current, branches, commits };
+  }
+
+  private async revisionDetails(target: string) {
+    const [id, parents, message, createdAt, author] = (await git(this.root, 'show', '-s', '--format=%H%x1f%P%x1f%s%x1f%aI%x1f%an', target)).split('\x1f');
+    return { id, parents: parents ? parents.split(' ') : [], message, createdAt, author };
+  }
+
+  /** Read the resulting source without changing the checked-out branch or document. */
+  async preview(kind: 'switch' | 'merge' | 'restore', target: string) {
+    const before = await this.content();
+    await this.requireClean();
+    if (kind === 'restore') {
+      if (!revisionId.test(target)) throw new ApiError(400, 'Invalid revision ID');
+      try { await git(this.root, 'cat-file', '-e', `${target}^{commit}`); }
+      catch { throw new ApiError(404, 'Revision not found'); }
+      return { before, after: await gitContent(this.root, target), scope: 'This document only', revision: await this.revisionDetails(target) };
+    }
+    await this.requireBranch(target);
+    if (kind === 'switch') {
+      return { before, after: await gitContent(this.root, target), scope: 'This document only', revision: await this.revisionDetails(target) };
+    }
+    if (target === (await this.status()).current) throw new ApiError(400, 'Choose another branch to merge');
+    let tree: string;
+    try { tree = (await git(this.root, 'merge-tree', '--write-tree', 'HEAD', target)).split('\n')[0]; }
+    catch { throw new ApiError(409, 'Merge conflict in this document. No changes were applied.'); }
+    return { before, after: await gitContent(this.root, tree), scope: 'This document only', revision: await this.revisionDetails(target) };
   }
 
   private async requireBranch(name: string): Promise<void> {

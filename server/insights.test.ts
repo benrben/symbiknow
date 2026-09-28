@@ -134,6 +134,8 @@ describe('canvas insights', () => {
     expect(report.items.find(item => item.category === 'connection')).toMatchObject({
       confidence: 0.7, blockIds: [first.id, second.id],
     });
+    expect(report.items.find(item => item.category === 'connection')?.references?.map(source => source.documentId))
+      .toEqual([first.id, second.id]);
     expect(report.items.find(item => item.category === 'connection')).not.toHaveProperty('action');
     expect(await runCanvasAutomation(store, canvas.id, 'connection', decider)).toMatchObject({ applied: 0 });
     expect((await store.getCanvas(canvas.id)).blocks.every(block => block.links.length === 0)).toBe(true);
@@ -152,6 +154,7 @@ describe('canvas insights', () => {
         p0_conflict: { type: 'noul', noul: 0.72 },
       })(key, state, questions);
     };
+    const startedAt = Date.now();
     const report = await analyzeCanvas(store, 'product-roadmap', 'roadmap', decider);
     expect(report).toMatchObject({ canvasId: 'product-roadmap', query: 'roadmap', analyzed: 5, total: 5 });
     expect(report.readingOrder.at(-1)?.blockId).toBe('roadmap-overview');
@@ -161,6 +164,13 @@ describe('canvas insights', () => {
       'purpose', 'stale', 'reviewer', 'conflict', 'layout',
     ]));
     expect(report.items.find(item => item.category === 'loader')).toBeUndefined();
+    const reference = report.items.find(item => item.category === 'purpose')?.references?.[0];
+    expect(reference).toMatchObject({ canvasId: 'product-roadmap', documentId: 'roadmap-overview',
+      contentHash: expect.any(String), navigation: { kind: 'document', canvasId: 'product-roadmap', blockId: 'roadmap-overview' } });
+    expect(Date.parse(reference!.checkedAt)).toBeGreaterThanOrEqual(startedAt);
+    const source = before.blocks.find(block => block.id === reference!.documentId)!;
+    if (reference!.passageKind === 'exact') expect(source.content).toContain(reference!.passage);
+    else expect(reference!.passageLabel).toContain('verify the claim');
     expect(report.items.find(item => item.category === 'reviewer')?.action).toEqual({
       type: 'update', blockId: 'roadmap-overview', patch: { reviewer: 'Ari' },
     });

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AppModel } from './App';
+import type { AppDialogModel } from './app-dialog-contract';
 import { Icon } from './AppIcon';
 import { BlockContent } from './Loaders';
 import { SettingsPage } from './SettingsPage';
@@ -10,12 +10,51 @@ import { browserActor } from './api';
 import { blockPath, renamedBlockDraft, updatedBlockDraft, type BlockDraft, type Dialog } from './app-model-helpers';
 import type { BlockKind, CanvasBlock } from '../shared/types';
 
-export function ModalOverlay({ model }: { model: AppModel }) {
+export function ModalOverlay({ model }: { model: AppDialogModel }) {
   const { dialog, busy, setDialog } = model;
-  return <div className="overlay modal-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !busy) setDialog(null); }}>
-    <div className={'modal ' + (dialog === 'settings' ? 'settings-modal' : dialog === 'block' ? 'editor-modal block-modal' : dialog === 'versions' ? 'editor-modal' : '')} role="dialog" aria-modal={dialog === 'block' && model.showChat ? 'false' : 'true'} aria-label={modalLabel(dialog)}>
-      <ModalHeading model={model}/>
-      <ModalContent model={model}/>
+  const modalRef = useRef<HTMLDivElement>(null);
+  const returnFocus = useRef<HTMLElement | null>(document.activeElement instanceof HTMLElement ? document.activeElement : null);
+  const originalDraft = useRef(JSON.stringify(model.draftBlock));
+  const [confirmClose, setConfirmClose] = useState(false);
+  const dirty = dialog === 'block' && JSON.stringify(model.draftBlock) !== originalDraft.current;
+  function close() {
+    if (busy) return;
+    if (dirty) setConfirmClose(true);
+    else setDialog(null);
+  }
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+    if (!modal.contains(document.activeElement)) modal.querySelector<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled)')?.focus();
+    return () => returnFocus.current?.focus();
+  }, []);
+  function trapFocus(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      if (confirmClose) setConfirmClose(false);
+      else close();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const scope = confirmClose ? modalRef.current?.querySelector<HTMLElement>('.dirty-close') : modalRef.current;
+    const items = [...(scope?.querySelectorAll<HTMLElement>('*') ?? [])]
+      .filter(item => item.matches('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')
+        && !item.closest('[hidden]') && !item.hasAttribute('hidden'));
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
+  return <div className="overlay modal-overlay" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
+    <div ref={modalRef} onKeyDown={trapFocus} className={'modal ' + (dialog === 'settings' ? 'settings-modal' : dialog === 'block' ? 'editor-modal block-modal' : dialog === 'versions' ? 'editor-modal' : '')} role="dialog" aria-modal={dialog === 'block' && model.showChat ? 'false' : 'true'} aria-label={modalLabel(dialog)}>
+      <ModalHeading model={model} onClose={close}/>
+      <ModalContent model={model} onClose={close}/>
+      {confirmClose && <div className="dirty-close" role="alertdialog" aria-modal="true" aria-label="Unsaved changes">
+        <h3>Unsaved changes</h3><p>Save this document before closing, or discard your draft.</p>
+        <div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setConfirmClose(false)} autoFocus>Continue editing</button>
+          <button type="button" className="danger-button" onClick={() => setDialog(null)}>Discard changes</button>
+          <button type="button" className="primary-button" onClick={() => { setConfirmClose(false); modalRef.current?.querySelector<HTMLFormElement>('form.modal-form')?.requestSubmit(); }}>Save changes</button></div>
+      </div>}
     </div>
   </div>;
 }
@@ -29,14 +68,14 @@ function modalLabel(dialog: Dialog) {
   return 'Create new';
 }
 
-function ModalContent({ model }: { model: AppModel }) {
+function ModalContent({ model, onClose }: { model: AppDialogModel; onClose: () => void }) {
   if (model.dialog === 'delete-canvas') return <DeleteCanvasForm model={model}/>;
   if (model.dialog === 'delete-workspace') return <DeleteWorkspaceForm model={model}/>;
-  if (model.dialog === 'settings') return <SettingsPage settings={model.settings} busy={model.busy} onSave={model.saveSettings} onCancel={() => model.setDialog(null)} onSettings={model.setSettings}/>;
-  if (model.dialog === 'block') return <BlockForm model={model}/>;
+  if (model.dialog === 'settings') return <SettingsPage settings={model.settings} busy={model.busy} onSave={model.saveSettings} onCancel={onClose} onSettings={model.setSettings} onOpenHistory={model.openActivityHistory}/>;
+  if (model.dialog === 'block') return <BlockForm model={model} onClose={onClose}/>;
   if (model.dialog === 'versions') {
     const block = model.canvas?.blocks.find(item => item.id === model.versionBlockId);
-    return block ? <VersionPanel canvasId={model.canvasId} block={block} onChanged={model.refreshAfterVersionChange}/> : null;
+    return block ? <VersionPanel canvasId={model.canvasId} block={block} initialRevision={model.versionRevision} onChanged={model.refreshAfterVersionChange}/> : null;
   }
   return <NamedForm model={model}/>;
 }
@@ -50,7 +89,7 @@ function modalHeading(dialog: Dialog, draft: BlockDraft) {
   return { eyebrow: 'CREATE NEW', title: dialog === 'workspace' ? 'New workspace' : 'New canvas' };
 }
 
-function DeleteCanvasForm({ model }: { model: AppModel }) {
+function DeleteCanvasForm({ model }: { model: AppDialogModel }) {
   const target = model.canvasToDelete;
   if (!target) return null;
   return <div className="modal-form">
@@ -60,7 +99,7 @@ function DeleteCanvasForm({ model }: { model: AppModel }) {
   </div>;
 }
 
-function DeleteWorkspaceForm({ model }: { model: AppModel }) {
+function DeleteWorkspaceForm({ model }: { model: AppDialogModel }) {
   const target = model.workspaceToDelete;
   if (!target) return null;
   return <div className="modal-form">
@@ -70,16 +109,16 @@ function DeleteWorkspaceForm({ model }: { model: AppModel }) {
   </div>;
 }
 
-function ModalHeading({ model }: { model: AppModel }) {
+function ModalHeading({ model, onClose }: { model: AppDialogModel; onClose: () => void }) {
   const { eyebrow, title } = modalHeading(model.dialog, model.draftBlock);
   return <div className="modal-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div><div className="modal-heading__actions">
     {model.dialog === 'block' && <button type="button" className="secondary-button document-assistant-trigger" onClick={model.openDocumentAssistant}><Icon name="spark" size={15}/> Ask Symbi</button>}
-    <button className="icon-button" aria-label="Close dialog" onClick={() => model.setDialog(null)} disabled={model.busy}><Icon name="close" size={19}/></button>
+    <button className="icon-button" aria-label="Close dialog" onClick={onClose} disabled={model.busy}><Icon name="close" size={19}/></button>
   </div></div>;
 }
 
-function BlockForm({ model }: { model: AppModel }) {
-  const { saveBlock, draftBlock, setDraftBlock, importEditedFile, deleteBlock, busy, setDialog, canvasId, draftLock, takeOverLock } = model;
+function BlockForm({ model, onClose }: { model: AppDialogModel; onClose: () => void }) {
+  const { saveBlock, draftBlock, setDraftBlock, importEditedFile, deleteBlock, busy, canvasId, draftLock, takeOverLock } = model;
   const [view, setView] = useState<EditorMode>('source');
   const [importing, setImporting] = useState(false);
   const toggle = () => setView(current => current === 'preview' ? 'source' : 'preview');
@@ -105,11 +144,11 @@ function BlockForm({ model }: { model: AppModel }) {
       {view !== 'source' && <BlockDraftPreview model={model}/>}
     </div>
     <div className="editor-footnote">Each block is saved as its own Markdown file with its own Git history. Website blocks use frontmatter to select a generator and source folder.</div>
-    <div className="modal-actions">{draftBlock.id && <button type="button" className="danger-button" onClick={() => void deleteBlock()} disabled={busy}><Icon name="trash" size={16}/> Delete</button>}<span className="actions-spacer"/><button type="button" className="secondary-button" onClick={() => setDialog(null)}>Cancel</button><button className="primary-button" disabled={busy || importing || savedVersionChanged}>{importing ? 'Loading file…' : 'Save block'}</button></div>
+    <div className="modal-actions">{draftBlock.id && <button type="button" className="danger-button" onClick={() => void deleteBlock()} disabled={busy}><Icon name="trash" size={16}/> Delete</button>}<span className="actions-spacer"/><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={busy || importing || savedVersionChanged}>{importing ? 'Loading file…' : 'Save block'}</button></div>
   </form>;
 }
 
-function BlockDraftPreview({ model }: { model: AppModel }) {
+function BlockDraftPreview({ model }: { model: AppDialogModel }) {
   const { draftBlock, canvasId, setDraftBlock, setError } = model;
   if (draftBlock.kind === 'website' && !draftBlock.id) {
     return <div className="editor-preview editor-preview--empty">Save this website block to build and preview its documentation site.</div>;
@@ -125,7 +164,7 @@ function BlockDraftPreview({ model }: { model: AppModel }) {
   </div>;
 }
 
-export function FullPageReader({ model }: { model: AppModel }) {
+export function FullPageReader({ model }: { model: AppDialogModel }) {
   const sequence = useMemo(() => {
     const blocks = model.canvas?.blocks ?? [];
     if (!model.readingPath) return readingSequence(blocks);
@@ -168,8 +207,17 @@ export function FullPageReader({ model }: { model: AppModel }) {
     <main className="page-reader__scroll" ref={scroller}><div className="page-reader__document">
       <div className="page-reader__eyebrow">{block.kind} · {block.file}{block.lock && block.lock.owner !== browserActor ? ` · ${block.lock.owner} is editing` : ''}</div>
       <h1>{block.title}</h1>
+      {model.sourceFocus?.blockId === block.id && model.sourceFocus.canvasId === model.canvasId && model.sourceFocus.excerpt &&
+        <aside className="page-reader__source-focus" aria-label="Source context from Chat">
+          <strong>Source context from Chat</strong>
+          <p>{model.sourceFocus.excerpt}</p>
+          <small>{model.sourceFocus.contentHash && block.contentHash !== model.sourceFocus.contentHash
+            ? 'This document changed since Chat checked it. Review the current text before relying on the answer.'
+            : block.content.includes(model.sourceFocus.excerpt) ? 'This passage appears in the current document.'
+              : 'This excerpt is approximate context. Check the current document text below.'}</small>
+        </aside>}
       <div className="page-reader__content"><BlockContent block={block} canvasId={model.canvasId} onUpdateBlock={model.updateBlock} onError={model.setError} fullPage/></div>
-      {Boolean(block.crossLinks?.length) && <aside className="page-reader__related" aria-label="Related on other canvases" style={{ borderTop: '1px solid #e2e8f1', marginTop: 24, paddingTop: 18 }}>
+      {Boolean(block.crossLinks?.length) && <aside className="page-reader__related" aria-label="Related on other canvases" style={{ borderTop: '1px solid var(--sk-border)', marginTop: 24, paddingTop: 18 }}>
         <h2 style={{ fontSize: 15, margin: '0 0 10px' }}>Related on other canvases</h2>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {block.crossLinks?.map(link => {
@@ -203,7 +251,7 @@ function mergeDiff(before: string, after: string) {
     prefix: oldLines.slice(0, start), suffix: end ? oldLines.slice(oldLines.length - end) : [] };
 }
 
-export function MergeReviewDialog({ model }: { model: AppModel }) {
+export function MergeReviewDialog({ model }: { model: AppDialogModel }) {
   const review = model.mergeReview;
   if (!review) return null;
   const [keeper, ...merged] = review.blocks;
@@ -213,11 +261,11 @@ export function MergeReviewDialog({ model }: { model: AppModel }) {
       <div className="modal-heading" style={{ padding: 0, marginBottom: 16 }}><div><span className="eyebrow">MERGE PREVIEW</span><h2>Review merge draft</h2></div>
         <button type="button" className="icon-button" aria-label="Close merge review" onClick={() => model.setMergeReview(null)} disabled={model.mergeBusy}><Icon name="close" size={19}/></button></div>
       <p>Keep <strong>{keeper.title}</strong> and archive {merged.map(block => block.title).join(', ')}. Check the complete draft before applying.</p>
-      <div role="region" aria-label="Proposed changes" style={{ maxHeight: 300, overflow: 'auto', padding: 12, background: '#f6f8fc', borderRadius: 8 }}>
+      <div role="region" aria-label="Proposed changes" style={{ maxHeight: 300, overflow: 'auto', padding: 12, background: 'var(--sk-surface-soft)', color: 'var(--sk-text)', borderRadius: 8 }}>
         <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', margin: 0 }}>
           {diff.prefix.length > 0 && <span>{diff.prefix.join('\n')}{'\n'}</span>}
-          {diff.before.length > 0 && <del style={{ display: 'block', background: '#ffe6e6', color: '#8b2630', textDecoration: 'none' }}>{diff.before.map(line => `− ${line}`).join('\n')}</del>}
-          {diff.after.length > 0 && <ins style={{ display: 'block', background: '#e1f6e9', color: '#1e623b', textDecoration: 'none' }}>{diff.after.map(line => `+ ${line}`).join('\n')}</ins>}
+          {diff.before.length > 0 && <del style={{ display: 'block', background: 'var(--sk-error-bg)', color: 'var(--sk-error)', textDecoration: 'none' }}>{diff.before.map(line => `− ${line}`).join('\n')}</del>}
+          {diff.after.length > 0 && <ins style={{ display: 'block', background: 'var(--sk-mint)', color: 'var(--sk-ink)', textDecoration: 'none' }}>{diff.after.map(line => `+ ${line}`).join('\n')}</ins>}
           {diff.suffix.length > 0 && <span>{'\n'}{diff.suffix.join('\n')}</span>}
         </pre>
       </div>
@@ -226,14 +274,14 @@ export function MergeReviewDialog({ model }: { model: AppModel }) {
       <label style={{ display: 'block', marginTop: 14 }}>Complete merged Markdown
         <textarea aria-label="Complete merged Markdown" value={review.content} onChange={event => model.setMergeReview({ ...review, content: event.currentTarget.value })}
           style={{ display: 'block', width: '100%', minHeight: 180, marginTop: 6, fontFamily: 'monospace' }}/></label>
-      {model.error && <p role="alert" style={{ color: '#a42b38' }}>{model.error}</p>}
+      {model.error && <p role="alert" style={{ color: 'var(--sk-error)' }}>{model.error}</p>}
       <div className="modal-actions"><button type="button" className="secondary-button" onClick={() => model.setMergeReview(null)} disabled={model.mergeBusy}>Cancel</button>
         <button type="button" className="primary-button" onClick={() => void model.applyMergeReview()} disabled={model.mergeBusy || !review.content.trim()}>{model.mergeBusy ? 'Applying merge…' : 'Apply merge'}</button></div>
     </section>
   </div>;
 }
 
-function NamedForm({ model }: { model: AppModel }) {
+function NamedForm({ model }: { model: AppDialogModel }) {
   const { dialog, createNamed, draftName, setDraftName, busy, setDialog } = model;
   return <form onSubmit={createNamed} className="modal-form">
     <label>{dialog === 'workspace' ? 'Workspace name' : 'Canvas name'}<input autoFocus required value={draftName} onChange={event => setDraftName(event.target.value)} placeholder={dialog === 'workspace' ? 'e.g. Product team' : 'e.g. Launch plan'}/></label>

@@ -76,7 +76,7 @@ export function CanvasOverview({ canvasName, groups, blocks, searchIds, searchQu
   useEffect(() => { setListOpen(false); }, [canvasName]);
 
   return <>
-    {overview && <button type="button" className="canvas-overview-list-toggle" aria-expanded={listOpen} onClick={() => setListOpen(value => !value)}>{listOpen ? 'Show connections' : 'Browse groups'}</button>}
+    {overview && <button type="button" className="canvas-overview-list-toggle" aria-expanded={listOpen} onClick={() => setListOpen(value => !value)}>{listOpen ? 'Show connections' : 'Show group list'}</button>}
     {overview && listOpen && <nav ref={boardRef} className={`canvas-overview-board${roots.length <= 6 ? ' is-spacious' : ''}${roots.length <= 4 ? ' is-paired' : ''}`} aria-label="Group overview" title={`${canvasName} groups`}
       onPointerDown={event => {
         if ((event.target as HTMLElement).closest('button, summary, .canvas-overview-board__connections')) return;

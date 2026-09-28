@@ -1,7 +1,7 @@
 import type { CanvasBlock, BlockKind, DocumentLane, GroupBy } from '../shared/types.js';
 import { groupedLayout, type AutomationKind, type DocumentClass, type InsightItem, type InsightReport, type RankedBlock } from '../shared/insights.js';
 import { ApiError, type CanvasStore } from './storage.js';
-import { decideWithJev, estimateJevTokens, JEV_STATE_TOKEN_LIMIT, type JevAnswer, type JevDecider, type JevQuestion } from './jev.js';
+import { decideWithJev, estimateJevTokens, JEV_MODEL, JEV_STATE_TOKEN_LIMIT, type JevAnswer, type JevDecider, type JevQuestion } from './jev.js';
 import { workAreaChoicesForDomains, workAreaDomainChoices, workAreaDomains, workAreaLabel, type WorkAreaDomain } from '../shared/work-areas.js';
 import { documentText } from '../shared/document-text.js';
 import { effectiveJevPolicy, type JevPolicy } from '../shared/policy.js';
@@ -18,6 +18,7 @@ import { buildReadingPaths } from './reading-paths.js';
 import { findCanvasHomes } from './moves.js';
 import { findDocumentationGaps } from './gaps.js';
 import { relationFinding, relationQuestions, supersedesFinding, supersedesQuestion, reflectedQuestion, reflectionItem } from './relations.js';
+import { normalizeEvidence } from '../shared/evidence.js';
 
 const concurrency = 8;
 
@@ -52,9 +53,12 @@ type Pair = { a: number; b: number };
 /** Jev question families. Automations ask only the families they need, which keeps them fast. */
 export type Family = 'order' | 'lane' | 'relevance' | 'loader' | 'purpose' | 'work_area' | 'stale' | 'steps' | 'reviewer' | 'links' | 'similarity' | 'quality' | 'duplicates' | 'tags' | 'move' | 'gap' | 'tasks';
 export const allFamilies: Family[] = ['order', 'lane', 'relevance', 'loader', 'purpose', 'work_area', 'stale', 'steps', 'reviewer', 'links', 'similarity', 'quality', 'duplicates', 'tags', 'move', 'gap', 'tasks'];
+const targetedFamilies: Family[] = ['purpose', 'work_area', 'stale', 'steps', 'reviewer', 'links', 'similarity', 'tags', 'gap'];
 
 export type AnalysisOptions = {
   families?: Iterable<Family>;
+  /** Analyze only these existing documents; pair questions may compare them with their neighbors. */
+  blockIds?: string[];
   /** Use saved purpose and work-area labels instead of asking Jev again. */
   reuseLabels?: boolean;
   groupBy?: GroupBy;
@@ -319,6 +323,53 @@ async function mapLimited<T, U>(values: T[], limit: number, work: (value: T) => 
 function item(id: string, category: InsightItem['category'], title: string, detail: string,
   blockIds: string[], confidence: number, action?: InsightItem['action']): InsightItem {
   return { id, category, title, detail, blockIds, confidence, ...(action ? { action } : {}) };
+}
+
+function answerText(answer: JevAnswer): string {
+  return answer.type === 'choice' ? answer.choice : answer.type === 'score' ? String(answer.score) : String(answer.noul);
+}
+
+function evidenceFor(ids: string[], answers: Record<string, JevAnswer>, sources: CanvasBlock[]): NonNullable<InsightItem['evidence']> {
+  const sourceIds = sources.map(block => block.id);
+  const sourceHashes = Object.fromEntries(sources.map(block => [block.id, block.contentHash ?? stateHash(block.content)]));
+  const sourceExcerpt = sources.map(block => `${block.title}: ${excerpt(documentText(block.content), { budget: 320, focus: 'claims' }).head.slice(0, 240)}`).join('\n');
+  return ids.flatMap(questionId => answers[questionId] ? [{ questionId, answer: answerText(answers[questionId]),
+    excerpt: sourceExcerpt, sourceIds, sourceHashes, model: JEV_MODEL }] : []);
+}
+
+function sourcePassage(block: CanvasBlock): string {
+  const text = documentText(block.content);
+  const selected = excerpt(text, { budget: 360, focus: 'claims' });
+  return (selected.extracts || selected.head).trim().slice(0, 240);
+}
+
+function sourceReferences(item: InsightItem, blocks: Map<string, CanvasBlock>, canvasId: string, checkedAt: string) {
+  const sourceIds = [...new Set([...item.blockIds, ...(item.evidence ?? []).flatMap(entry => entry.sourceIds ?? [])])];
+  return sourceIds.flatMap(id => {
+    const block = blocks.get(id);
+    if (!block) return [];
+    const reference = normalizeEvidence({ claim: item.title, passage: sourcePassage(block), sourceText: block.content,
+      canvasId, documentId: block.id, documentTitle: block.title, contentHash: block.contentHash, checkedAt });
+    return reference ? [reference] : [];
+  });
+}
+
+function documentEvidenceIds(category: InsightItem['category'], index: number): string[] {
+  const base = `d${index}_`;
+  const families: Partial<Record<InsightItem['category'], string[]>> = {
+    loader: ['loader'], purpose: ['purpose'], work_area: ['domain', 'work_area'],
+    stale: ['stale_marked', 'stale_past'], missing_steps: ['steps_prereq', 'steps_gap'], reviewer: ['reviewer'],
+  };
+  return (families[category] ?? []).map(suffix => `${base}${suffix}`);
+}
+
+function pairEvidenceIds(category: InsightItem['category'], index: number): string[] {
+  const base = `p${index}_`;
+  const families: Partial<Record<InsightItem['category'], string[]>> = {
+    connection: ['link', 'link_strength', 'keep'], conflict: ['conflict', 'conflict_topic'],
+    relation: ['relation'], supersedes: ['supersedes'],
+  };
+  return (families[category] ?? []).map(suffix => `${base}${suffix}`);
 }
 
 function loaderItem(block: CanvasBlock, index: number, answers: Record<string, JevAnswer>, policy: JevPolicy): InsightItem | undefined {
@@ -612,7 +663,12 @@ async function appendDocuments(report: InsightReport, blocks: CanvasBlock[], can
 
   if (asks(scope, 'order')) report.readingOrder.push(...rank(blocks, answers, 'order'));
   if (asks(scope, 'relevance')) report.relevance.push(...rank(blocks, answers, 'relevance'));
-  report.items.push(...documentItems(blocks, answers, reviewers, policy));
+  const documentSuggestions = documentItems(blocks, answers, reviewers, policy);
+  for (const suggestion of documentSuggestions) {
+    const index = blocks.findIndex(block => block.id === suggestion.blockIds[0]);
+    if (index >= 0) suggestion.evidence = evidenceFor(documentEvidenceIds(suggestion.category, index), answers, [blocks[index]]);
+  }
+  report.items.push(...documentSuggestions);
   if (asks(scope, 'quality')) blocks.forEach((block, index) => {
     const purpose = has(answers, `d${index}_purpose`) ? choice(answers, `d${index}_purpose`).value : block.purpose;
     const quality = scoreDocumentQuality(index, purpose, answers);
@@ -663,9 +719,25 @@ async function processPair(position: number, a: number, b: number, blocks: Canva
 }
 
 async function appendPairs(report: InsightReport, blocks: CanvasBlock[], apiKey: string,
-  decider: JevDecider, scope: Scope, policy: JevPolicy, index: SimilarityIndex, cache: JevCache): Promise<void> {
+  decider: JevDecider, scope: Scope, policy: JevPolicy, index: SimilarityIndex, cache: JevCache,
+  targetIds?: Set<string>): Promise<void> {
   if (!asks(scope, 'links') && !asks(scope, 'similarity')) return;
-  const pairs = selectPairs(blocks, index);
+  const selectedPairs = selectPairs(blocks, index);
+  if (targetIds?.size === 2) {
+    const [first, second] = [...targetIds].map(id => blocks.findIndex(block => block.id === id));
+    if (first >= 0 && second >= 0 && !selectedPairs.some(pair => pair.a === Math.min(first, second) && pair.b === Math.max(first, second))) {
+      selectedPairs.push({ a: Math.min(first, second), b: Math.max(first, second) });
+    }
+  }
+  const touching = selectedPairs.filter(({ a, b }) => !targetIds || targetIds.has(blocks[a].id) || targetIds.has(blocks[b].id));
+  const neighborScores = new Map(targetIds ? [...targetIds].flatMap(id => index.neighbors(id, blocks.length)
+    .map(neighbor => [id < neighbor.blockId ? `${id}:${neighbor.blockId}` : `${neighbor.blockId}:${id}`, neighbor.score] as const)) : []);
+  const strength = ({ a, b }: Pair) => neighborScores.get(blocks[a].id < blocks[b].id
+    ? `${blocks[a].id}:${blocks[b].id}` : `${blocks[b].id}:${blocks[a].id}`) ?? index.shingleOverlap(blocks[a].id, blocks[b].id);
+  const pairs = targetIds ? touching.sort((left, right) =>
+    Number(targetIds.has(blocks[right.a].id) && targetIds.has(blocks[right.b].id))
+      - Number(targetIds.has(blocks[left.a].id) && targetIds.has(blocks[left.b].id))
+      || strength(right) - strength(left)).slice(0, 6) : touching;
   if (!pairs.length) return;
   const results = await mapLimited(pairs.map((_, position) => position), concurrency,
     position => processPair(position, pairs[position].a, pairs[position].b, blocks, apiKey, decider, scope, cache, policy));
@@ -675,6 +747,12 @@ async function appendPairs(report: InsightReport, blocks: CanvasBlock[], apiKey:
 
   const connections: InsightItem[] = [];
   for (const suggestion of pairItems(blocks, pairs, answers, policy)) {
+    const pairIndex = pairs.findIndex(({ a, b }) => suggestion.blockIds.every(id => id === blocks[a].id || id === blocks[b].id));
+    if (pairIndex >= 0 && !suggestion.evidence?.length) {
+      const pair = pairs[pairIndex];
+      const evidence = evidenceFor(pairEvidenceIds(suggestion.category, pairIndex), answers, [blocks[pair.a], blocks[pair.b]]);
+      if (evidence.length) suggestion.evidence = evidence;
+    }
     if (suggestion.category === 'connection' && suggestion.action?.type !== 'unlink') connections.push(suggestion);
     else report.items.push(suggestion);
   }
@@ -686,7 +764,12 @@ export async function analyzeCanvas(store: CanvasStore, canvasId: string, query:
   decider: JevDecider = decideWithJev, options: AnalysisOptions = {}): Promise<InsightReport> {
   if (query.length > 200) throw new ApiError(400, 'Insight query is too long');
   const canvas = await store.getCanvas(canvasId);
-  const blocks = canvas.blocks;
+  const targetIds = options.blockIds ? new Set(options.blockIds) : undefined;
+  if (targetIds && (targetIds.size < 1 || targetIds.size > 2 || targetIds.size !== options.blockIds?.length
+    || [...targetIds].some(id => !canvas.blocks.some(block => block.id === id)))) {
+    throw new ApiError(400, 'blockIds must name one or two distinct documents on this canvas');
+  }
+  const blocks = targetIds ? canvas.blocks.filter(block => targetIds.has(block.id)) : canvas.blocks;
   const settings = await store.getSettings();
   const policy = effectiveJevPolicy(settings.jevPolicy);
   const groupBy = options.groupBy ?? settings.groupBy ?? 'work_area';
@@ -695,7 +778,7 @@ export async function analyzeCanvas(store: CanvasStore, canvasId: string, query:
   if (!blocks.length) return report;
   const apiKey = await store.getJevApiKey();
   if (!apiKey) throw new ApiError(400, 'Set a TypeSafe Jev API key in Settings before using insights');
-  const scope: Scope = { families: new Set(options.families ?? allFamilies), reuseLabels: options.reuseLabels ?? false };
+  const scope: Scope = { families: new Set(options.families ?? (targetIds ? targetedFamilies : allFamilies)), reuseLabels: options.reuseLabels ?? false };
   const reviewers = reviewersFrom(settings.reviewers);
   const metadata = new Map<string, Awaited<ReturnType<CanvasStore['documentMetadata']>>>();
   if (asks(scope, 'reviewer') && reviewers.length) {
@@ -704,17 +787,17 @@ export async function analyzeCanvas(store: CanvasStore, canvasId: string, query:
   const cache = await JevCache.load(store.root, canvasId);
   await Promise.all([
     appendDocuments(report, blocks, canvas.name, reviewers, settings.workAreas ?? '', apiKey, decider, scope, policy, cache, metadata),
-    appendPairs(report, blocks, apiKey, decider, scope, policy, store.similarityIndex(canvas.workspaceId), cache),
+    appendPairs(report, canvas.blocks, apiKey, decider, scope, policy, store.similarityIndex(canvas.workspaceId), cache, targetIds),
   ]);
   if (asks(scope, 'duplicates')) report.items.push(...await findDuplicates({ canvasId, blocks,
     index: store.similarityIndex(canvas.workspaceId), apiKey, decider, policy, cache,
     lastModified: Object.fromEntries([...metadata].map(([id, value]) => [id, value.lastModified ?? ''])) }));
-  if (asks(scope, 'tags')) report.items.push(...await findTagSuggestions({ canvasId, blocks,
+  if (asks(scope, 'tags')) report.items.push(...await findTagSuggestions({ canvasId, blocks: canvas.blocks, targetIds,
     index: store.similarityIndex(canvas.workspaceId), apiKey, vocabulary: settings.tagVocabulary, policy, decider, cache }));
   if (asks(scope, 'move')) {
     const workspace = (await store.listWorkspaces()).find(item => item.id === canvas.workspaceId);
     const canvases = workspace ? await Promise.all(workspace.canvases.map(item => store.getCanvas(item.id))) : [canvas];
-    const homes = await findCanvasHomes({ canvas, canvases, apiKey, policy,
+    const homes = await findCanvasHomes({ canvas: targetIds ? { ...canvas, blocks } : canvas, canvases, apiKey, policy,
       decider: (key, state, questions) => decideCached(cache, decider, key, state, questions, id => ({
         questionFamily: id.replace(/^d\d+_/, ''), questionVersion: '3', contentHash: stateHash(state), question: questions[id] })) });
     for (const home of homes) {
@@ -728,19 +811,36 @@ export async function analyzeCanvas(store: CanvasStore, canvasId: string, query:
       report.items.at(-1)!.evidence = home.evidence;
     }
   }
-  if (asks(scope, 'gap')) report.items.push(...await findDocumentationGaps({ blocks, apiKey, policy,
+  if (asks(scope, 'gap')) report.items.push(...await findDocumentationGaps({ blocks: canvas.blocks, targetIds, apiKey, policy,
     decider: (key, state, questions) => decideCached(cache, decider, key, state, questions, id => ({
       questionFamily: id.replace(/^d\d+_/, ''), questionVersion: '3', contentHash: stateHash(state), question: questions[id] })) }));
   await cache.save();
-  if (asks(scope, 'quality')) {
+  if (asks(scope, 'quality') && !targetIds) {
     const at = new Date().toISOString();
     for (const block of blocks) {
       const score = report.qualityScores?.[block.id];
       if (score !== undefined && block.quality?.score !== score) await store.updateBlock(canvasId, block.id, { quality: { score, at } }, 'Jev');
     }
   }
-  report.health = canvasHealth(blocks, report.items, report.qualityScores);
-  report.readingPaths = buildReadingPaths(blocks, report, groupBy);
-  appendLayout(report, blocks, groupBy, policy);
+  if (!targetIds) {
+    report.health = canvasHealth(blocks, report.items, report.qualityScores);
+    report.readingPaths = buildReadingPaths(blocks, report, groupBy);
+    appendLayout(report, blocks, groupBy, policy);
+  }
+  const sourceHashes = new Map(canvas.blocks.map(block => [block.id, block.contentHash ?? stateHash(block.content)]));
+  const sourceBlocks = new Map(canvas.blocks.map(block => [block.id, block]));
+  const checkedAt = new Date().toISOString();
+  for (const suggestion of report.items) {
+    if (!suggestion.evidence?.length) continue;
+    suggestion.evidence = suggestion.evidence.map(entry => ({ ...entry,
+      sourceIds: entry.sourceIds ?? suggestion.blockIds.filter(id => sourceHashes.has(id)),
+      sourceHashes: entry.sourceHashes ?? Object.fromEntries(suggestion.blockIds.flatMap(id =>
+        sourceHashes.has(id) ? [[id, sourceHashes.get(id)!]] : [])),
+      model: entry.model ?? JEV_MODEL }));
+  }
+  for (const suggestion of report.items) {
+    const references = sourceReferences(suggestion, sourceBlocks, canvasId, checkedAt);
+    if (references.length) suggestion.references = references;
+  }
   return report;
 }

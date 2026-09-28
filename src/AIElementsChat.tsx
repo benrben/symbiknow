@@ -3,8 +3,12 @@ import { AlertTriangle, Check, ChevronDown, Circle, Copy, LoaderCircle, ShieldCh
 import { Conversation, ConversationContent, ConversationScrollButton } from './components/ai-elements/conversation';
 import { Message, MessageContent, MessageResponse } from './components/ai-elements/message';
 import { PromptInput, PromptInputBody, PromptInputFooter, PromptInputSubmit, PromptInputTextarea } from './components/ai-elements/prompt-input';
-import { streamCanvasChat, type AgentStep, type ChatTurn, type Verification } from './chatStream';
-import type { AnswerCanvasResult, AnswerCanvasTurn, CanvasNavigationTarget, ChatViewContext, ResearchCanvasPatch, ResearchSurfaceChoice } from '../shared/answer-canvas';
+import { streamCanvasChat, type AgentStep, type ChatProposal, type ChatProposalReceipt, type ChatProposalUndoReceipt, type ChatTurn, type Verification } from './chatStream';
+import { chatHistoryKey } from './chat-history';
+import { SavedInvestigations, type InvestigationRecord, type InvestigationProposalRef, type InvestigationResearchSnapshot, type InvestigationSourceRef } from './SavedInvestigations';
+import { api } from './api';
+import type { AnswerCanvasResult, AnswerCanvasTurn, CanvasNavigationTarget, ChatViewContext, ResearchCanvasPatch, ResearchLayout, ResearchSurfaceChoice } from '../shared/answer-canvas';
+import type { ResearchCanvasEdits } from './research-edits';
 import type { CanvasBlock, CanvasDocument } from '../shared/types';
 import { chatSuggestions } from './chat-suggestions';
 import { chatScopeOptions, requestContextForScope, type ChatScope } from './chat-context';
@@ -17,11 +21,15 @@ type AIElementsChatProps = {
   canvas: CanvasDocument | null;
   viewContext: ChatViewContext;
   answerTurns: AnswerCanvasTurn[];
+  researchEdits?: ResearchCanvasEdits;
+  researchLayout?: ResearchLayout;
   hasApiKey: boolean;
   jevAvailable?: boolean;
   model: string;
   promptRequest?: { text: string; sequence: number; mergeDraft?: MergeDraftRequest };
   focusRequest?: number;
+  investigationOpenRequest?: { id: string; sequence: number };
+  onActiveInvestigationChange?: (reference?: { id: string; canvasId: string }) => void;
   onMergeDraft?: (markdown: string, request: MergeDraftRequest) => void;
   onOpenSettings: () => void;
   onCanvasChanged: (canvasId: string, beforeBlocks: CanvasBlock[]) => Promise<CanvasChanges>;
@@ -34,8 +42,10 @@ type AIElementsChatProps = {
   onCanvasPatch: (id: number, patch: ResearchCanvasPatch) => void;
   onCanvasAnswer: (id: number, answer: string) => void;
   onCanvasTurnEnd: (id: number, status: 'complete' | 'stopped') => void;
+  onRestoreResearch?: (snapshot?: InvestigationResearchSnapshot) => void;
   onOpenAnswerCanvas: () => void;
   onAvatarStateChange?: (state: SymbiState) => void;
+  onHistoryChange?: (hasHistory: boolean) => void;
 };
 
 export type MergeDraftRequest = { keepBlockId: string; mergeBlockIds: string[]; intentToken?: string };
@@ -43,9 +53,22 @@ export type MergeDraftRequest = { keepBlockId: string; mergeBlockIds: string[]; 
 type Activity = { key: number; type: 'thinking' | 'tool'; id?: string; name?: string; message: string; status: 'active' | 'complete' | 'stopped' };
 type DisplayTurn = ChatTurn & { id: number; activities: Activity[]; verification?: Verification; createdBlocks?: CanvasBlock[]; editedBlocks?: CanvasEdit[];
   createdCanvasId?: string; undoMessage?: string; undoError?: string;
+  proposal?: ChatProposal; selectedProposalIds?: string[]; proposalState?: 'pending' | 'applying' | 'applied' | 'reverted' | 'expired' | 'failed';
+  proposalReceipt?: ChatProposalReceipt; proposalUndoReceipt?: ChatProposalUndoReceipt; proposalError?: string;
   mergeDraft?: MergeDraftRequest; answerCanvas?: AnswerCanvasResult; researchPatch?: ResearchCanvasPatch;
   presentationChoice?: ResearchSurfaceChoice; navigation?: CanvasNavigationTarget };
 type ChatStatus = 'ready' | 'submitted' | 'streaming';
+
+function restoredTurns(): DisplayTurn[] {
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(chatHistoryKey) ?? '[]');
+    if (!Array.isArray(value)) return [];
+    return value.filter((turn): turn is DisplayTurn => turn && typeof turn === 'object'
+      && (turn.role === 'user' || turn.role === 'assistant') && typeof turn.content === 'string'
+      && Number.isInteger(turn.id) && Array.isArray(turn.activities)).slice(-60)
+      .map(turn => ({ ...turn, activities: finishActivity(turn.activities, 'stopped') }));
+  } catch { return []; }
+}
 
 const jevAnalysisTools = new Set(['analyze_canvas', 'find_duplicates', 'connect_across_canvases', 'score_documents']);
 const jevActionTools = new Set(['merge_documents', 'organize_canvas', 'regroup_canvas', 'connect_documents',
@@ -262,11 +285,37 @@ function AssistantResponse({ turn, streaming }: { turn: DisplayTurn; streaming: 
   return null;
 }
 
-function VerificationBadge({ verification }: { verification?: Verification }) {
-  if (!verification || verification.status === 'unavailable' || verification.status === 'no_claims') return null;
+function VerificationBadge({ verification, onNavigate }: { verification?: Verification; onNavigate: (target: CanvasNavigationTarget) => void }) {
+  if (!verification || verification.status === 'no_claims') return null;
   if (verification.status === 'checking') return <span className="ai-chat__verify ai-chat__verify--checking"><LoaderCircle size={12} className="ai-chat__activity-spin" aria-hidden="true"/>Checking sources</span>;
-  if (verification.status === 'supported') return <span className="ai-chat__verify ai-chat__verify--ok" title="TypeSafe Jev found the answer's claims in the canvas documents"><ShieldCheck size={12} aria-hidden="true"/>Matches canvas docs</span>;
-  return <span className="ai-chat__verify ai-chat__verify--warn" role="note"><AlertTriangle size={12} aria-hidden="true"/>Some claims may not be in the canvas docs — check the sources</span>;
+  if (verification.status === 'unavailable') return <span className="ai-chat__verify ai-chat__verify--warn" role="status"><AlertTriangle size={12} aria-hidden="true"/>Source check unavailable</span>;
+  const supported = verification.status === 'supported';
+  const icon = supported ? <ShieldCheck size={12} aria-hidden="true"/> : <AlertTriangle size={12} aria-hidden="true"/>;
+  const checked = verification.checkedClaims ?? verification.claims?.length ?? 0;
+  const total = verification.totalClaims ?? checked;
+  const label = checked === 0 ? supported ? 'No checkable claims found' : 'Source check needs review' : supported
+    ? `${checked} of ${total} checked claims match sources` : `${checked} of ${total} claims checked · review needed`;
+  if (!verification.claims?.length) return <span className={`ai-chat__verify ai-chat__verify--${supported ? 'ok' : 'warn'}`} role={supported ? undefined : 'note'}>{icon}{label}</span>;
+  return <details className="ai-chat__verification">
+    <summary className={`ai-chat__verify ai-chat__verify--${supported ? 'ok' : 'warn'}`}>{icon}{label}<ChevronDown size={12} aria-hidden="true"/></summary>
+    <div className="ai-chat__verification-detail"><strong>Claim check</strong>
+      <p>{total > checked ? `${total - checked} additional claims were not checked. ` : ''}Sources are limited to documents available to this canvas check.</p>
+      <ul>{verification.claims.map((claim, index) => <li key={`${index}-${claim.text}`}>
+      <span className={claim.supported ? 'is-supported' : 'is-unsupported'}>{claim.supported ? 'Supported' : 'Check source'}</span>
+      <p>{claim.text}</p>
+      {(claim.source?.evidence?.passage || claim.source?.excerpt) && <blockquote className="ai-chat__verification-excerpt">
+        {claim.source?.evidence?.passageKind === 'exact' ? 'Exact source passage' : 'Approximate source context'}: {claim.source.evidence?.passage ?? claim.source.excerpt}
+      </blockquote>}
+      {claim.source?.evidence && <small>Checked {new Date(claim.source.evidence.checkedAt).toLocaleString()}
+        {claim.source.evidence.revision ? ` · Revision ${claim.source.evidence.revision}` : claim.source.evidence.contentHash ? ` · Hash ${claim.source.evidence.contentHash}` : ''}</small>}
+      {!claim.source?.evidence && claim.source?.contentHash && <small>Checked content hash {claim.source.contentHash.slice(0, 8)}</small>}
+      {claim.source && <button type="button" onClick={() => onNavigate({ kind: 'document', canvasId: claim.source!.canvasId,
+        blockId: claim.source!.blockId, title: claim.source!.title, excerpt: claim.source!.evidence?.passage ?? claim.source!.excerpt,
+        contentHash: claim.source!.contentHash })}>Open {claim.source.title}</button>}
+    </li>)}</ul>
+    {verification.sources?.length ? <details><summary>Documents checked ({verification.sources.length})</summary><div className="ai-chat__verification-sources">{verification.sources.map(source =>
+      <button type="button" key={`${source.canvasId}:${source.blockId}`} onClick={() => onNavigate({ kind: 'document', ...source })}>{source.title}</button>)}</div></details> : null}</div>
+  </details>;
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -283,11 +332,15 @@ function CopyButton({ text }: { text: string }) {
   </button>;
 }
 
-function TurnMessage({ turn, status, latestId, avatarState, question, undoingBlockId, onShowBlock, onOpenAnswerCanvas, onChooseSurface,
-  onReturnNavigation, onUndoCreated, onUndoEdited }: { turn: DisplayTurn; status: ChatStatus; latestId?: number; avatarState: SymbiState; undoingBlockId: string | null;
-  onShowBlock: (block: CanvasBlock, canvasId?: string) => void; onOpenAnswerCanvas: () => void; onChooseSurface: (prompt: string) => void;
+function TurnMessage({ turn, status, latestId, avatarState, question, undoingBlockId, onShowBlock, onNavigate, onOpenAnswerCanvas, onChooseSurface,
+  onReturnNavigation, onUndoCreated, onUndoEdited, onSelectProposal, onApplyProposal, onUndoProposal }: { turn: DisplayTurn; status: ChatStatus; latestId?: number; avatarState: SymbiState; undoingBlockId: string | null;
+  onShowBlock: (block: CanvasBlock, canvasId?: string) => void; onNavigate: (target: CanvasNavigationTarget) => void;
+  onOpenAnswerCanvas: () => void; onChooseSurface: (prompt: string) => void;
   onReturnNavigation: () => void; onUndoCreated: (turnId: number, block: CanvasBlock) => void;
   onUndoEdited: (turnId: number, edit: CanvasEdit) => void;
+  onSelectProposal: (turnId: number, changeId: string, selected: boolean) => void;
+  onApplyProposal: (turnId: number) => void;
+  onUndoProposal: (turnId: number) => void;
   question?: string }) {
   if (turn.role === 'user') return <Message from="user" className="ai-chat__user-turn"><MessageContent className="ai-chat__user-bubble">{turn.content}</MessageContent></Message>;
   const streaming = status !== 'ready' && turn.id === latestId;
@@ -308,6 +361,33 @@ function TurnMessage({ turn, status, latestId, avatarState, question, undoingBlo
       </div>}
       {turn.navigation && <div className="ai-chat__navigation" role="status"><span>Opened {turn.navigation.title} on the canvas.</span>
         <button type="button" onClick={onReturnNavigation}>Go back</button></div>}
+      {turn.proposal && <section className="ai-chat__proposal" aria-label="Review proposed document changes">
+        <h3>{turn.proposalState === 'reverted' ? 'Changes reverted' : turn.proposalState === 'applied' ? 'Changes applied' : turn.proposalState === 'expired' ? 'Proposal expired' : turn.proposalState === 'failed' ? 'No changes saved' : 'Review proposed changes'}</h3>
+        <p>{turn.proposal.changes.length} proposed change{turn.proposal.changes.length === 1 ? '' : 's'} on this canvas. Saved documents change only after Apply.</p>
+        {turn.proposal.expiresAt && turn.proposalState === 'pending' && <p>Available until {new Date(turn.proposal.expiresAt).toLocaleString()}.</p>}
+        {turn.proposal.changes.map(change => <div className="ai-chat__proposal-change" key={change.id}>
+          <label><input type="checkbox" checked={(turn.selectedProposalIds ?? []).includes(change.id)} disabled={turn.proposalState !== 'pending' || change.canApply === false}
+            onChange={event => onSelectProposal(turn.id, change.id, event.currentTarget.checked)}/>
+            <span><strong>{change.type} · {change.title}</strong><small>{change.before ? 'Existing document' : 'New document'} · {change.blockId}</small></span></label>
+          {change.canApply === false && <p>This change cannot be applied from Chat. Use the document controls to make it.</p>}
+          <details><summary>Inspect full before and after</summary><div className="ai-chat__proposal-compare">
+            <div><strong>Before</strong><pre>{change.before ? JSON.stringify({ title: change.before.title, kind: change.before.kind,
+              x: change.before.x, y: change.before.y, links: change.before.links }, null, 2) + '\n\n' + change.before.content : '(new document)'}</pre></div>
+            <div><strong>After</strong><pre>{change.after ? JSON.stringify({ title: change.after.title, kind: change.after.kind,
+              x: change.after.x, y: change.after.y, links: change.after.links }, null, 2) + '\n\n' + change.after.content : '(removed document)'}</pre></div>
+          </div></details>
+        </div>)}
+        {turn.proposalError && <p role="alert">{turn.proposalError}</p>}
+        {turn.proposalState === 'pending' && <button type="button" className="primary-button" disabled={!(turn.selectedProposalIds?.length)} onClick={() => onApplyProposal(turn.id)}>Apply selected ({turn.selectedProposalIds?.length ?? 0})</button>}
+        {turn.proposalState === 'applying' && <p role="status">Applying selected changes…</p>}
+        {turn.proposalReceipt && <p role="status">{turn.proposalReceipt.applied.length} change{turn.proposalReceipt.applied.length === 1 ? '' : 's'} saved{turn.proposalReceipt.skipped.length ? `; ${turn.proposalReceipt.skipped.length} skipped` : ''}.
+          {turn.proposalReceipt.skipped.map(item => <span key={item.id}> {item.id}: {item.reason}</span>)}</p>}
+        {turn.proposalUndoReceipt && <p role="status">{turn.proposalUndoReceipt.reverted.length} change{turn.proposalUndoReceipt.reverted.length === 1 ? '' : 's'} reverted{turn.proposalUndoReceipt.skipped?.length ? `; ${turn.proposalUndoReceipt.skipped.length} still applied` : ''}.
+          {turn.proposalUndoReceipt.skipped?.map(item => <span key={item.id}> {item.id}: {item.reason}</span>)}</p>}
+        {turn.proposalState === 'applied' && <button type="button" className="secondary-button" onClick={() => onUndoProposal(turn.id)}>{turn.proposalUndoReceipt?.status === 'partial' ? 'Retry Undo for remaining changes' : 'Undo applied changes'}</button>}
+        {turn.proposalState === 'expired' && <p>Ask Chat to prepare a fresh proposal, then review the current documents before applying.</p>}
+        {turn.proposalState === 'reverted' && <p role="status">The applied changes were reverted. Review the current documents before proposing another change.</p>}
+      </section>}
       {turn.createdBlocks?.map(block => <div className="ai-chat__created-row" key={block.id}>
         <button className="ai-chat__created" type="button" onClick={() => onShowBlock(block, turn.createdCanvasId)}>Show {block.title} on canvas</button>
         {turn.createdCanvasId && <button type="button" disabled={undoingBlockId === block.id}
@@ -335,18 +415,19 @@ function TurnMessage({ turn, status, latestId, avatarState, question, undoingBlo
           ? <button type="button" onClick={() => onChooseSurface(`Answer briefly in chat with no canvas for: ${question}`)}>Answer briefly in chat</button>
           : <button type="button" onClick={() => onChooseSurface(`Create a temporary research canvas for: ${question}`)}>Turn this into a map</button>}
       </div>}
-      {turn.content && !answering && !turn.answerCanvas && !turn.researchPatch && <div className="ai-chat__actions"><CopyButton text={turn.content}/><VerificationBadge verification={turn.verification}/></div>}
+      {turn.content && !answering && !turn.answerCanvas && !turn.researchPatch && <div className="ai-chat__actions"><CopyButton text={turn.content}/><VerificationBadge verification={turn.verification} onNavigate={onNavigate}/></div>}
     </MessageContent>
   </Message>;
 }
 
-export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, hasApiKey, jevAvailable = false, model, promptRequest, focusRequest, onMergeDraft, onOpenSettings,
-  onCanvasChanged, onShowBlock, onNavigate, onReturnNavigation, onUndoCreatedBlock, onUndoEditedBlock, onCanvasSources, onCanvasPatch, onCanvasAnswer, onCanvasTurnEnd, onOpenAnswerCanvas, onAvatarStateChange }: AIElementsChatProps) {
+export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, researchEdits, researchLayout, hasApiKey, jevAvailable = false, model, promptRequest, focusRequest,
+  investigationOpenRequest, onActiveInvestigationChange, onMergeDraft, onOpenSettings,
+  onCanvasChanged, onShowBlock, onNavigate, onReturnNavigation, onUndoCreatedBlock, onUndoEditedBlock, onCanvasSources, onCanvasPatch, onCanvasAnswer, onCanvasTurnEnd, onRestoreResearch, onOpenAnswerCanvas, onAvatarStateChange, onHistoryChange }: AIElementsChatProps) {
   const [input, setInput] = useState(() => {
     try { return window.sessionStorage.getItem('symbiknow:chat-draft') ?? ''; }
     catch { return ''; }
   });
-  const [turns, setTurns] = useState<DisplayTurn[]>([]);
+  const [turns, setTurns] = useState<DisplayTurn[]>(restoredTurns);
   const [status, setStatus] = useState<ChatStatus>('ready');
   const [error, setError] = useState('');
   const [justFinished, setJustFinished] = useState(false);
@@ -354,9 +435,12 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
   const [scopeOpen, setScopeOpen] = useState(false);
   const [undoingBlockId, setUndoingBlockId] = useState<string | null>(null);
   const [connection, setConnection] = useState<'online' | 'checking' | 'restored'>('online');
-  const turnsRef = useRef<DisplayTurn[]>([]);
+  const [previousConversation, setPreviousConversation] = useState<DisplayTurn[] | null>(null);
+  const [previousResearch, setPreviousResearch] = useState<InvestigationResearchSnapshot | undefined>();
+  const [savedSourceOpened, setSavedSourceOpened] = useState(false);
+  const turnsRef = useRef<DisplayTurn[]>(turns);
   const activeRef = useRef<AbortController | null>(null);
-  const nextId = useRef(0);
+  const nextId = useRef(Math.max(0, ...turns.map(turn => turn.id)));
   const nextActivityId = useRef(0);
   const lastPromptSequence = useRef<number | null>(null);
   const pendingPrompts = useRef<Array<{ text: string; sequence: number; mergeDraft?: MergeDraftRequest }>>([]);
@@ -377,6 +461,37 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
       : latestTurn?.content ? 'speaking' : 'thinking');
 
   useEffect(() => { onAvatarStateChange?.(avatarState); }, [avatarState, onAvatarStateChange]);
+  useEffect(() => { onHistoryChange?.(turns.length > 0); }, [turns.length, onHistoryChange]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try { window.localStorage.setItem(chatHistoryKey, JSON.stringify(turns.slice(-60))); }
+      catch { /* The current conversation remains available in memory if browser storage is full. */ }
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [turns]);
+  useEffect(() => {
+    const flush = () => {
+      try { window.localStorage.setItem(chatHistoryKey, JSON.stringify(turnsRef.current.slice(-60))); }
+      catch { /* Keep the active conversation in memory if browser storage is full. */ }
+    };
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
+  }, []);
+  useEffect(() => {
+    let active = true;
+    for (const turn of turnsRef.current.filter(item => item.proposal && item.proposalState !== 'reverted' && item.proposalState !== 'expired')) {
+      void api<ChatProposal | ChatProposalReceipt>(`/chat/proposals/${encodeURIComponent(turn.proposal!.id)}`).then(result => {
+        if (!active) return;
+        commit(turnsRef.current.map(item => item.id !== turn.id ? item : result.status === 'pending'
+          ? { ...item, proposal: result, proposalState: 'pending' }
+          : { ...item, proposalReceipt: result, proposalState: result.applied.length ? 'applied' : 'failed' }));
+      }).catch(failure => {
+        if (!active) return;
+        commit(turnsRef.current.map(item => item.id === turn.id ? { ...item, proposalState: 'expired', proposalError: errorText(failure) } : item));
+      });
+    }
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!focusRequest) return;
@@ -411,6 +526,45 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
   function commit(next: DisplayTurn[]) {
     turnsRef.current = next;
     setTurns(next);
+  }
+
+  function openInvestigation(record: InvestigationRecord) {
+    if (turnsRef.current.some(turn => turn.content.trim()) || answerTurns.length) {
+      setPreviousConversation(turnsRef.current);
+      if (researchEdits && researchLayout) setPreviousResearch({ turns: answerTurns, edits: researchEdits, layout: researchLayout });
+    }
+    const next = record.messages.map(message => ({ ...message, id: ++nextId.current, activities: [] as Activity[] }));
+    commit(next);
+    onActiveInvestigationChange?.({ id: record.id, canvasId: record.canvasId ?? canvasId });
+    onRestoreResearch?.(record.researchSnapshot);
+    setError('');
+    setStatus('ready');
+  }
+
+  function openInvestigationSource(source: InvestigationSourceRef) {
+    setSavedSourceOpened(true);
+    onNavigate({ kind: 'document', canvasId: source.canvasId, blockId: source.blockId,
+      title: canvas?.blocks.find(block => block.id === source.blockId)?.title ?? source.blockId,
+      excerpt: source.excerpt, contentHash: source.contentHash });
+  }
+
+  async function openInvestigationProposal(reference: InvestigationProposalRef, record: InvestigationRecord) {
+    if (reference.kind !== 'chat') throw new Error('This proposal is available in Jev Workspace runs.');
+    const result = await api<ChatProposal | ChatProposalReceipt>(`/chat/proposals/${encodeURIComponent(reference.id)}`);
+    const proposal: ChatProposal = result.status === 'pending' ? result : {
+      id: result.id, canvasId: record.canvasId ?? canvasId, status: 'pending', changes: (result.documents ?? []).map(document => ({
+        id: document.id, blockId: document.id, title: document.after?.title ?? document.before?.title ?? document.id,
+        type: document.before ? document.after ? 'edit' as const : 'delete' as const : 'create' as const,
+        before: document.before, after: document.after, expectedContentHash: null, canApply: false,
+      })),
+    };
+    const next: DisplayTurn = { id: ++nextId.current, role: 'assistant', content: result.status === 'pending'
+      ? 'Recovered the saved proposal for review.' : 'Recovered the saved proposal receipt and its document changes.', activities: [],
+      proposal, selectedProposalIds: result.status === 'pending' ? result.changes.filter(change => change.canApply !== false).map(change => change.id) : [],
+      proposalState: result.status === 'pending' ? 'pending' : result.applied.length ? 'applied' : 'failed',
+      ...(result.status !== 'pending' ? { proposalReceipt: result } : {}),
+    };
+    commit([...turnsRef.current, next]);
   }
 
   function appendAssistant(base: DisplayTurn[], mergeDraft?: MergeDraftRequest): DisplayTurn[] {
@@ -463,6 +617,8 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
         },
         onPresentationChoice: choice => commit(turnsRef.current.map(turn => turn.id === assistantId
           ? { ...turn, presentationChoice: choice } : turn)),
+        onProposal: proposal => commit(turnsRef.current.map(turn => turn.id === assistantId
+          ? { ...turn, proposal, selectedProposalIds: proposal.changes.filter(change => change.canApply !== false).map(change => change.id), proposalState: 'pending' } : turn)),
       });
       commit(discardIntentToken(settledAssistant(turnsRef.current, assistantId, 'complete'), assistantId));
       onCanvasTurnEnd(assistantId, 'complete');
@@ -536,6 +692,57 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
     } finally { setUndoingBlockId(null); }
   }
 
+  function navigateToSource(turnId: number, target: CanvasNavigationTarget) {
+    commit(turnsRef.current.map(turn => turn.id === turnId ? { ...turn, navigation: target } : turn));
+    onNavigate(target);
+  }
+
+  function selectProposal(turnId: number, changeId: string, selected: boolean) {
+    commit(turnsRef.current.map(turn => turn.id === turnId && turn.proposal?.changes.some(change => change.id === changeId && change.canApply !== false) ? { ...turn,
+      selectedProposalIds: selected ? [...new Set([...(turn.selectedProposalIds ?? []), changeId])]
+        : (turn.selectedProposalIds ?? []).filter(id => id !== changeId) } : turn));
+  }
+
+  async function applyProposal(turnId: number) {
+    const turn = turnsRef.current.find(item => item.id === turnId);
+    const proposal = turn?.proposal;
+    if (!proposal || turn.proposalState !== 'pending' || !turn.selectedProposalIds?.length) return;
+    commit(turnsRef.current.map(item => item.id === turnId ? { ...item, proposalState: 'applying', proposalError: '' } : item));
+    try {
+      const before = await api<CanvasDocument>(`/canvases/${encodeURIComponent(proposal.canvasId)}`);
+      const receipt = await api<ChatProposalReceipt>(`/chat/proposals/${encodeURIComponent(proposal.id)}/apply`, {
+        method: 'POST', body: JSON.stringify({ changeIds: turn.selectedProposalIds }),
+      });
+      commit(turnsRef.current.map(item => item.id === turnId ? { ...item, proposalState: receipt.applied.length ? 'applied' : 'failed', proposalReceipt: receipt,
+        proposalError: '' } : item));
+      try { await onCanvasChanged(proposal.canvasId, before.blocks); }
+      catch (failure) { commit(turnsRef.current.map(item => item.id === turnId ? { ...item,
+        proposalError: `Changes saved, but the canvas could not refresh: ${errorText(failure)} Reopen the canvas to see them.` } : item)); }
+    } catch (failure) {
+      const message = errorText(failure);
+      commit(turnsRef.current.map(item => item.id === turnId ? { ...item,
+        proposalState: message.includes('no longer available') ? 'expired' : 'pending', proposalError: message } : item));
+    }
+  }
+
+  async function undoProposal(turnId: number) {
+    const turn = turnsRef.current.find(item => item.id === turnId);
+    if (!turn?.proposal || turn.proposalState !== 'applied') return;
+    commit(turnsRef.current.map(item => item.id === turnId ? { ...item, proposalState: 'applying', proposalError: '' } : item));
+    try {
+      const before = await api<CanvasDocument>(`/canvases/${encodeURIComponent(turn.proposal.canvasId)}`);
+      const receipt = await api<ChatProposalUndoReceipt>(`/chat/proposals/${encodeURIComponent(turn.proposal.id)}/undo`, { method: 'POST', body: JSON.stringify({}) });
+      commit(turnsRef.current.map(item => item.id === turnId ? { ...item, proposalState: receipt.status === 'reverted' ? 'reverted' : 'applied', proposalUndoReceipt: receipt } : item));
+      try { await onCanvasChanged(turn.proposal.canvasId, before.blocks); }
+      catch (failure) { commit(turnsRef.current.map(item => item.id === turnId ? { ...item,
+        proposalError: `Undo saved, but the canvas could not refresh: ${errorText(failure)} Reopen the canvas to see it.` } : item)); }
+    } catch (failure) {
+      const message = errorText(failure);
+      commit(turnsRef.current.map(item => item.id === turnId ? { ...item,
+        proposalState: message.includes('no longer available') ? 'expired' : 'applied', proposalError: message } : item));
+    }
+  }
+
   useEffect(() => {
     if (promptRequest && lastPromptSequence.current !== promptRequest.sequence) {
       pendingPrompts.current.push({ text: promptRequest.text, sequence: promptRequest.sequence, mergeDraft: promptRequest.mergeDraft });
@@ -557,22 +764,52 @@ export function AIElementsChat({ canvasId, canvas, viewContext, answerTurns, has
   }, [promptRequest?.sequence, promptRequest?.text, canvasId, hasApiKey, status]);
 
   const latestId = turns.at(-1)?.id;
+  const investigationSources = [...new Map(turns.flatMap(turn => [
+    ...(turn.verification?.sources ?? []), ...(turn.answerCanvas?.sources ?? []),
+  ]).concat(answerTurns.flatMap(turn => turn.sources)).filter(source => source.canvasId && source.blockId).map(source => [`${source.canvasId}:${source.blockId}`, {
+    canvasId: source.canvasId, blockId: source.blockId,
+    ...(source.contentHash && /^[a-f0-9]{16}$/.test(source.contentHash) ? { contentHash: source.contentHash } : {}),
+    ...(source.excerpt ? { excerpt: source.excerpt.slice(0, 2_000) } : {}),
+  }]))].map(([, source]) => source);
+  const investigationProposals = turns.flatMap(turn => turn.proposal ? [{ kind: 'chat' as const, id: turn.proposal.id,
+    status: turn.proposalState ?? 'pending' }] : []);
+
+  function recheckInvestigation(record: InvestigationRecord, changedSources: Array<{ canvasId: string; blockId: string;
+    oldHash?: string; currentHash?: string }>) {
+    const previousAnswer = [...record.messages].reverse().find(message => message.role === 'assistant')?.content ?? '';
+    const sourceChanges = changedSources.map(source => `${source.canvasId}/${source.blockId}: saved hash ${source.oldHash ?? 'unknown'}, current hash ${source.currentHash ?? 'missing'}`);
+    submit(`Recheck this saved investigation against the current documents. Compare the earlier answer with what the changed sources now support. Explain which claims remain supported, which changed, and what is still uncertain. Do not edit documents.\n\nEarlier answer:\n${previousAnswer.slice(0, 12_000)}\n\nChanged sources:\n${sourceChanges.join('\n')}`);
+  }
 
   return <div className="ai-chat">
     {!hasApiKey && <div className="ai-chat__setup"><span>Connect a chat model in Settings to talk with this canvas.</span><button type="button" onClick={onOpenSettings}>Open Settings</button></div>}
+    {canvas?.workspaceId && <SavedInvestigations workspaceId={canvas.workspaceId} canvasId={canvasId}
+      messages={turns.filter(turn => turn.content.trim()).map(({ role, content }) => ({ role, content }))}
+      sourceRefs={investigationSources} proposalRefs={investigationProposals}
+      researchSnapshot={researchEdits && researchLayout ? { turns: answerTurns, edits: researchEdits, layout: researchLayout } : undefined}
+      openRequest={investigationOpenRequest} onOpen={openInvestigation}
+      onSaved={record => onActiveInvestigationChange?.({ id: record.id, canvasId: record.canvasId ?? canvasId })}
+      onClearSelection={() => onActiveInvestigationChange?.(undefined)}
+      onOpenSource={openInvestigationSource} onOpenProposal={openInvestigationProposal} onRecheck={recheckInvestigation}/>}
+    {previousConversation && <div className="ai-chat__saved-return" role="status">Opened a saved investigation.
+      <button type="button" onClick={() => { commit(previousConversation); onRestoreResearch?.(previousResearch); onActiveInvestigationChange?.(undefined); setPreviousConversation(null); setPreviousResearch(undefined); }}>Restore previous conversation and canvas</button>
+      <button type="button" onClick={() => { setPreviousConversation(null); setPreviousResearch(undefined); }}>Dismiss</button></div>}
+    {savedSourceOpened && <div className="ai-chat__saved-return" role="status">Opened a saved source.
+      <button type="button" onClick={() => { onReturnNavigation(); setSavedSourceOpened(false); }}>Go back</button></div>}
     <Conversation className="ai-chat__conversation">
       <ConversationContent className="ai-chat__messages">
         {turns.length === 0 && <div className="ai-chat__welcome"><SymbiAvatar size="large" decorative/><h2>Hi, I’m Symbi.</h2><p>{canvasId ? 'Ask me to find sources, connect ideas, or build a map of what matters. I’ll show you where the answer came from.' : 'Open a canvas and ask me to find sources, connect ideas, or build a map of what matters.'}</p></div>}
         {turns.map((turn, index) => <TurnMessage key={turn.id} turn={turn} status={status} latestId={latestId} avatarState={avatarState}
           undoingBlockId={undoingBlockId} onReturnNavigation={onReturnNavigation} onUndoCreated={(id, block) => void undoCreated(id, block)}
           onUndoEdited={(id, edit) => void undoEdited(id, edit)}
+          onSelectProposal={selectProposal} onApplyProposal={id => void applyProposal(id)} onUndoProposal={id => void undoProposal(id)}
           question={turn.role === 'assistant' ? turns.slice(0, index).reverse().find(item => item.role === 'user')?.content : undefined} onShowBlock={onShowBlock}
-          onOpenAnswerCanvas={onOpenAnswerCanvas} onChooseSurface={submit}/>)}
+          onOpenAnswerCanvas={onOpenAnswerCanvas} onNavigate={target => navigateToSource(turn.id, target)} onChooseSurface={submit}/>)}
         {error && <div className="ai-chat__error" role="alert"><span>{error}</span>
           {connection !== 'online' && <small>{connection === 'restored' ? 'Connection restored. Your question is ready to retry.' : 'Checking the connection. Your question is still here.'}</small>}
           {hasApiKey && <button type="button" onClick={retry}>{connection === 'restored' ? 'Retry answer' : 'Retry'}</button>}</div>}
       </ConversationContent>
-      <ConversationScrollButton aria-label="Scroll to latest message"/>
+      <ConversationScrollButton className="ai-chat__scroll-latest" aria-label="Scroll to latest message"/>
     </Conversation>
     {turns.length === 0 ? <div className="ai-chat__starters" role="group" aria-label="Suggested questions">{suggestions.slice(0, 3).map(item => <button key={item.title} type="button" className="ai-chat__starter" onClick={() => submit(item.title)}><strong>{item.title}</strong><span>{item.detail}</span></button>)}</div>
       : status === 'ready' && <div className="ai-chat__followups" role="group" aria-label="Suggested follow-up questions">{suggestions.slice(0, 2).map(item => <button key={item.title} type="button" onClick={() => submit(item.title)}>{item.title}</button>)}</div>}

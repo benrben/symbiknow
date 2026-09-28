@@ -21,13 +21,15 @@ function relative(value: string): string {
   return hours < 24 ? `${hours}h ago` : new Date(value).toLocaleDateString();
 }
 
-function TaskCard({ task, canvas, onChange, onOpenBlock, score, suggestions }: {
+function TaskCard({ task, canvas, onChange, onOpenBlock, onOpenFinding, onOpenInvestigation, score, suggestions }: {
   task: CanvasTask;
   canvas: CanvasDocument;
   onChange: (route: string, init: RequestInit) => Promise<void>;
   onOpenBlock: (blockId: string) => void;
+  onOpenFinding?: (findingRef: FindingTaskReference) => void;
   score?: TaskScore;
   suggestions: TaskSuggestion[];
+  onOpenInvestigation?: (investigationId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [comment, setComment] = useState('');
@@ -40,6 +42,17 @@ function TaskCard({ task, canvas, onChange, onOpenBlock, score, suggestions }: {
       <div className="task-card__body">
         <strong>{task.title}</strong>
         {task.detail && <p>{task.detail}</p>}
+        {task.findingRef && <div className="task-card__finding" aria-label="Finding evidence">
+          <div><span>From finding</span><strong>{task.findingRef.title}</strong></div>
+          {task.findingRef.detail && <p>{task.findingRef.detail}</p>}
+          {task.findingRef.evidence?.map((item, index) => <blockquote key={`${item.questionId}-${index}`}>{item.excerpt}</blockquote>)}
+          {task.findingRef.references?.map((item, index) => <blockquote key={`${item.documentId}-${index}`}>{item.passageLabel ?? item.passage}</blockquote>)}
+          <p><strong>Affected documents:</strong> {task.findingRef.blockIds.map(id => canvas.blocks.find(block => block.id === id)?.title ?? id).join(', ') || 'None'}</p>
+          {task.findingRef.suggestedOwner && <small>Suggested owner: {task.findingRef.suggestedOwner}</small>}
+          {task.findingRef.investigationId && onOpenInvestigation && <button type="button" className="task-card__finding-link"
+            onClick={() => onOpenInvestigation(task.findingRef!.investigationId!)}>Open saved investigation</button>}
+          {onOpenFinding && <button type="button" className="task-card__finding-link" onClick={() => onOpenFinding(task.findingRef!)}>Open finding in Insights</button>}
+        </div>}
         <div className="task-card__meta">
           {task.assignee ? <span className="task-chip task-chip--owner">{task.assignee}</span> : <span className="task-chip">Unassigned</span>}
           <span>by {task.createdBy} · {relative(task.updatedAt)}</span>
@@ -63,7 +76,11 @@ function TaskCard({ task, canvas, onChange, onOpenBlock, score, suggestions }: {
         <select aria-label={`Status for ${task.title}`} value={task.status} onChange={event => void onChange(base, { method: 'PUT', body: JSON.stringify({ status: event.target.value }) })}>
           {order.map(status => <option key={status} value={status}>{statusInfo[status].label}</option>)}</select>
         {task.assignee !== browserActor && <button type="button" className="secondary-button" onClick={() => void onChange(`${base}/claim`, { method: 'POST', body: JSON.stringify({ force: true }) })}>Assign to me</button>}
-        <button type="button" className="icon-button" aria-label={`Delete ${task.title}`} onClick={() => void onChange(base, { method: 'DELETE' })}><Trash2 size={14}/></button>
+        <button type="button" className="icon-button" aria-label={`Delete ${task.title}`} onClick={() => {
+          const consequential = task.comments.length > 0 || Boolean(task.assignee) || task.blockIds.length > 0;
+          if (consequential && !window.confirm(`Delete “${task.title}”? This task has ${task.comments.length ? 'comments' : task.assignee ? 'an assignee' : 'linked documents'} and cannot be recovered.`)) return;
+          void onChange(base, { method: 'DELETE' });
+        }}><Trash2 size={14}/></button>
       </div>
       {task.comments.length > 0 && <ol className="task-card__comments">{task.comments.map((item, index) => <li key={index}><strong>{item.author}</strong><span>{item.text}</span><small>{relative(item.createdAt)}</small></li>)}</ol>}
       <form className="task-card__comment" onSubmit={event => { event.preventDefault(); if (!comment.trim()) return;
@@ -76,9 +93,18 @@ function TaskCard({ task, canvas, onChange, onOpenBlock, score, suggestions }: {
 }
 
 /** The shared board. Agents update it over MCP, so it refreshes every few seconds while visible. */
-export function TasksPanel({ canvas, visible, onOpenBlock }: { canvas: CanvasDocument | null; visible: boolean; onOpenBlock: (blockId: string) => void }) {
+export type FindingTaskReference = NonNullable<CanvasTask['findingRef']>;
+
+export function TasksPanel({ canvas, visible, onOpenBlock, findingRef, onFindingTaskCreated, onOpenFinding, onOpenInvestigation }: {
+  canvas: CanvasDocument | null; visible: boolean; onOpenBlock: (blockId: string) => void;
+  findingRef?: FindingTaskReference; onFindingTaskCreated?: (createdTask: CanvasTask) => void;
+  onOpenFinding?: (findingRef: FindingTaskReference) => void;
+  onOpenInvestigation?: (investigationId: string) => void;
+}) {
   const [tasks, setTasks] = useState<CanvasTask[] | null>(null);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(findingRef?.title ?? '');
+  const [suggestedOwner, setSuggestedOwner] = useState(findingRef?.suggestedOwner ?? '');
+  const [linkInvestigation, setLinkInvestigation] = useState(false);
   const [error, setError] = useState('');
   const [showDone, setShowDone] = useState(false);
   const [taskInsights, setTaskInsights] = useState<TaskInsightReport | null>(null);
@@ -87,6 +113,12 @@ export function TasksPanel({ canvas, visible, onOpenBlock }: { canvas: CanvasDoc
   const canvasId = canvas?.id ?? '';
   const latest = useRef(canvasId);
   latest.current = canvasId;
+
+  useEffect(() => {
+    setTitle(findingRef?.title ?? '');
+    setSuggestedOwner(findingRef?.suggestedOwner ?? '');
+    setLinkInvestigation(false);
+  }, [findingRef?.id, findingRef?.title, findingRef?.suggestedOwner]);
 
   const load = useCallback(async () => {
     if (!canvasId) return;
@@ -122,8 +154,22 @@ export function TasksPanel({ canvas, visible, onOpenBlock }: { canvas: CanvasDoc
   async function create(event: FormEvent) {
     event.preventDefault();
     if (!title.trim() || !canvasId) return;
-    await change(`/canvases/${encodeURIComponent(canvasId)}/tasks`, { method: 'POST', body: JSON.stringify({ title: title.trim() }) });
-    setTitle('');
+    setError('');
+    try {
+      const taskFindingRef = findingRef && !linkInvestigation && findingRef.investigationId
+        ? { ...findingRef, investigationId: undefined }
+        : findingRef;
+      const createdTask = await api<CanvasTask>(`/canvases/${encodeURIComponent(canvasId)}/tasks`, { method: 'POST', body: JSON.stringify({
+        title: title.trim(), ...(suggestedOwner.trim() ? { assignee: suggestedOwner.trim() } : {}),
+        ...(taskFindingRef ? { blockIds: taskFindingRef.blockIds, detail: [taskFindingRef.detail,
+          ...(taskFindingRef.evidence ?? []).map(item => item.excerpt), ...(taskFindingRef.references ?? []).map(item => item.passage)]
+          .filter((part): part is string => Boolean(part?.trim())).join('\n\n').slice(0, 4000), findingRef: taskFindingRef } : {}),
+      }) });
+      await load();
+      setTaskInsights(null);
+      setTitle('');
+      if (findingRef && createdTask) onFindingTaskCreated?.(createdTask);
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not create the task.'); }
   }
 
   if (!canvas) return <div className="tasks-panel tasks-panel--empty"><p>Open a canvas to see its tasks.</p></div>;
@@ -134,6 +180,21 @@ export function TasksPanel({ canvas, visible, onOpenBlock }: { canvas: CanvasDoc
       <Plus size={15} aria-hidden="true"/><input aria-label="New task" value={title} onChange={event => setTitle(event.target.value)} placeholder="Add a task…"/>
       <button className="primary-button" disabled={!title.trim()}>Add</button>
     </form>
+    {findingRef && <div className="tasks-panel__finding-preview" aria-label="Finding task context">
+      <div><span>Finding to follow up</span><strong>{findingRef.title}</strong></div>
+      {findingRef.detail && <p>{findingRef.detail}</p>}
+      {findingRef.evidence?.map((item, index) => <blockquote key={`${item.questionId}-${index}`}>{item.excerpt}</blockquote>)}
+      {findingRef.references?.map((item, index) => <blockquote key={`${item.documentId}-${index}`}>{item.passageLabel ?? item.passage}</blockquote>)}
+      <p><strong>Affected documents:</strong> {findingRef.blockIds.map(id => canvas.blocks.find(block => block.id === id)?.title ?? id).join(', ') || 'None'}</p>
+      {findingRef.suggestedOwner && <label>Suggested owner<input aria-label="Suggested owner" value={suggestedOwner} onChange={event => setSuggestedOwner(event.target.value)}/></label>}
+      {findingRef.investigationId && <label className="tasks-panel__investigation-link-choice">
+        <input type="checkbox" checked={linkInvestigation} onChange={event => setLinkInvestigation(event.target.checked)}/>
+        Link this task to the open saved investigation
+      </label>}
+      {findingRef.investigationId && onOpenInvestigation && <button type="button" className="task-card__finding-link"
+        onClick={() => onOpenInvestigation(findingRef.investigationId!)}>Open saved investigation</button>}
+      {onOpenFinding && <button type="button" className="task-card__finding-link" onClick={() => onOpenFinding(findingRef)}>Return to finding in Insights</button>}
+    </div>}
     <div className="tasks-panel__analysis">
       <button type="button" className="secondary-button" disabled={analyzing} onClick={() => void analyze()}>
         {analyzing ? 'Analyzing tasks…' : 'Analyze tasks with Jev'}</button>
@@ -142,15 +203,18 @@ export function TasksPanel({ canvas, visible, onOpenBlock }: { canvas: CanvasDoc
         <option value="status">Status</option><option value="priority_effort">Priority per effort</option>
       </select></label>}
     </div>
+    {taskInsights && <p className="tasks-panel__analysis-note" role="status">{taskInsights.items.length
+      ? `${taskInsights.items.length} suggestions are ready. Review each suggestion and choose Apply to update a task.`
+      : 'Analysis finished with no suggested changes. Add or update a task, then analyze again when the board changes.'}</p>}
     {error && <p className="tasks-panel__error" role="alert">{error}</p>}
     {tasks === null ? <p className="tasks-panel__loading"><LoaderCircle size={14} className="insights-spin" aria-hidden="true"/>Loading tasks…</p>
-      : tasks.length === 0 ? <div className="tasks-panel__empty-state"><CheckCircle2 size={22} aria-hidden="true"/><p>No tasks yet. Add one here, or ask an agent to create tasks with <code>create_task</code>.</p></div>
+      : tasks.length === 0 ? <div className="tasks-panel__empty-state"><CheckCircle2 size={22} aria-hidden="true"/><p>No tasks yet. Add a task above, or ask an agent to create one with <code>create_task</code>.</p></div>
         : <div className="tasks-panel__groups">{order.filter(status => status !== 'done' || showDone).map(status => {
           const items = tasks.filter(task => task.status === status).sort((a, b) => sortBy === 'priority_effort'
             ? (taskInsights?.scores[b.id]?.priorityPerEffort ?? -Infinity) - (taskInsights?.scores[a.id]?.priorityPerEffort ?? -Infinity) : 0);
           if (!items.length) return null;
           return <section key={status} aria-label={statusInfo[status].label}><h3>{statusInfo[status].label}<span>{items.length}</span></h3>
-            {items.map(task => <TaskCard key={task.id} task={task} canvas={canvas} onChange={change} onOpenBlock={onOpenBlock}
+            {items.map(task => <TaskCard key={task.id} task={task} canvas={canvas} onChange={change} onOpenBlock={onOpenBlock} onOpenFinding={onOpenFinding} onOpenInvestigation={onOpenInvestigation}
               score={taskInsights?.scores[task.id]} suggestions={taskInsights?.items.filter(item => item.id.endsWith(`-${task.id}`)) ?? []}/>)}</section>;
         })}
         <button type="button" className="tasks-panel__toggle-done" onClick={() => setShowDone(value => !value)}>

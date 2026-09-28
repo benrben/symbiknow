@@ -23,7 +23,7 @@
 .task-card__check { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: none; color: #97a3b8; cursor: pointer; }
 .task-card--in_progress .task-card__check { color: #5268dc; }
 .task-card--blocked .task-card__check { color: #c0506a; }
-.task-card--done .task-card__check { color: #2a8a5a; }
+.task-card--done .task-card__check { color: var(--sk-action); }
 .task-card__body { min-width: 0; }
 .task-card__body strong { display: block; color: #1f2e4d; font-size: 12.5px; line-height: 1.4; }
 .task-card--done .task-card__body strong { text-decoration: line-through; text-decoration-color: #a9b3c6; }
@@ -47,6 +47,58 @@
 .task-card__comments small { color: #9ca7ba; font-size: 10px; }
 .task-card__comment { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
 .tasks-panel__analysis { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.tasks-panel__analysis-note { margin: -5px 0 0; color: #78869c; font-size: 11px; line-height: 1.45; }
 .tasks-panel__analysis label { display: inline-flex; align-items: center; gap: 5px; color: #6d7b93; font-size: 11px; }
 .tasks-panel__analysis select { border: 1px solid #dce3ed; border-radius: 7px; padding: 4px 6px; background: #fff; color: #263650; font: inherit; }
 .task-card__suggestion { display: flex; align-items: center; justify-content: space-between; gap: 7px; margin-top: 8px; padding: 6px 8px; border-radius: 8px; background: #f4f6ff; color: #4354a0; font-size: 11px; }
+
+.tasks-panel__finding-preview, .task-card__finding { display: grid; gap: 7px; margin-top: 8px; padding: 10px 12px; border: 1px solid #d8dff7; border-radius: 10px; background: #f6f7ff; color: #43516d; font-size: 11px; line-height: 1.5; }
+.tasks-panel__finding-preview > div > span, .task-card__finding > div > span { display: block; color: #6879c8; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.tasks-panel__finding-preview > div > strong, .task-card__finding > div > strong { display: block; color: #26385d; font-size: 12px; }
+.tasks-panel__finding-preview p { margin: 0; }
+.tasks-panel__finding-preview blockquote, .task-card__finding blockquote { margin: 0; padding-left: 9px; border-left: 2px solid #9ca9e8; color: #4a5876; white-space: pre-wrap; }
+.tasks-panel__finding-preview label { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.tasks-panel__finding-preview label input { width: min(100%, 220px); border: 1px solid #d5dcef; border-radius: 7px; padding: 5px 7px; color: #253450; font: inherit; }
+.tasks-panel__finding-preview .tasks-panel__investigation-link-choice { justify-content: flex-start; gap: 7px; font-weight: 600; }
+.tasks-panel__finding-preview .tasks-panel__investigation-link-choice input { width: auto; margin: 0; accent-color: var(--sk-focus); }
+.task-card__finding { margin-top: 8px; padding: 8px 10px; }
+.task-card__finding small { color: #586a9b; font-weight: 700; }
+.task-card__finding-link { justify-self: start; border: 0; padding: 2px 0; background: none; color: #4258c3; font: inherit; font-weight: 700; cursor: pointer; }
+.task-card__finding-link:hover { text-decoration: underline; }
+/* Task board surfaces and action states use the shared palette. */
+.tasks-panel { background: var(--sk-surface); color: var(--sk-text); }
+.tasks-panel__intro h2, .task-card__body strong, .task-card__finding > div > strong,
+.tasks-panel__finding-preview > div > strong { color: var(--sk-text); }
+.tasks-panel__intro p, .tasks-panel__loading, .tasks-panel__empty-state, .tasks-panel__groups h3,
+.task-card__body p, .task-card__meta, .task-card__expand, .tasks-panel__analysis-note,
+.tasks-panel__analysis label { color: var(--sk-muted); }
+.task-card { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
+.task-card--in_progress { border-color: var(--sk-focus); }
+.task-card--blocked { border-color: var(--sk-pending); }
+.task-card__controls select, .task-card__comment input { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
+.task-card__comments li { background: var(--sk-surface-soft); }
+.task-card__comments strong, .task-card__comments span { color: var(--sk-text); }
+.task-card__comments small { color: var(--sk-muted); }
+.task-chip { background: var(--sk-surface-soft); color: var(--sk-muted); }
+.task-chip--owner, .task-card__finding-link { color: var(--sk-link); }
+.task-card__docs button { border-color: var(--sk-border); background: var(--sk-surface-soft); color: var(--sk-text); }
+.task-card__docs button:hover, .task-card__finding-link:hover { border-color: var(--sk-focus); color: var(--sk-link); }
+.task-card__suggestion { border-color: var(--sk-pending); background: var(--sk-pending-bg); color: var(--sk-pending); }
+.tasks-panel__finding-preview, .task-card__finding { border-color: var(--sk-border); background: var(--sk-surface-soft); color: var(--sk-text); }
+.tasks-panel__finding-preview > div > span, .task-card__finding > div > span,
+.task-card__finding small { color: var(--sk-muted); }
+.tasks-panel__finding-preview blockquote, .task-card__finding blockquote { border-color: var(--sk-link); color: var(--sk-muted); }
+.tasks-panel__finding-preview label input { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
+.task-card__finding-link { color: var(--sk-link); }
+.tasks-panel__error { border: 1px solid var(--sk-error); background: var(--sk-error-bg); color: var(--sk-error); }
+.tasks-panel__new { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-muted); }
+.tasks-panel__new:focus-within { border-color: var(--sk-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sk-focus) 18%, transparent); }
+.tasks-panel__new input { color: var(--sk-text); }
+.tasks-panel__new .primary-button { border-color: var(--sk-action-bg); background: var(--sk-action-bg); color: var(--sk-action); }
+.tasks-panel :is(button, input, select, textarea):focus-visible { outline-color: var(--sk-focus); }
+.tasks-panel :is(button, input, select, textarea):disabled { color: var(--sk-muted); opacity: .72; }
+html[data-theme='dark'] .task-card__check { color: var(--sk-muted); }
+html[data-theme='dark'] .task-card--in_progress .task-card__check { color: var(--sk-focus); }
+html[data-theme='dark'] .task-card--blocked .task-card__check { color: var(--sk-pending); }
+
+.task-card--done { opacity: 1; }

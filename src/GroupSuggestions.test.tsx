@@ -28,12 +28,15 @@ describe('GroupSuggestions', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'By tags' }));
     fireEvent.click(screen.getByRole('button', { name: 'Show preview on canvas' }));
     expect(onPreview).toHaveBeenCalledWith({ a: 'custom:tags/api', b: 'custom:tags/api' });
+    expect(screen.getByText(/Nothing has been saved/)).toBeTruthy();
     expect(screen.getByText('Where should these documents go?')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Accept grouping' }));
     await waitFor(() => expect(onApply).toHaveBeenCalledOnce());
+    expect(screen.getByText(/Saved grouping for 2 documents/)).toBeTruthy();
     view.rerender(<GroupSuggestions canvas={current} hasApiKey={false} onOpenSettings={vi.fn()} onApply={onApply} onClose={vi.fn()} onPreview={onPreview}/>);
     fireEvent.click(screen.getByRole('button', { name: 'Undo grouping' }));
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
+    expect(screen.getByText(/Reverted grouping for 2 documents/)).toBeTruthy();
     expect(current.blocks.map(block => [block.x, block.y, block.group])).toEqual([[10, 20, undefined], [350, 20, undefined], [690, 20, undefined]]);
   });
 

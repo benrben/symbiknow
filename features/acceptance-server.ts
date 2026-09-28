@@ -26,6 +26,7 @@ function answer(id: string, question: JevQuestion, state: State): JevAnswer {
   const document = state.document ?? state.documents?.[Number(id.match(/^d(\d+)/)?.[1] ?? -1)];
   const pair = state.pair ?? state.pairs?.[Number(id.match(/^p(\d+)/)?.[1] ?? -1)];
   if (question.type === 'noul') {
+    if (id.startsWith('intake_tag_')) return { type: 'noul', noul: 0.96 };
     if (id === 'authorized') {
       const context = state as State & { userRequest?: string; previousAssistant?: string; target?: { title?: string } };
       const proposed = context.previousAssistant?.includes(`delete ${context.target?.title}`) ?? false;
@@ -44,7 +45,11 @@ function answer(id: string, question: JevQuestion, state: State): JevAnswer {
   }
   const choices = Object.keys(question.criteria);
   let choice = choices[0];
-  if (id === 'intent') choice = (state as State & { latest?: string }).latest === 'yes' ? 'delete' : choice;
+  if (id === 'intake_purpose') choice = 'guide';
+  else if (id === 'intake_domain') choice = 'engineering';
+  else if (id === 'intake_area') choice = 'software_engineering' in question.criteria ? 'software_engineering' : choices[0];
+  else if (id === 'intake_link') choice = 'b0' in question.criteria ? 'b0' : 'none';
+  else if (id === 'intent') choice = (state as State & { latest?: string }).latest === 'yes' ? 'delete' : choice;
   else if (id.endsWith('_dup_kind')) choice = 'identical';
   else if (id.endsWith('_newer')) choice = (state as State & { a?: { title?: string } }).a?.title === 'Setup v2' ? 'a' : 'b';
   else if (id.endsWith('_relation')) choice = 'same_topic';
@@ -68,14 +73,8 @@ const jevDecider: JevDecider = async (_apiKey, value, questions) => {
 const agentFactory: DeepAgentFactory = (_settings, tools) => async function* (messages) {
   const latest = String(messages.at(-1)?.content ?? '');
   if (latest === 'yes') {
-    const target = tools.find(item => item.name === 'delete_doc');
-    if (!target) throw new Error('Delete tool was not available to the confirmation');
-    const canvas = await fetch(`http://127.0.0.1:${port}/api/workspaces`).then(response => response.json()) as Array<{ canvases: Array<{ id: string }> }>;
-    const current = await fetch(`http://127.0.0.1:${port}/api/canvases/${canvas[0].canvases[0].id}`).then(response => response.json()) as { blocks: Array<{ id: string; title: string }> };
-    const block = current.blocks.find(item => item.title === 'Temporary Note');
-    if (!block) throw new Error('Temporary Note was not found');
-    await target.invoke({ blockId: block.id });
-    yield { messages: [...messages, new AIMessage('Deleted Temporary Note.')] };
+    if (tools.some(item => item.name === 'delete_doc')) throw new Error('Normal Chat exposed a direct document delete tool');
+    yield { messages: [...messages, new AIMessage('Chat cannot delete Temporary Note directly. Open the document and use Delete in its editor, then confirm the deletion there.')] };
     return;
   }
   if (latest.includes('Draft a merge of these documents:')) {

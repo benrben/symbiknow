@@ -79,6 +79,8 @@ export function GroupSuggestions({ canvas, hasApiKey, onOpenSettings, onApply, o
   const [error, setError] = useState('');
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [undo, setUndo] = useState<{ before: BlockPosition[]; after: BlockPosition[] }>();
+  const [previewing, setPreviewing] = useState(false);
+  const [receipt, setReceipt] = useState('');
   const draft = useMemo(() => assignments(canvas, mode, report).map(item => ({ ...item, group: overrides[item.blockId] ?? item.group })), [canvas, mode, report, overrides]);
   const grouped = useMemo(() => {
     const map = new Map<string, CanvasBlock[]>();
@@ -111,7 +113,7 @@ export function GroupSuggestions({ canvas, hasApiKey, onOpenSettings, onApply, o
     setLoading(true);
     setError('');
     const before = canvas.blocks.map(block => ({ blockId: block.id, x: block.x, y: block.y, group: block.group ?? null }));
-    try { await onApply(preview); setUndo({ before, after: preview }); onPreview(null); }
+    try { await onApply(preview); setUndo({ before, after: preview }); setPreviewing(false); onPreview(null); setReceipt(`Saved grouping for ${preview.length} documents. You can undo this placement.`); }
     catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not place groups.'); }
     finally { setLoading(false); }
   }
@@ -125,22 +127,25 @@ export function GroupSuggestions({ canvas, hasApiKey, onOpenSettings, onApply, o
     });
     if (changed) { setError('The canvas changed since grouping. Review the current positions before undoing.'); return; }
     setLoading(true);
-    try { await onApply(undo.before); setUndo(undefined); }
+    try { await onApply(undo.before); setUndo(undefined); setReceipt(`Reverted grouping for ${undo.after.length} documents. Their previous positions and saved groups were restored.`); }
     catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not undo grouping.'); }
     finally { setLoading(false); }
   }
 
   return <aside className="group-suggestions" aria-label="Suggested groups">
-    <header><div><strong>Suggested groups</strong><small>Review before moving documents</small></div><button type="button" onClick={() => { onPreview(null); onClose(); }} aria-label="Close suggested groups">×</button></header>
+    <header><div><strong>Suggested groups</strong><small>Inferred placement · {new Set(canvas.blocks.map(block => block.group).filter(Boolean)).size} saved canvas groups</small></div><button type="button" onClick={() => { onPreview(null); onClose(); }} aria-label="Close suggested groups">×</button></header>
     <div className="group-suggestions__modes" role="tablist" aria-label="Grouping basis">
-      {([['topic', 'By topic · AI'], ['tags', 'By tags'], ['repo', 'By source repo']] as const).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={mode === value} onClick={() => { setMode(value); setOverrides({}); setReport(undefined); onPreview(null); }}>{label}</button>)}
+      {([['topic', 'By topic · AI'], ['tags', 'By tags'], ['repo', 'By source repo']] as const).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={mode === value} onClick={() => { setMode(value); setOverrides({}); setReport(undefined); setPreviewing(false); setReceipt(''); onPreview(null); }}>{label}</button>)}
     </div>
     <button type="button" className="group-suggestions__generate" onClick={() => { void generate(); }} disabled={loading}>{loading ? 'Working…' : mode === 'topic' ? 'Ask Jev for groups' : 'Preview groups'}</button>
+    <p className="group-suggestions__explanation">Proposed groups are separate from saved canvas groups. Review each document before accepting the placement.</p>
     <div className="group-suggestions__list">
       {[...grouped].map(([group, blocks]) => <section key={group}><h3>{groupLabel(group)} <span>{blocks.length}</span></h3><p>{blocks.slice(0, 3).map(block => block.title).join(' · ')}{blocks.length > 3 ? ` · +${blocks.length - 3} more` : ''}</p></section>)}
-      {ungrouped.length > 0 && <section><h3>Needs a group <span>{ungrouped.length}</span></h3><p>Where should these documents go?</p>{ungrouped.map(block => <label key={block.id}>{block.title}<select aria-label={`Group for ${block.title}`} value={overrides[block.id] ?? ''} onChange={event => setOverrides(value => ({ ...value, [block.id]: event.target.value }))}><option value="">Leave ungrouped</option>{[...grouped.keys()].map(group => <option key={group} value={group}>{groupLabel(group)}</option>)}</select></label>)}</section>}
+      {ungrouped.length > 0 && <section><h3>Needs a group <span>{ungrouped.length}</span></h3><p>Where should these documents go?</p>{ungrouped.map(block => <label key={block.id}>{block.title}<select aria-label={`Group for ${block.title}`} value={overrides[block.id] ?? ''} onChange={event => { setOverrides(value => ({ ...value, [block.id]: event.target.value })); setPreviewing(false); onPreview(null); }}><option value="">Leave ungrouped</option>{[...grouped.keys()].map(group => <option key={group} value={group}>{groupLabel(group)}</option>)}</select></label>)}</section>}
     </div>
     {error && <p className="group-suggestions__error" role="alert">{error}</p>}
-    <footer><button type="button" onClick={() => onPreview(Object.fromEntries(draft.filter(item => item.group).map(item => [item.blockId, item.group!])))} disabled={!preview.length}>Show preview on canvas</button><button type="button" onClick={() => { void apply(); }} disabled={!preview.length || loading}>Accept grouping</button>{undo && <button type="button" onClick={() => { void undoLast(); }} disabled={loading}>Undo grouping</button>}</footer>
+    {previewing && <p className="group-suggestions__receipt" role="status">Canvas preview shows the proposed group frames. {preview.length} documents would be placed. Nothing has been saved.</p>}
+    {receipt && <p className="group-suggestions__receipt" role="status">{receipt}</p>}
+    <footer><button type="button" onClick={() => { onPreview(Object.fromEntries(draft.filter(item => item.group).map(item => [item.blockId, item.group!]))); setPreviewing(true); setReceipt(''); }} disabled={!preview.length}>Show preview on canvas</button><button type="button" onClick={() => { void apply(); }} disabled={!preview.length || loading}>Accept grouping</button>{undo && <button type="button" onClick={() => { void undoLast(); }} disabled={loading}>Undo grouping</button>}</footer>
   </aside>;
 }

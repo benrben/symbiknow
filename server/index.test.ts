@@ -110,7 +110,7 @@ describe('HTTP route dispatch', () => {
     const route = '/api/canvases/product-roadmap/insights';
     expect((await request(base, route, 'POST', { query: 'launch' })).status).toBe(400);
     expect((await request(base, '/api/settings', 'PUT', { model: 'openai/gpt-4o-mini', jevApiKey: 'test-key', reviewers: 'Product, Engineering' })).status).toBe(200);
-    expect((await request(base, route, 'POST', {})).status).toBe(400);
+    expect((await request(base, route, 'POST', {})).status).toBe(200);
     expect((await request(base, route, 'POST', { query: 'x'.repeat(501) })).status).toBe(400);
     const response = await request(base, route, 'POST', { query: 'launch' });
     expect(response.status).toBe(200);

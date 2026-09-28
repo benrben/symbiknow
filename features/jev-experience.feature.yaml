@@ -1,0 +1,37 @@
+feature: Jev document experiences
+scenarios:
+  - name: A card requests focused analysis for one saved document
+    steps:
+      - given: a fresh workspace
+      - when: I configure Jev for canvas run review
+      - and: I request Jev analysis for one document card
+      - then: Jev reports only that document as analyzed
+
+  - name: Invalid targeted analysis is rejected before asking Jev
+    steps:
+      - given: a fresh workspace
+      - when: I configure Jev for canvas run review
+      - and: I request an unsupported Jev question family
+      - then: the targeted Jev request is rejected
+
+  - name: Intake preview recommends labels without saving a document
+    steps:
+      - given: a fresh workspace
+      - when: I configure Jev for canvas run review
+      - and: I preview Jev intake for a new guide
+      - then: the intake preview has provenance and has saved no document
+
+  - name: Accepted intake suggestions save with a new document in one write
+    steps:
+      - given: a fresh workspace
+      - when: I configure Jev for canvas run review
+      - and: I preview intake with a related document and known tag
+      - and: I save the document with its accepted intake suggestions
+      - then: one new document keeps its suggested labels tag and link after reloading
+
+  - name: The review inbox checks changed documents in bounded batches
+    steps:
+      - given: a fresh workspace
+      - when: I configure Jev for canvas run review
+      - and: I open the Jev review inbox
+      - then: the inbox reports checked and pending documents

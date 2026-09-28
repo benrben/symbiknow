@@ -166,6 +166,19 @@ describe('canvas storage', () => {
     expect((await store.getCanvas(canvas.id)).blocks.map(block => [block.x, block.y])).toEqual(rectangles.map(block => [block.x, block.y]));
   });
 
+  it('creates an imported document with accepted Jev labels, tags, and links in one save', async () => {
+    const store = await makeStore();
+    const added = await store.createBlock('product-roadmap', { title: 'Release notes', content: '# Release notes',
+      purpose: 'changelog', workArea: 'product', tags: ['release'], links: ['roadmap-overview'] });
+    expect(added).toMatchObject({ purpose: 'changelog', workArea: 'product', tags: ['release'], links: ['roadmap-overview'] });
+    expect((await store.getCanvas('product-roadmap')).blocks.find(block => block.id === added.id)).toMatchObject({
+      purpose: 'changelog', workArea: 'product', tags: ['release'], links: ['roadmap-overview'],
+    });
+    await expect(store.createBlock('product-roadmap', { title: 'Invalid import', links: ['missing'] }))
+      .rejects.toMatchObject({ status: 400 });
+    expect((await store.getCanvas('product-roadmap')).blocks.some(block => block.title === 'Invalid import')).toBe(false);
+  });
+
   it('updates block metadata and content, then removes its file and inbound links', async () => {
     const store = await makeStore();
     const linked = await store.createBlock('product-roadmap', { title: 'Linked notes', content: '---\ntitle: metadata\n---\n# Public finding' });
@@ -224,7 +237,25 @@ describe('canvas storage', () => {
     expect(hits[1].excerpt).toContain('API detail');
     expect(hits[1].excerpt.startsWith('…')).toBe(true);
     expect(hits[1].excerpt.endsWith('…')).toBe(true);
+    expect(hits[1].evidence).toMatchObject({ claim: 'api', passageKind: 'approximation',
+      canvasId: canvas.id, documentId: body.id, contentHash: body.contentHash,
+      navigation: { kind: 'document', canvasId: canvas.id, blockId: body.id } });
+    expect(hits[1].evidence?.passageLabel).toContain('Approximate source context');
+    expect(hits[1].evidence?.passage).toBe(hits[1].excerpt);
+    expect(Number.isFinite(Date.parse(hits[1].evidence?.checkedAt ?? ''))).toBe(true);
     expect(hits).toHaveLength(2);
+  });
+
+  it('attaches a literal, complete source line as exact search evidence', async () => {
+    const store = await makeStore();
+    const workspace = await store.createWorkspace({ name: 'Source review' });
+    const canvas = await store.createCanvas(workspace.id, { name: 'Policies' });
+    const block = await store.createBlock(canvas.id, { title: 'Retry policy', content: '# Retry policy\nPause API requests after a 429 response.\n' });
+    const hit = (await store.search('API requests')).find(result => result.blockId === block.id);
+    expect(hit?.evidence).toMatchObject({ claim: 'API requests', passage: 'Pause API requests after a 429 response.',
+      passageKind: 'exact', contentHash: block.contentHash,
+      navigation: { kind: 'document', canvasId: canvas.id, blockId: block.id } });
+    expect(hit?.evidence).not.toHaveProperty('passageLabel');
   });
 
   it('refreshes cached document bodies and canvas revisions after external edits', async () => {

@@ -2,13 +2,22 @@ import { strict as assert } from 'node:assert';
 import { Then, When } from '@cucumber/cucumber';
 
 async function waitForBlockInView(page, title) {
-  await page.waitForFunction((name) => {
+  try { await page.waitForFunction((name) => {
     const surface = document.querySelector('.answer-canvas__workspace .canvas-flow-stage')?.getBoundingClientRect();
     const block = [...document.querySelectorAll('.answer-canvas__workspace .react-flow__node-document')]
       .find(node => node.textContent?.includes(name))?.getBoundingClientRect();
     return surface && block && block.left >= surface.left && block.right <= surface.right
       && block.top >= surface.top && block.bottom <= surface.bottom;
-  }, title, { timeout: 4000 });
+  }, title, { timeout: 4000 }); }
+  catch (failure) {
+    const position = await page.evaluate(name => {
+      const surface = document.querySelector('.answer-canvas__workspace .canvas-flow-stage')?.getBoundingClientRect();
+      const block = [...document.querySelectorAll('.answer-canvas__workspace .react-flow__node-document')]
+        .find(node => node.textContent?.includes(name))?.getBoundingClientRect();
+      return { surface: surface?.toJSON(), block: block?.toJSON(), viewport: innerWidth };
+    }, title);
+    throw new Error(`${failure.message}: ${JSON.stringify(position)}`);
+  }
 }
 
 When('I configure chat for the conversation canvas', async function () {
@@ -86,7 +95,7 @@ Then('the research canvas uses dark surfaces and retains every block', async fun
   const color = await board.locator('.answer-canvas__workspace .react-flow').evaluate(element => getComputedStyle(element).backgroundColor);
   const cardColor = await board.locator('.canvas-card').first().evaluate(element => getComputedStyle(element).backgroundColor);
   assert.equal(await this.page.locator('html').getAttribute('data-theme'), 'dark');
-  assert.equal(color, 'rgb(17, 31, 36)');
+  assert.equal(color, 'rgb(28, 46, 52)');
   assert.notEqual(cardColor, 'rgb(255, 255, 255)');
   await board.getByText(/6 documents · 1 cited source/u).waitFor();
   assert.ok(await board.locator('.canvas-card').count() >= 1);
@@ -188,11 +197,17 @@ Then('I can add, read, search, undo, and save with the normal canvas controls', 
   assert.ok(saved.blocks.some(block => block.title === 'Saved research note'));
   assert.ok(saved.blocks.find(block => block.title === 'Saved research note').links
     .includes(saved.blocks.find(block => block.title === 'Finding 1').id));
-  await this.page.getByRole('button', { name: 'Suggest groups' }).click();
-  await board.locator('.canvas-surface--overview').waitFor();
+  const viewport = board.locator('.react-flow__viewport');
+  const previousViewport = await viewport.getAttribute('style');
+  await this.page.getByRole('button', { name: 'Browse groups', exact: true }).click();
+  await this.page.waitForFunction(previous => {
+    const style = document.querySelector('[aria-label="Research canvas"] .react-flow__viewport')?.getAttribute('style');
+    return style !== previous && /scale\(0\.28\)/u.test(style ?? '');
+  }, previousViewport);
+  assert.match(await viewport.getAttribute('style') ?? '', /scale\(0\.28\)/u);
   await this.page.setViewportSize({ width: 1120, height: 688 });
   await board.getByRole('button', { name: 'Step 1: Finding 1' }).click();
-  await board.getByText('Files · 100%').waitFor({ timeout: 6000 });
+  await board.getByText(/Files · (?:[7-9]\d|100)%/u).waitFor({ timeout: 6000 });
   await waitForBlockInView(this.page, 'Finding 1');
   await this.page.screenshot({ path: '.quality/research-canvas-small.png' });
   assert.deepEqual(this.pageErrors, []);

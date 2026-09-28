@@ -267,6 +267,17 @@ export function AnswerCanvas({ turns, layout, theme, edits, canUndo, historyCoun
         : <span>No matching blocks</span>}</div>}
     {latestWorking && <div className="answer-canvas__staging" role="status"><strong>Jev is selecting evidence and drawing the next answer…</strong>
       {latest.sources.map(source => <button key={sourceKey(source)} type="button" onClick={() => onOpenSource(source)}>{source.title} ↗</button>)}</div>}
+    {sources.length > 0 && <details className="answer-canvas__evidence" aria-label="Research source evidence">
+      <summary>Source context and provenance · {sources.length}</summary>
+      <p>These passages explain why documents were selected for research. Read the document to verify each answer claim.</p>
+      <ul>{sources.map(source => <li key={sourceKey(source)}>
+        <div><strong>{source.title}</strong><small>{source.canvasName} · {source.evidence?.passageKind === 'exact' ? 'Exact passage' : 'Approximate context'}</small></div>
+        <blockquote>{source.evidence?.passage ?? source.excerpt}</blockquote>
+        {source.evidence && <small>{source.evidence.claim} · Checked {new Date(source.evidence.checkedAt).toLocaleString()}
+          {source.evidence.revision ? ` · Revision ${source.evidence.revision}` : source.evidence.contentHash ? ` · Hash ${source.evidence.contentHash}` : ''}</small>}
+        <button type="button" onClick={() => onOpenSource(source)}>Read source ↗</button>
+      </li>)}</ul>
+    </details>}
     {saveError && <div className="answer-canvas__freshness" role="alert">{saveError}</div>}
     {saved && <div className="answer-canvas__saved" role="status">Saved as {saved.name}.
       <button type="button" onClick={() => onOpenSavedCanvas(saved.id, saved.name)}>Open saved canvas ↗</button></div>}

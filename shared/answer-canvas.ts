@@ -1,4 +1,5 @@
 import type { BlockKind } from './types.js';
+import type { EvidenceReference } from './evidence.js';
 
 export interface ChatViewContext {
   selectedBlockIds: string[];
@@ -42,7 +43,7 @@ export interface AnswerCanvasViewFocus {
 }
 
 export type CanvasNavigationTarget =
-  | { kind: 'document'; canvasId: string; blockId: string; title: string }
+  | { kind: 'document'; canvasId: string; blockId: string; title: string; excerpt?: string; contentHash?: string }
   | { kind: 'group'; canvasId: string; group: string; title: string };
 
 export interface AnswerSource {
@@ -53,6 +54,7 @@ export interface AnswerSource {
   excerpt: string;
   relevance: number;
   contentHash?: string;
+  evidence?: EvidenceReference;
 }
 
 export interface AnswerCanvasResult {

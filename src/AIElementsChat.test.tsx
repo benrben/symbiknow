@@ -39,6 +39,7 @@ function activityButton() {
 
 beforeEach(() => {
   window.sessionStorage.removeItem('symbiknow:chat-draft');
+  window.localStorage.removeItem('symbiknow:chat-history');
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
   Element.prototype.scrollIntoView = vi.fn();
   vi.stubGlobal('fetch', vi.fn());
@@ -46,6 +47,97 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('AI Elements agent activity', () => {
+  it('restores a completed conversation after remounting', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response('data: {"choices":[{"delta":{"content":"Saved answer."}}]}\n\ndata: [DONE]\n\n'));
+    const first = render(<AIElementsChat {...viewProps()}/>);
+    send('Keep this question');
+    expect(await screen.findByText('Saved answer.')).toBeTruthy();
+    await waitFor(() => expect(window.localStorage.getItem('symbiknow:chat-history')).toContain('Saved answer.'));
+    first.unmount();
+    render(<AIElementsChat {...viewProps()}/>);
+    expect(screen.getByText('Keep this question')).toBeTruthy();
+    expect(screen.getByText('Saved answer.')).toBeTruthy();
+  });
+  it('opens a named investigation with its messages and source navigation', async () => {
+    const canvas = { id: 'planning', name: 'Planning', workspaceId: 'team', blocks: [] };
+    const researchSnapshot = { turns: [{ id: 9, query: 'What changed?', answer: 'QA shifted.', sources: [], status: 'complete' as const }],
+      edits: { added: [], changed: {}, deleted: [], addedEdges: [], deletedEdges: [] }, layout: 'roadmap' as const };
+    const saved = { id: 'saved-1', workspaceId: 'team', canvasId: 'planning', title: 'Launch review', visibility: 'shared',
+      messages: [{ role: 'user', content: 'What changed?' }, { role: 'assistant', content: 'The QA plan changed.' }],
+      sourceRefs: [{ canvasId: 'planning', blockId: 'qa', excerpt: 'QA approval moved to Friday.' }], proposalRefs: [],
+      researchSnapshot,
+      revision: 1, createdAt: '2026-09-28T10:00:00.000Z', updatedAt: '2026-09-28T10:00:00.000Z' };
+    const onNavigate = vi.fn();
+    const onRestoreResearch = vi.fn();
+    vi.mocked(fetch).mockImplementation(async input => {
+      if (String(input) === '/api/investigations/list') return Response.json({ investigations: [{ ...saved,
+        messageCount: 2, sourceCount: 1, proposalCount: 0 }] });
+      if (String(input) === '/api/investigations/saved-1') return Response.json(saved);
+      throw new Error('Unexpected request ' + String(input));
+    });
+    render(<AIElementsChat {...viewProps()} canvas={canvas} onNavigate={onNavigate} onRestoreResearch={onRestoreResearch}/>);
+    fireEvent.click(screen.getByText('Saved investigations'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open' }));
+    expect(await screen.findByText('The QA plan changed.')).toBeTruthy();
+    expect(onRestoreResearch).toHaveBeenCalledWith(researchSnapshot);
+    fireEvent.click(screen.getByRole('button', { name: 'Open planning / qa' }));
+    expect(onNavigate).toHaveBeenCalledWith({ kind: 'document', canvasId: 'planning', blockId: 'qa',
+      title: 'qa', excerpt: 'QA approval moved to Friday.', contentHash: undefined });
+  });
+  it('reopens a saved pending proposal for before-and-after review', async () => {
+    const before: CanvasBlock = { id: 'qa', file: 'qa.md', kind: 'markdown', title: 'QA report', content: '# Before\nold detail',
+      x: 10, y: 20, width: 300, height: 200, links: [], contentHash: 'old-hash' };
+    const after = { ...before, content: '# After\nnew detail', contentHash: 'new-hash' };
+    const saved = { id: 'saved-1', workspaceId: 'team', canvasId: 'planning', title: 'Launch review', visibility: 'shared',
+      messages: [{ role: 'user', content: 'Update QA' }], sourceRefs: [], proposalRefs: [{ kind: 'chat', id: 'proposal-1', status: 'pending' }],
+      revision: 1, createdAt: '2026-09-28T10:00:00.000Z', updatedAt: '2026-09-28T10:00:00.000Z' };
+    vi.mocked(fetch).mockImplementation(async input => {
+      if (String(input) === '/api/investigations/list') return Response.json({ investigations: [{ ...saved,
+        messageCount: 1, sourceCount: 0, proposalCount: 1 }] });
+      if (String(input) === '/api/investigations/saved-1') return Response.json(saved);
+      if (String(input) === '/api/chat/proposals/proposal-1') return Response.json({ id: 'proposal-1', canvasId: 'planning', status: 'pending',
+        changes: [{ id: 'qa', type: 'edit', blockId: 'qa', title: 'QA report', before, after, expectedContentHash: 'old-hash', canApply: true }] });
+      throw new Error('Unexpected request ' + String(input));
+    });
+    render(<AIElementsChat {...viewProps()} canvas={{ id: 'planning', name: 'Planning', workspaceId: 'team', blocks: [before] }}/>);
+    fireEvent.click(screen.getByText('Saved investigations'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Review proposal in Chat' }));
+    const review = await screen.findByRole('region', { name: 'Review proposed document changes' });
+    fireEvent.click(within(review).getByText('Inspect full before and after'));
+    expect(within(review).getByText(/old detail/)).toBeTruthy();
+    expect(within(review).getByText(/new detail/)).toBeTruthy();
+    expect(within(review).getByRole('button', { name: 'Apply selected (1)' })).toBeTruthy();
+  });
+  it('reviews a full staged document change before Apply and exposes Undo after the receipt', async () => {
+    const before: CanvasBlock = { id: 'qa', file: 'qa.md', kind: 'markdown', title: 'QA report', content: '# Before\nold detail',
+      x: 10, y: 20, width: 300, height: 200, links: [], contentHash: 'old-hash' };
+    const after = { ...before, content: '# After\nnew detail', contentHash: 'new-hash' };
+    const proposal = { id: 'proposal-1', canvasId: 'planning', status: 'pending', changes: [{ id: 'change-1', type: 'edit',
+      blockId: 'qa', title: 'QA report', before, after, expectedContentHash: 'old-hash' }] };
+    const calls: string[] = [];
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      if (String(input) === '/api/chat/stream') return new Response(`data: {"choices":[{"delta":{"content":"I prepared a QA update."}}]}\n\nevent: chat_proposal\ndata: ${JSON.stringify(proposal)}\n\ndata: [DONE]\n\n`);
+      if (String(input) === '/api/canvases/planning') return Response.json({ id: 'planning', name: 'Planning', workspaceId: 'team', blocks: [before] });
+      if (String(input).endsWith('/apply')) return Response.json({ id: 'proposal-1', status: 'applied', applied: ['change-1'], skipped: [],
+        createdBlockIds: {}, documents: [{ before, after }] });
+      if (String(input).endsWith('/undo')) return Response.json({ id: 'proposal-1', status: 'reverted', reverted: ['change-1'] });
+      throw new Error(`Unexpected request ${String(input)}`);
+    });
+    render(<AIElementsChat {...viewProps()}/>);
+    send('Update the QA report');
+    const review = await screen.findByRole('region', { name: 'Review proposed document changes' });
+    expect(calls).not.toContain('/api/chat/proposals/proposal-1/apply');
+    fireEvent.click(within(review).getByText('Inspect full before and after'));
+    expect(within(review).getByText(/old detail/)).toBeTruthy();
+    expect(within(review).getByText(/new detail/)).toBeTruthy();
+    fireEvent.click(within(review).getByRole('button', { name: 'Apply selected (1)' }));
+    expect(await within(review).findByRole('button', { name: 'Undo applied changes' })).toBeTruthy();
+    expect(calls).toContain('/api/chat/proposals/proposal-1/apply');
+    fireEvent.click(within(review).getByRole('button', { name: 'Undo applied changes' }));
+    expect(await within(review).findByText(/The applied changes were reverted/)).toBeTruthy();
+  });
   it('moves Symbi through finding sources, answering, and a brief completed state', async () => {
     const stream = controlledStream();
     const onAvatarStateChange = vi.fn();
@@ -294,11 +386,25 @@ describe('AI Elements agent activity', () => {
     await act(async () => { stream.push('event: verification\ndata: {"status":"checking"}\n\n'); });
     expect(screen.getByText('Checking sources')).toBeTruthy();
     await act(async () => { stream.push('event: verification\ndata: {"status":"unsupported","score":0.3}\n\ndata: [DONE]\n\n'); });
-    await waitFor(() => expect(screen.getByRole('note').textContent).toContain('may not be in the canvas docs'));
+    await waitFor(() => expect(screen.getByRole('note').textContent).toContain('Source check needs review'));
     expect(screen.getByText('May')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Copy answer' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('The plan moved to **May**.'));
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeTruthy();
+  });
+
+  it('expands Jev claim checks and opens the source for a supported claim', async () => {
+    const stream = controlledStream();
+    const onNavigate = vi.fn();
+    vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
+    render(<AIElementsChat {...viewProps()} onNavigate={onNavigate}/>);
+    send('What changed?');
+    await act(async () => { stream.push('data: {"choices":[{"delta":{"content":"The plan moved to May."}}]}\n\n'); });
+    await act(async () => { stream.push('event: verification\ndata: {"status":"supported","score":0.9,"claims":[{"text":"The plan moved to May.","score":0.9,"supported":true,"source":{"canvasId":"planning","blockId":"roadmap","title":"Roadmap"}}],"sources":[{"canvasId":"planning","blockId":"roadmap","title":"Roadmap"}]}\n\ndata: [DONE]\n\n'); });
+    fireEvent.click(await screen.findByText('1 of 1 checked claims match sources'));
+    expect(within(document.querySelector('.ai-chat__verification-detail')!).getByText('The plan moved to May.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Roadmap' }));
+    expect(onNavigate).toHaveBeenCalledWith({ kind: 'document', canvasId: 'planning', blockId: 'roadmap', title: 'Roadmap' });
   });
 
   it('hides the verification badge when the answer has no canvas claims', async () => {
@@ -312,7 +418,7 @@ describe('AI Elements agent activity', () => {
     await act(async () => { stream.push('event: verification\ndata: {"status":"no_claims"}\n\ndata: [DONE]\n\n'); });
     await screen.findByRole('button', { name: 'Copy answer' });
     expect(screen.queryByText('Checking sources')).toBeNull();
-    expect(screen.queryByText('Matches canvas docs')).toBeNull();
+    expect(screen.queryByText(/checked claims match sources/)).toBeNull();
     expect(screen.queryByRole('note')).toBeNull();
     expect(screen.getByText('Hello!')).toBeTruthy();
   });

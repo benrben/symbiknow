@@ -1,4 +1,6 @@
 import type { AnswerCanvasResult, CanvasNavigationTarget, ChatViewContext, ResearchCanvasPatch, ResearchSurfaceChoice } from '../shared/answer-canvas';
+import type { CanvasBlock } from '../shared/types';
+import type { EvidenceReference } from '../shared/evidence';
 
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
 export type AgentStep = {
@@ -8,7 +10,20 @@ export type AgentStep = {
   message: string;
 };
 
-export type Verification = { status: 'checking' | 'supported' | 'unsupported' | 'unavailable' | 'no_claims'; score?: number };
+export type VerificationSource = { canvasId: string; blockId: string; title: string; contentHash?: string; excerpt?: string;
+  evidence?: EvidenceReference };
+export type Verification = { status: 'checking' | 'supported' | 'unsupported' | 'unavailable' | 'no_claims'; score?: number;
+  checkedClaims?: number; totalClaims?: number;
+  claims?: Array<{ text: string; score: number; supported: boolean; source?: VerificationSource }>;
+  sources?: VerificationSource[] };
+
+export type ChatProposalChange = { id: string; type: 'create' | 'edit' | 'delete' | 'move' | 'link'; blockId: string; title: string;
+  before: CanvasBlock | null; after: CanvasBlock | null; expectedContentHash: string | null; expectedStateHash?: string | null; canApply?: boolean };
+export type ChatProposal = { id: string; canvasId: string; changes: ChatProposalChange[]; status: 'pending'; expiresAt?: string };
+export type ChatProposalReceipt = { id: string; status: 'applied' | 'partial'; applied: string[];
+  skipped: Array<{ id: string; reason: string }>; createdBlockIds: Record<string, string>;
+  documents?: Array<{ id: string; before: CanvasBlock | null; after: CanvasBlock | null }> };
+export type ChatProposalUndoReceipt = { id: string; status: 'reverted' | 'partial'; reverted: string[]; skipped: Array<{ id: string; reason: string }> };
 
 type StreamOptions = {
   canvasId: string;
@@ -27,10 +42,11 @@ type StreamOptions = {
   onNavigation?: (target: CanvasNavigationTarget) => void;
   onResearchPatch?: (patch: ResearchCanvasPatch) => void;
   onPresentationChoice?: (choice: ResearchSurfaceChoice) => void;
+  onProposal?: (proposal: ChatProposal) => void;
   fetcher?: typeof fetch;
 };
 
-type Handlers = Pick<StreamOptions, 'onChunk' | 'onStep' | 'onReset' | 'onVerification' | 'onAnswerCanvas' | 'onNavigation' | 'onResearchPatch' | 'onPresentationChoice'>;
+type Handlers = Pick<StreamOptions, 'onChunk' | 'onStep' | 'onReset' | 'onVerification' | 'onAnswerCanvas' | 'onNavigation' | 'onResearchPatch' | 'onPresentationChoice' | 'onProposal'>;
 
 async function responseError(response: Response): Promise<string> {
   const payload = await response.json().catch(() => null) as { error?: string } | null;
@@ -64,7 +80,21 @@ function consumeCompletionFrame(payload: unknown, onChunk: (content: string) => 
 
 function isVerification(value: unknown): value is Verification {
   const status = (value as Partial<Verification> | null)?.status;
-  return status === 'checking' || status === 'supported' || status === 'unsupported' || status === 'unavailable' || status === 'no_claims';
+  if (status !== 'checking' && status !== 'supported' && status !== 'unsupported' && status !== 'unavailable' && status !== 'no_claims') return false;
+  const verification = value as Verification;
+  const source = (entry: VerificationSource) => typeof entry?.canvasId === 'string' && typeof entry.blockId === 'string' && typeof entry.title === 'string'
+    && (entry.contentHash === undefined || typeof entry.contentHash === 'string')
+    && (entry.excerpt === undefined || typeof entry.excerpt === 'string')
+    && (entry.evidence === undefined || (entry.evidence !== null && typeof entry.evidence.claim === 'string' && typeof entry.evidence.passage === 'string'
+      && (entry.evidence.passageKind === 'exact' || entry.evidence.passageKind === 'approximation')
+      && Number.isFinite(Date.parse(entry.evidence.checkedAt))
+      && entry.evidence.navigation?.kind === 'document' && typeof entry.evidence.navigation.blockId === 'string'));
+  return (verification.sources === undefined || (Array.isArray(verification.sources) && verification.sources.every(source)))
+    && (verification.checkedClaims === undefined || (Number.isInteger(verification.checkedClaims) && verification.checkedClaims >= 0))
+    && (verification.totalClaims === undefined || (Number.isInteger(verification.totalClaims) && verification.totalClaims >= 0))
+    && (verification.claims === undefined || (Array.isArray(verification.claims) && verification.claims.every(claim =>
+      typeof claim?.text === 'string' && typeof claim.score === 'number' && Number.isFinite(claim.score)
+      && typeof claim.supported === 'boolean' && (claim.source === undefined || source(claim.source)))));
 }
 
 function isAnswerCanvas(value: unknown): value is AnswerCanvasResult {
@@ -100,6 +130,18 @@ function isPresentationChoice(value: unknown): value is ResearchSurfaceChoice {
     && choice.options.every(option => typeof option.label === 'string' && typeof option.detail === 'string' && typeof option.prompt === 'string');
 }
 
+function isChatProposal(value: unknown): value is ChatProposal {
+  if (!value || typeof value !== 'object') return false;
+  const proposal = value as Partial<ChatProposal>;
+  return typeof proposal.id === 'string' && typeof proposal.canvasId === 'string' && proposal.status === 'pending'
+    && Array.isArray(proposal.changes) && proposal.changes.every(change => typeof change.id === 'string'
+      && ['create', 'edit', 'delete', 'move', 'link'].includes(change.type) && typeof change.blockId === 'string'
+      && typeof change.title === 'string' && (change.before === null || typeof change.before === 'object')
+      && (change.after === null || typeof change.after === 'object')
+      && (change.canApply === undefined || typeof change.canApply === 'boolean'))
+    && (proposal.expiresAt === undefined || typeof proposal.expiresAt === 'string');
+}
+
 function consumeFrame(frame: string, handlers: Handlers): boolean {
   const data = frameData(frame);
   if (data === '[DONE]') return true;
@@ -113,6 +155,7 @@ function consumeFrame(frame: string, handlers: Handlers): boolean {
   else if (event === 'canvas_navigation') { if (isNavigation(payload)) handlers.onNavigation?.(payload); }
   else if (event === 'research_canvas_patch') { if (isResearchPatch(payload)) handlers.onResearchPatch?.(payload); }
   else if (event === 'presentation_choice') { if (isPresentationChoice(payload)) handlers.onPresentationChoice?.(payload); }
+  else if (event === 'chat_proposal') { if (isChatProposal(payload)) handlers.onProposal?.(payload); }
   else if (event === 'error') throw new Error((payload as { message?: string }).message || 'The assistant stopped. Please retry.');
   else consumeCompletionFrame(payload, handlers.onChunk);
   return false;

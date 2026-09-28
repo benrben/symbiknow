@@ -7,8 +7,10 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createApiServer } from './index.js';
 import { createProjectMcpServer } from './mcp.js';
+import { CanvasStore } from './storage.js';
 
 const opened: Array<{ http: Server; dataDir: string }> = [];
+const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
   vi.unstubAllEnvs();
@@ -16,9 +18,106 @@ afterEach(async () => {
     await new Promise<void>(resolve => http.close(() => resolve()));
     await rm(dataDir, { recursive: true, force: true });
   }
+  for (const dataDir of temporaryDirectories.splice(0)) await rm(dataDir, { recursive: true, force: true });
 });
 
 describe('project MCP', () => {
+  it('validates and exposes token canvas and tool scope', async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-mcp-scope-'));
+    const store = new CanvasStore(dataDir);
+    temporaryDirectories.push(dataDir);
+    await store.init();
+    const created = await store.createMcpToken('Scoped reader', 'read', { allowedCanvasIds: ['product-roadmap'], tools: ['read_doc'] });
+    expect(created.settings.mcpTokens?.[0]).toMatchObject({ name: 'Scoped reader', access: 'read',
+      allowedCanvasIds: ['product-roadmap'], tools: ['read_doc'] });
+    expect(await store.mcpTokenIdentity(created.token)).toMatchObject({ allowedCanvasIds: ['product-roadmap'], tools: ['read_doc'] });
+    await expect(store.createMcpToken('Bad canvas', 'read', { allowedCanvasIds: ['missing'] })).rejects.toMatchObject({ status: 400 });
+    await expect(store.createMcpToken('Bad tool', 'read', { tools: ['edit_doc'] })).rejects.toMatchObject({ status: 400 });
+    await expect(store.createMcpToken('Unknown tool', 'write', { tools: ['unknown_tool'] })).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('enforces canvas scope for direct, search, cross-canvas, and workspace tools', async () => {
+    const requests: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      requests.push(url.pathname);
+      if (url.pathname === '/api/workspaces') return Response.json([{ id: 'team', name: 'Team', canvases: [
+        { id: 'canvas-a', name: 'A' }, { id: 'canvas-b', name: 'B' }] }]);
+      if (url.pathname === '/api/search') return Response.json([{ canvasId: 'canvas-a', blockId: 'a' }, { canvasId: 'canvas-b', blockId: 'b' }]);
+      return Response.json({ id: 'canvas-a', blocks: [] });
+    }) as unknown as typeof fetch;
+    const server = createProjectMcpServer('http://127.0.0.1:8787/api', fetcher, {
+      access: 'write', allowedCanvasIds: ['canvas-a'], tools: ['list_canvases', 'read_canvas', 'search_docs',
+        'connect_across_canvases', 'find_duplicates', 'run_workspace_automation'],
+    });
+    const client = new Client({ name: 'scoped-agent', version: '0.1.0' });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    try {
+      const names = (await client.listTools()).tools.map(tool => tool.name);
+      expect(names).not.toContain('edit_doc');
+      const parse = async (name: string, args: Record<string, unknown>) => {
+        const response = await client.callTool({ name, arguments: args });
+        return { response, value: response.isError ? null : JSON.parse((response.content as Array<{ text: string }>)[0].text) as unknown };
+      };
+      expect((await parse('list_canvases', {})).value).toMatchObject([{ canvases: [{ id: 'canvas-a' }] }]);
+      expect((await parse('search_docs', { query: 'plan' })).value).toEqual([{ canvasId: 'canvas-a', blockId: 'a' }]);
+      expect((await parse('read_canvas', { canvasId: 'canvas-b' })).response.isError).toBe(true);
+      expect((await parse('read_canvas', { canvasId: 'canvas-a' })).response.isError).not.toBe(true);
+      expect((await parse('connect_across_canvases', { canvasId: 'canvas-a' })).response.isError).toBe(true);
+      expect((await parse('find_duplicates', { canvasId: 'canvas-a', crossCanvas: true })).response.isError).toBe(true);
+      expect((await parse('run_workspace_automation', { workspaceId: 'team', kind: 'tidy' })).response.isError).toBe(true);
+      expect(requests).not.toContain('/api/canvases/canvas-b');
+      expect(requests).not.toContain('/api/canvases/canvas-a/cross-connections');
+      expect(requests).not.toContain('/api/workspaces/team/automations');
+    } finally { await client.close(); await server.close(); }
+  });
+
+  it('allows a scoped workspace preview only when every canvas is in scope', async () => {
+    const requests: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const route = new URL(String(input)).pathname;
+      requests.push(route);
+      return Response.json(route === '/api/workspaces' ? [{ id: 'team', canvases: [{ id: 'canvas-a' }, { id: 'canvas-b' }] }] : { changes: [] });
+    }) as unknown as typeof fetch;
+    const server = createProjectMcpServer('http://127.0.0.1:8787/api', fetcher, {
+      access: 'propose', allowedCanvasIds: ['canvas-a', 'canvas-b'], tools: ['run_workspace_automation'],
+    });
+    const client = new Client({ name: 'workspace-preview-agent', version: '0.1.0' });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    try {
+      const preview = await client.callTool({ name: 'run_workspace_automation', arguments: { workspaceId: 'team', kind: 'tidy' } });
+      expect(preview.isError).not.toBe(true);
+      const apply = await client.callTool({ name: 'run_workspace_automation', arguments: { workspaceId: 'team', kind: 'tidy', dryRun: false, actionIds: ['x'] } });
+      expect(apply.isError).toBe(true);
+      expect(requests.filter(route => route === '/api/workspaces/team/automations')).toHaveLength(1);
+    } finally { await client.close(); await server.close(); }
+  });
+  it('limits read and propose tokens to their advertised tools and blocks proposal execution', async () => {
+    const requests: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => { requests.push(String(input)); return Response.json({ ok: true }); }) as unknown as typeof fetch;
+    for (const access of ['read', 'propose'] as const) {
+      const server = createProjectMcpServer('http://127.0.0.1:8787/api', fetcher, { access });
+      const client = new Client({ name: 'limited-agent', version: '0.1.0' });
+      const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+      await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+      try {
+        const names = (await client.listTools()).tools.map(tool => tool.name);
+        expect(names).toContain('read_doc');
+        expect(names).not.toContain('edit_doc');
+        expect(names).not.toContain('create_task');
+        expect(names.includes('run_workspace_automation')).toBe(access === 'propose');
+        if (access === 'propose') {
+          const denied = await client.callTool({ name: 'run_workspace_automation', arguments: {
+            workspaceId: 'workspace-a', kind: 'tidy', dryRun: false, actionIds: ['a-1'],
+          } });
+          expect(denied.isError).toBe(true);
+        }
+      } finally { await client.close(); await server.close(); }
+    }
+    expect(requests).toEqual([]);
+  });
   it('shares the HTTP canvas with agents and supports full file transfer and branches', async () => {
     vi.stubEnv('SYMBIKNOW_ACCESS_TOKEN', 'local-access');
     vi.stubEnv('ALLTEAM_AGENT_NAME', 'Legacy agent');

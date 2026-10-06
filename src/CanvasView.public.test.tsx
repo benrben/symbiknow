@@ -151,7 +151,7 @@ describe('CanvasView public controls with its actual model and installed rendere
     fireEvent.click(node('group:custom:research/notes').querySelector('[data-canvas-group]') ?? node('group:custom:research/notes'));
     await cameraFrames(1000);
     expect(state().group).toBe('custom:research/notes');
-    expect(document.querySelector('.canvas-zoom-label')?.textContent).toBe('Files · 80%');
+    expect(document.querySelector('.canvas-zoom-label')?.textContent).toBe('Files · 100%');
     fireEvent.click(screen.getByRole('button', { name: 'Browse files' }));
     expect(screen.getByRole('region', { name: 'Notes group documents' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Show canvas' }));
@@ -183,7 +183,7 @@ describe('CanvasView public controls with its actual model and installed rendere
     await cameraFrames(1000);
     expect(state().group).toBe('__ungrouped');
     expect(document.querySelector('.canvas-breadcrumb')?.textContent).toContain('Ungrouped');
-    expect(document.querySelector('.canvas-zoom-label')?.textContent).toBe('Files · 80%');
+    expect(document.querySelector('.canvas-zoom-label')?.textContent).toBe('Files · 100%');
   });
 
   it('opens a native supergroup and returns through the supergroup breadcrumb without selecting documents', async () => {

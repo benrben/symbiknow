@@ -11,10 +11,15 @@ Then('the ordinary app is visible without Jev action controls', async function (
 });
 
 When('I open the restored chat and settings without a Tasks tab', async function () {
+  const search = this.page.getByRole('dialog', { name: 'Search documents', exact: true });
+  if (await search.isVisible()) {
+    await search.getByRole('button', { name: 'Close search', exact: true }).click();
+    await search.waitFor({ state: 'hidden' });
+  }
   if (!await this.page.getByRole('tab', { name: 'Chat', exact: true }).isVisible()) {
     await this.page.getByRole('button', { name: /^Toggle Symbi$/ }).first().click();
   }
-  await this.page.getByRole('tab', { name: 'Chat', exact: true }).waitFor();
+  await this.page.getByRole('tab', { name: 'Chat', exact: true }).waitFor({ timeout: 5000 });
   assert.equal(await this.page.getByRole('tab', { name: 'Tasks', exact: true }).count(), 0);
   await this.page.getByRole('tab', { name: 'Symbi Reflex', exact: true }).waitFor();
   assert.equal(await this.page.getByRole('tab', { name: 'Insights', exact: true }).count(), 0);

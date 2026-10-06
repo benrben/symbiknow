@@ -58,13 +58,21 @@ function resultClass(selected: boolean) { return selected ? 'canvas-search__resu
 
 function resultKind(hit: SearchHit) { return hit.kind || 'markdown'; }
 
+function cleanExcerpt(excerpt: string): string {
+  return excerpt.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/(?:\*\*|__|~~|`)/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
 function SearchResult({ hit, query, selected, stale, request, evidenceEnabled }: ResultProps) {
   return <div className={resultClass(selected)} role="option" aria-selected={selected} id={searchResultId(hit)}>
     <div className="canvas-search__result-content">
       <button type="button" className="canvas-search__result-main" onClick={() => request(hit, 'reveal')} aria-label={`Show ${hit.title} on canvas`}>
         <span className="canvas-search__result-title">{markMatch(hit.title, query)}<em>{matchLabel(hit)}</em></span>
         <span className="canvas-search__location">in {searchCanvasName(hit)}{hit.group ? ` › ${groupLabel(hit.group)}` : ''} · {resultKind(hit)}</span>
-        <span className="canvas-search__excerpt">{markMatch(hit.excerpt.replace(/\s+/g, ' ').trim(), query)}</span>
+        <span className="canvas-search__excerpt">{markMatch(cleanExcerpt(hit.excerpt), query)}</span>
       </button>
       <SearchSourceDetails hit={hit} stale={stale}/>
       {stale && <span className="canvas-search__stale-indicator">Source changed since this search</span>}

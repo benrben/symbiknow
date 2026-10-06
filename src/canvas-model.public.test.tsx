@@ -71,14 +71,14 @@ describe('canvas model public focus and layout boundaries', () => {
     let requested: { x: number; y: number; zoom: number; sequence: number } | undefined;
     ui.change({ canvasProps: current, view: false, action: model => { requested = model.pointRequest; } });
     run();
-    expect(requested).toEqual({ x: 354, y: 140, zoom: .8, sequence: 2 });
+    expect(requested).toEqual({ x: 354, y: 140, zoom: 1, sequence: 2 });
 
     ui.change({ canvasProps: current });
     await waitFor(() => {
       const viewport = instance().getViewport();
-      expect(viewport.zoom).toBeCloseTo(.8, 7);
-      expect(viewport.x).toBeCloseTo(500 - 354 * .8, 5);
-      expect(viewport.y).toBeCloseTo(400 - 140 * .8, 5);
+      expect(viewport.zoom).toBeCloseTo(1, 7);
+      expect(viewport.x).toBeCloseTo(500 - 354, 5);
+      expect(viewport.y).toBeCloseTo(400 - 140, 5);
     });
     expect(state()).toMatchObject({ group: 'custom:delivery', selected: [] });
     expect(current.onUpdateBlock).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe('canvas model public focus and layout boundaries', () => {
     expect(state()).toMatchObject({ parent: 'custom:launch', group: '' });
     ui.change({ canvasProps: current, action: model => model.openHierarchyGroup('files:custom:launch') });
     run();
-    await waitFor(() => expect(instance().getZoom()).toBe(.8));
+    await waitFor(() => expect(instance().getZoom()).toBe(1));
     expect(state()).toMatchObject({ group: 'custom:launch', selected: [] });
     ui.change({ canvasProps: { ...current, groupFocusRequest: { canvasId: 'other', group: 'custom:launch/notes', sequence: 1 } } });
     expect(state().group).toBe('custom:launch');

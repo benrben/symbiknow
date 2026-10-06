@@ -32,6 +32,7 @@ function LoginScreen({ onSignIn, theme, onToggleTheme }: { onSignIn: (token: str
 export function App() {
   const model = useAppModel();
   const [page, setPage] = useState<'canvas' | 'tasks'>(() => urlParam('view') === 'tasks' ? 'tasks' : 'canvas');
+  const [tasksAssistantOpen, setTasksAssistantOpen] = useState(false);
   const previousCanvasId = useRef(model.canvasId);
   useEffect(() => {
     if (previousCanvasId.current !== model.canvasId) setPage(urlParam('view') === 'tasks' ? 'tasks' : 'canvas');
@@ -53,12 +54,13 @@ export function App() {
   const [theme, setTheme] = useState<Theme>(preferredTheme);
   useLayoutEffect(() => { applyTheme(theme); }, [theme]);
   const toggleTheme = () => setTheme(current => current === 'dark' ? 'light' : 'dark');
+  const workspaceModel = page === 'tasks' ? { ...model, showChat: tasksAssistantOpen, setShowChat: setTasksAssistantOpen } : model;
   if (model.authRequired) return <LoginScreen onSignIn={model.signIn} theme={theme} onToggleTheme={toggleTheme}/>;
-  return <div className={appShellClass(model)}
+  return <div className={appShellClass(workspaceModel)}
     style={{ '--document-chat-width': `${model.documentAssistantWidth}px` } as CSSProperties}>
     <Sidebar model={model} page={page} onOpenTasks={openTasks} onOpenCanvas={openCanvas}/>
-    <MainColumn model={model} theme={theme} onToggleTheme={toggleTheme} page={page} onOpenCanvas={openCanvas}/>
-    <AssistantPanel model={model}/>
+    <MainColumn model={workspaceModel} theme={theme} onToggleTheme={toggleTheme} page={page} onOpenCanvas={openCanvas}/>
+    <AssistantPanel model={workspaceModel}/>
     <AppOverlays model={model}/>
 
   </div>;

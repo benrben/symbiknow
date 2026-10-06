@@ -110,7 +110,7 @@ function focusScope(modal: HTMLDivElement | null, warning: boolean) {
 function modalClass(dialog: Dialog) {
   if (dialog === 'settings') return 'modal settings-modal';
   if (dialog === 'block') return 'modal editor-modal block-modal';
-  return dialog === 'versions' ? 'modal editor-modal' : 'modal ';
+  return dialog === 'versions' ? 'modal editor-modal history-modal' : 'modal ';
 }
 
 function DirtyCloseWarning({ open, onContinue, onDiscard, onSave }: {

@@ -3,6 +3,7 @@ import { searchResultId, useCanvasSearch } from './canvas-search-model';
 import { CanvasSearchConfirmation } from './CanvasSearchConfirmation';
 import { CanvasSearchFilters } from './CanvasSearchFilters';
 import { CanvasSearchSection, CanvasSearchStatus } from './CanvasSearchResults';
+import { CanvasSearchPreview } from './CanvasSearchPreview';
 import { useEscapeLayer } from './escape-layers';
 import './canvas-search.css';
 
@@ -55,6 +56,7 @@ export function CanvasSearch(props: CanvasSearchProps) {
   useEscapeLayer(true, props.onClose);
   const activeId = model.navigation.active ? searchResultId(model.navigation.active) : undefined;
   return <aside className="canvas-search" role="dialog" aria-modal="false" aria-label="Search documents">
+    <div className="canvas-search__list">
     <SearchInput props={props} model={model}/>
     <SearchCount props={props} model={model}/>
     <CanvasSearchFilters filters={model.filters} choices={model.choices} onChange={model.changeFilter}/>
@@ -64,5 +66,8 @@ export function CanvasSearch(props: CanvasSearchProps) {
     </div>
     <p className="canvas-search__hint">↑ ↓ move · Enter show on canvas · Esc close</p>
     <SearchConfirmation model={model}/>
+    </div>
+    {model.navigation.active && <CanvasSearchPreview key={`${model.navigation.active.canvasId}:${model.navigation.active.blockId}`}
+      hit={model.navigation.active} request={model.actions.request} evidenceEnabled={Boolean(props.onOpenEvidence)}/>}
   </aside>;
 }

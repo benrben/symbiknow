@@ -1,4 +1,5 @@
-import { Background, Controls, ReactFlow, applyNodeChanges, type Node, type NodeProps, type NodeChange } from '@xyflow/react';
+import { ReactFlow, applyNodeChanges, type Node, type NodeProps, type NodeChange, type ReactFlowInstance } from '@xyflow/react';
+import { FileText, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CanvasTask, TaskStatus } from '../shared/types';
 import { api } from './api';
@@ -11,13 +12,13 @@ const columns: Array<{ status: TaskStatus; label: string }> = [
   { status: 'blocked', label: 'Blocked' },
   { status: 'done', label: 'Done' },
 ];
-const columnWidth = 330;
-const columnGap = 36;
+const columnWidth = 310;
+const columnGap = 18;
 const rowHeight = 132;
-const taskTop = 92;
+const taskTop = 86;
 
 type ColumnNode = Node<{ label: string; count: number; status: TaskStatus; showFirstTaskPrompt: boolean; onCreate: (status: TaskStatus) => void }, 'taskColumn'>;
-type TaskNode = Node<{ task: CanvasTask; onSelect: (id: string) => void }, 'taskCard'>;
+type TaskNode = Node<{ task: CanvasTask; cardWidth: number; onSelect: (id: string) => void }, 'taskCard'>;
 type BoardNode = ColumnNode | TaskNode;
 type TaskHistoryEvent = { eventId: string; kind: string; actor: string; at: string; taskId: string;
   before?: CanvasTask; after?: CanvasTask; undoOf?: string };
@@ -28,12 +29,12 @@ export function orderedTasks(tasks: CanvasTask[], status: TaskStatus): CanvasTas
     || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
 }
 
-function columnIndex(x: number): number {
-  return Math.max(0, Math.min(columns.length - 1, Math.round(x / (columnWidth + columnGap))));
+function columnIndex(x: number, width: number): number {
+  return Math.max(0, Math.min(columns.length - 1, Math.round(x / (width + columnGap))));
 }
 
-function fallbackDrop(fallback: { x: number; y: number }) {
-  return { status: columns[columnIndex(fallback.x - 18)].status,
+function fallbackDrop(fallback: { x: number; y: number }, width: number) {
+  return { status: columns[columnIndex(fallback.x - 14, width)].status,
     targetIndex: Math.max(0, Math.round((fallback.y - taskTop) / rowHeight)) };
 }
 
@@ -59,11 +60,11 @@ function insertionIndex(surface: HTMLElement, tasks: CanvasTask[], status: TaskS
 }
 
 export function dropPosition(event: MouseEvent | TouchEvent, surface: HTMLElement | null, fallback: { x: number; y: number },
-  tasks: CanvasTask[], movingId: string) {
+  tasks: CanvasTask[], movingId: string, width = columnWidth) {
   const point = 'clientX' in event ? event : event.changedTouches[0];
-  if (!point || !surface) return fallbackDrop(fallback);
+  if (!point || !surface) return fallbackDrop(fallback, width);
   const status = nearestColumn(surface, point.clientX);
-  return status === undefined ? fallbackDrop(fallback)
+  return status === undefined ? fallbackDrop(fallback, width)
     : { status, targetIndex: insertionIndex(surface, tasks, status, movingId, point.clientY) };
 }
 
@@ -89,37 +90,39 @@ async function refreshAfterTaskFailure(cause: unknown, refresh: () => Promise<vo
   catch (reloadCause) { report(`${message} Saved tasks could not be reloaded: ${(reloadCause as Error).message}`); }
 }
 
-function boardNodes(tasks: CanvasTask[], onSelect: (id: string) => void, onCreate: (status: TaskStatus) => void): BoardNode[] {
+function boardNodes(tasks: CanvasTask[], onSelect: (id: string) => void, onCreate: (status: TaskStatus) => void,
+  width: number): BoardNode[] {
   const maxCount = Math.max(0, ...columns.map(column => orderedTasks(tasks, column.status).length));
-  const height = Math.max(650, taskTop + maxCount * rowHeight + 44);
+  const height = Math.max(640, taskTop + maxCount * rowHeight + 44);
   return columns.flatMap((column, index): BoardNode[] => {
-    const x = index * (columnWidth + columnGap);
+    const x = index * (width + columnGap);
     const cards: TaskNode[] = orderedTasks(tasks, column.status).map((task, row) => ({
-      id: task.id, type: 'taskCard', position: { x: x + 18, y: taskTop + row * rowHeight },
-      data: { task, onSelect }, draggable: true, zIndex: 2,
+      id: task.id, type: 'taskCard', position: { x: x + 14, y: taskTop + row * rowHeight },
+      data: { task, cardWidth: width - 28, onSelect }, draggable: true, zIndex: 2,
     }));
     return [{ id: `column:${column.status}`, type: 'taskColumn', position: { x, y: 0 },
       data: { label: column.label, count: cards.length, status: column.status,
-        showFirstTaskPrompt: tasks.length === 0 && column.status === 'todo', onCreate },
-      style: { width: columnWidth, height }, draggable: false, selectable: true, zIndex: 0 }, ...cards];
+        showFirstTaskPrompt: cards.length === 0 && column.status === 'todo', onCreate },
+      style: { width, height }, draggable: false, selectable: true, zIndex: 0 }, ...cards];
   });
 }
 
 const TaskColumnNode = memo(function TaskColumnNode({ data }: NodeProps<ColumnNode>) {
-  return <div className="task-canvas-column canvas-group" data-task-column={data.status} aria-label={`${data.label}, ${data.count} tasks`}>
+  return <div className="task-canvas-column" data-task-column={data.status} aria-label={`${data.label}, ${data.count} tasks`}>
     <div className="task-canvas-column__heading"><span className="task-canvas-column__dot" data-status={data.status}/><strong>{data.label}</strong><span className="task-canvas-column__count">{data.count}</span>
       <button type="button" className="nodrag" aria-label={`Add task in ${data.label}`} onClick={() => data.onCreate(data.status)}>+</button></div>
-    {data.showFirstTaskPrompt && <div className="task-canvas-first-task">
-      <strong>Start with your first task</strong>
-      <p>Give your team a clear next step.</p>
-      <button type="button" className="nodrag" onClick={() => data.onCreate(data.status)}>Create first task</button>
-    </div>}
+    {data.showFirstTaskPrompt && <button type="button" className="task-canvas-first-task nodrag" aria-label="Create first task"
+      onClick={() => data.onCreate(data.status)}>
+      <FileText aria-hidden="true" size={36} strokeWidth={1.5}/>
+      <strong>No tasks in To do</strong>
+      <span>Add a task to this column</span>
+    </button>}
   </div>;
 });
 
 const TaskCardNode = memo(function TaskCardNode({ data }: NodeProps<TaskNode>) {
   const { task, onSelect } = data;
-  return <button type="button" className="task-canvas-card canvas-card" data-task-id={task.id}
+  return <button type="button" className="task-canvas-card canvas-card" data-task-id={task.id} style={{ width: data.cardWidth }}
     onClick={() => onSelect(task.id)} aria-label={`Open task ${task.title}`}>
     <span className="task-canvas-card__title">{task.title}</span>
     <span className="task-canvas-card__meta"><span>{task.assignee || 'Unassigned'}</span><span>{task.blockIds.length} linked {task.blockIds.length === 1 ? 'document' : 'documents'}</span></span>
@@ -179,14 +182,17 @@ function TaskCreator({ status, busy, onClose, onCreate }: {
   const [detail, setDetail] = useState('');
   const [chosenStatus, setChosenStatus] = useState<TaskStatus>(status);
   return <form className="task-canvas-create" role="dialog" aria-modal="true" aria-labelledby="task-create-title"
+    onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onClose(); } }}
     onSubmit={event => { event.preventDefault(); void onCreate(chosenStatus, title, detail); }}>
-    <h2 id="task-create-title">Create task</h2>
-    <label>Title<input autoFocus required maxLength={160} value={title} onChange={event => setTitle(event.target.value)}/></label>
-    <label>Status<select value={chosenStatus} onChange={event => setChosenStatus(event.target.value as TaskStatus)}>
-      {columns.map(column => <option key={column.status} value={column.status}>{column.label}</option>)}
-    </select></label>
-    <label>Details<textarea maxLength={4000} value={detail} onChange={event => setDetail(event.target.value)}/></label>
-    <div><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={busy || !title.trim()}>Create task</button></div>
+    <header><h2 id="task-create-title">New task</h2><button type="button" className="task-canvas-create__close"
+      aria-label="Close task creation" onClick={onClose}><X aria-hidden="true" size={22}/></button></header>
+    <label>Title<input autoFocus required maxLength={160} placeholder="Enter a title..." value={title} onChange={event => setTitle(event.target.value)}/></label>
+    <label>Details<textarea maxLength={4000} placeholder="Add details (optional)..." value={detail} onChange={event => setDetail(event.target.value)}/></label>
+    <label>Status<span className="task-canvas-create__status"><span className="task-canvas-column__dot" data-status={chosenStatus}/>
+      <select value={chosenStatus} onChange={event => setChosenStatus(event.target.value as TaskStatus)}>
+        {columns.map(column => <option key={column.status} value={column.status}>{column.label}</option>)}
+      </select></span></label>
+    <div className="task-canvas-create__actions"><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={busy || !title.trim()}>Create task</button></div>
   </form>;
 }
 
@@ -194,6 +200,8 @@ export function TasksCanvasBoard({ canvasId, theme, documentTitles = {}, onOpenD
   canvasId: string; theme: Theme; documentTitles?: Record<string, string>; onOpenDocument?: (blockId: string) => void;
 }) {
   const surfaceRef = useRef<HTMLElement>(null);
+  const flowRef = useRef<ReactFlowInstance<BoardNode> | null>(null);
+  const [boardColumnWidth, setBoardColumnWidth] = useState(columnWidth);
   const [tasks, setTasks] = useState<CanvasTask[]>([]);
   const [nodes, setNodes] = useState<BoardNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -229,7 +237,21 @@ export function TasksCanvasBoard({ canvasId, theme, documentTitles = {}, onOpenD
 
   const select = useCallback((id: string) => setSelectedId(id), []);
   const openCreator = useCallback((status: TaskStatus) => setCreating(status), []);
-  useEffect(() => setNodes(boardNodes(tasks, select, openCreator)), [tasks, select, openCreator]);
+  useEffect(() => {
+    const surface = surfaceRef.current!;
+    const measure = () => setBoardColumnWidth(Math.max(columnWidth,
+      Math.floor((surface.clientWidth - 64 - (columns.length - 1) * columnGap) / columns.length)));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(surface);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => setNodes(boardNodes(tasks, select, openCreator, boardColumnWidth)), [tasks, select, openCreator, boardColumnWidth]);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => void flowRef.current?.fitView({ padding: .02, maxZoom: 1, duration: 0 }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [boardColumnWidth]);
   const selected = useMemo(() => tasks.find(task => task.id === selectedId), [tasks, selectedId]);
   const save = useCallback(async (task: CanvasTask, patch: Record<string, unknown>) => {
     setBusy(true);
@@ -241,10 +263,10 @@ export function TasksCanvasBoard({ canvasId, theme, documentTitles = {}, onOpenD
       setTasks(current => current.map(item => item.id === saved.id ? saved : item));
       setError('');
     } catch (cause) {
-      setNodes(boardNodes(tasks, select, openCreator));
+      setNodes(boardNodes(tasks, select, openCreator, boardColumnWidth));
       await refreshAfterTaskFailure(cause, refresh, setError);
     } finally { setBusy(false); }
-  }, [canvasId, refresh, select, openCreator, tasks]);
+  }, [canvasId, refresh, select, openCreator, tasks, boardColumnWidth]);
   const create = useCallback(async (status: TaskStatus, title: string, detail: string) => {
     setBusy(true);
     try {
@@ -288,26 +310,25 @@ export function TasksCanvasBoard({ canvasId, theme, documentTitles = {}, onOpenD
   }, [canvasId, refresh]);
 
   return <main className="task-canvas-page">
-    <header className="task-canvas-header"><div><span className="eyebrow">CANVAS TASKS</span><h1>Tasks</h1><p>Drag cards between status columns, or use the status control in task details.</p></div>
+    <header className="task-canvas-header"><h1>Tasks</h1>
       <button type="button" className="primary-button" onClick={() => setCreating('todo')}>Add task</button></header>
     {error && <div className="task-canvas-error" role="alert">{error}<button type="button" onClick={() => setError('')}>Dismiss</button></div>}
     {loading && <p role="status">Loading tasks…</p>}
     <section ref={surfaceRef} className="task-canvas-surface canvas-surface" aria-label="Tasks canvas board">
-      <ReactFlow<BoardNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} colorMode={theme} fitView fitViewOptions={{ padding: .1, maxZoom: 1 }}
+      <ReactFlow<BoardNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} colorMode={theme} fitView fitViewOptions={{ padding: .02, maxZoom: 1 }}
+        onInit={instance => { flowRef.current = instance; }}
         minZoom={.2} maxZoom={2} panOnDrag zoomOnScroll onNodesChange={(changes: NodeChange<BoardNode>[]) => setNodes(current => applyNodeChanges(changes, current) as BoardNode[])}
         onNodeDragStop={(event, node) => {
           if (node.type !== 'taskCard') return;
           const task = tasks.find(item => item.id === node.id);
           if (!task) return;
-          const { status, targetIndex } = dropPosition(event, surfaceRef.current, node.position, tasks, task.id);
+          const { status, targetIndex } = dropPosition(event, surfaceRef.current, node.position, tasks, task.id, boardColumnWidth);
           if (status === task.status && targetIndex === orderedTasks(tasks, status).findIndex(item => item.id === task.id)) {
-            setNodes(boardNodes(tasks, select, openCreator));
+            setNodes(boardNodes(tasks, select, openCreator, boardColumnWidth));
             return;
           }
           void save(task, { status, boardOrder: nextOrder(tasks, status, targetIndex, task.id) });
         }}>
-        <Background color={theme === 'dark' ? '#2D4649' : '#D6DEDC'} gap={22} size={1.1}/>
-        <Controls position="bottom-left" showInteractive={false}/>
       </ReactFlow>
     </section>
     {selected && <TaskDetails key={selected.id} task={selected} canvasId={canvasId} busy={busy} documentTitles={documentTitles} onOpenDocument={onOpenDocument}

@@ -44,7 +44,7 @@ export interface AnswerCanvasViewFocus {
 
 export type CanvasNavigationTarget =
   | ({ kind: 'document'; canvasId: string; blockId: string; title: string; excerpt?: string; contentHash?: string;
-      origin?: 'Chat' | 'Symbi Reflex' } & EvidenceSourceRevision)
+      origin?: 'Chat' | 'Search' | 'Symbi Reflex' } & EvidenceSourceRevision)
   | { kind: 'group'; canvasId: string; group: string; title: string };
 
 export interface AnswerSource {

@@ -62,9 +62,9 @@ function packedBox(blocks: CanvasBlock[], positions: DrillPositions): Box {
 }
 
 function fittedZoom(box: Box, view: View): number {
-  // Before the surface is measured there is nothing to fit, so keep the usual reading zoom.
-  if (!view.width || !view.height) return 0.8;
-  return Math.min(0.8, Math.max(0.4, Math.min(view.width / (box.width + 96), view.height / (box.height + 160))));
+  // Keep a single document at readable size while fitting larger groups into the surface.
+  if (!view.width || !view.height) return 1;
+  return Math.min(1, Math.max(0.4, Math.min(view.width / (box.width + 96), view.height / (box.height + 160))));
 }
 
 /** Where the camera goes when entering a group: the middle of what is actually shown, zoomed to fit it. */

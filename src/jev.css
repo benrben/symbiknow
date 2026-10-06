@@ -104,3 +104,22 @@ html[data-theme=light] .jev-panel { color: var(--sk-text); background: var(--sk-
 .jev-document-progress ol { list-style: none; margin: .65rem 0 0; padding: 0; }
 .jev-document-progress li { display: flex; justify-content: space-between; gap: .75rem; padding: .28rem 0; font-size: .85rem; }
 .jev-document-progress li span:last-child { text-align: right; color: var(--text-muted, #686d78); }
+
+/* Reflex uses the same neutral cards and restrained selection as the workspace. */
+.jev-panel { background: var(--sk-surface); color: var(--sk-text); }
+.jev-panel__body { padding: 18px 20px 26px; }
+.jev-utilities { background: var(--sk-surface); border-color: var(--sk-border); }
+.jev-utilities small { color: var(--sk-muted); font-size: 13px; }
+.jev-thresholds { padding: 18px 16px 8px; border-color: var(--sk-border); background: var(--sk-surface); }
+.jev-thresholds h2 { font-size: 17px; margin: 0 0 6px; }
+.jev-thresholds > p { font-size: 12px; line-height: 1.5; }
+.jev-thresholds th, .jev-thresholds td { padding: 11px 0; border-color: var(--sk-border); }
+.jev-thresholds th { color: var(--sk-text); }
+.jev-thresholds th small { color: var(--sk-muted); font-size: 11px; line-height: 1.4; }
+.jev-panel .jev-thresholds td input { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
+.jev-panel .jev-thresholds td input:focus-visible { border-color: var(--sk-focus); }
+.jev-panel .jev-card { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
+.jev-panel .jev-card p { color: var(--sk-muted); }
+.jev-panel .jev-reset-button { width: 100%; min-height: 40px; border-color: var(--sk-muted); background: var(--sk-surface); color: var(--sk-text); }
+.jev-panel .jev-reset-button:hover:not(:disabled) { border-color: var(--sk-focus); background: var(--sk-surface-soft); }
+@media (max-width: 480px) { .jev-panel__body { padding: 12px; } }

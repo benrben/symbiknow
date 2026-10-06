@@ -1489,7 +1489,11 @@ describe('App composition', () => {
   });
 
   it('ignores stale search results and failures after the query changes', async () => {
-    const server = fixture();
+    const freshBlock: CanvasBlock = {
+      id: 'fresh', file: 'fresh.md', title: 'Fresh note', kind: 'markdown', content: '# Fresh note\nCurrent result',
+      x: 10, y: 20, width: 350, height: 250, links: [],
+    };
+    const server = fixture({ initialBlocks: [freshBlock] });
     const stale = deferred<Response>();
     const failure = deferred<Response>();
     let staleStarted = false;

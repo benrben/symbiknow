@@ -3,6 +3,7 @@ import type { CanvasBlock, CanvasDocument } from '../shared/types';
 import './browse-groups.css';
 import { groupDisplayPath } from './canvas-group-labels';
 import { useEscapeLayer } from './escape-layers';
+import { Icon } from './AppIcon';
 
 export type BrowseGroupsProps = {
   canvas: CanvasDocument | null;
@@ -41,6 +42,7 @@ export function BrowseGroups({ canvas, onOpenBlock, onClose }: BrowseGroupsProps
         : groups.map(group => <section className="browse-groups__group" key={group.key || '__ungrouped'} aria-label={group.label}>
           <h3>{group.label} <span>{group.blocks.length} {group.blocks.length === 1 ? 'document' : 'documents'}</span></h3>
           <ul>{group.blocks.map(block => <li key={block.id}><button type="button" aria-label={`Open ${block.title}`} onClick={() => onOpenBlock(block.id)}>
+            <Icon name="file" size={17}/>
             <span className="browse-groups__document-title">{block.title}</span><small aria-hidden="true">{block.kind}</small>
           </button></li>)}</ul>
         </section>)}

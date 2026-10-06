@@ -236,7 +236,7 @@ describe('hierarchy through the actual Canvas and stored documents', () => {
     await waitFor(() => expect(within(groupElement('custom:research/notes')).getByText('Notes')).toBeTruthy());
     expect(currentFlow().nodes?.map(value => value.id)).toContain('group:custom:research/benchmarks');
     await openGroup('custom:research/notes');
-    await waitFor(() => expect(instance().getZoom()).toBe(.8));
+    await waitFor(() => expect(instance().getZoom()).toBe(1));
     await screen.findByRole('button', { name: 'Read Research notes full page' });
     fireEvent.click(screen.getByRole('button', { name: 'Read Research notes full page' }));
     expect(window.location.search).toBe('?document=' + notes.id);

@@ -80,6 +80,7 @@ Then('the conversation canvas has {int} answers and one reusable source', async 
   const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
   await board.waitFor();
   await board.getByText(new RegExp(`${count * 3} documents · 1 cited source`, 'u')).waitFor();
+  await board.locator('.canvas-card').nth(2).waitFor();
   assert.ok(await board.locator('.canvas-card').count() >= 3);
   if (await board.locator('.answer-canvas__outline').getAttribute('open') === null) {
     await board.locator('.answer-canvas__outline summary').click();

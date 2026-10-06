@@ -7,9 +7,9 @@ export function preferredTheme(): Theme {
     const saved = window.localStorage.getItem(storageKey);
     if (saved === 'light' || saved === 'dark') return saved;
   } catch {
-    console.warn('Saved theme preferences cannot be read; using the system preference.');
+    console.warn('Saved theme preferences cannot be read; using the light theme.');
   }
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return 'light';
 }
 
 export function applyTheme(theme: Theme): void {

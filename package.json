@@ -45,7 +45,7 @@
     "@marp-team/marp-core": "^4.4.0",
     "@mdx-js/mdx": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
-    "@modelcontextprotocol/sdk": "^1.30.1",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@streamdown/cjk": "^1.0.3",
     "@streamdown/code": "^1.1.1",
     "@streamdown/math": "^1.0.2",
@@ -106,7 +106,8 @@
     "lodash-es": "^4.18.1",
     "katex": "0.18.2",
     "source-map-js": "1.2.2",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5",
+    "shell-quote": "1.11.0"
   },
   "main": "./dist/sdk/sdk.js",
   "types": "./dist/sdk/sdk.d.ts",

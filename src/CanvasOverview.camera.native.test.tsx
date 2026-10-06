@@ -42,7 +42,7 @@ describe('overview camera ownership while installed renderer geometry is pending
     await cameraFrames(500);
     expect(state()).toMatchObject({ pinned: false, group: 'custom:b' });
     release(); await cameraFrames(500);
-    expect(instance().getZoom()).toBeCloseTo(.8, 7);
+    expect(instance().getZoom()).toBeCloseTo(1, 7);
     const frame = instance().getNode('group:custom:b');
     if (!frame || frame.type !== 'groupFrame') throw new Error('Missing installed group frame');
     expectCenter(frame.position.x + frame.data.width / 2, frame.position.y + frame.data.height / 2);

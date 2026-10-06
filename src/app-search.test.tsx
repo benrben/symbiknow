@@ -171,7 +171,7 @@ describe('search results and recovery', () => {
     act(() => result.current.actions.openSearchEvidence(hit)); expect(result.current.state.readerId).toBe('');
     const evidence = normalizeEvidence({ claim: 'Claim', passage: 'Quoted evidence', sourceText: 'Quoted evidence', canvasId: 'delivery', documentId: 'evidence', checkedAt: '2026-10-01T00:00:00Z', contentHash: 'evidence-hash' })!;
     act(() => result.current.actions.openSearchEvidence({ ...hit, evidence }));
-    expect(result.current.state).toMatchObject({ readerId: 'evidence', canvasId: 'delivery', sourceFocus: { excerpt: 'Quoted evidence', contentHash: 'evidence-hash' } });
+    expect(result.current.state).toMatchObject({ readerId: 'evidence', canvasId: 'delivery', sourceFocus: { excerpt: 'Quoted evidence', contentHash: 'evidence-hash', origin: 'Search' } });
     expect(result.current.actions.searchCurrentContentHashes).toEqual({});
     act(() => result.current.state.setCanvas({ ...other, blocks: [{ ...other.blocks[0], contentHash: undefined }] }));
     expect(result.current.actions.searchCurrentContentHashes).toEqual({});

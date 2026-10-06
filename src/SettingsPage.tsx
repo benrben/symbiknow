@@ -65,10 +65,11 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings, onO
 
   function jump(id: SectionId) {
     window.clearTimeout(jumping.current);
-    // scrollend never fires when the section is already in place, so the pause also ends on its own.
+    // Keep the selected section active while the browser settles after the jump.
     jumping.current = window.setTimeout(() => { jumping.current = 0; }, 900);
     setActive(id);
-    document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Instant alignment avoids leaving the previous section above the footer while smooth scrolling.
+    document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 
   function update<K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) { setDraft(current => ({ ...current, [key]: value })); }

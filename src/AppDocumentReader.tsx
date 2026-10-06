@@ -65,10 +65,10 @@ function ReaderPage({ model, block: summary, sequence, index, neighbors, scrolle
     <main className="page-reader__scroll" ref={scroller}><div className="page-reader__document">
       <div className="page-reader__eyebrow">{block.kind} · {block.file}<ReaderLock block={block}/></div>
       <h1>{block.title}</h1>
+      <ReaderContent model={model} content={content}/>
       {model.canvas && <JevDocumentReview key={`${model.canvasId}:${block.id}`} workspaceId={model.canvas.workspaceId}
         canvasId={model.canvasId} blockId={block.id} contentHash={block.contentHash} groupLabels={model.canvas.groupLabels}
         onGroupChanged={model.refreshAfterVersionChange}/>}
-      <ReaderContent model={model} content={content}/>
       <ReaderRelated model={model} block={block}/><ReaderFooter model={model} {...neighbors}/>
     </div></main>
   </div>;
@@ -87,7 +87,10 @@ function leadingHeadingMatchesTitle(block: CanvasBlock): boolean {
   const body = block.content.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '');
   const firstLine = body.trimStart().split(/\r?\n/, 1)[0];
   const heading = /^#\s+(.+?)\s*#*\s*$/.exec(firstLine);
-  return Boolean(heading && heading[1].replace(/\s+/g, ' ').trim() === block.title.replace(/\s+/g, ' ').trim());
+  if (!heading) return false;
+  const headingTitle = heading[1].replace(/\s+/g, ' ').trim();
+  const documentTitle = block.title.replace(/\s+/g, ' ').trim();
+  return headingTitle === documentTitle || (documentTitle.startsWith('Atlas: ') && headingTitle === documentTitle.slice(7));
 }
 
 function ReaderPager({ model, block, sequence, index, previous, next }: ReaderProps & ReaderNeighbors & { sequence: CanvasBlock[]; index: number }) {

@@ -78,7 +78,7 @@ export function useCanvasSearch(state: AppState, navigation: CanvasNavigationAct
     if (!hit.evidence) return;
     navigateFromChat({ kind: 'document', canvasId: hit.evidence.navigation.canvasId,
       blockId: hit.evidence.navigation.blockId, title: hit.title,
-      excerpt: hit.evidence.passage, contentHash: hit.evidence.contentHash });
+      excerpt: hit.evidence.passage, contentHash: hit.evidence.contentHash, origin: 'Search' });
   }
 
   const searchCurrentContentHashes = Object.fromEntries((canvas ? [canvas] : [])

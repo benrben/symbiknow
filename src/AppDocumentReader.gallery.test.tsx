@@ -25,6 +25,8 @@ it('suppresses only a matching leading Markdown H1 in reader presentation while 
   expect(view.container.querySelector('.page-reader__document > h1')?.textContent).toBe('Release guide');
   expect(view.container.querySelector('.page-reader__content--duplicate-title .loader-markdown > h1')?.textContent).toBe('Release guide');
   expect(block.content).toBe('---\ncategory: release\n---\n# Release guide\n\nRead the checklist.');
+  view.rerender(<FullPageReader model={model({ ...block, title: 'Atlas: Release guide' })}/>);
+  expect(view.container.querySelector('.page-reader__content--duplicate-title .loader-markdown > h1')?.textContent).toBe('Release guide');
   view.rerender(<FullPageReader model={model({ ...block, content: '# Different heading\n\nRead the checklist.' })}/>);
   expect(view.container.querySelector('.page-reader__content--duplicate-title')).toBeNull();
   view.rerender(<FullPageReader model={model({ ...block, content: 'Read the checklist without a heading.' })}/>);

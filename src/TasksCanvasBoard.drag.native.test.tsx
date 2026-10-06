@@ -4,13 +4,14 @@ import { afterEach, expect, it, vi } from 'vitest';
 import type { CanvasTask } from '../shared/types';
 import { TasksCanvasBoard } from './TasksCanvasBoard';
 
-type MockNode = { id: string; type?: string; position: { x: number; y: number };
+type MockNode = { id: string; type?: string; position: { x: number; y: number }; style?: { width?: number };
   data?: { task?: CanvasTask; onSelect?: (id: string) => void } };
 
 vi.mock('@xyflow/react', () => ({
-  ReactFlow: ({ nodes, onNodeDragStop, children }: {
-    nodes: MockNode[]; onNodeDragStop: (event: TouchEvent, node: MockNode) => void; children: React.ReactNode;
-  }) => <div>{nodes.map(node => <div key={node.id}><button type="button" onClick={() =>
+  ReactFlow: ({ nodes, onNodeDragStop, children, colorMode }: {
+    nodes: MockNode[]; onNodeDragStop: (event: TouchEvent, node: MockNode) => void; children: React.ReactNode; colorMode: string;
+  }) => <div data-testid="board-color-mode" data-color-mode={colorMode}>{nodes.map(node => <div key={node.id}
+    data-x={node.position.x} data-width={node.style?.width}><button type="button" onClick={() =>
     onNodeDragStop({ changedTouches: [] } as unknown as TouchEvent, node)}>{`Drop ${node.id}`}</button>
     {node.type === 'taskCard' && node.data?.onSelect && <button type="button" onClick={() =>
       node.data?.onSelect?.(node.id)}>{`Open ${node.data.task?.title}`}</button>}</div>)}
@@ -21,12 +22,52 @@ vi.mock('@xyflow/react', () => ({
         { id: 'missing', type: 'taskCard', position: { x: 750, y: 92 } })}>Drop missing card</button>
     </>}{children}</div>,
   applyNodeChanges: (_changes: unknown, nodes: MockNode[]) => nodes,
-  Background: ({ color }: { color: string }) => <div data-testid="board-grid-color" data-color={color}/>,
-  Controls: () => null,
-  MiniMap: () => null,
 }));
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+it('focuses the task title and closes task creation with Escape', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json([])));
+  render(<TasksCanvasBoard canvasId="board" theme="light"/>);
+  fireEvent.click(screen.getByRole('button', { name: 'Add task' }));
+  const dialog = screen.getByRole('dialog', { name: 'New task' });
+  expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Title' }));
+  fireEvent.keyDown(dialog, { key: 'ArrowLeft' });
+  expect(screen.getByRole('dialog', { name: 'New task' })).toBe(dialog);
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.queryByRole('dialog', { name: 'New task' })).toBeNull();
+});
+
+it('widens all four task columns to fill a desktop canvas', async () => {
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1660);
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json([])));
+  render(<TasksCanvasBoard canvasId="board" theme="light"/>);
+  const done = await screen.findByRole('button', { name: 'Drop column:done' });
+  await waitFor(() => expect(done.parentElement?.dataset).toMatchObject({ x: '1209', width: '385' }));
+});
+
+it('remeasures task columns when the desktop canvas is resized and stops observing on unmount', async () => {
+  let width = 1660;
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => width);
+  let resize: (() => void) | undefined;
+  const disconnect = vi.fn();
+  const observe = vi.fn();
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(callback: () => void) { resize = callback; }
+    observe = observe;
+    disconnect = disconnect;
+  });
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json([])));
+  const view = render(<TasksCanvasBoard canvasId="board" theme="light"/>);
+  const done = await screen.findByRole('button', { name: 'Drop column:done' });
+  await waitFor(() => expect(done.parentElement?.dataset).toMatchObject({ x: '1209', width: '385' }));
+  expect(observe).toHaveBeenCalledWith(screen.getByRole('region', { name: 'Tasks canvas board' }));
+  width = 1420;
+  act(() => resize!());
+  await waitFor(() => expect(done.parentElement?.dataset).toMatchObject({ x: '1029', width: '325' }));
+  view.unmount();
+  expect(disconnect).toHaveBeenCalledOnce();
+});
 
 it('ignores column, missing-card, and unchanged drops, then saves a dragged task without replacing its neighbor', async () => {
   const seed = (id: string, boardOrder: number): CanvasTask => ({
@@ -46,7 +87,7 @@ it('ignores column, missing-card, and unchanged drops, then saves a dragged task
   }));
   const view = render(<TasksCanvasBoard canvasId="board" theme="light"/>);
   await screen.findByRole('button', { name: 'Drop first' });
-  expect(screen.getByTestId('board-grid-color').getAttribute('data-color')).toBe('#D6DEDC');
+  expect(screen.getByTestId('board-color-mode').getAttribute('data-color-mode')).toBe('light');
   fireEvent.click(screen.getByRole('button', { name: 'Drop column:todo' }));
   fireEvent.click(screen.getByRole('button', { name: 'Drop missing card' }));
   fireEvent.click(screen.getByRole('button', { name: 'Drop first' }));
@@ -55,7 +96,7 @@ it('ignores column, missing-card, and unchanged drops, then saves a dragged task
   await waitFor(() => expect(updates).toEqual([{ status: 'blocked', boardOrder: 0, expectedRevision: 1 }]));
   expect(screen.getByRole('button', { name: 'Drop second' })).toBeTruthy();
   view.rerender(<TasksCanvasBoard canvasId="board" theme="dark"/>);
-  expect(screen.getByTestId('board-grid-color').getAttribute('data-color')).toBe('#2D4649');
+  expect(screen.getByTestId('board-color-mode').getAttribute('data-color-mode')).toBe('dark');
 });
 
 it('shows a linked document identifier when its title is unavailable', async () => {

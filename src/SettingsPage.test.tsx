@@ -54,7 +54,7 @@ describe('settings page', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Models' }));
     expect(screen.getByRole('button', { name: 'Models' }).getAttribute('aria-current')).toBe('true');
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: 'instant', block: 'start' });
     fireEvent.scroll(scroller);
     expect(screen.getByRole('button', { name: 'Models' }).getAttribute('aria-current')).toBe('true');
     fireEvent(scroller, new Event('scrollend'));

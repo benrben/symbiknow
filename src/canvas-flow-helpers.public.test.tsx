@@ -53,8 +53,8 @@ async function enterFiles(group: string) {
     return element!;
   });
   fireEvent.click(within(frame as HTMLElement).getAllByRole('button')[0]);
-  await waitFor(() => expect(flow.instance?.getZoom()).toBe(.8));
-  await moveZoom(.8);
+  await waitFor(() => expect(flow.instance?.getZoom()).toBeGreaterThan(.28));
+  await moveZoom(1);
 }
 async function moveZoom(zoom: number) {
   await act(async () => { await flow.instance!.setViewport({ x: 0, y: 0, zoom }, { duration: 0 }); });

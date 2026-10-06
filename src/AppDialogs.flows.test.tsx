@@ -258,7 +258,7 @@ describe('reader navigation and cited context', () => {
     expect(screen.getByText('First: First passage')).toBeTruthy();
     const review = screen.getByRole('region', { name: 'Jev document decisions' });
     const documentContent = screen.getByText('First: First passage');
-    expect(review.compareDocumentPosition(documentContent) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(documentContent.compareDocumentPosition(review) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     view.unmount(); render(<FullPageReader model={current}/>);
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Source temporarily unavailable'));
     fireEvent.click(screen.getByRole('button', { name: 'Retry loading document' }));

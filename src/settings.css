@@ -200,3 +200,51 @@ html[data-theme='dark'] .settings-page .activity-health__ok { color: var(--sk-ac
   .settings-page__footer { flex-wrap: wrap; padding: 12px 18px; }
   .settings-page__footer span { flex-basis: 100%; }
 }
+
+/* Gallery settings: three provider cards across, quiet selection, and readable access controls. */
+.settings-page__nav button { min-height: 44px; font-size: 13px; }
+.settings-page__nav button.active { background: var(--sk-selected); color: var(--sk-selected-text); }
+.settings-page__nav button.active svg { color: var(--sk-link); }
+.settings-page__nav p { border-top: 1px solid var(--sk-border); padding-top: 18px; color: var(--sk-muted); line-height: 1.55; }
+.settings-page__section-heading h3 { color: var(--sk-text); font-size: 20px; }
+.settings-page__section-heading p { color: var(--sk-muted); font-size: 13px; }
+.settings-page label:not(.plugin-toggle) { color: var(--sk-text); font-size: 12px; }
+.settings-page label small { color: var(--sk-muted); }
+.settings-page :is(input, select, textarea) { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
+.settings-page :is(input, select, textarea):focus-visible { border-color: var(--sk-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sk-focus) 17%, transparent); }
+.provider-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.settings-page .provider-option { min-height: 100px; align-items: center; background: var(--sk-surface); border-color: var(--sk-border); }
+.settings-page .provider-option.is-selected { border-color: var(--sk-focus); background: var(--sk-surface); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sk-focus) 13%, transparent); }
+.settings-page .provider-option small { color: var(--sk-muted); }
+.settings-page .provider-status { color: var(--sk-muted); background: var(--sk-surface-soft); }
+.settings-page .provider-status.connected { color: var(--sk-link); background: var(--sk-selected); }
+.settings-page .connection-card { border-color: var(--sk-border); background: var(--sk-surface); }
+.settings-page .connection-card__top { color: var(--sk-text); }
+.settings-page .connection-card p { color: var(--sk-muted); }
+.settings-page .token-form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.settings-page .token-form > .primary-button { grid-column: 1; justify-self: stretch; width: 100%; min-height: 42px; margin-top: 4px; }
+.settings-page .token-scope-picker { background: var(--sk-surface); border-color: var(--sk-border); color: var(--sk-text); }
+.settings-page__footer { box-shadow: 0 -5px 18px var(--sk-shadow); }
+
+@media (min-width: 761px) and (max-width: 1120px) {
+  .provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .provider-grid, .settings-page .token-form { grid-template-columns: 1fr; }
+  .settings-page .token-form > .primary-button { grid-column: 1; }
+}
+
+/* Keep the complete access-token form visible in the desktop Settings viewport. */
+.settings-page__scroll { scroll-padding-top: 0; }
+#settings-connect { scroll-margin-top: 0; }
+#settings-connect .settings-page__section-heading p { margin-bottom: 10px; }
+#settings-connect .connection-banner { margin-bottom: 10px; padding: 12px 14px; }
+#settings-connect .connection-banner p { line-height: 1.4; }
+#settings-connect .connection-card { margin: 10px 0; padding: 14px 16px; }
+#settings-connect .connection-card p { margin: 7px 0; line-height: 1.42; }
+#settings-connect .token-form { margin: 10px 0 12px; gap: 9px 14px; }
+#settings-connect .token-form > label { gap: 5px; margin: 0; }
+#settings-connect .token-form > label :is(input, select) { padding: 8px 10px; }
+#settings-connect .token-form > .primary-button { margin-top: 1px; }
+.settings-page .primary-button:disabled { opacity: 1; color: var(--sk-text); background: #b6cfbd; border-color: #b6cfbd; }
+html[data-theme='dark'] .settings-page .primary-button:disabled { color: var(--sk-text); background: #46594c; border-color: #46594c; }

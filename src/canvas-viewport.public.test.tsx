@@ -329,8 +329,8 @@ describe('viewport gestures through the installed renderer', () => {
     const ui = render(<ReactFlowProvider><Canvas {...current} /><FlowAccess /></ReactFlowProvider>);
     await waitFor(() => expect(instance().getViewport()).toEqual({ x: 330, y: 260, zoom: 1 }));
     ui.rerender(<ReactFlowProvider><Canvas {...current} groupFocusRequest={{ canvasId: document.id, group: 'custom:launch', sequence: 1 }} /><FlowAccess /></ReactFlowProvider>);
-    await waitFor(() => expect(instance().getZoom()).toBe(.8));
-    expect(changed).toHaveBeenLastCalledWith(instance().getViewport(), ['a', 'b'], expect.objectContaining({ level: 'documents', activeGroup: 'custom:launch' }));
+    await waitFor(() => expect(instance().getZoom()).toBe(1));
+    await waitFor(() => expect(changed).toHaveBeenLastCalledWith(instance().getViewport(), ['a', 'b'], expect.objectContaining({ level: 'documents', activeGroup: 'custom:launch' })));
   });
   it('waits for a requested document to arrive and centers it with the default minimum zoom', async () => {
     const changed = vi.fn();

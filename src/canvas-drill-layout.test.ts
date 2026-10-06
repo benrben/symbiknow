@@ -53,8 +53,8 @@ describe('drillCamera', () => {
 
   it('keeps a tidy group frame, its reading zoom when unmeasured, and a floor when it is huge', () => {
     const frame = { x: 0, y: 0, width: 400, height: 320 };
-    expect(drillCamera([], 'custom:team', frame, view)).toEqual({ x: 200, y: 160, zoom: 0.8 });
-    expect(drillCamera([], 'custom:team', frame, { width: 0, height: 0 })).toMatchObject({ zoom: 0.8 });
+    expect(drillCamera([], 'custom:team', frame, view)).toEqual({ x: 200, y: 160, zoom: 1 });
+    expect(drillCamera([], 'custom:team', frame, { width: 0, height: 0 })).toMatchObject({ zoom: 1 });
     expect(drillCamera([], 'custom:team', { ...frame, width: 9000 }, view)).toMatchObject({ zoom: 0.4 });
     expect(drillCamera([], 'custom:team', undefined, view)).toBeUndefined();
   });

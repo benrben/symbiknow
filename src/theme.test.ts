@@ -14,9 +14,9 @@ afterEach(() => {
 });
 
 describe('theme preference', () => {
-  it('uses a saved choice before the system preference', () => {
+  it('starts in warm light and honors a saved choice', () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
-    expect(preferredTheme()).toBe('dark');
+    expect(preferredTheme()).toBe('light');
     window.localStorage.setItem('symbiknow.theme', 'light');
     expect(preferredTheme()).toBe('light');
     window.localStorage.setItem('symbiknow.theme', 'dark');
@@ -35,7 +35,7 @@ describe('theme preference', () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Storage blocked'); });
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage blocked'); });
-    expect(preferredTheme()).toBe('dark');
+    expect(preferredTheme()).toBe('light');
     expect(() => applyTheme('dark')).not.toThrow();
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(warning).toHaveBeenCalledWith('Theme preferences cannot be saved in this browser.');

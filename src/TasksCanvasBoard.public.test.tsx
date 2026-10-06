@@ -23,13 +23,17 @@ describe('Tasks canvas board with native task persistence', () => {
   it('renders all four empty columns and saves creation and accessible status changes on real task records', async () => {
     const fixture = await assistantFixture(undefined, false);
     const surface = await board();
-    expect([...surface.querySelectorAll('[data-task-column]')].map(node => node.getAttribute('data-task-column')))
-      .toEqual(['todo', 'in_progress', 'blocked', 'done']);
+    await waitFor(() => expect([...surface.querySelectorAll('[data-task-column]')].map(node => node.getAttribute('data-task-column')))
+      .toEqual(['todo', 'in_progress', 'blocked', 'done']));
     expect(within(surface).getByRole('button', { name: 'Create first task' })).toBeTruthy();
+    expect(document.querySelector('aside[aria-label="Symbi assistant"]')?.hasAttribute('hidden')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle Symbi' }));
+    expect(document.querySelector('aside[aria-label="Symbi assistant"]')?.hasAttribute('hidden')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle Symbi' }));
     expect(screen.getAllByRole('button', { name: 'Add task' })).toHaveLength(1);
     expect(document.querySelector('.task-canvas-create-nav')).toBeNull();
     expect(document.querySelector('.react-flow__minimap')).toBeNull();
-    fireEvent.click(within(surface).getByRole('button', { name: 'Add task in Blocked' }));
+    fireEvent.click(await within(surface).findByRole('button', { name: 'Add task in Blocked' }));
     const form = document.querySelector<HTMLFormElement>('.task-canvas-create');
     expect(form).toBeTruthy();
     expect((within(form!).getByLabelText('Status') as HTMLSelectElement).value).toBe('blocked');
@@ -37,6 +41,7 @@ describe('Tasks canvas board with native task persistence', () => {
     fireEvent.change(within(form!).getByLabelText('Title'), { target: { value: 'Restore release' } });
     fireEvent.click(within(form!).getByRole('button', { name: 'Create task' }));
     await within(surface).findByRole('button', { name: 'Open task Restore release' });
+    expect(within(surface).getByRole('button', { name: 'Create first task' })).toBeTruthy();
     let tasks = await new CanvasStore(fixture.root).listTasks('product-roadmap');
     expect(tasks).toMatchObject([{ title: 'Restore release', status: 'blocked' }]);
     fireEvent.click(within(surface).getByRole('button', { name: 'Open task Restore release' }));
@@ -47,7 +52,7 @@ describe('Tasks canvas board with native task persistence', () => {
       expect(tasks[0].status).toBe('done');
     });
     await waitFor(() => expect(within(surface).getByRole('button', { name: 'Open task Restore release' })
-      .closest('.react-flow__node')?.getAttribute('style')).toContain('1116px'));
+      .closest('.react-flow__node')?.getAttribute('style')).toContain('998px'));
     fixture.unmount();
     const { render } = await import('@testing-library/react');
     render(<App/>);
@@ -64,7 +69,7 @@ describe('Tasks canvas board with native task persistence', () => {
     expect(push).not.toHaveBeenCalled();
     push.mockRestore();
     fireEvent.click(screen.getByRole('button', { name: /^Add task$/ }));
-    const form = screen.getByRole('dialog', { name: 'Create task' });
+    const form = screen.getByRole('dialog', { name: 'New task' });
     expect((within(form).getByLabelText('Status') as HTMLSelectElement).value).toBe('todo');
     fireEvent.change(within(form).getByLabelText('Title'), { target: { value: 'Check launch' } });
     fireEvent.change(within(form).getByLabelText('Status'), { target: { value: 'in_progress' } });
@@ -115,7 +120,7 @@ describe('Tasks canvas board with native task persistence', () => {
       expect(response.isError).not.toBe(true);
     } finally { await client.close(); await mcp.close(); }
     await waitFor(() => expect(screen.getByRole('button', { name: 'Open task External task' }).closest('.react-flow__node')?.getAttribute('style'))
-      .toContain('384px'), { timeout: 5000 });
+      .toContain('342px'), { timeout: 5000 });
     rejectStatus = true;
     fireEvent.click(within(surface).getByRole('button', { name: 'Open task External task' }));
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Task status' }), 'done');
@@ -123,7 +128,7 @@ describe('Tasks canvas board with native task persistence', () => {
     expect(screen.getByRole('alert').textContent).toContain('Task revision conflict');
     expect((await store.listTasks('product-roadmap'))[0].status).toBe('in_progress');
     expect(screen.getByRole('button', { name: 'Open task External task' }).closest('.react-flow__node')?.getAttribute('style'))
-      .toContain('384px');
+      .toContain('342px');
   });
 
   it('orders many tasks by saved board order without changing their status or document positions', () => {
@@ -152,7 +157,7 @@ describe('Tasks canvas board with native task persistence', () => {
         body: JSON.stringify({ title: 'Existing task', status: 'todo', boardOrder: 2000 }) });
     });
     const surface = await board();
-    fireEvent.click(within(surface).getByRole('button', { name: 'Add task in To do' }));
+    fireEvent.click(await within(surface).findByRole('button', { name: 'Add task in To do' }));
     const form = document.querySelector<HTMLFormElement>('.task-canvas-create')!;
     fireEvent.change(within(form).getByLabelText('Title'), { target: { value: 'New task' } });
     fireEvent.click(within(form).getByRole('button', { name: 'Create task' }));
@@ -249,7 +254,7 @@ describe('Tasks canvas board with native task persistence', () => {
     await waitFor(async () => expect({ status: (await store.listTasks('product-roadmap'))[0].status,
       error: screen.queryByRole('alert')?.textContent ?? null }).toEqual({ status: 'todo', error: null }));
     await waitFor(() => expect(within(surface).getByRole('button', { name: 'Open task Review release' })
-      .closest('.react-flow__node')?.getAttribute('style')).toContain('18px'));
+      .closest('.react-flow__node')?.getAttribute('style')).toContain('14px'));
     expect(within(surface).getByRole('button', { name: 'Open task Independent review' })).toBeTruthy();
   });
 

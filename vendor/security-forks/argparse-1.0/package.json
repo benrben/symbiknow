@@ -1,0 +1,9 @@
+{
+  "name": "argparse",
+  "version": "1.0.11",
+  "description": "Local dependency fork of argparse 1.0.10 using patched sprintf-js",
+  "main": "index.js",
+  "license": "MIT",
+  "files": ["index.js", "lib", "LICENSE"],
+  "dependencies": {"sprintf-js": "^1.1.4"}
+}

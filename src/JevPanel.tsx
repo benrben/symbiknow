@@ -43,7 +43,7 @@ function AutomaticContents(props: CanvasProps) {
   if (!state) return null;
   const jobs = state.jobs.filter(job => job.request.canvasId === props.canvas.id && automaticActions.has(job.request.action));
   return <><AutomaticStatus state={state} canvas={props.canvas} jobs={jobs}/>
-    <JevDocumentProgress canvas={props.canvas} documents={props.model.progress ?? []} error={props.model.progressError}/>
+    <JevDocumentProgress canvas={props.canvas} documents={props.model.progress} error={props.model.progressError}/>
     <LazyDetails className="jev-results" title="Automatic findings and saved results" onOpenChange={props.model.setDetailsOpen}>
       {() => state.summary ? <p role="status">Loading saved findings…</p> : <SavedContents {...props} state={state} jobs={jobs}/>}
     </LazyDetails>
@@ -74,7 +74,7 @@ function unavailableReason(state: JevViewState): string {
 function AutomaticStatus({ state, canvas, jobs }: { state: JevViewState; canvas: CanvasDocument; jobs: JevJob[] }) {
   const unavailable = unavailableReason(state);
   const working = jobs.filter(job => ['queued', 'running'].includes(job.state));
-  return <section aria-label="Automatic organization status" className="jev-card"><h2>Jev works automatically</h2>
+  return <section aria-label="Automatic organization status" className="jev-card"><h2>Symbi Reflex is active</h2>
     <p>All {jevActions.length} actions run on saved documents and update their results automatically.</p>
     <p role="status">{unavailable || (working.length ? `${working.length} automatic checks in progress` : 'Watching saved documents for changes.')}</p>
     <DocumentUnderstanding state={state} canvas={canvas}/>

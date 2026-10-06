@@ -236,7 +236,7 @@ describe('infinite canvas', () => {
     ] };
     render(<Canvas canvas={canvas([linked])} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()} onSelectBlock={vi.fn()} onOpenCrossLink={onOpenCrossLink} crossLinkLabels={{ 'billing:client': 'Billing · Billing client' }}/>);
     const card = await screen.findByTestId('node-a');
-    expect(within(card).getByTitle('2 cross-canvas links').textContent).toBe('↗ 2');
+    expect(within(card).getByRole('navigation', { name: 'Relationships for Document a' }).textContent).toContain('2 relationships');
     expect(within(card).getByText('↗ Other canvas: Billing · Billing client')).toBeTruthy();
     fireEvent.click(within(card).getByRole('button', { name: 'Open related document client on canvas billing' }));
     expect(onOpenCrossLink).toHaveBeenCalledWith('billing', 'client');

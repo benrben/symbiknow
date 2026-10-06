@@ -115,10 +115,10 @@ When('I open the current canvas in a browser', async function () {
 });
 
 When('I save a new block titled {string}', async function (title) {
-  await this.page.getByRole('button', { name: /Add (your first )?block/ }).first().click();
-  const editor = this.page.getByRole('dialog', { name: 'Block editor' });
+  await this.page.getByRole('button', { name: 'Create note' }).first().click();
+  const editor = this.page.getByRole('dialog', { name: 'Document editor' });
   await editor.getByLabel('Title').fill(title);
-  await editor.getByRole('button', { name: 'Save block' }).click();
+  await editor.getByRole('button', { name: 'Save document' }).click();
   await editor.waitFor({ state: 'hidden' });
   await this.page.locator('.canvas-card__identity strong', { hasText: title }).waitFor();
 });
@@ -142,7 +142,7 @@ When('I search for {string} and choose Show on canvas', async function (title) {
 
 Then('the searched card is highlighted without opening its editor', async function () {
   await this.page.locator('.canvas-card.is-highlighted', { hasText: 'First note' }).waitFor();
-  assert.equal(await this.page.getByRole('dialog', { name: 'Block editor' }).count(), 0);
+  assert.equal(await this.page.getByRole('dialog', { name: 'Document editor' }).count(), 0);
   assert.deepEqual(this.pageErrors, []);
 });
 
@@ -469,7 +469,7 @@ Then('I can read the whole page and return to the canvas', async function () {
 
 Then('I can switch between source and a live HTML preview in the editor', async function () {
   await this.page.getByRole('button', { name: 'Edit Landing' }).click();
-  const editor = this.page.getByRole('dialog', { name: 'Block editor' });
+  const editor = this.page.getByRole('dialog', { name: 'Document editor' });
   const unsaved = '---\nformat: html\n---\n<!doctype html><html><body><h1>Unsaved preview</h1></body></html>';
   await editor.getByLabel('Markdown source').fill(unsaved);
   await editor.getByRole('button', { name: 'Preview' }).click();
@@ -490,11 +490,11 @@ Then('I can download its Markdown file and upload an edited version', async func
   assert.match(downloaded.headers.get('content-disposition'), /attachment/);
   assert.equal(await downloaded.text(), this.htmlBlock.content);
   await this.page.getByRole('button', { name: 'Edit Landing' }).click();
-  const editor = this.page.getByRole('dialog', { name: 'Block editor' });
+  const editor = this.page.getByRole('dialog', { name: 'Document editor' });
   await editor.locator('input[type=file]').setInputFiles({ name: 'Landing.md', mimeType: 'text/markdown',
     buffer: Buffer.from('# Revised from disk\n') });
   await editor.getByLabel('Markdown source').getByText('# Revised from disk').waitFor();
-  await editor.getByRole('button', { name: 'Save block' }).click();
+  await editor.getByRole('button', { name: 'Save document' }).click();
   await editor.waitFor({ state: 'hidden' });
   const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
   assert.equal(canvas.blocks.find(block => block.id === this.htmlBlock.id).content, '# Revised from disk\n');

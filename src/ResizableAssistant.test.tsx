@@ -24,11 +24,11 @@ describe('resizable assistant', () => {
     fireEvent.pointerDown(handle, { pointerId: 1, clientX: 700 });
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 600 });
     fireEvent.pointerUp(handle, { pointerId: 1 });
-    expect(window.localStorage.getItem('symbiknow.assistant.width')).toBe('600');
-    expect(screen.getByRole('complementary', { name: 'Symbi assistant' }).getAttribute('style')).toContain('600px');
+    expect(window.localStorage.getItem('symbiknow.assistant.width')).toBe('460');
+    expect(screen.getByRole('complementary', { name: 'Symbi assistant' }).getAttribute('style')).toContain('460px');
     cleanup();
     showAt(1440);
-    expect(screen.getByRole('separator', { name: 'Resize chat panel' }).getAttribute('aria-valuenow')).toBe('600');
+    expect(screen.getByRole('separator', { name: 'Resize chat panel' }).getAttribute('aria-valuenow')).toBe('460');
   });
 
   it('supports keyboard resizing and keeps the canvas visible', () => {

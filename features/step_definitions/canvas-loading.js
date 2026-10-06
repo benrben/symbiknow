@@ -136,11 +136,11 @@ Then("only that group's visible documents are requested", async function () {
 When('I read and edit the selected cold document', async function () {
   const reader = await readSelected(this, initialText);
   await reader.getByRole('button', { name: 'Edit document' }).click();
-  const editor = this.page.getByRole('dialog', { name: 'Block editor' });
+  const editor = this.page.getByRole('dialog', { name: 'Document editor' });
   await editor.waitFor({ timeout: 10_000 });
   await editor.getByLabel('Markdown source').getByText(initialText, { exact: true }).waitFor();
   await editor.getByLabel('Markdown source').fill(savedContent);
-  await editor.getByRole('button', { name: 'Save block' }).click();
+  await editor.getByRole('button', { name: 'Save document' }).click();
   await editor.waitFor({ state: 'hidden' });
 });
 

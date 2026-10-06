@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { CanvasTask } from '../shared/types';
@@ -25,9 +25,15 @@ describe('Tasks canvas board with native task persistence', () => {
     const surface = await board();
     expect([...surface.querySelectorAll('[data-task-column]')].map(node => node.getAttribute('data-task-column')))
       .toEqual(['todo', 'in_progress', 'blocked', 'done']);
+    expect(within(surface).getByRole('button', { name: 'Create first task' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Add task' })).toHaveLength(1);
+    expect(document.querySelector('.task-canvas-create-nav')).toBeNull();
+    expect(document.querySelector('.react-flow__minimap')).toBeNull();
     fireEvent.click(within(surface).getByRole('button', { name: 'Add task in Blocked' }));
     const form = document.querySelector<HTMLFormElement>('.task-canvas-create');
     expect(form).toBeTruthy();
+    expect((within(form!).getByLabelText('Status') as HTMLSelectElement).value).toBe('blocked');
+    expect(document.activeElement).toBe(within(form!).getByLabelText('Title'));
     fireEvent.change(within(form!).getByLabelText('Title'), { target: { value: 'Restore release' } });
     fireEvent.click(within(form!).getByRole('button', { name: 'Create task' }));
     await within(surface).findByRole('button', { name: 'Open task Restore release' });
@@ -45,9 +51,39 @@ describe('Tasks canvas board with native task persistence', () => {
     fixture.unmount();
     const { render } = await import('@testing-library/react');
     render(<App/>);
-    await screen.findByText('Product Roadmap', { selector: '.canvas-label h1' });
-    await board();
+    expect(await screen.findByRole('region', { name: 'Tasks canvas board' })).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Open task Restore release' })).toBeTruthy();
+  });
+
+  it('lets the global task action choose a status and restores Tasks through the URL', async () => {
+    const fixture = await assistantFixture(undefined, false);
+    await board();
+    expect(window.location.search).toContain('view=tasks');
+    const push = vi.spyOn(window.history, 'pushState');
+    fireEvent.click(screen.getByRole('button', { name: 'Open Tasks page' }));
+    expect(push).not.toHaveBeenCalled();
+    push.mockRestore();
+    fireEvent.click(screen.getByRole('button', { name: /^Add task$/ }));
+    const form = screen.getByRole('dialog', { name: 'Create task' });
+    expect((within(form).getByLabelText('Status') as HTMLSelectElement).value).toBe('todo');
+    fireEvent.change(within(form).getByLabelText('Title'), { target: { value: 'Check launch' } });
+    fireEvent.change(within(form).getByLabelText('Status'), { target: { value: 'in_progress' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Create task' }));
+    await screen.findByRole('button', { name: 'Open task Check launch' });
+    expect((await new CanvasStore(fixture.root).listTasks('product-roadmap'))[0].status).toBe('in_progress');
+    fireEvent.click(screen.getByRole('button', { name: 'Open canvas: Product Roadmap' }));
+    await screen.findByText('Product Roadmap', { selector: '.canvas-label h1' });
+    expect(window.location.search).not.toContain('view=tasks');
+    act(() => window.history.back());
+    expect(await screen.findByRole('region', { name: 'Tasks canvas board' })).toBeTruthy();
+    act(() => window.history.forward());
+    expect(await screen.findByText('Product Roadmap', { selector: '.canvas-label h1' })).toBeTruthy();
+    act(() => window.history.back());
+    expect(await screen.findByRole('region', { name: 'Tasks canvas board' })).toBeTruthy();
+    fixture.unmount();
+    const { render } = await import('@testing-library/react');
+    render(<App/>);
+    expect(await screen.findByRole('region', { name: 'Tasks canvas board' })).toBeTruthy();
   });
 
   it('reflects an external task update and rolls back a rejected board save', async () => {
@@ -330,8 +366,7 @@ describe('Tasks canvas board with native task persistence', () => {
     fixture.unmount();
     const { render } = await import('@testing-library/react');
     render(<App/>);
-    await screen.findByText('Product Roadmap', { selector: '.canvas-label h1' });
-    const reloaded = await board();
+    const reloaded = await screen.findByRole('region', { name: 'Tasks canvas board' });
     expect(await within(reloaded).findAllByRole('button', { name: /^Open task Board item/ })).toHaveLength(28);
   }, 15000);
 });

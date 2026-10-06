@@ -362,8 +362,11 @@ describe('App composition', () => {
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Make knowledge together.' })).toBeTruthy();
     expect(screen.getByText(/team and its AI agents can connect, organize, and build on it/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Add your first block' }));
-    expect(screen.getByRole('dialog', { name: 'Block editor' })).toBeTruthy();
+    const prompt = document.querySelector<HTMLElement>('.canvas-empty-prompt');
+    expect(prompt).toBeTruthy();
+    expect(within(prompt!).getByRole('button', { name: 'Upload files' })).toBeTruthy();
+    fireEvent.click(within(prompt!).getByRole('button', { name: 'Create note' }));
+    expect(screen.getByRole('dialog', { name: 'Document editor' })).toBeTruthy();
   });
 
   it('saves OpenRouter settings and reflects the connected model without revealing the key', async () => {
@@ -485,7 +488,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     fireEvent.click(await screen.findByRole('button', { name: 'Edit Guide' }));
-    const editor = screen.getByRole('dialog', { name: 'Block editor' });
+    const editor = screen.getByRole('dialog', { name: 'Document editor' });
     fireEvent.click(within(editor).getByRole('button', { name: 'Ask Symbi' }));
     const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
     await waitFor(() => expect(document.activeElement).toBe(compose));
@@ -523,7 +526,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     fireEvent.click(await screen.findByRole('button', { name: 'Edit Guide' }));
-    const editor = screen.getByRole('dialog', { name: 'Block editor' });
+    const editor = screen.getByRole('dialog', { name: 'Document editor' });
     fireEvent.click(within(editor).getByRole('button', { name: 'Ask Symbi' }));
     const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: 'Edit this document.' } });
@@ -544,7 +547,7 @@ describe('App composition', () => {
     secondReply.resolve({ message: 'Checked the guide.', changed: true });
     await waitFor(() => expect(within(editor).getByText(/The saved document changed while this editor was open/)).toBeTruthy());
     expect(editorText(editor)).toBe('# My unsaved draft');
-    expect(within(editor).getByRole('button', { name: 'Save block' }).hasAttribute('disabled')).toBe(true);
+    expect(within(editor).getByRole('button', { name: 'Save document' }).hasAttribute('disabled')).toBe(true);
     fireEvent.click(within(editor).getByRole('button', { name: 'Load saved version' }));
     expect(editorText(editor)).toBe('# New saved guide');
   });
@@ -555,8 +558,8 @@ describe('App composition', () => {
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
-    const editor = screen.getByRole('dialog', { name: 'Block editor' });
+    fireEvent.click(within(document.querySelector<HTMLElement>('.topbar')!).getByRole('button', { name: 'Create note' }));
+    const editor = screen.getByRole('dialog', { name: 'Document editor' });
     fireEvent.change(within(editor).getByLabelText('Title'), { target: { value: 'Brainstorm' } });
     expect(editorText(editor)).toContain('# Brainstorm');
     typeInEditor(editor, '# Ideas\n\nFind a path.');
@@ -564,8 +567,8 @@ describe('App composition', () => {
     expect(within(editor).getByRole('region', { name: 'Document preview' }).textContent).toContain('Find a path.');
     fireEvent.click(within(editor).getByRole('button', { name: 'Source' }));
     expect(editorText(editor)).toBe('# Ideas\n\nFind a path.');
-    fireEvent.click(within(editor).getByRole('button', { name: 'Save block' }));
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull());
+    fireEvent.click(within(editor).getByRole('button', { name: 'Save document' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull());
     expect(server.canvas.blocks).toMatchObject([{ title: 'Brainstorm', content: '# Ideas\n\nFind a path.' }]);
     await waitFor(() => expect(document.querySelector('.canvas-card.is-highlighted')).toBeTruthy());
 
@@ -574,7 +577,7 @@ describe('App composition', () => {
     fireEvent.change(within(search).getByPlaceholderText('Search every Markdown file…'), { target: { value: 'Ideas' } });
     expect(within(search).getByRole('status').textContent).toContain('Searching documents…');
     fireEvent.click(await within(search).findByRole('button', { name: 'Edit Brainstorm' }));
-    const reopened = await screen.findByRole('dialog', { name: 'Block editor' });
+    const reopened = await screen.findByRole('dialog', { name: 'Document editor' });
     expect((within(reopened).getByLabelText('Title') as HTMLInputElement).value).toBe('Brainstorm');
     await within(reopened).findByLabelText('Markdown source');
     expect(editorText(reopened)).toContain('Find a path.');
@@ -589,7 +592,7 @@ describe('App composition', () => {
     fireEvent.click(screen.getByRole('button', { name: /Search documents/ }));
     fireEvent.change(screen.getByPlaceholderText('Search every Markdown file…'), { target: { value: 'Outline' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Show Outline on canvas' }));
-    expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull();
     expect(screen.getByRole('dialog', { name: 'Search documents' })).toBeTruthy();
     await waitFor(() => expect(document.querySelector('.canvas-card.is-highlighted')).toBeTruthy());
   });
@@ -711,26 +714,26 @@ describe('App composition', () => {
     fireEvent.click(screen.getByRole('button', { name: /Search documents/ }));
     fireEvent.change(screen.getByPlaceholderText('Search every Markdown file…'), { target: { value: 'Outline' } });
     fireEvent.click(await within(screen.getByRole('dialog', { name: 'Search documents' })).findByRole('button', { name: 'Edit Outline' }));
-    const editor = await screen.findByRole('dialog', { name: 'Block editor' });
+    const editor = await screen.findByRole('dialog', { name: 'Document editor' });
     await within(editor).findByLabelText('Markdown source');
     typeInEditor(editor, '# Revised');
-    fireEvent.click(within(editor).getByRole('button', { name: 'Save block' }));
+    fireEvent.click(within(editor).getByRole('button', { name: 'Save document' }));
     await waitFor(() => expect(server.canvas.blocks[0].content).toBe('# Revised'));
 
     fireEvent.click(screen.getByRole('button', { name: /Search documents/ }));
     fireEvent.click(await within(screen.getByRole('dialog', { name: 'Search documents' })).findByRole('button', { name: 'Edit Outline' }));
-    const reopened = await screen.findByRole('dialog', { name: 'Block editor' });
+    const reopened = await screen.findByRole('dialog', { name: 'Document editor' });
     await within(reopened).findByLabelText('Markdown source');
     expect((within(reopened).getByRole('link', { name: 'Download .md' }) as HTMLAnchorElement).getAttribute('href')).toBe('/api/canvases/planning/blocks/outline/download');
     const replacement = new File(['# Edited on disk'], 'outline.md', { type: 'text/markdown' });
     Object.defineProperty(replacement, 'text', { value: async () => '# Edited on disk' });
     fireEvent.change(reopened.querySelector('input[type=file]')!, { target: { files: [replacement] } });
     await waitFor(() => expect(editorText(reopened)).toBe('# Edited on disk'));
-    fireEvent.click(within(reopened).getByRole('button', { name: 'Save block' }));
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Save document' }));
     await waitFor(() => expect(server.canvas.blocks[0].content).toBe('# Edited on disk'));
     fireEvent.click(screen.getByRole('button', { name: /Search documents/ }));
     fireEvent.click(await within(screen.getByRole('dialog', { name: 'Search documents' })).findByRole('button', { name: 'Edit Outline' }));
-    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Block editor' })).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Document editor' })).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(server.canvas.blocks).toHaveLength(0));
     expect(server.requests.some(request => request.path.endsWith('/blocks/outline') && request.method === 'DELETE')).toBe(true);
   });
@@ -849,16 +852,16 @@ describe('App composition', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Open canvas: Other' }));
         expect(await screen.findByRole('heading', { name: 'Other' })).toBeTruthy();
       } else {
-        fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
-        expect(screen.getByRole('heading', { name: 'New block' })).toBeTruthy();
+        fireEvent.click(within(document.querySelector<HTMLElement>('.topbar')!).getByRole('button', { name: 'Create note' }));
+        expect(screen.getByRole('heading', { name: 'New document' })).toBeTruthy();
         if (destination === 'a closed editor') fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
       }
       await act(async () => pending.resolve(Response.json(server.canvas)));
       if (destination === 'a new editor') {
-        expect(screen.getByRole('heading', { name: 'New block' })).toBeTruthy();
+        expect(screen.getByRole('heading', { name: 'New document' })).toBeTruthy();
         expect(screen.getByLabelText('Title')).toHaveProperty('value', 'Untitled note');
-      } else expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
-      expect(screen.queryByRole('heading', { name: 'Edit block' })).toBeNull();
+      } else expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Edit document' })).toBeNull();
     });
 
   it('restores temporary research after refresh and asks before clearing it', async () => {
@@ -947,8 +950,8 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
-    const editor = screen.getByRole('dialog', { name: 'Block editor' });
+    fireEvent.click(within(document.querySelector<HTMLElement>('.topbar')!).getByRole('button', { name: 'Create note' }));
+    const editor = screen.getByRole('dialog', { name: 'Document editor' });
     fireEvent.change(within(editor).getByLabelText('Loader'), { target: { value: 'slides' } });
     expect(editorText(editor)).toContain('# New presentation');
     typeInEditor(editor, '# Custom');
@@ -956,11 +959,11 @@ describe('App composition', () => {
     expect(editorText(editor)).toBe('# Custom');
     fireEvent.keyDown(editor, { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
-    expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Block editor' })).getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
+    fireEvent.click(within(document.querySelector<HTMLElement>('.topbar')!).getByRole('button', { name: 'Create note' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Document editor' })).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull();
 
     fireEvent.keyDown(window, { key: 'k', metaKey: true });
     expect(screen.getByRole('dialog', { name: 'Search documents' })).toBeTruthy();
@@ -1146,7 +1149,7 @@ describe('App composition', () => {
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
     const input = document.querySelector('input[type=file]') as HTMLInputElement;
     const click = vi.spyOn(input, 'click').mockImplementation(() => undefined);
-    fireEvent.click(screen.getByRole('button', { name: 'Upload files' }));
+    fireEvent.click(within(document.querySelector<HTMLElement>('.topbar')!).getByRole('button', { name: 'Upload files' }));
     expect(click).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByRole('button', { name: /Search documents/ }));
@@ -1173,7 +1176,7 @@ describe('App composition', () => {
     fireEvent.change(screen.getByPlaceholderText('Search every Markdown file…'), { target: { value: 'Deleted' } });
     fireEvent.click(await within(screen.getByRole('dialog', { name: 'Search documents' })).findByRole('button', { name: 'Edit Deleted note' }));
     expect(screen.queryByRole('dialog', { name: 'Search documents' })).toBeNull();
-    expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull();
   });
 
   it('shows an initial workspace error and allows a fresh workspace action', async () => {
@@ -1196,7 +1199,7 @@ describe('App composition', () => {
     fireEvent.change(screen.getByPlaceholderText('Search every Markdown file…'), { target: { value: 'Outline' } });
     fireEvent.click(await within(screen.getByRole('dialog', { name: 'Search documents' })).findByRole('button', { name: 'Edit Outline' }));
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Canvas unavailable');
-    expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull();
   });
 
   it('refreshes the active canvas after a WebMCP tool creates a document', async () => {
@@ -1401,10 +1404,10 @@ describe('App composition', () => {
     expect(await screen.findByRole('heading', { name: 'Second canvas' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open canvas: Planning' }));
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
-    const editor = screen.getByRole('dialog', { name: 'Block editor' });
+    fireEvent.click(within(document.querySelector<HTMLElement>('.topbar')!).getByRole('button', { name: 'Create note' }));
+    const editor = screen.getByRole('dialog', { name: 'Document editor' });
     fireEvent.change(within(editor).getByLabelText('Title'), { target: { value: 'Delayed note' } });
-    fireEvent.click(within(editor).getByRole('button', { name: 'Save block' }));
+    fireEvent.click(within(editor).getByRole('button', { name: 'Save document' }));
     await waitFor(() => expect(saveStarted).toBe(true));
     fireEvent.click(screen.getByRole('button', { name: 'Open canvas: Second canvas' }));
     expect(await screen.findByRole('heading', { name: 'Second canvas' })).toBeTruthy();
@@ -1438,10 +1441,10 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
-    const blockDialog = screen.getByRole('dialog', { name: 'Block editor' });
+    fireEvent.click(within(document.querySelector<HTMLElement>('.topbar')!).getByRole('button', { name: 'Create note' }));
+    const blockDialog = screen.getByRole('dialog', { name: 'Document editor' });
     fireEvent.change(within(blockDialog).getByLabelText('Title'), { target: { value: ' ' } });
-    fireEvent.submit(within(blockDialog).getByRole('button', { name: 'Save block' }).closest('form')!);
+    fireEvent.submit(within(blockDialog).getByRole('button', { name: 'Save document' }).closest('form')!);
     expect(server.requests.some(request => request.path.endsWith('/blocks') && request.method === 'POST')).toBe(false);
     fireEvent.click(within(blockDialog).getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }));

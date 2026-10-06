@@ -26,12 +26,12 @@ describe('canvas navigation', () => {
   it.each(['640', 'invalid', 'Infinity', '200'])('restores a valid assistant width or defaults invalid preference %s', value => {
     window.localStorage.setItem('symbiknow.assistant.document-width', value);
     const { result } = renderHook(useAppState);
-    expect(result.current.documentAssistantWidth).toBe(value === '640' ? 640 : Math.max(500, Math.round(window.innerWidth * .5)));
+    expect(result.current.documentAssistantWidth).toBe(value === '640' ? 640 : 360);
   });
   it('starts the app when browser preference storage is unavailable', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new DOMException('Storage denied', 'SecurityError'); });
     const { result } = renderHook(useAppState);
-    expect(result.current.documentAssistantWidth).toBe(Math.max(500, Math.round(window.innerWidth * .5)));
+    expect(result.current.documentAssistantWidth).toBe(360);
   });
 
   it('keeps an assistant width change usable when saving browser preferences fails', () => {

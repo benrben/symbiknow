@@ -42,7 +42,7 @@ describe('MarkdownEditor through actual App edit, native HTTP, Git and reload', 
     const block = original.blocks[0];
     const historyBefore = await new CanvasStore(fixture.root).documentHistory(original.id, block.id);
     await userEvent.click(await screen.findByRole('button', { name: 'Edit ' + block.title }));
-    const dialog = await screen.findByRole('dialog', { name: 'Block editor' });
+    const dialog = await screen.findByRole('dialog', { name: 'Document editor' });
     const initial = await installedSource(dialog);
     expect(initial.view.state.doc.toString()).toBe(block.content);
     const content = '# Persisted Unicode evidence 🚀\n\n**Reviewed אבג漢字**\n\n- [ ] Native save';
@@ -64,13 +64,13 @@ describe('MarkdownEditor through actual App edit, native HTTP, Git and reload', 
     fireEvent.keyDown(within(modes).getByRole('button', { name: 'Preview' }), { key: 'e', code: 'KeyE', ctrlKey: true });
     expect(within(modes).getByRole('button', { name: 'Source' }).getAttribute('aria-pressed')).toBe('true');
     expect((await installedSource(dialog)).view.state.doc.toString()).toBe(content);
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save block' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save document' }));
     await screen.findByText('Editor transport unavailable');
     expect((await installedSource(dialog)).view.state.doc.toString()).toBe(content);
     expect(await fixture.read(original.id)).toEqual(original);
     expect(await new CanvasStore(fixture.root).documentHistory(original.id, block.id)).toEqual(historyBefore);
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save block' }));
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save document' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull());
     const saved = await fixture.read(original.id);
     expect(saved.blocks[0].content).toBe(content);
     const restarted = new CanvasStore(fixture.root); await restarted.init();
@@ -81,7 +81,7 @@ describe('MarkdownEditor through actual App edit, native HTTP, Git and reload', 
     fixture.unmount(); render(<App />);
     await screen.findByText(saved.name, { selector: '.canvas-label h1' });
     await userEvent.click(await screen.findByRole('button', { name: 'Edit ' + block.title }));
-    const reopened = await screen.findByRole('dialog', { name: 'Block editor' });
+    const reopened = await screen.findByRole('dialog', { name: 'Document editor' });
     expect((await installedSource(reopened)).view.state.doc.toString()).toBe(content);
     fireEvent.click(within(reopened).getByRole('button', { name: 'Cancel' }));
     expect(await fixture.read(saved.id)).toEqual(saved);

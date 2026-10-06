@@ -17,7 +17,7 @@ function boundedWidth(value: number, documentMode = false) {
 }
 
 function savedWidth() {
-  return Number(window.localStorage.getItem(storageKey) ?? window.localStorage.getItem(legacyStorageKey)) || 500;
+  return Number(window.localStorage.getItem(storageKey) ?? window.localStorage.getItem(legacyStorageKey)) || 360;
 }
 
 export function ResizableAssistant({ hidden, documentWidth, onDocumentWidthChange, children }: {

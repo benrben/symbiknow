@@ -86,8 +86,11 @@ Then('the conversation canvas has {int} answers and one reusable source', async 
   }
   await board.getByRole('button', { name: `Step 1: Finding ${count}` }).click();
   await board.getByText('Files · 100%').waitFor({ timeout: 6000 });
-  await board.locator('.canvas-card__portals').first().waitFor({ timeout: 6000 });
-  assert.ok(await board.locator('.canvas-card__portals').count() >= 2);
+  const relatedCards = board.locator('.canvas-card:has(.canvas-card__relationships)');
+  await relatedCards.first().waitFor({ timeout: 6000 });
+  assert.ok(await relatedCards.count() >= 2);
+  await relatedCards.first().getByRole('button', { name: /Read .* full page/u }).focus();
+  await relatedCards.first().getByRole('navigation', { name: /Relationships for/u }).waitFor({ state: 'visible' });
   assert.ok(await board.locator('.canvas-card').filter({ hasText: 'Launch flow' }).count() >= 1);
   assert.equal(await board.getByRole('navigation', { name: 'Research questions' }).getByRole('button').count(), count > 1 ? count : 0);
   await board.locator('.loader-mermaid svg').first().waitFor({ timeout: 10000 });
@@ -123,7 +126,7 @@ Then('the research canvas uses dark surfaces and retains every block', async fun
   const color = await board.locator('.answer-canvas__workspace .react-flow').evaluate(element => getComputedStyle(element).backgroundColor);
   const cardColor = await board.locator('.canvas-card').first().evaluate(element => getComputedStyle(element).backgroundColor);
   assert.equal(await this.page.locator('html').getAttribute('data-theme'), 'dark');
-  assert.equal(color, 'rgb(28, 46, 52)');
+  assert.equal(color, 'rgb(32, 37, 36)');
   assert.notEqual(cardColor, 'rgb(255, 255, 255)');
   await board.getByText(/6 documents · 1 cited source/u).waitFor();
   assert.ok(await board.locator('.canvas-card').count() >= 1);
@@ -172,11 +175,11 @@ Then('I can add, read, search, undo, and save with the normal canvas controls', 
   const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
   await board.locator('.canvas-surface').waitFor();
   assert.equal(await board.locator('.canvas-surface .react-flow__minimap').count(), 1);
-  await this.page.getByRole('button', { name: 'Add block', exact: true }).click();
-  const editor = this.page.getByRole('dialog', { name: 'Block editor' });
+  await this.page.getByRole('button', { name: 'Create note', exact: true }).click();
+  const editor = this.page.getByRole('dialog', { name: 'Document editor' });
   await editor.waitFor();
   await editor.getByLabel('Title').fill('My field note');
-  await editor.getByRole('button', { name: 'Save block' }).click();
+  await editor.getByRole('button', { name: 'Save document' }).click();
   await board.getByText(/4 documents · 1 cited source/u).waitFor();
   await board.getByRole('button', { name: 'Read My field note full page' }).waitFor();
   const original = await fetch(`${this.baseUrl}/api/canvases/${this.canvasId}`).then(response => response.json());
@@ -188,7 +191,7 @@ Then('I can add, read, search, undo, and save with the normal canvas controls', 
   await reader.getByRole('button', { name: 'Back to canvas' }).click();
   await board.getByRole('button', { name: 'Edit My field note' }).click();
   await editor.getByLabel('Title').fill('Edited field note');
-  await editor.getByRole('button', { name: 'Save block' }).click();
+  await editor.getByRole('button', { name: 'Save document' }).click();
   await board.getByRole('button', { name: 'Read Edited field note full page' }).waitFor();
 
   await this.page.getByRole('button', { name: 'Search documents' }).click();
@@ -209,9 +212,9 @@ Then('I can add, read, search, undo, and save with the normal canvas controls', 
   await board.getByText(/4 documents · 1 cited source/u).waitFor();
   await board.getByRole('button', { name: 'Undo', exact: true }).click();
   await board.getByText(/3 documents · 1 cited source/u).waitFor();
-  await this.page.getByRole('button', { name: 'Add block', exact: true }).click();
+  await this.page.getByRole('button', { name: 'Create note', exact: true }).click();
   await editor.getByLabel('Title').fill('Saved research note');
-  await editor.getByRole('button', { name: 'Save block' }).click();
+  await editor.getByRole('button', { name: 'Save document' }).click();
   await board.getByText(/4 documents · 1 cited source/u).waitFor();
   await board.locator('.canvas-card').filter({ hasText: 'Saved research note' }).click();
   const inspector = board.getByRole('complementary', { name: 'Selection inspector' });

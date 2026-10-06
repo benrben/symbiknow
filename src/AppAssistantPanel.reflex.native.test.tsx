@@ -75,7 +75,7 @@ it('keeps automatic organization available when its initial canvas-source refres
   failSources = true;
   fireEvent.click(screen.getByRole('tab', { name: 'Symbi Reflex' }));
   await screen.findByText('Saved source read temporarily unavailable');
-  expect(await screen.findByRole('heading', { name: 'Jev works automatically' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Symbi Reflex is active' })).toBeTruthy();
   failSources = false; const beforeRetry = sourceReads;
   fireEvent.click(screen.getByRole('tab', { name: 'Chat' }));
   fireEvent.click(screen.getByRole('tab', { name: 'Symbi Reflex' }));

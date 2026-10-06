@@ -139,7 +139,7 @@ describe('document editor', () => {
 
   it('edits source, loader and title, switches views and routes preview changes and errors', () => {
     const setError = vi.fn(); render(<EditorHarness initial={{ title: '', content: 'Draft', kind: 'markdown' }} overrides={{ setError, canvas: null }}/>);
-    expect(screen.getByRole('heading', { name: 'New block' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'New document' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'split' }));
     expect(screen.getByRole('region', { name: 'Document preview' }).textContent).toContain('Untitled: Draft');
@@ -160,11 +160,11 @@ describe('document editor', () => {
 
   it('keeps a newer saved revision safe until the user explicitly loads it', () => {
     render(<EditorHarness initial={{ id: 'one', title: 'Old draft', kind: 'markdown', content: 'old', contentHash: 'old' }}/>);
-    expect((screen.getByRole('button', { name: 'Save block' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Save document' }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Load saved version' }));
     expect((screen.getByRole('textbox', { name: 'Title' }) as HTMLInputElement).value).toBe('First');
     expect((screen.getByRole('textbox', { name: 'Markdown source' }) as HTMLTextAreaElement).value).toBe(first.content);
-    expect((screen.getByRole('button', { name: 'Save block' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: 'Save document' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('shows another editor lock with optional notes and routes take-over and delete actions', () => {
@@ -191,7 +191,7 @@ describe('document editor', () => {
     const file = new File(['edited'], 'one.md', { type: 'text/markdown' }); fireEvent.change(upload, { target: { files: [file] } });
     expect(importEditedFile).toHaveBeenCalledWith(file);
     expect((screen.getByRole('button', { name: 'Loading file…' }) as HTMLButtonElement).disabled).toBe(true);
-    await act(async () => resolve()); expect((screen.getByRole('button', { name: 'Save block' }) as HTMLButtonElement).disabled).toBe(false);
+    await act(async () => resolve()); expect((screen.getByRole('button', { name: 'Save document' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('explains website preview before saving and after source changes', () => {

@@ -93,13 +93,13 @@ describe('protected App through the native session API', () => {
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'That access token is not correct');
     fireEvent.change(input, { target: { value: token } }); fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     await screen.findByRole('heading', { name: 'Product Roadmap' });
-    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
+    fireEvent.click(document.querySelector<HTMLButtonElement>('.topbar button[aria-label="Create note"]')!);
     const title = await screen.findByLabelText('Title'); fireEvent.change(title, { target: { value: 'Protected saved note' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save block' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save document' }));
       expect((await savedBlock).status).toBe(201);
     });
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Save block' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Save document' })).toBeNull());
     const reopened = new CanvasStore(root); await reopened.init();
     expect((await reopened.getCanvas('product-roadmap')).blocks.find(block => block.title === 'Protected saved note')?.content).toContain('Start writing here.');
     app.unmount(); render(<App/>); await screen.findByRole('heading', { name: 'Product Roadmap' });
@@ -129,21 +129,21 @@ describe('protected App through the native session API', () => {
     fireEvent.change(screen.getByLabelText('Access token'), { target: { value: token } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     await screen.findByRole('heading', { name: 'Product Roadmap' });
-    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
+    fireEvent.click(document.querySelector<HTMLButtonElement>('.topbar button[aria-label="Create note"]')!);
     fireEvent.change(await screen.findByLabelText('Title'), { target: { value: 'Pending protected note' } });
     let saved!: Awaited<typeof savedBlock>;
     try {
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save block' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save document' }));
         saved = await savedBlock;
       });
       expect(saved.status).toBe(201);
-      expect(screen.getByRole('button', { name: 'Save block' })).toHaveProperty('disabled', true);
-      expect(screen.getByRole('dialog', { name: 'Block editor' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Save document' })).toHaveProperty('disabled', true);
+      expect(screen.getByRole('dialog', { name: 'Document editor' })).toBeTruthy();
       const reopened = new CanvasStore(root); await reopened.init();
       expect(await reopened.getCanvasBlock('product-roadmap', saved.block.id)).toMatchObject({ title: 'Pending protected note', content: saved.block.content });
     } finally { await act(async () => release()); }
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Save block' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Save document' })).toBeNull());
     expect(await screen.findByRole('button', { name: 'Edit Pending protected note' })).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });

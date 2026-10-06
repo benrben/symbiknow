@@ -11,7 +11,7 @@ export type AssistantView = 'chat' | 'reflex';
 export type ResearchActionRequest = { kind: 'add' | 'search' | 'groups' | 'upload'; sequence: number; files?: File[] };
 
 function initialDocumentAssistantWidth() {
-  const fallback = Math.max(500, Math.round(window.innerWidth * .5));
+  const fallback = 360;
   try {
     const saved = Number(window.localStorage.getItem('symbiknow.assistant.document-width'));
     return Number.isFinite(saved) && saved >= 320 ? saved : fallback;

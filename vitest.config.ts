@@ -4,7 +4,9 @@ import viteConfig from './vite.config.js';
 const nativePersistenceTests = [
   'server/jev/runtime-admission-drain.native.test.ts',
   'server/jev/runtime-scheduler.native.test.ts',
+  'server/storage-tasks.public.test.ts',
   'src/research-edits.public.test.tsx',
+  'src/SavedInvestigations.public.test.tsx',
 ];
 
 export default mergeConfig(viteConfig, defineConfig({

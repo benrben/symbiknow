@@ -195,7 +195,8 @@ describe('saved investigation public persistence', () => {
     await expand();
     await openFirst();
     expect(screen.getByLabelText('Restored research').textContent).toBe('roadmap:Beta testing remains.');
-    expect(JSON.parse(window.localStorage.getItem('symbiknow:research-session') ?? 'null')).toMatchObject({ turns: snapshot.turns });
+    await waitFor(() => expect(JSON.parse(window.localStorage.getItem('symbiknow:research-session') ?? 'null'))
+      .toMatchObject({ turns: snapshot.turns }));
     name('Renamed launch evidence');
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await saveFinished('Saved Renamed launch evidence (private).');

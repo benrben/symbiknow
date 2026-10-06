@@ -59,14 +59,14 @@ describe('dialog API validation and recovery', () => {
   it('keeps failed saves visible inside the editor, retries, and reads the persisted revision back', async () => {
     const fixture = server(); vi.stubGlobal('fetch', vi.fn(fixture.fetchResponse)); render(<Harness/>);
     await screen.findByRole('heading', { name: 'Docs' }); fireEvent.click(screen.getByRole('button', { name: 'Edit saved note' }));
-    const dialog = screen.getByRole('dialog', { name: 'Block editor' });
+    const dialog = screen.getByRole('dialog', { name: 'Document editor' });
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Title' }), { target: { value: '  Revised note  ' } });
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Markdown source' }), { target: { value: 'Revised persisted content' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save block' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save document' }));
     expect((await within(dialog).findByRole('alert')).textContent).toContain('Saved content is unchanged. Retry saving.');
     expect(fixture.saved.title).toBe('Saved note'); expect(fixture.saved.content).toBe('Saved content');
-    expect((within(dialog).getByRole('button', { name: 'Save block' }) as HTMLButtonElement).disabled).toBe(false);
-    const readsBefore = fixture.reads.length; fireEvent.click(within(dialog).getByRole('button', { name: 'Save block' }));
+    expect((within(dialog).getByRole('button', { name: 'Save document' }) as HTMLButtonElement).disabled).toBe(false);
+    const readsBefore = fixture.reads.length; fireEvent.click(within(dialog).getByRole('button', { name: 'Save document' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByLabelText('Saved documents').textContent).toBe('Revised note: Revised persisted content');
     expect(fixture.writes.at(-1)).toEqual({ path: '/api/canvases/docs/blocks/doc', payload: { title: 'Revised note', content: 'Revised persisted content', kind: 'markdown', expectedContentHash: 'original' } });
@@ -92,7 +92,7 @@ describe('dialog API validation and recovery', () => {
   it('recovers from an edited-file read failure without replacing the draft and accepts a corrected file', async () => {
     const fixture = server(); vi.stubGlobal('fetch', vi.fn(fixture.fetchResponse)); render(<Harness/>);
     await screen.findByRole('heading', { name: 'Docs' }); fireEvent.click(screen.getByRole('button', { name: 'Edit saved note' }));
-    const dialog = screen.getByRole('dialog', { name: 'Block editor' }); const input = within(dialog).getByLabelText('Upload edited file');
+    const dialog = screen.getByRole('dialog', { name: 'Document editor' }); const input = within(dialog).getByLabelText('Upload edited file');
     const broken = new File(['broken'], 'edited.md'); Object.defineProperty(broken, 'text', { value: async () => { throw new Error('File could not be read'); } });
     fireEvent.change(input, { target: { files: [broken] } }); expect((await within(dialog).findByRole('alert')).textContent).toBe('File could not be read');
     expect((within(dialog).getByRole('textbox', { name: 'Markdown source' }) as HTMLTextAreaElement).value).toBe('Saved content');
@@ -100,7 +100,7 @@ describe('dialog API validation and recovery', () => {
     fireEvent.change(input, { target: { files: [fixed] } });
     await waitFor(() => expect((within(dialog).getByRole('textbox', { name: 'Markdown source' }) as HTMLTextAreaElement).value).toBe('Corrected local content'));
     expect(within(dialog).queryByRole('alert')).toBeNull();
-    expect((within(dialog).getByRole('button', { name: 'Save block' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((within(dialog).getByRole('button', { name: 'Save document' }) as HTMLButtonElement).disabled).toBe(false);
     expect(fixture.writes).toHaveLength(0); expect(fixture.saved.content).toBe('Saved content');
   });
 });

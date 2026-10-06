@@ -4,16 +4,26 @@
 .jev-panel button, .jev-panel input, .jev-panel textarea, .jev-panel select { font: inherit; color: inherit; border: 1px solid #8885; border-radius: 6px; background: transparent; padding: 7px; }.jev-panel button { cursor: pointer; }.jev-panel button:disabled { opacity: .45; cursor: default; }.jev-panel button:focus-visible { outline: 2px solid #599fe8; outline-offset: 2px; }
 .jev-panel label { display: block; font-size: 13px; margin: 10px 0; }.jev-panel label > input:not([type=checkbox]), .jev-panel textarea, .jev-panel select { display: block; width: 100%; margin-top: 5px; }.jev-panel input[type=checkbox] { margin-right: 8px; }.jev-panel textarea { resize: vertical; }
 .jev-card { display: grid; gap: 8px; padding: 12px; margin: 12px 0; border: 1px solid #8883; border-radius: 10px; }.jev-card > span, .jev-card small { font-size: 12px; }.jev-actions { display: flex; flex-wrap: wrap; gap: 6px; }.jev-panel pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; max-height: 300px; overflow: auto; padding: 8px; background: #8881; border-radius: 6px; }.jev-panel blockquote { margin: 8px 0; padding-left: 10px; border-left: 2px solid #d8b061; }.jev-panel blockquote small { display: block; }.jev-error { color: #e67b75; }.jev-modes label { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.jev-modes select { width: 120px; margin: 0; }.jev-panel fieldset { border: 1px solid #8884; border-radius: 6px; margin-top: 12px; max-height: 200px; overflow: auto; }
-html[data-theme=light] .jev-panel { color: #172c27; background: #f8fcfa; }
+html[data-theme=light] .jev-panel { color: var(--sk-text); background: var(--sk-canvas); }
 
 .jev-facts { margin: 0; font-size: 13px; }.jev-facts > div { margin: 8px 0; }.jev-facts dt { font-weight: 600; }.jev-facts dd { margin: 3px 0 0; }.jev-facts ul { padding-left: 18px; margin: 4px 0; }
 .jev-thresholds table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-.jev-thresholds th, .jev-thresholds td { padding: 10px 0; border-bottom: 1px solid var(--sk-border); vertical-align: middle; }
+.jev-thresholds th, .jev-thresholds td { padding: 12px 0; border-bottom: 1px solid var(--sk-border); vertical-align: middle; }
 .jev-thresholds th:first-child { padding-right: 12px; }
 .jev-thresholds th strong, .jev-thresholds th small { display: block; }
 .jev-thresholds th small { margin-top: 3px; color: var(--sk-muted); font-size: 11px; font-weight: 400; }
 .jev-panel .jev-thresholds td label { display: flex; align-items: center; gap: 5px; margin: 0; }
 .jev-panel .jev-thresholds td input { width: 65px; margin: 0; }
+.jev-thresholds { padding: 14px 16px; border: 1px solid var(--sk-border); border-radius: 12px; background: var(--sk-surface); }
+.jev-thresholds h2 { margin-bottom: 5px; color: var(--sk-text); }
+.jev-thresholds > p { margin: 0 0 8px; color: var(--sk-muted); }
+.jev-thresholds table { table-layout: fixed; }
+.jev-thresholds th:last-child { width: 91px; }
+.jev-thresholds tbody tr:last-child :is(th, td) { border-bottom: 0; }
+.jev-panel .jev-thresholds td input { width: 64px; padding: 7px 6px; border: 1px solid var(--sk-border); background: var(--sk-surface); color: var(--sk-text); text-align: right; }
+.jev-panel .jev-thresholds td input:focus-visible { border-color: var(--sk-focus); outline-color: var(--sk-focus); }
+.jev-panel .jev-reset-button { justify-self: start; padding: 9px 12px; border: 1px solid var(--sk-border); background: var(--sk-surface); color: var(--sk-text); font-weight: 600; }
+.jev-panel .jev-reset-button:hover:not(:disabled) { border-color: var(--sk-focus); background: var(--sk-surface-soft); }
 .jev-results { margin: 16px 0; font-size: 13px; }
 .jev-utilities { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; gap: 8px; border-bottom: 1px solid var(--sk-border); }.jev-utilities small { font-size: 12px; color: var(--sk-muted); }.jev-utilities button { padding: 4px 8px; font-size: 12px; }
 .jev-panel__body .ai-chat__welcome { padding: 14px 0; }.jev-panel__body .ai-chat__starters { margin: 0; padding: 0; }.jev-contextual > details { margin: 14px 0; border-top: 1px solid var(--sk-border); padding-top: 12px; }.jev-contextual > details > summary { cursor: pointer; font-size: 12px; color: var(--sk-muted); }.jev-notice { font-size: 11px !important; color: var(--sk-muted); }.jev-composer textarea { width: 100%; border: 0; margin: 0; background: transparent; padding: 12px; }.jev-composer form { padding: 4px; }.jev-composer button { display: block; margin: 0 8px 8px auto; }
@@ -50,6 +60,9 @@ html[data-theme=light] .jev-panel { color: #172c27; background: #f8fcfa; }
 .jev-group-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
 .jev-group-actions .primary-button { flex: 1; min-width: 140px; }
 .jev-panel .primary-button { background: var(--sk-action-bg); color: var(--sk-action); border-color: transparent; font-weight: 600; padding: 10px 14px; }
+.jev-panel :is(button, input, select, textarea):focus-visible { outline-color: var(--sk-focus); }
+.jev-panel .jev-card > p { color: var(--sk-muted); }
+.jev-panel .jev-card > h2 { color: var(--sk-text); }
 .jev-membership-preview { list-style: none; padding: 0 0 0 12px; margin: 14px 0; border-left: 1px solid var(--sk-border); }
 .jev-membership-preview li { padding: 5px 0 5px 10px; overflow-wrap: anywhere; }
 .jev-membership-document { display: block; font-size: 13px; }

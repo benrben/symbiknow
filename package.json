@@ -51,6 +51,8 @@
     "@streamdown/math": "^1.0.2",
     "@streamdown/mermaid": "^1.0.2",
     "@xyflow/react": "^12.12.0",
+    "argparse": "file:vendor/security-forks/argparse-1.0.11.tgz",
+    "braces": "file:vendor/security-forks/braces-3.0.4.tgz",
     "ai": "^7.0.114",
     "better-sqlite3": "12.8.0",
     "class-variance-authority": "^0.7.1",
@@ -72,6 +74,7 @@
     "remark-stringify": "^11.0.0",
     "shiki": "^4.4.3",
     "streamdown": "^2.6.0",
+    "sprintf-js": "file:vendor/security-forks/sprintf-js-1.1.4.tgz",
     "unified": "^11.0.5",
     "use-stick-to-bottom": "^1.1.6",
     "zod": "^4.6.5"

@@ -20,7 +20,7 @@ describe('BrowseGroups', () => {
     const onOpenBlock = vi.fn();
     render(<BrowseGroups canvas={canvas} onOpenBlock={onOpenBlock} onClose={vi.fn()}/>);
     const launch = screen.getByRole('region', { name: 'Launch' });
-    expect(within(launch).getByRole('heading', { name: 'Launch 2' })).toBeTruthy();
+    expect(within(launch).getByRole('heading', { name: 'Launch 2 documents' })).toBeTruthy();
     expect(within(launch).getAllByRole('button').map(button => button.textContent)).toEqual(['Alpha notesmarkdown', 'Beta checklistmarkdown']);
     expect(screen.getByRole('region', { name: 'Launch / Quality' }).textContent).toContain('QA plan');
     expect(screen.getByRole('region', { name: 'Ungrouped' }).textContent).toContain('Loose note');

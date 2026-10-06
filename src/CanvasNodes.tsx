@@ -19,11 +19,10 @@ export const DocumentNode = memo(function DocumentNode({ data, selected }: NodeP
       onResizeEnd={(_, dimensions) => onResize(block.id, dimensions)}/>
     <Handle type="target" position={Position.Left} className="canvas-handle"/>
     <DocumentHeader data={data}/>
-    <DocumentLinks data={data}/>
+    <DocumentRelationships data={data}/>
     {data.detail !== 'titles' && <div className="canvas-card__body nowheel nodrag" onDoubleClick={event => event.stopPropagation()}>
       <BlockContent block={block} canvasId={canvasId} onUpdateBlock={onUpdateBlock} onError={onError}/>
     </div>}
-    <DocumentPortals data={data}/>
     <Handle type="source" position={Position.Right} className="canvas-handle"/>
   </article>;
 }, (previous, next) => previous.selected === next.selected && previous.data === next.data);
@@ -43,7 +42,6 @@ function DocumentHeader({ data }: { data: CanvasNodeData }) {
           <small>{block.file}</small>
           <DocumentMetadata block={block}/>
         </div>
-        <PortalCount data={data}/>
         <span className="canvas-card__kind">{block.kind}</span>
         <button className="canvas-card__edit nodrag" title="Open full page" aria-label={`Read ${block.title} full page`} onClick={() => onReadBlock(block)}>↗</button>
         <button className="canvas-card__edit nodrag" title="File history" aria-label={`History for ${block.title}`} onClick={() => onHistoryBlock(block)}>⑂</button>
@@ -75,66 +73,74 @@ function labelTone(value: string): number {
   return [...value].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 6;
 }
 
-function PortalCount({ data }: { data: CanvasNodeData }) {
-  const portals = data.block.crossLinks ?? [];
-  if (portals.length === 0 || data.detail === 'titles') return null;
-  return <span className="canvas-card__portal-count" title={`${portals.length} cross-canvas ${portals.length === 1 ? 'link' : 'links'}`} style={{ borderRadius: 8, padding: '2px 5px', background: 'var(--sk-surface-soft)', color: 'var(--sk-link)', fontSize: 10, fontWeight: 700 }}>↗ {portals.length}</span>;
-}
-
-function DocumentLinks({ data }: { data: CanvasNodeData }) {
+function DocumentRelationships({ data }: { data: CanvasNodeData }) {
   const links = data.relatedLinks ?? [];
-  if (!links.length) return null;
-  return <nav className="canvas-card__links nowheel nodrag" aria-label={`Links for ${data.block.title}`}>
-    <strong>{links.length} {links.length === 1 ? 'link' : 'links'}</strong>
+  const portals = data.detail === 'titles' ? [] : data.block.crossLinks ?? [];
+  const count = links.length + portals.length;
+  if (!count) return null;
+  return <nav className="canvas-card__relationships nowheel nodrag" aria-label={`Relationships for ${data.block.title}`}>
+    <strong>{count} {count === 1 ? 'relationship' : 'relationships'}</strong>
     {links.map(link => <button type="button" key={`${link.direction}:${link.block.id}`} className="nodrag"
       title={`${link.direction === 'out' ? 'Links to' : 'Linked from'} ${link.block.title}${link.relation ? ` · ${link.relation.replaceAll('_', ' ')}` : ''}`}
       aria-label={`${link.direction === 'out' ? 'Open linked document' : 'Open linking document'} ${link.block.title}`}
       onClick={event => { event.stopPropagation(); data.onReadBlock(link.block); }}>
       {link.direction === 'out' ? '↗' : '↙'} {link.block.title}
     </button>)}
+    {portals.map(link => <button key={`${link.canvasId}:${link.blockId}`} type="button" className="nodrag"
+      aria-label={`Open related document ${link.blockId} on canvas ${link.canvasId}`}
+      title={`Open ${link.blockId} on canvas ${link.canvasId}`}
+      onClick={event => { event.stopPropagation(); data.onOpenCrossLink(link.canvasId, link.blockId); }}>
+      ↗ Other canvas: {data.crossLinkLabels?.[`${link.canvasId}:${link.blockId}`] ?? link.canvasId}
+    </button>)}
   </nav>;
 }
 
-function DocumentPortals({ data }: { data: CanvasNodeData }) {
-  const { block, onOpenCrossLink } = data;
-  const portals = block.crossLinks ?? [];
-  if (portals.length === 0 || data.detail === 'titles') return null;
-  return <div className="canvas-card__portals nodrag" aria-label={`Related documents on other canvases for ${block.title}`} style={{ display: 'flex', gap: 4, padding: '5px 8px', overflowX: 'auto', borderTop: '1px solid var(--sk-border)' }}>
-        {portals.slice(0, 2).map(link => <button key={`${link.canvasId}:${link.blockId}`} type="button" className="canvas-card__portal nodrag"
-          aria-label={`Open related document ${link.blockId} on canvas ${link.canvasId}`}
-          title={`Open ${link.blockId} on canvas ${link.canvasId}`}
-          style={{ flex: '0 0 auto', border: '1px solid var(--sk-border)', borderRadius: 6, background: 'var(--sk-surface-soft)', color: 'var(--sk-link)', padding: '2px 5px', fontSize: 10, cursor: 'pointer' }}
-          onClick={event => { event.stopPropagation(); onOpenCrossLink(link.canvasId, link.blockId); }}>
-          ↗ Other canvas: {data.crossLinkLabels?.[`${link.canvasId}:${link.blockId}`] ?? link.canvasId}
-        </button>)}
-        {portals.length > 2 && <span style={{ whiteSpace: 'nowrap', fontSize: 10, alignSelf: 'center' }}>+{portals.length - 2} more</span>}
-      </div>;
-}
-
-export const GroupFrameNode = memo(function GroupFrameNode({ data }: NodeProps<GroupNode>) {
-  const noun = groupNoun(data, false);
-  return <div className={`canvas-group canvas-group--tone-${data.tone}${data.overview ? ' is-overview' : ''}${data.collapsed ? ' is-collapsed' : ''}${data.kind ? ` is-${data.kind}` : ''}`} style={{ width: data.width, height: data.height }}
+export const GroupFrameNode = memo(function GroupFrameNode({ data, selected }: NodeProps<GroupNode>) {
+  return <div className={groupFrameClass(data, selected)} style={{ width: data.width, height: data.height }}
     data-canvas-group={data.group}
-    onClick={() => { if (data.overview) data.onDrill(data.group); }}
-    onMouseEnter={() => { if (data.overview) data.onHover(data.group); }}
-    onMouseLeave={() => { if (data.overview) data.onHover(null); }}
-    aria-label={`${data.title} ${groupKind(data)}, ${data.count} ${noun}`}>
+    onClick={() => drillOverview(data)}
+    onMouseEnter={() => hoverOverview(data, data.group)}
+    onMouseLeave={() => hoverOverview(data, null)}
+    aria-label={`${data.title} ${groupKind(data)}, ${data.count} ${groupNoun(data, false)}`}>
     <Handle type="target" position={Position.Left} className="canvas-group__handle" isConnectable={false}/>
     <GroupHeading data={data}/>
-    {(data.overview || data.collapsed) && <div className="canvas-group__summary">
-      {data.overview && Boolean(data.internalLinkCount) && <span className="canvas-group__internal-links">↗ {data.internalLinkCount} {data.internalLinkCount === 1 ? 'link' : 'links'} inside</span>}
-      {data.overview && Boolean(data.externalLinkCount) && <span className="canvas-group__external-links">↗ {data.externalLinkCount} {data.externalLinkCount === 1 ? 'link' : 'links'} beyond this group</span>}
-      {data.topTitles.map(title => <span key={title}>{title}</span>)}
-    </div>}
+    <GroupSummary data={data}/>
     <Handle type="source" position={Position.Right} className="canvas-group__handle" isConnectable={false}/>
   </div>;
 }, (previous, next) => {
   const before = previous.data;
   const after = next.data;
-  return before === after || (groupDataFields.every(field => before[field] === after[field])
+  return previous.selected === next.selected && (before === after || (groupDataFields.every(field => before[field] === after[field])
     && before.topTitles.length === after.topTitles.length
-    && before.topTitles.every((title, index) => title === after.topTitles[index]));
+    && before.topTitles.every((title, index) => title === after.topTitles[index])));
 });
+
+function groupFrameClass(data: GroupNodeData, selected: boolean) {
+  return [`canvas-group canvas-group--tone-${data.tone}`, data.overview && 'is-overview', selected && 'is-selected',
+    data.collapsed && 'is-collapsed', data.kind && `is-${data.kind}`].filter(Boolean).join(' ');
+}
+
+function drillOverview(data: GroupNodeData) { if (data.overview) data.onDrill(data.group); }
+function hoverOverview(data: GroupNodeData, group: string | null) { if (data.overview) data.onHover(group); }
+
+function GroupSummary({ data }: { data: GroupNodeData }) {
+  if (!data.overview && !data.collapsed) return null;
+  return <div className="canvas-group__summary">
+    <GroupInternalLinks data={data}/>
+    <GroupExternalLinks data={data}/>
+    {data.topTitles.map(title => <span key={title}>{title}</span>)}
+  </div>;
+}
+
+function GroupInternalLinks({ data }: { data: GroupNodeData }) {
+  if (!data.overview || !data.internalLinkCount) return null;
+  return <span className="canvas-group__internal-links">↗ {data.internalLinkCount} {data.internalLinkCount === 1 ? 'link' : 'links'} inside</span>;
+}
+
+function GroupExternalLinks({ data }: { data: GroupNodeData }) {
+  if (!data.overview || !data.externalLinkCount) return null;
+  return <span className="canvas-group__external-links">↗ {data.externalLinkCount} {data.externalLinkCount === 1 ? 'link' : 'links'} beyond this group</span>;
+}
 
 const groupDataFields = ['group', 'title', 'count', 'tone', 'width', 'height', 'depth', 'collapsed',
   'overview', 'kind', 'internalLinkCount', 'externalLinkCount', 'onDrill', 'onCollapse', 'onHover'] as const;

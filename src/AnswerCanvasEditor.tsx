@@ -9,8 +9,8 @@ export function AnswerCanvasEditor({ model }: { model: AnswerCanvasModel }) {
   if (!draft) return null;
   return (
     <div className="overlay modal-overlay" onMouseDown={event => { if (event.target === event.currentTarget) setDraft(null); }}>
-      <div className="modal editor-modal block-modal" role="dialog" aria-modal="true" aria-label="Block editor">
-        <div className="modal-heading"><div><span className="eyebrow">SESSION RESEARCH</span><h2>{draft.id ? 'Edit block' : 'New block'}</h2></div>
+      <div className="modal editor-modal block-modal" role="dialog" aria-modal="true" aria-label="Document editor">
+        <div className="modal-heading"><div><span className="eyebrow">SESSION RESEARCH</span><h2>{draft.id ? 'Edit document' : 'New document'}</h2></div>
           <button className="icon-button" type="button" aria-label="Close dialog" onClick={() => setDraft(null)}>×</button></div>
         <form className="modal-form" onSubmit={saveDraft}>
           <div className="form-row"><label>Title<input required value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></label>
@@ -26,7 +26,7 @@ export function AnswerCanvasEditor({ model }: { model: AnswerCanvasModel }) {
               setDraft(null);
             }}>Delete</button>}
             <span className="actions-spacer" /><button type="button" className="secondary-button" onClick={() => setDraft(null)}>Cancel</button>
-            <button className="primary-button">Save block</button></div>
+            <button className="primary-button">Save document</button></div>
         </form>
       </div></div>
   );

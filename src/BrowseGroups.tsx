@@ -39,9 +39,9 @@ export function BrowseGroups({ canvas, onOpenBlock, onClose }: BrowseGroupsProps
     <div className="browse-groups__body">
       {groups.length === 0 ? <p className="browse-groups__empty">No documents in this canvas yet.</p>
         : groups.map(group => <section className="browse-groups__group" key={group.key || '__ungrouped'} aria-label={group.label}>
-          <h3>{group.label} <span>{group.blocks.length}</span></h3>
+          <h3>{group.label} <span>{group.blocks.length} {group.blocks.length === 1 ? 'document' : 'documents'}</span></h3>
           <ul>{group.blocks.map(block => <li key={block.id}><button type="button" aria-label={`Open ${block.title}`} onClick={() => onOpenBlock(block.id)}>
-            <span>{block.title}</span><small aria-hidden="true">{block.kind}</small>
+            <span className="browse-groups__document-title">{block.title}</span><small aria-hidden="true">{block.kind}</small>
           </button></li>)}</ul>
         </section>)}
     </div>

@@ -85,3 +85,24 @@
 .editor-file-actions .secondary-button { color: var(--sk-text); }
 .block-modal :is(button, input, select, textarea):focus-visible { outline-color: var(--sk-focus); }
 .block-modal button:disabled { color: var(--sk-muted); opacity: .72; }
+
+/* Keep document reading and editing on the same neutral surface roles. */
+.page-reader { background: var(--sk-canvas, #f6f5f2); color: var(--sk-text); }
+.page-reader__header { border-color: var(--sk-border); background: var(--sk-surface); box-shadow: 0 2px 14px var(--sk-shadow); }
+.page-reader__back { color: var(--sk-link); }
+.page-reader__back:hover { color: var(--sk-text); }
+.page-reader__location, .page-reader__eyebrow { color: var(--sk-muted); }
+.page-reader__location span { color: var(--sk-muted); }
+.page-reader__document { width: min(840px, 100%); border-color: var(--sk-border); background: var(--sk-surface); box-shadow: 0 16px 52px var(--sk-shadow); }
+.page-reader__document > h1 { color: var(--sk-text); }
+.page-reader__content { max-width: 68ch; font-size: 17px; line-height: 1.75; color: var(--sk-text); }
+.page-reader__content--duplicate-title .loader-markdown > h1:first-child { display: none; }
+.page-reader__content .loader-markdown :is(p, li) { line-height: 1.75; }
+.page-reader__content .loader-markdown :is(h2, h3, h4) { line-height: 1.3; }
+
+.canvas-card__relationships { display: grid; gap: 5px; padding: 9px; border-top: 1px solid var(--sk-border); background: var(--sk-surface); }
+.canvas-card__relationships strong { color: var(--sk-muted); font-size: 11px; }
+.canvas-card__relationships button { border: 1px solid var(--sk-border); border-radius: 6px; padding: 5px 7px; background: var(--sk-surface-soft); color: var(--sk-link); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
+.canvas-card__relationships button:focus-visible { outline: 2px solid var(--sk-focus); outline-offset: 1px; }
+.canvas-card:not(.is-selected):not(:focus-within) .canvas-card__relationships,
+.canvas-group.is-overview:not(.is-selected):not(:focus-within) :is(.canvas-group__internal-links, .canvas-group__external-links) { display: none; }

@@ -145,7 +145,7 @@ describe('saved document node boundaries through native App and API', () => {
     const editorRead = nextRead(sourcePath);
     fireEvent.click(within(await sourceCard(title)).getByRole('button', { name: `Edit ${title}` }));
     expect(await completedRead<CanvasBlock>(editorRead)).toMatchObject({ id: source.id, content: source.content });
-    const editor = await screen.findByRole('dialog', { name: 'Block editor' });
+    const editor = await screen.findByRole('dialog', { name: 'Document editor' });
     expect((within(editor).getByRole('textbox', { name: /^Title$/ }) as HTMLInputElement).value).toBe(title);
     fireEvent.click(within(editor).getByRole('button', { name: 'Close dialog' }));
     const destinationRead = nextRead('/api/canvases/' + destination.id);

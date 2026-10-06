@@ -458,3 +458,6 @@ html[data-theme='dark'] .version-panel__error { background: #492b30; color: #ffd
 /* Small controls keep a 28px hit area (WCAG 2.5.8 asks for at least 24px). */
 :is(.ai-chat__action, .ai-chat__context > button, .ai-chat__followups button, .ai-chat__activity-toggle, .canvas-map-index button, .canvas-map-index summary, .chat-header__research-return) { min-height: 28px; }
 .icon-button.subtle { min-width: 28px; min-height: 28px; }
+
+.canvas-empty-prompt__actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.canvas-empty-prompt__actions :is(.primary-button, .secondary-button) { min-height: 42px; }

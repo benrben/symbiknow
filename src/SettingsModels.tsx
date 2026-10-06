@@ -6,15 +6,15 @@ import { providerInfo } from './settings-page-values';
 import { providerIsReady, type SettingsDraft, type UpdateSettingsDraft } from './settings-page-model';
 
 function cycleProviders(event: KeyboardEvent<HTMLDivElement>) {
-          if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
-          const radios = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
-          const current = radios.indexOf(document.activeElement as HTMLButtonElement);
-          if (current < 0) return;
-          event.preventDefault();
-          const delta = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
-          const next = radios[(current + delta + radios.length) % radios.length];
-          next.click(); next.focus();
-        
+  if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
+  const radios = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
+  const current = radios.indexOf(document.activeElement as HTMLButtonElement);
+  if (current < 0) return;
+  event.preventDefault();
+  const delta = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+  const next = radios[(current + delta + radios.length) % radios.length];
+  next.click();
+  next.focus();
 }
 
 export function SettingsModels({ draft, settings, apiKey, setApiKey, update }: {

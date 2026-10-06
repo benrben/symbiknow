@@ -54,7 +54,7 @@ export function BlockForm({ model, onClose }: { model: AppDialogModel; onClose: 
     <div className="editor-footnote">Each block is saved as its own Markdown file with its own Git history. Website blocks use frontmatter to select a generator and source folder.</div>
     <div className="modal-actions"><DeleteDraftAction model={model}/><span className="actions-spacer"/>
       <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
-      <button className="primary-button" disabled={busy || importing || changed}>{importing ? 'Loading file…' : 'Save block'}</button></div>
+      <button className="primary-button" disabled={busy || importing || changed}>{importing ? 'Loading file…' : 'Save document'}</button></div>
   </form>;
 }
 

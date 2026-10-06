@@ -156,7 +156,7 @@ When('I open Reflex only to observe automatic results', async function () {
     if (outgoing.method() !== 'GET' && /\/jev\//.test(new URL(outgoing.url()).pathname)) this.reflexWriteRequests.push(outgoing.url());
   });
   await this.page.getByRole('tab', { name: 'Symbi Reflex', exact: true }).click();
-  await panel(this).getByRole('heading', { name: 'Jev works automatically', exact: true }).waitFor();
+  await panel(this).getByRole('heading', { name: 'Symbi Reflex is active', exact: true }).waitFor();
   await panel(this).getByText('Automatic findings and saved results', { exact: true }).click();
 });
 
@@ -180,7 +180,7 @@ When('I reload the automatic Reflex canvas', async function () {
   try {
     await this.page.reload({ waitUntil: 'networkidle' });
     await this.page.getByRole('tab', { name: 'Symbi Reflex', exact: true }).click();
-    await panel(this).getByRole('heading', { name: 'Jev works automatically', exact: true }).waitFor();
+    await panel(this).getByRole('heading', { name: 'Symbi Reflex is active', exact: true }).waitFor();
   } catch (error) {
     const body = await this.page.locator('body').innerText({ timeout: 2000 }).catch(() => 'Body unavailable');
     assert.fail(`${error.message}\nURL: ${this.page.url()}\nPage errors: ${JSON.stringify(this.pageErrors)}\n` +
@@ -350,9 +350,9 @@ When('manual organization is saved and automatic processing is paused with anoth
 
 Then('Reflex reports paused processing and offers the workspace reset', async function () {
   await panel(this).getByText('Automatic processing is paused.', { exact: true }).waitFor();
-  const button = panel(this).getByRole('button', { name: 'Reset all Jev', exact: true });
+  const button = panel(this).getByRole('button', { name: 'Reset automatic organization', exact: true });
   assert.equal(await button.isEnabled(), true);
-  await panel(this).getByText('Across this workspace, clears Jev-generated analysis and organization, then runs all 6 actions. Manual changes and source content remain.', { exact: true }).waitFor();
+  await panel(this).getByText('Across this workspace, clears Symbi Reflex analysis and automatic organization, then runs all 6 actions. Manual changes and source content remain.', { exact: true }).waitFor();
   assert.deepEqual(this.reflexWriteRequests, []);
   assert.deepEqual(this.pageErrors, []);
 });
@@ -363,7 +363,7 @@ When('I reset and rerun Jev from Reflex', async function () {
   this.reflexResetCount = (this.reflexResetCount ?? 0) + 1;
   const completed = this.page.waitForResponse(outgoing => outgoing.request().method() === 'POST'
     && new URL(outgoing.url()).pathname === `/api/workspaces/${this.reflexWorkspaceId}/jev/reset`);
-  await panel(this).getByRole('button', { name: 'Reset all Jev', exact: true }).click();
+  await panel(this).getByRole('button', { name: 'Reset automatic organization', exact: true }).click();
   const result = await completed;
   assert.equal(result.status(), 200, await result.text());
   await panel(this).getByText('Jev-generated results cleared. Automatic checks restarted across this workspace.', { exact: true }).waitFor();
@@ -422,7 +422,7 @@ Then('the reset results and confidence settings survive browser reload', async f
   await assertThresholdControls(this);
   assert.equal(await thresholdInput(this, 'Understand documents').inputValue(), '85');
   assert.equal(await thresholdInput(this, 'Organize into groups').inputValue(), '80');
-  assert.equal(await panel(this).getByRole('button', { name: 'Reset all Jev', exact: true }).isEnabled(), true);
+  assert.equal(await panel(this).getByRole('button', { name: 'Reset automatic organization', exact: true }).isEnabled(), true);
 });
 
 Then('Reflex reports the missing provider key without requesting action approval', async function () {
@@ -436,9 +436,9 @@ Then('Reflex reports the missing provider key without requesting action approval
 });
 
 Then('the workspace reset is disabled without a provider and makes no request', async function () {
-  const button = panel(this).getByRole('button', { name: 'Reset all Jev', exact: true });
+  const button = panel(this).getByRole('button', { name: 'Reset automatic organization', exact: true });
   assert.equal(await button.isDisabled(), true);
-  await panel(this).getByText('A connected TypeSafe key and automatic processing are required to reset and rerun Jev.', { exact: true }).waitFor();
+  await panel(this).getByText('A connected TypeSafe key and automatic processing are required to reset and rerun Symbi Reflex.', { exact: true }).waitFor();
   await button.evaluate(element => element.click());
   assert.deepEqual(this.reflexWriteRequests, []);
   assert.deepEqual(this.pageErrors, []);

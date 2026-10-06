@@ -31,9 +31,9 @@ function NativeReset({ fixture, scoped }: { fixture: Fixture; scoped?: JevViewSt
 }
 async function mount(fixture: Fixture) {
   const view = render(<NativeReset fixture={fixture}/>);
-  await screen.findByRole('button', { name: 'Reset all Jev' }); return view;
+  await screen.findByRole('button', { name: 'Reset automatic organization' }); return view;
 }
-function resetButton() { return screen.getByRole('button', { name: 'Reset all Jev' }) as HTMLButtonElement; }
+function resetButton() { return screen.getByRole('button', { name: 'Reset automatic organization' }) as HTMLButtonElement; }
 async function connectedFixture() {
   const fixture = await workspaceFixture({ fetcher: async (url, options) => {
     const response = await acceptanceReflexProvider(url, options);
@@ -66,10 +66,10 @@ it('keeps reset unavailable while loading, without a provider, or when external 
   const fixture = await workspaceFixture();
   const initial = fixture.hold(`/api/workspaces/${fixture.workspace.id}/jev/state`, 'GET');
   const view = render(<NativeReset fixture={fixture}/>);
-  expect(screen.queryByRole('button', { name: 'Reset all Jev' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Reset automatic organization' })).toBeNull();
   await initial.response; await act(async () => { await initial.release(); });
   expect(resetButton().disabled).toBe(true);
-  expect(screen.getByText('A connected TypeSafe key and automatic processing are required to reset and rerun Jev.')).toBeTruthy();
+  expect(screen.getByText('A connected TypeSafe key and automatic processing are required to reset and rerun Symbi Reflex.')).toBeTruthy();
   fireEvent.click(resetButton()); expect(fixture.calls.filter(call => call.route.endsWith('/jev/reset'))).toEqual([]);
   await api(`/workspaces/${fixture.workspace.id}/jev/settings`, { method: 'PUT', body: JSON.stringify({ externalProcessing: false }) });
   vi.stubEnv('TYPESAFE_API_KEY', 'native-disabled-reset-key');
@@ -109,10 +109,10 @@ beforeEach(async () => {
 
 it('resets the workspace from Reflex, preserves manual sources and thresholds, and automatically reruns all six actions', async () => {
   expect(resetButton().disabled).toBe(false);
-  expect(screen.getByText('Across this workspace, clears Jev-generated analysis and organization, then runs all 6 actions. Manual changes and source content remain.')).toBeTruthy();
+  expect(screen.getByText('Across this workspace, clears Symbi Reflex analysis and automatic organization, then runs all 6 actions. Manual changes and source content remain.')).toBeTruthy();
   const held = fixture.hold(`/api/workspaces/${fixture.workspace.id}/jev/reset`, 'POST');
   fireEvent.click(resetButton());
-  expect((screen.getByRole('button', { name: 'Resetting Jev…' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole('button', { name: 'Resetting automatic organization…' }) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.getAllByRole('spinbutton').every(input => input.hasAttribute('disabled'))).toBe(true);
   expect((await held.response).ok).toBe(true);
   await act(async () => { await held.release(); });
@@ -182,6 +182,6 @@ it('hides the workspace reset for a scoped read principal', async () => {
     const scoped: JevViewState = { ...await runtime.read(fixture.workspace.id, principal), hasApiKey: false, canConfigure: Boolean(principal.canConfigure), canApprove: Boolean(principal.canApprove) };
     render(<NativeReset fixture={fixture} scoped={scoped}/>);
     expect(screen.queryByRole('region', { name: 'Reset automatic organization' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Reset all Jev' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reset automatic organization' })).toBeNull();
   } finally { await runtime.shutdown(); }
 });

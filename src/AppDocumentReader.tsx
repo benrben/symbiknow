@@ -77,8 +77,17 @@ function ReaderPage({ model, block: summary, sequence, index, neighbors, scrolle
 function ReaderContent({ model, content }: { model: AppDialogModel; content: ReturnType<typeof useDocumentContent> }) {
   if (content.error) return <div className="loader-error" role="alert">{content.error} <button type="button" onClick={content.retry}>Retry loading document</button></div>;
   if (!content.block) return <div className="loader-loading" role="status">Loading document…</div>;
+  const duplicateTitle = leadingHeadingMatchesTitle(content.block);
   return <><ReaderSourceContext model={model} block={content.block}/>
-    <div className="page-reader__content"><BlockContent block={content.block} canvasId={model.canvasId} onUpdateBlock={model.updateBlock} onError={model.setError} fullPage/></div></>;
+    <div className={`page-reader__content${duplicateTitle ? ' page-reader__content--duplicate-title' : ''}`}><BlockContent block={content.block} canvasId={model.canvasId} onUpdateBlock={model.updateBlock} onError={model.setError} fullPage/></div></>;
+}
+
+function leadingHeadingMatchesTitle(block: CanvasBlock): boolean {
+  if (block.kind !== 'markdown') return false;
+  const body = block.content.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '');
+  const firstLine = body.trimStart().split(/\r?\n/, 1)[0];
+  const heading = /^#\s+(.+?)\s*#*\s*$/.exec(firstLine);
+  return Boolean(heading && heading[1].replace(/\s+/g, ' ').trim() === block.title.replace(/\s+/g, ' ').trim());
 }
 
 function ReaderPager({ model, block, sequence, index, previous, next }: ReaderProps & ReaderNeighbors & { sequence: CanvasBlock[]; index: number }) {

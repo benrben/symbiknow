@@ -42,7 +42,7 @@ function modalLabel(dialog: Dialog) {
   if (dialog === 'delete-canvas') return 'Delete canvas';
   if (dialog === 'delete-workspace') return 'Delete workspace';
   if (dialog === 'settings') return 'Settings';
-  if (dialog === 'block') return 'Block editor';
+  if (dialog === 'block') return 'Document editor';
   if (dialog === 'versions') return 'History and branches';
   return 'Create new';
 }
@@ -128,7 +128,7 @@ function DirtyCloseWarning({ open, onContinue, onDiscard, onSave }: {
   </div>;
 }
 
-function blockHeading(draft: BlockDraft) { return { eyebrow: 'MARKDOWN FILE', title: draft.id ? 'Edit block' : 'New block' }; }
+function blockHeading(draft: BlockDraft) { return { eyebrow: 'MARKDOWN FILE', title: draft.id ? 'Edit document' : 'New document' }; }
 function namedHeading(dialog: Dialog) { return { eyebrow: 'CREATE NEW', title: dialog === 'workspace' ? 'New workspace' : 'New canvas' }; }
 
 function VersionDialogContent({ model }: { model: AppDialogModel }) {

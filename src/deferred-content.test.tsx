@@ -78,6 +78,8 @@ it('retries the reader and checks cited passages against fetched content and its
   expect((await screen.findByRole('alert')).textContent).toContain('Reader response disconnected');
   fireEvent.click(screen.getByRole('button', { name: 'Retry loading document' }));
   const context = await screen.findByLabelText('Source context from Chat');
+  expect(document.querySelector('.page-reader__content')?.classList.contains('page-reader__content--duplicate-title')).toBe(true);
+  expect((await workspace.reload()).blocks.find(block => block.id === saved.id)?.content).toBe(saved.content);
   expect(within(context).getByText(excerpt)).toBeTruthy();
   expect(within(context).getByText('This passage appears in the current document.')).toBeTruthy();
   expect((screen.getByRole('button', { name: 'Edit document' }) as HTMLButtonElement).disabled).toBe(false);
@@ -85,6 +87,7 @@ it('retries the reader and checks cited passages against fetched content and its
   await api(blockPath(workspace.canvas.id, saved.id), { method: 'PUT', body: JSON.stringify({ content: '# Current release guide\nThe deployment procedure changed.' }) });
   render(<FullPageReader model={model.result.current}/>);
   expect(await screen.findByRole('heading', { name: 'Current release guide' })).toBeTruthy();
+  expect(document.querySelector('.page-reader__content')?.classList.contains('page-reader__content--duplicate-title')).toBe(false);
   expect(screen.getByLabelText('Source context from Chat').textContent).toContain('This document changed since Chat checked it.');
   expect((await workspace.reload()).blocks.find(block => block.id === saved.id)?.content).toContain('The deployment procedure changed.');
 });

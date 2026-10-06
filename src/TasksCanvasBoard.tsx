@@ -1,4 +1,4 @@
-import { Background, Controls, MiniMap, ReactFlow, applyNodeChanges, type Node, type NodeProps, type NodeChange } from '@xyflow/react';
+import { Background, Controls, ReactFlow, applyNodeChanges, type Node, type NodeProps, type NodeChange } from '@xyflow/react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CanvasTask, TaskStatus } from '../shared/types';
 import { api } from './api';
@@ -16,7 +16,7 @@ const columnGap = 36;
 const rowHeight = 132;
 const taskTop = 92;
 
-type ColumnNode = Node<{ label: string; count: number; status: TaskStatus; onCreate: (status: TaskStatus) => void }, 'taskColumn'>;
+type ColumnNode = Node<{ label: string; count: number; status: TaskStatus; showFirstTaskPrompt: boolean; onCreate: (status: TaskStatus) => void }, 'taskColumn'>;
 type TaskNode = Node<{ task: CanvasTask; onSelect: (id: string) => void }, 'taskCard'>;
 type BoardNode = ColumnNode | TaskNode;
 type TaskHistoryEvent = { eventId: string; kind: string; actor: string; at: string; taskId: string;
@@ -99,15 +99,21 @@ function boardNodes(tasks: CanvasTask[], onSelect: (id: string) => void, onCreat
       data: { task, onSelect }, draggable: true, zIndex: 2,
     }));
     return [{ id: `column:${column.status}`, type: 'taskColumn', position: { x, y: 0 },
-      data: { label: column.label, count: cards.length, status: column.status, onCreate },
+      data: { label: column.label, count: cards.length, status: column.status,
+        showFirstTaskPrompt: tasks.length === 0 && column.status === 'todo', onCreate },
       style: { width: columnWidth, height }, draggable: false, selectable: true, zIndex: 0 }, ...cards];
   });
 }
 
 const TaskColumnNode = memo(function TaskColumnNode({ data }: NodeProps<ColumnNode>) {
   return <div className="task-canvas-column canvas-group" data-task-column={data.status} aria-label={`${data.label}, ${data.count} tasks`}>
-    <div className="task-canvas-column__heading"><span className="canvas-group__dot"/><strong>{data.label}</strong><span>{data.count}</span>
+    <div className="task-canvas-column__heading"><span className="task-canvas-column__dot" data-status={data.status}/><strong>{data.label}</strong><span className="task-canvas-column__count">{data.count}</span>
       <button type="button" className="nodrag" aria-label={`Add task in ${data.label}`} onClick={() => data.onCreate(data.status)}>+</button></div>
+    {data.showFirstTaskPrompt && <div className="task-canvas-first-task">
+      <strong>Start with your first task</strong>
+      <p>Give your team a clear next step.</p>
+      <button type="button" className="nodrag" onClick={() => data.onCreate(data.status)}>Create first task</button>
+    </div>}
   </div>;
 });
 
@@ -171,9 +177,14 @@ function TaskCreator({ status, busy, onClose, onCreate }: {
 }) {
   const [title, setTitle] = useState('');
   const [detail, setDetail] = useState('');
-  return <form className="task-canvas-create" onSubmit={event => { event.preventDefault(); void onCreate(status, title, detail); }}>
-    <h2>New task in {columns.find(column => column.status === status)?.label}</h2>
+  const [chosenStatus, setChosenStatus] = useState<TaskStatus>(status);
+  return <form className="task-canvas-create" role="dialog" aria-modal="true" aria-labelledby="task-create-title"
+    onSubmit={event => { event.preventDefault(); void onCreate(chosenStatus, title, detail); }}>
+    <h2 id="task-create-title">Create task</h2>
     <label>Title<input autoFocus required maxLength={160} value={title} onChange={event => setTitle(event.target.value)}/></label>
+    <label>Status<select value={chosenStatus} onChange={event => setChosenStatus(event.target.value as TaskStatus)}>
+      {columns.map(column => <option key={column.status} value={column.status}>{column.label}</option>)}
+    </select></label>
     <label>Details<textarea maxLength={4000} value={detail} onChange={event => setDetail(event.target.value)}/></label>
     <div><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={busy || !title.trim()}>Create task</button></div>
   </form>;
@@ -278,10 +289,7 @@ export function TasksCanvasBoard({ canvasId, theme, documentTitles = {}, onOpenD
 
   return <main className="task-canvas-page">
     <header className="task-canvas-header"><div><span className="eyebrow">CANVAS TASKS</span><h1>Tasks</h1><p>Drag cards between status columns, or use the status control in task details.</p></div>
-      <button type="button" onClick={() => setCreating('todo')}>Add task</button></header>
-    <nav className="task-canvas-create-nav" aria-label="Create task in a status column">
-      {columns.map(column => <button key={column.status} type="button" onClick={() => setCreating(column.status)}>+ {column.label}</button>)}
-    </nav>
+      <button type="button" className="primary-button" onClick={() => setCreating('todo')}>Add task</button></header>
     {error && <div className="task-canvas-error" role="alert">{error}<button type="button" onClick={() => setError('')}>Dismiss</button></div>}
     {loading && <p role="status">Loading tasks…</p>}
     <section ref={surfaceRef} className="task-canvas-surface canvas-surface" aria-label="Tasks canvas board">
@@ -300,11 +308,11 @@ export function TasksCanvasBoard({ canvasId, theme, documentTitles = {}, onOpenD
         }}>
         <Background color={theme === 'dark' ? '#2D4649' : '#D6DEDC'} gap={22} size={1.1}/>
         <Controls position="bottom-left" showInteractive={false}/>
-        <MiniMap position="bottom-right" pannable zoomable nodeColor={node => node.type === 'taskColumn' ? '#97d4cf' : '#BCE7C9'}/>
       </ReactFlow>
     </section>
     {selected && <TaskDetails key={selected.id} task={selected} canvasId={canvasId} busy={busy} documentTitles={documentTitles} onOpenDocument={onOpenDocument}
       onClose={() => setSelectedId(null)} onSave={save} onComment={comment} onUndo={undo}/>}
-    {creating && <TaskCreator status={creating} busy={busy} onClose={() => setCreating(null)} onCreate={create}/>}
+    {creating && <div className="task-canvas-create-backdrop"><TaskCreator key={creating} status={creating} busy={busy}
+      onClose={() => setCreating(null)} onCreate={create}/></div>}
   </main>;
 }

@@ -104,7 +104,7 @@ describe('ModalOverlay', () => {
     expect(screen.queryByRole('alertdialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
-    expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Document editor' })).toBeNull();
   });
 
   it('keeps a busy dialog open after Escape or backdrop clicks', () => {
@@ -167,9 +167,9 @@ describe('editor keyboard recovery', () => {
       setDraftBlock: vi.fn(), saveBlock: vi.fn(), busy: false, showChat: true, canvas: { blocks: [] }, canvasId: 'canvas',
       importEditedFile: vi.fn(), deleteBlock: vi.fn(), takeOverLock: vi.fn(), openDocumentAssistant: vi.fn() } as unknown as AppDialogModel;
     render(<ModalOverlay model={model}/>);
-    const dialog = screen.getByRole('dialog', { name: 'Block editor' });
+    const dialog = screen.getByRole('dialog', { name: 'Document editor' });
     expect(dialog.getAttribute('aria-modal')).toBe('false');
-    const save = within(dialog).getByRole('button', { name: 'Save block' });
+    const save = within(dialog).getByRole('button', { name: 'Save document' });
     save.focus();
     expect(fireEvent.keyDown(save, { key: 'Tab' })).toBe(true);
   });

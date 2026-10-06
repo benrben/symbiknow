@@ -24,16 +24,22 @@ export function renamedBlockDraft(current: BlockDraft, title: string): BlockDraf
   return { ...current, title, content };
 }
 
-/** Keep canvas and reader addresses linkable and compatible with browser Back. */
-export function locationFor(canvasId: string, docId = ''): string {
+/** Keep canvas, Tasks, and reader addresses linkable and compatible with browser Back. */
+export function locationFor(canvasId: string, docId = '', view: 'canvas' | 'tasks' = 'canvas'): string {
   const params = new URLSearchParams(window.location.search);
-  if (canvasId) params.set('canvas', canvasId); else params.delete('canvas');
-  if (docId) params.set('doc', docId); else params.delete('doc');
+  setLocationParam(params, 'canvas', canvasId);
+  setLocationParam(params, 'doc', docId);
+  setLocationParam(params, 'view', view === 'tasks' && canvasId && !docId ? 'tasks' : '');
   const query = params.toString();
   return `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
 }
 
-export function urlParam(name: 'canvas' | 'doc'): string {
+function setLocationParam(params: URLSearchParams, name: string, value: string) {
+  if (value) params.set(name, value);
+  else params.delete(name);
+}
+
+export function urlParam(name: 'canvas' | 'doc' | 'view'): string {
   return new URLSearchParams(window.location.search).get(name) ?? '';
 }
 

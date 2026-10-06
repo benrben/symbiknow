@@ -56,7 +56,7 @@ When('I show the {string} search result on the canvas', async function (title) {
 Then('the {string} card is highlighted and search stays open', async function (title) {
   await this.page.locator('.canvas-card.is-highlighted', { hasText: title }).waitFor();
   assert.equal(await this.page.getByRole('dialog', { name: 'Search documents' }).count(), 1);
-  assert.equal(await this.page.getByRole('dialog', { name: 'Block editor' }).count(), 0);
+  assert.equal(await this.page.getByRole('dialog', { name: 'Document editor' }).count(), 0);
   assert.deepEqual(this.pageErrors, []);
 });
 

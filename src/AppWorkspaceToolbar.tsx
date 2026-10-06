@@ -21,7 +21,7 @@ export function WorkspaceToolbar({ model, theme, onToggleTheme, page = 'canvas' 
         else void uploadFiles(event.target.files);
         event.target.value = '';
       }}/>
-      {page === 'canvas' && <button className="primary-button" aria-label="Add block" title="Add block" onClick={() => model.answerCanvasOpen ? model.requestResearchAction('add') : openNewBlock()} disabled={!canvasId}><Icon name="plus" size={17}/><span className="toolbar-label">Add block</span></button>}
+      {page === 'canvas' && <button className="primary-button" aria-label="Create note" title="Create note" onClick={() => model.answerCanvasOpen ? model.requestResearchAction('add') : openNewBlock()} disabled={!canvasId}><Icon name="plus" size={17}/><span className="toolbar-label">Create note</span></button>}
       {page === 'canvas' && <button className="toolbar-button" aria-label="Browse groups" title="Browse groups" onClick={() => {
         if (model.answerCanvasOpen) model.requestResearchAction('groups');
         else { setSearchOpen(false); setBrowseGroupsOpen(true); }

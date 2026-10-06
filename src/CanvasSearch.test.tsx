@@ -74,19 +74,23 @@ describe('CanvasSearch', () => {
     const onOpenEvidence = vi.fn();
     render(<CanvasSearch query="api" hits={hits} loading={false} currentCanvasId="project" currentContentHashes={{ 'project:api-plan': 'new-hash' }} onQuery={vi.fn()} onClose={vi.fn()} onReveal={vi.fn()} onEdit={vi.fn()} onOpenEvidence={onOpenEvidence}/>);
     const result = screen.getByRole('option', { name: /API plan/ });
-    expect(within(result).getByText(/Document changed since this search/)).toBeTruthy();
+    expect(within(result).getByText('Source changed since this search')).toBeTruthy();
     fireEvent.click(within(result).getByRole('button', { name: 'Read current document API plan' }));
     expect(onOpenEvidence).toHaveBeenCalledWith(hits[0]);
-    expect(screen.getByRole('option', { name: /Auth decisions/ }).textContent).not.toContain('Document changed');
+    expect(screen.getByRole('option', { name: /Auth decisions/ }).textContent).not.toContain('Source changed');
   });
 
   it('shows checked provenance and opens the cited passage', () => {
     const onOpenEvidence = vi.fn();
     render(<CanvasSearch query="api" hits={hits} loading={false} currentCanvasId="project" onQuery={vi.fn()} onClose={vi.fn()} onReveal={vi.fn()} onEdit={vi.fn()} onOpenEvidence={onOpenEvidence}/>);
     const result = screen.getByRole('option', { name: /API plan/ });
+    const details = within(result).getByText('Source details').closest('details')!;
+    expect(details.open).toBe(false);
+    fireEvent.click(within(result).getByText('Source details'));
+    expect(details.open).toBe(true);
     expect(within(result).getByText('Exact source passage')).toBeTruthy();
     expect(within(result).getByText(/Hash abc123/)).toBeTruthy();
-    expect(screen.getByText('Approximate source context')).toBeTruthy();
+    expect(within(screen.getByRole('option', { name: /Auth decisions/ })).getByText('Approximate source context')).toBeTruthy();
     fireEvent.click(within(result).getByRole('button', { name: 'Read cited passage in API plan' }));
     expect(onOpenEvidence).toHaveBeenCalledWith(hits[0]);
   });
@@ -100,5 +104,16 @@ describe('CanvasSearch', () => {
     expect(confirm.textContent).toContain('Jev research');
     fireEvent.click(within(confirm).getByRole('button', { name: 'Switch canvas' }));
     expect(onOpenEvidence).toHaveBeenCalledWith(hits[2]);
+  });
+
+  it('keeps a result without source evidence navigable and omits source controls', () => {
+    const onReveal = vi.fn();
+    const hit: SearchHit = { ...hits[0], blockId: 'summary', title: 'API summary', group: undefined, evidence: undefined };
+    render(<CanvasSearch query="api" hits={[hit]} loading={false} currentCanvasId="project" onQuery={vi.fn()} onClose={vi.fn()} onReveal={onReveal} onEdit={vi.fn()}/>);
+    const result = screen.getByRole('option', { name: /API summary/ });
+    expect(within(result).queryByText('Source details')).toBeNull();
+    expect(within(result).queryByRole('button', { name: /Read source|Read current document/u })).toBeNull();
+    fireEvent.click(within(result).getByRole('button', { name: 'Show API summary on canvas' }));
+    expect(onReveal).toHaveBeenCalledWith(hit);
   });
 });

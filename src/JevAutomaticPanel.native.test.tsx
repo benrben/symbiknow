@@ -43,7 +43,7 @@ async function mountPanel(fixture: Fixture, opened?: (value: string) => void, so
   expect(within(panel).getByText('Opening workspace organization…')).toBeTruthy();
   expect((await held.response).ok).toBe(true);
   await act(async () => { await held.release(); });
-  await within(panel).findByRole('heading', { name: 'Jev works automatically' });
+  await within(panel).findByRole('heading', { name: 'Symbi Reflex is active' });
   if (resultsOpen) {
     await toggleDetails(panel, 'Automatic findings and saved results');
     await within(panel).findByRole('region', { name: 'Automatic findings' });
@@ -64,15 +64,17 @@ it('shows exactly the retained automatic actions without requesting work or appr
   expectAutomaticOnly(panel);
   expect(within(panel).getByText('Waiting for a TypeSafe API key in Settings.')).toBeTruthy();
   expect(within(panel).getAllByRole('spinbutton').map(item => item.getAttribute('aria-label'))).toEqual(jevActions.map(action => `${jevActionLabels[action]} confidence threshold`));
+  expect(within(panel).queryByRole('region', { name: 'Document progress' })).toBeNull();
+  expect(within(panel).getByRole('region', { name: 'Automatic organization status' })).toBeTruthy();
   expect(jevActions).toHaveLength(6);
   expect(fixture.calls.filter(call => call.method !== 'GET')).toEqual([]);
   expect(await fixture.reload()).toEqual(fixture.canvas);
   expect(within(panel).queryByRole('button', { name: 'Settings' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Symbi settings' }));
   await within(panel).findByLabelText('TypeSafe API key');
-  expect(within(panel).queryByRole('heading', { name: 'Jev works automatically' })).toBeNull();
+  expect(within(panel).queryByRole('heading', { name: 'Symbi Reflex is active' })).toBeNull();
   fireEvent.click(within(panel).getByRole('button', { name: 'Back to thresholds' }));
-  await within(panel).findByRole('heading', { name: 'Jev works automatically' });
+  await within(panel).findByRole('heading', { name: 'Symbi Reflex is active' });
   fireEvent.click(screen.getByRole('button', { name: 'Clear selected canvas' }));
   expect(screen.getByText('Select a canvas to open workspace organization.')).toBeTruthy();
 });
@@ -233,7 +235,7 @@ it('keeps an empty canvas useful and recovers a failed native state read through
   const panel = screen.getByRole('region', { name: 'Symbi Reflex organization' });
   await waitFor(() => expect(within(panel).getByRole('alert').textContent).toContain('Workspace temporarily unavailable'));
   fireEvent.click(within(panel).getByRole('button', { name: 'Retry' }));
-  await within(panel).findByRole('heading', { name: 'Jev works automatically' });
+  await within(panel).findByRole('heading', { name: 'Symbi Reflex is active' });
   expect(within(panel).getByText('New saved documents will be organized automatically.')).toBeTruthy();
   expect(within(panel).queryByText('Document profiles and connections')).toBeNull();
   expect(within(panel).queryByText(/Saved activity/)).toBeNull();
@@ -248,7 +250,7 @@ it('opens provider settings from an external settings request', async () => {
   await within(panel).findByLabelText('TypeSafe API key');
   expect(within(panel).getByRole('button', { name: 'Back to thresholds' })).toBeTruthy();
   fireEvent.click(within(panel).getByRole('button', { name: 'Back to thresholds' }));
-  await within(panel).findByRole('heading', { name: 'Jev works automatically' });
+  await within(panel).findByRole('heading', { name: 'Symbi Reflex is active' });
 });
 
 it('reports connection and pause settings with native readback and resumes watching an empty canvas', async () => {

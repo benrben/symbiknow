@@ -18,7 +18,7 @@ export function Sidebar({ model, page = 'canvas', onOpenTasks, onOpenCanvas }: {
   return <aside className="sidebar">
     <div className="brand"><BrandMark/><div><strong>symbiknow</strong><span>People + AI · infinite canvas</span></div></div>
     <div className="sidebar-section-label">WORKSPACES <button className="icon-button subtle" title="New workspace" aria-label="New workspace" onClick={() => openNamedDialog('workspace')}><Icon name="plus" size={16}/></button></div>
-    <div className="workspace-list">{workspaces.map(workspace => <div key={workspace.id} className="workspace-group"><div className="workspace-title"><span className="workspace-avatar">{workspace.name.slice(0, 1).toUpperCase()}</span><span className="workspace-name">{workspace.name}</span><button type="button" className="workspace-delete" title={`Delete workspace: ${workspace.name}`} aria-label={`Delete workspace: ${workspace.name}`} onClick={() => requestDeleteWorkspace(workspace)}><Icon name="trash" size={15}/></button></div><div className="canvas-links">{workspace.canvases.map(item => <div className={'canvas-link-row ' + (canvasId === item.id && page === 'canvas' ? 'active' : '')} key={item.id}><button className="canvas-link" title={`Open canvas: ${item.name}`} aria-label={`Open canvas: ${item.name}`} onClick={() => { onOpenCanvas?.(); selectCanvas(item.id); }}><Icon name="grid" size={15}/><span>{item.name}</span></button><button className="canvas-link-delete" title={`Delete canvas: ${item.name}`} aria-label={`Delete canvas: ${item.name}`} onClick={() => requestDeleteCanvas(item.id, item.name, workspace.id)}><Icon name="trash" size={15}/></button></div>)}</div></div>)}</div>
+    <div className="workspace-list">{workspaces.map(workspace => <div key={workspace.id} className="workspace-group"><div className="workspace-title"><span className="workspace-avatar">{workspace.name.slice(0, 1).toUpperCase()}</span><span className="workspace-name">{workspace.name}</span><button type="button" className="workspace-delete" title={`Delete workspace: ${workspace.name}`} aria-label={`Delete workspace: ${workspace.name}`} onClick={() => requestDeleteWorkspace(workspace)}><Icon name="trash" size={15}/></button></div><div className="canvas-links">{workspace.canvases.map(item => <div className={'canvas-link-row ' + (canvasId === item.id && page === 'canvas' ? 'active' : '')} key={item.id}><button className="canvas-link" title={`Open canvas: ${item.name}`} aria-label={`Open canvas: ${item.name}`} onClick={() => { selectCanvas(item.id); onOpenCanvas?.(); }}><Icon name="grid" size={15}/><span>{item.name}</span></button><button className="canvas-link-delete" title={`Delete canvas: ${item.name}`} aria-label={`Delete canvas: ${item.name}`} onClick={() => requestDeleteCanvas(item.id, item.name, workspace.id)}><Icon name="trash" size={15}/></button></div>)}</div></div>)}</div>
     <button className={'sidebar-new' + (page === 'tasks' ? ' active' : '')} title="Open Tasks page" aria-label="Open Tasks page" disabled={!canvasId} onClick={onOpenTasks}><Icon name="grid" size={16}/> Tasks</button>
     <button className="sidebar-new" title="New canvas" aria-label="New canvas" onClick={() => openNamedDialog('canvas')}><Icon name="plus" size={16}/> New canvas</button>
     <div className="sidebar-spacer"/>
@@ -29,13 +29,24 @@ export function Sidebar({ model, page = 'canvas', onOpenTasks, onOpenCanvas }: {
 export function MainColumn({ model, theme, onToggleTheme, page = 'canvas', onOpenCanvas }: { model: AppModel; theme: Theme; onToggleTheme: () => void; page?: 'canvas' | 'tasks'; onOpenCanvas?: () => void }) {
   return <div className="main-column">
     <WorkspaceToolbar model={model} theme={theme} onToggleTheme={onToggleTheme} page={page}/>
-    {model.error && !dialogShowsError(model.dialog) && <div className="global-error" role="alert"><span>{model.error}</span>
-      {model.error.includes('server is unavailable') && <button type="button" onClick={model.retryConnection}>Reconnect</button>}
-      <button aria-label="Dismiss error" onClick={() => model.setError('')}><Icon name="close" size={15}/></button></div>}
-    {page === 'tasks' && model.canvasId ? <TasksCanvasBoard canvasId={model.canvasId} theme={theme}
-      documentTitles={Object.fromEntries(model.canvas?.blocks.map(block => [block.id, block.title]) ?? [])}
-      onOpenDocument={blockId => { onOpenCanvas?.(); model.openReader(blockId); }}/>: <CanvasArea model={model} theme={theme}/>}
+    <GlobalErrorBanner model={model}/>
+    <WorkspaceContent model={model} theme={theme} page={page} onOpenCanvas={onOpenCanvas}/>
   </div>;
+}
+
+function GlobalErrorBanner({ model }: { model: AppModel }) {
+  if (!model.error || dialogShowsError(model.dialog)) return null;
+  return <div className="global-error" role="alert"><span>{model.error}</span>
+    {model.error.includes('server is unavailable') && <button type="button" onClick={model.retryConnection}>Reconnect</button>}
+    <button aria-label="Dismiss error" onClick={() => model.setError('')}><Icon name="close" size={15}/></button></div>;
+}
+
+function WorkspaceContent({ model, theme, page, onOpenCanvas }: { model: AppModel; theme: Theme;
+  page: 'canvas' | 'tasks'; onOpenCanvas?: () => void }) {
+  if (page === 'tasks' && model.canvasId) return <TasksCanvasBoard canvasId={model.canvasId} theme={theme}
+      documentTitles={Object.fromEntries(model.canvas?.blocks.map(block => [block.id, block.title]) ?? [])}
+      onOpenDocument={blockId => { model.openReader(blockId); onOpenCanvas?.(); }}/>;
+  return <CanvasArea model={model} theme={theme}/>;
 }
 
 function CanvasArea({ model, theme }: { model: AppModel; theme: Theme }) {
@@ -102,7 +113,10 @@ function FirstBlockPrompt({ model, canvas }: { model: AppModel; canvas: NonNulla
       <span className="eyebrow">START HERE</span>
       <h2>Make knowledge together.</h2>
       <p>Add a source or an idea. Your team and its AI agents can connect, organize, and build on it across this infinite canvas.</p>
-      <button className="primary-button" onClick={() => model.openNewBlock()}><Icon name="plus" size={17}/> Add your first block</button>
+      <div className="canvas-empty-prompt__actions">
+        <button className="primary-button" onClick={() => model.openNewBlock()}><Icon name="plus" size={17}/> Create note</button>
+        <button className="secondary-button" onClick={() => model.uploadRef.current?.click()}><Icon name="upload" size={17}/> Upload files</button>
+      </div>
     </div>;
 }
 

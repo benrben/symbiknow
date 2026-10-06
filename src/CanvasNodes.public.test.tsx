@@ -39,29 +39,27 @@ describe('public document node contracts in the installed renderer', () => {
     await screen.findByTitle('Reviewer: Review pending');
     expect(within(node).queryByRole('meter')).toBeNull();
   });
-  it('keeps portal order, count, labels and overflow, hides bodies and portals in title detail, and exposes one link singularly', async () => {
+  it('lists selected-card relationships together and hides cross-canvas links in title detail', async () => {
     const links = [{ canvasId: 'other', blockId: 'target' }, { canvasId: 'billing', blockId: 'invoice' }, { canvasId: 'research', blockId: 'evidence' }];
     const linked = block('a', { crossLinks: links });
-    const ui = mountNodes([documentSeed({ block: linked, crossLinkLabels: { 'other:target': 'Other · Release evidence' } })]);
+    const ui = mountNodes([{ ...documentSeed({ block: linked, crossLinkLabels: { 'other:target': 'Other · Release evidence' } }), selected: true }]);
     const node = await card();
-    expect(within(node).getByTitle('3 cross-canvas links').textContent).toBe('↗ 3');
-    expect(within(node).getByText('+1 more')).toBeTruthy();
+    expect(within(node).getByRole('navigation', { name: 'Relationships for Document a' }).textContent).toContain('3 relationships');
     expect(within(node).getByText('↗ Other canvas: Other · Release evidence')).toBeTruthy();
     expect(within(node).getByText('↗ Other canvas: billing')).toBeTruthy();
-    expect(within(node).queryByRole('button', { name: 'Open related document evidence on canvas research' })).toBeNull();
+    expect(within(node).getByRole('button', { name: 'Open related document evidence on canvas research' })).toBeTruthy();
     fireEvent.click(within(node).getByRole('button', { name: 'Open related document target on canvas other' }));
     expect(events()).toEqual(['portal:other:target']);
     ui.change([documentSeed({ block: linked, detail: 'titles' })]);
     await waitFor(() => expect(node.className).toContain('is-title-only'));
     expect(node.querySelector('.canvas-card__body')).toBeNull();
-    expect(node.querySelector('.canvas-card__portals')).toBeNull();
-    expect(node.querySelector('.canvas-card__portal-count')).toBeNull();
+    expect(node.querySelector('.canvas-card__relationships')).toBeNull();
     ui.change([documentSeed({ block: block('a', { crossLinks: links.slice(0, 1) }) })]);
-    await waitFor(() => expect(within(node).getByTitle('1 cross-canvas link')).toBeTruthy());
+    await waitFor(() => expect(within(node).getByText('1 relationship')).toBeTruthy());
     expect(node.querySelector('.canvas-card__body')).toBeTruthy();
     expect(within(node).queryByText(/more/)).toBeNull();
     ui.change([documentSeed({ block: block('a', { crossLinks: [] }) })]);
-    await waitFor(() => expect(node.querySelector('.canvas-card__portals')).toBeNull());
+    await waitFor(() => expect(node.querySelector('.canvas-card__relationships')).toBeNull());
   });
   it('routes read/history/edit without bubbling the body double click', async () => {
     mountNodes([documentSeed()]);
@@ -90,6 +88,17 @@ describe('public document node contracts in the installed renderer', () => {
 });
 
 describe('public group node contracts in the installed renderer', () => {
+  it('marks a selected overview group so its relationship counts can be revealed', async () => {
+    const ui = mountNodes([{ ...groupSeed({ overview: true, internalLinkCount: 1, externalLinkCount: 2 }), selected: true }]);
+    const node = await group();
+    expect(node.className).toContain('is-overview');
+    expect(node.className).toContain('is-selected');
+    expect(within(node).getByText('↗ 1 link inside')).toBeTruthy();
+    expect(within(node).getByText('↗ 2 links beyond this group')).toBeTruthy();
+    ui.change([{ ...groupSeed({ overview: true, internalLinkCount: 2, externalLinkCount: 1 }), selected: true }]);
+    expect(await within(node).findByText('↗ 2 links inside')).toBeTruthy();
+    expect(within(node).getByText('↗ 1 link beyond this group')).toBeTruthy();
+  });
   it.each([false, true])('drills and hovers only in overview while heading actions remain available (overview %s)', async overview => {
     mountNodes([groupSeed({ overview, count: 2 })]);
     const node = await group();

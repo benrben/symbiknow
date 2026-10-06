@@ -25,7 +25,8 @@ it('keeps linked destinations visible and readable when a zoomed group hides the
   const current = props(canvas([source, target]));
   const view = mount({ canvasProps: current, action: model => model.focusGroup('custom:source') });
   run();
-  const sourceCard = await screen.findByRole('navigation', { name: 'Links for Document source' });
+  fireEvent.click(await screen.findByRole('group', { name: 'Document: Document source' }));
+  const sourceCard = await screen.findByRole('navigation', { name: 'Relationships for Document source' });
   await waitFor(() => expect(document.querySelectorAll('.canvas-card')).toHaveLength(1));
   expect(document.querySelectorAll('.react-flow__edge')).toHaveLength(0);
   expect(sourceCard.previousElementSibling?.classList.contains('canvas-card__header')).toBe(true);

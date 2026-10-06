@@ -72,7 +72,7 @@ it('keeps the mounted assistant resting while its initial native workspace read 
   expect(screen.getByRole('img', { name: 'Symbi Reflex resting' })).toBeTruthy();
   expect((await held.response).status).toBe(200);
   await act(async () => { await held.release(); });
-  await within(panel).findByRole('heading', { name: 'Jev works automatically' });
+  await within(panel).findByRole('heading', { name: 'Symbi Reflex is active' });
   expect(within(panel).queryByText('Opening workspace organization…')).toBeNull();
   expect(within(panel).getByText('Waiting for a TypeSafe API key in Settings.')).toBeTruthy();
   expect(screen.getByRole('img', { name: 'Symbi Reflex resting' })).toBeTruthy();
@@ -81,7 +81,7 @@ it('keeps the mounted assistant resting while its initial native workspace read 
 
 it('refreshes the full App after a real automatic FILE commit and shows the new group without rewriting the source', async () => {
   const panel = openReflex();
-  await within(panel).findByRole('heading', { name: 'Jev works automatically' });
+  await within(panel).findByRole('heading', { name: 'Symbi Reflex is active' });
   await toggleDetails(panel, 'Automatic findings and saved results');
   await within(panel).findByText('Document profiles and connections');
   await toggleDetails(panel, 'Document profiles and connections');
@@ -105,7 +105,7 @@ it('refreshes the full App after a real automatic FILE commit and shows the new 
 
 it('shows unavailable after an actual native HTTP 503 and recovers through the visible read-only Retry control', async () => {
   const panel = openReflex();
-  await within(panel).findByRole('heading', { name: 'Jev works automatically' });
+  await within(panel).findByRole('heading', { name: 'Symbi Reflex is active' });
   const files = new JevWorkspaceFiles(fixture.root); const file = files.file(workspaceId);
   const saved = await readFile(file, 'utf8');
   await writeFile(file, '{interrupted workspace write');
@@ -120,7 +120,7 @@ it('shows unavailable after an actual native HTTP 503 and recovers through the v
   fireEvent.click(retry);
   await waitFor(() => expect(within(panel).queryByRole('alert')).toBeNull());
   expect(screen.getByRole('img', { name: 'Symbi Reflex resting' })).toBeTruthy();
-  expect(within(panel).getByRole('heading', { name: 'Jev works automatically' })).toBeTruthy();
+  expect(within(panel).getByRole('heading', { name: 'Symbi Reflex is active' })).toBeTruthy();
   expect((await files.read(workspaceId)).settings).toEqual((JSON.parse(saved) as JevWorkspaceState).settings);
   expect(calls.filter(call => call.route.includes('/jev/')).every(call => call.method === 'GET')).toBe(true);
   expect((await fixture.read('product-roadmap')).blocks[0].content).toBe(original.content);

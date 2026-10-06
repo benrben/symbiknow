@@ -6,5 +6,8 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-  server: { proxy: { '/api': 'http://127.0.0.1:8787', '/mcp': 'http://127.0.0.1:8787' } },
+  server: { proxy: {
+    '/api': { target: 'http://127.0.0.1:8787', changeOrigin: false },
+    '/mcp': { target: 'http://127.0.0.1:8787', changeOrigin: false },
+  } },
 });

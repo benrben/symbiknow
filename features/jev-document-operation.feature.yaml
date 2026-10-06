@@ -1,0 +1,19 @@
+feature: One durable automatic document operation
+tags:
+  - "@engine"
+  - "@document-operation"
+scenarios:
+  - name: Six action outcomes share one durable document completion
+    steps:
+      - given: an isolated document operation with an offline decision provider
+      - when: the automatic document operation completes
+      - then: six current outcomes survive reload in three workspace writes
+      - and: the document content manual organization and position are preserved
+      - when: unchanged automatic documents are checked again
+      - then: no new decisions or document operations are created
+  - name: Removed actions cannot restart work or change a document
+    steps:
+      - given: an isolated document operation with an offline decision provider
+      - when: the seven removed actions are requested
+      - then: each removed action is rejected without decisions jobs or durable writes
+      - and: the document content manual organization and position are preserved

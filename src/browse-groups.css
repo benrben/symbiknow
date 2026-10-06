@@ -13,11 +13,15 @@
 .browse-groups__group li button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; border: 1px solid transparent; border-radius: 8px; padding: 9px 10px; background: transparent; color: var(--sk-text); text-align: left; cursor: pointer; }
 .browse-groups__group li button:hover, .browse-groups__group li button:focus-visible { border-color: var(--sk-border); background: var(--sk-surface-soft); }
 .browse-groups__group li button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.browse-groups__group li button small { flex: none; color: var(--sk-muted); font-size: 10px; }
+.browse-groups__group li button small { flex: none; color: var(--sk-muted); font-size: 11px; }
 .browse-groups__empty { padding: 24px 6px; color: var(--sk-muted); font-size: 13px; text-align: center; }
 .browse-groups footer { border-top: 1px solid var(--sk-border); padding: 10px 14px; }
 .browse-groups footer button { width: 100%; border: 1px solid var(--sk-mint); border-radius: 8px; padding: 9px 12px; background: var(--sk-mint); color: #172b31; font-size: 12px; font-weight: 700; cursor: pointer; }
 .browse-groups footer button:hover, .browse-groups footer button:focus-visible { background: color-mix(in srgb, var(--sk-mint) 86%, #172b31); color: #172b31; }
 .browse-groups button:focus-visible { outline: 2px solid var(--sk-focus); outline-offset: 2px; }
+.app-shell:has(.canvas-main.is-grouping) .chat-panel { display: none; }
+.canvas-main.is-grouping { display: grid; grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: auto minmax(0, 1fr); }
+.canvas-main.is-grouping > .canvas-label { grid-column: 1; grid-row: 1; }
+.canvas-main.is-grouping > .canvas-surface { grid-column: 1; grid-row: 2; width: 100%; height: 100%; min-height: 0; }
 .canvas-main.is-grouping > .browse-groups { position: relative; z-index: 8; grid-column: 2; grid-row: 1 / 3; width: 100%; height: 100%; max-height: none; box-sizing: border-box; border: 0; border-left: 1px solid var(--sk-border); border-radius: 0; box-shadow: none; }
-@media (max-width: 700px) { .canvas-main.is-grouping > .browse-groups { position: absolute; top: 0; right: 0; width: min(340px, 100%); } }
+@media (max-width: 700px) { .canvas-main.is-grouping { display: flex; } .canvas-main.is-grouping > .browse-groups { position: absolute; top: 0; right: 0; width: min(340px, 100%); } }

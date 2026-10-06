@@ -1,0 +1,98 @@
+feature: Symbi Reflex runs the six retained actions automatically
+tags:
+- "@automatic-reflex"
+scenarios:
+- name: Independent automatic action questions share provider requests and preserve source isolation across reload
+  steps:
+  - given: a fresh workspace
+  - and: an isolated automatic Reflex workspace with a saved provider key
+  - when: distinct rollout sources and existing work are saved through the ordinary API
+  - then: all six Reflex actions finish without a request or an open panel
+  - and: independent typed action questions share real provider requests without mixing their saved sources
+  - when: I open the current canvas in a browser
+  - and: I open Reflex only to observe automatic results
+  - and: I reload the automatic Reflex canvas
+  - then: automatic classification and unchanged manual tasks survive reload
+  - and: independent typed action questions share real provider requests without mixing their saved sources
+- name: Saved sources are organized before the Reflex panel opens and results survive reload
+  steps:
+  - given: a fresh workspace
+  - and: an isolated automatic Reflex workspace with a saved provider key
+  - when: related sources and existing rollout work are saved through the ordinary API
+  - then: all six Reflex actions finish without a request or an open panel
+  - when: I open the current canvas in a browser
+  - and: I open Reflex only to observe automatic results
+  - then: the Reflex panel contains findings without action approval or mode controls
+  - when: I reload the automatic Reflex canvas
+  - then: automatic classification and unchanged manual tasks survive reload
+- name: Source changes refresh automatic checks while manually updated tasks remain intact
+  steps:
+  - given: a fresh workspace
+  - and: an isolated automatic Reflex workspace with a saved provider key
+  - when: related sources and existing rollout work are saved through the ordinary API
+  - then: all six Reflex actions finish without a request or an open panel
+  - when: the saved source and existing work change through the ordinary API
+  - then: all six Reflex actions refresh for the current source automatically
+  - when: I open the current canvas in a browser
+  - and: I open Reflex only to observe automatic results
+  - and: I reload the automatic Reflex canvas
+  - then: the refreshed results survive reload without additional tasks or approvals
+- name: Repeated reconciliation and browser reload keep unchanged completed sources stable
+  steps:
+  - given: a fresh workspace
+  - and: an isolated automatic Reflex workspace with a saved provider key
+  - when: related sources and existing rollout work are saved through the ordinary API
+  - then: all six Reflex actions finish without a request or an open panel
+  - and: I record the completed automatic knowledge and its job history
+  - when: I save the unchanged automatic settings through three reconciliation passes
+  - then: completed sources and their automatic results have not restarted or changed
+  - when: I open the current canvas in a browser
+  - and: I open Reflex only to observe automatic results
+  - and: I reload the automatic Reflex canvas
+  - and: I save the unchanged automatic settings through three reconciliation passes
+  - then: completed sources and their automatic results have not restarted or changed
+- name: Each automatic action has one confidence threshold that saves and survives reload
+  steps:
+  - given: a fresh workspace
+  - and: an isolated automatic Reflex workspace with a saved provider key
+  - when: related sources and existing rollout work are saved through the ordinary API
+  - then: all six Reflex actions finish without a request or an open panel
+  - when: I open the current canvas in a browser
+  - and: I open Reflex only to observe automatic results
+  - then: the primary Reflex tab has exactly six single confidence controls at seventy percent
+  - when: I change the "Organize into groups" confidence threshold to 85 percent
+  - and: I change the "Find useful connections" confidence threshold to 65 percent
+  - then: only those confidence thresholds save automatically without an apply action
+  - when: I reload the automatic Reflex canvas
+  - then: the individual confidence thresholds survive API readback and browser reload
+- name: Removed actions and command recipes are unavailable
+  steps:
+  - given: a fresh workspace
+  - and: an isolated automatic Reflex workspace with a saved provider key
+  - when: every removed Reflex action and command recipe is submitted through HTTP
+  - then: all twenty-one removed actions return bad requests and commands return not found
+- name: Reset restarts every workspace document and preserves manual knowledge and confidence settings
+  steps:
+  - given: a fresh workspace
+  - and: an isolated automatic Reflex workspace with a saved provider key
+  - when: related sources and existing rollout work are saved through the ordinary API
+  - then: all six Reflex actions finish without a request or an open panel
+  - when: manual organization is saved and automatic processing is paused with another workspace canvas
+  - and: I open the current canvas in a browser
+  - and: I open Reflex only to observe automatic results
+  - then: Reflex reports paused processing and offers the workspace reset
+  - when: I reset and rerun Jev from Reflex
+  - then: all six actions rerun for every workspace source while manual knowledge and settings remain
+  - when: I reload the automatic Reflex canvas
+  - then: the reset results and confidence settings survive browser reload
+  - when: I reset and rerun Jev from Reflex
+  - then: all six actions rerun for every workspace source while manual knowledge and settings remain
+- name: An unavailable provider is reported without pending approvals
+  steps:
+  - given: a fresh workspace
+  - and: an isolated automatic Reflex workspace without a provider key
+  - when: related sources and existing rollout work are saved through the ordinary API
+  - and: I open the current canvas in a browser
+  - and: I open Reflex only to observe automatic results
+  - then: Reflex reports the missing provider key without requesting action approval
+  - and: the workspace reset is disabled without a provider and makes no request

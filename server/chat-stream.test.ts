@@ -1,41 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createServer, type Server } from 'node:http';
-import { AIMessage, AIMessageChunk, HumanMessage, ToolMessage } from '@langchain/core/messages';
+import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import { ApiError, CanvasStore } from './storage';
 import { createApiServer } from './index';
-import { createChatStream, openRouterAgent, sendChatStream, type ChatStreamSession, type DeepAgentFactory } from './chat-stream';
-import type { JevDecider, JevQuestion, JevAnswer } from './jev';
+import { createChatStream, sendChatStream, type ChatStreamSession, type DeepAgentFactory } from './chat-stream';
 
 const directories: string[] = [];
 const servers: Server[] = [];
-const nativeFetch = globalThis.fetch;
-
-const approvedDecider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([name, question]) => [name,
-  question.type === 'choice' ? { type: 'choice', choice: 'multiple', confidence: 1,
-    probabilities: Object.fromEntries(Object.keys(question.criteria).map(choice => [choice, choice === 'multiple' ? 1 : 0])) }
-    : { type: 'noul', noul: 1 },
-])) as Record<string, JevAnswer>;
-
-beforeEach(() => {
-  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = input instanceof Request ? input.url : String(input);
-    if (url === 'https://api.typesafe.ai/v1/systemone') {
-      const payload = JSON.parse(String(init?.body)) as { questions: Record<string, JevQuestion> };
-      return approvedDecider('test-key', '', payload.questions).then(answers => Response.json({ answers }));
-    }
-    return nativeFetch(input, init);
-  });
-});
 
 async function storeFixture(): Promise<CanvasStore> {
   const root = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-chat-stream-'));
   directories.push(root);
   const store = new CanvasStore(root);
   await store.init();
-  await store.updateSettings({ jevApiKey: 'test-jev-key' });
   return store;
 }
 
@@ -61,57 +41,21 @@ afterEach(async () => {
 const body = { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Update the checklist.' }] };
 
 describe('Deep Agent chat stream', () => {
-  it('merges only with a token bound to the exact document set', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    const canvas = await store.getCanvas('product-roadmap');
-    const keeper = canvas.blocks.find(block => block.id === 'roadmap-overview')!;
-    const merged = canvas.blocks.find(block => block.id === 'pitch-slides')!;
-    const validator = vi.fn((_token: string, scope: { canvasId: string; action: string; blockIds: string[] }) =>
-      scope.canvasId === canvas.id && scope.action === 'merge documents'
-      && scope.blockIds.join() === `${keeper.id},${merged.id}`);
-    const factory: DeepAgentFactory = (_settings, tools) => async function* (messages) {
-      expect(tools.map(item => item.name)).toContain('merge_documents');
-      const result = await tools.find(item => item.name === 'merge_documents')!.invoke({
-        keepBlockId: keeper.id, mergeBlockIds: [merged.id], content: `${keeper.content}\n\n${merged.content}`,
-        expectedContentHashes: { [keeper.id]: keeper.contentHash, [merged.id]: merged.contentHash },
-      });
-      expect(String(result)).toContain('archivedBlockIds');
-      yield { messages: [...messages, new AIMessage('Merged the two documents.')] };
-    };
-    const decider: JevDecider = async (_key, _state, questions): Promise<Record<string, JevAnswer>> => {
-      if ('intent' in questions) return { intent: { type: 'choice', choice: 'organize', confidence: 1, probabilities: { organize: 1 } } };
-      if ('authorized' in questions) throw new Error('A valid token must skip the Jev gate');
-      return { has_claims: { type: 'noul', noul: 0.1 }, supported: { type: 'noul', noul: 1 } };
-    };
-    const session = await createChatStream(store, { ...body, intentToken: 'merge-token', messages: [{ role: 'user', content: 'yes' }] },
-      factory, decider, { validateIntentToken: validator });
-    for await (const chunk of session.tokens(new AbortController().signal)) { void chunk; }
-    expect(validator).toHaveBeenCalledWith('merge-token', {
-      canvasId: canvas.id, action: 'merge documents', blockIds: [keeper.id, merged.id],
-    });
-    const after = await store.getCanvas(canvas.id);
-    expect(after.blocks.some(block => block.id === merged.id)).toBe(false);
-    expect(after.blocks.find(block => block.id === keeper.id)?.content).toContain(merged.content);
-  });
 
-  it('routes a confident read-only request to read tools without exposing write tools', async () => {
+  it('refuses task writes from a stopped session even without an invocation signal', async () => {
     const store = await storeFixture();
     await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    let offered: string[] = [];
-    const factory: DeepAgentFactory = (_settings, tools, prompt) => {
-      offered = tools.map(item => item.name);
-      expect(prompt).toContain('appears to be answer');
-      return async function* (messages) { yield { messages: [...messages, new AIMessage('The launch is planned.')] }; };
+    let taskTool: Parameters<DeepAgentFactory>[1][number] | undefined;
+    const factory: DeepAgentFactory = (_settings, tools) => {
+      taskTool = tools.find(tool => tool.name === 'create_task');
+      return async function* (messages) { yield { messages: [...messages, new AIMessage('Stopped.')] }; };
     };
-    const decider: JevDecider = async (_key, _state, questions): Promise<Record<string, JevAnswer>> => 'intent' in questions
-      ? { intent: { type: 'choice', choice: 'answer', confidence: 0.95, probabilities: { answer: 0.95 } } }
-      : { supported: { type: 'noul', noul: 0.98 } };
-    const session = await createChatStream(store, { ...body, messages: [{ role: 'user', content: 'What is the launch status?' }] }, factory, decider);
-    const chunks: string[] = [];
-    for await (const chunk of session.tokens(new AbortController().signal)) chunks.push(chunk);
-    expect(chunks.join('')).toBe('The launch is planned.');
-    expect(offered).toEqual(['search_docs', 'read_doc', 'show_doc_on_canvas', 'show_group_on_canvas', 'analyze_canvas', 'list_tasks']);
+    const session = await createChatStream(store, body, factory);
+    const controller = new AbortController();
+    controller.abort();
+    for await (const event of session.events!(controller.signal)) { void event; }
+    await expect(taskTool!.invoke({ title: 'Late detached task' })).rejects.toMatchObject({ name: 'AbortError' });
+    expect((await store.listTasks('product-roadmap')).some(task => task.title === 'Late detached task')).toBe(false);
   });
 
   it('emits typed navigation when the agent opens a document or group in the native canvas', async () => {
@@ -124,7 +68,7 @@ describe('Deep Agent chat stream', () => {
       yield { messages: [...messages, new AIMessage('Opened the launch evidence.')] };
     };
     const session = await createChatStream(store, { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Open the launch checklist' }] },
-      factory, approvedDecider);
+      factory);
     const events: Array<{ kind: string; target?: unknown }> = [];
     for await (const event of session.events!(new AbortController().signal)) events.push(event);
     expect(events.filter(event => event.kind === 'navigate')).toEqual([
@@ -148,13 +92,7 @@ describe('Deep Agent chat stream', () => {
       ], edges: [{ from: 'summary', to: 'flow', label: 'explains' }, { from: 'flow', to: 'next', label: 'unblocks' }] });
       yield { messages: [...messages, new AIMessage('I mapped the release evidence.')] };
     };
-    const decider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([id, question]) => {
-      if (id === 'intent') return [id, { type: 'choice', choice: 'answer', confidence: 1, probabilities: { answer: 1 } }];
-      if (id === 'research_layout') return [id, { type: 'choice', choice: 'architecture', confidence: 1, probabilities: { architecture: 1 } }];
-      if (id.startsWith('source_') && question.type === 'score') return [id, { type: 'score', score: 4, confidence: 1, probabilities: { '4': 1 } }];
-      return [id, { type: 'noul', noul: 1 }];
-    })) as Record<string, JevAnswer>;
-    const session = await createChatStream(store, { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'What blocks launch?' }] }, factory, decider);
+    const session = await createChatStream(store, { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'What blocks launch?' }] }, factory);
     const events: Array<{ kind: string; patch?: { blocks: Array<{ sourceIds: string[]; kind?: string; content: string }>; edges: unknown[] } }> = [];
     for await (const event of session.events!(new AbortController().signal)) events.push(event);
     const patch = events.find(event => event.kind === 'research_patch')?.patch;
@@ -173,61 +111,12 @@ describe('Deep Agent chat stream', () => {
       offered = tools.map(item => item.name);
       yield { messages: [...messages, new AIMessage('The two mobile tests failed.')] };
     };
-    const decider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([id, question]) => {
-      if (id === 'intent') return [id, { type: 'choice', choice: 'answer', confidence: 1, probabilities: { answer: 1 } }];
-      if (id === 'answer_surface') return [id, { type: 'choice', choice: 'chat', confidence: 1, probabilities: { chat: 1 } }];
-      if (question.type === 'score') return [id, { type: 'score', score: 4, confidence: 1, probabilities: { '4': 1 } }];
-      return [id, { type: 'noul', noul: 1 }];
-    })) as Record<string, JevAnswer>;
-    const session = await createChatStream(store, { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Which tests failed?' }] }, factory, decider);
+    const session = await createChatStream(store, { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Which tests failed?' }] }, factory);
     const events = [];
     for await (const event of session.events!(new AbortController().signal)) events.push(event);
     expect(offered).not.toContain('draw_research_canvas');
     expect(events.some(event => event.kind === 'answer_canvas' || event.kind === 'research_patch')).toBe(false);
     expect(events.some(event => event.kind === 'text' && event.content.includes('two mobile tests'))).toBe(true);
-  });
-
-  it('routes the research canvas choice to the drawing tool even when intent suggests creating a main-canvas document', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    let offered: string[] = [];
-    const factory: DeepAgentFactory = (_settings, tools) => async function* (messages) {
-      offered = tools.map(item => item.name);
-      yield { messages: [...messages, new AIMessage('I will map the research.')] };
-    };
-    const decider: JevDecider = async (_key, _state, questions) => {
-      const answers: Record<string, JevAnswer> = {};
-      for (const [id, question] of Object.entries(questions)) answers[id] = id === 'intent'
-        ? { type: 'choice', choice: 'create', confidence: 1, probabilities: { create: 1 } }
-        : id === 'answer_surface'
-          ? { type: 'choice', choice: 'chat', confidence: 1, probabilities: { chat: 1 } }
-          : question.type === 'score'
-            ? { type: 'score', score: 4, confidence: 1, probabilities: { '4': 1 } }
-            : { type: 'noul', noul: 1 };
-      return answers;
-    };
-    const session = await createChatStream(store, { canvasId: 'product-roadmap', messages: [{ role: 'user',
-      content: 'Create a temporary research canvas for: launch blockers' }] }, factory, decider);
-    for await (const event of session.events!(new AbortController().signal)) expect(event.kind).toBeDefined();
-    expect(offered).toContain('draw_research_canvas');
-  });
-
-  it('offers current-view, research-canvas, and navigation choices for an unclear request', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    const factory: DeepAgentFactory = () => { throw new Error('The agent should wait for the user choice'); };
-    const decider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([id, question]) => {
-      if (id === 'intent') return [id, { type: 'choice', choice: 'answer', confidence: 1, probabilities: { answer: 1 } }];
-      if (id === 'answer_surface') return [id, { type: 'choice', choice: 'clarify', confidence: 1, probabilities: { clarify: 1 } }];
-      if (question.type === 'score') return [id, { type: 'score', score: 4, confidence: 1, probabilities: { '4': 1 } }];
-      return [id, { type: 'noul', noul: 1 }];
-    })) as Record<string, JevAnswer>;
-    const session = await createChatStream(store, { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Help me with this?' }] }, factory, decider);
-    const events = [];
-    for await (const event of session.events!(new AbortController().signal)) events.push(event);
-    const choice = events.find(event => event.kind === 'presentation_choice');
-    expect(choice?.choice.options.map(option => option.label)).toEqual(['Build a research canvas', 'Work on this view', 'Take me to the source']);
-    expect(events.some(event => event.kind === 'research_patch')).toBe(false);
   });
 
   it('offers create and typed linking together after an explicit gap draft approval', async () => {
@@ -238,37 +127,10 @@ describe('Deep Agent chat stream', () => {
       offered = tools.map(item => item.name);
       return async function* (messages) { yield { messages: [...messages, new AIMessage('Ready to save the draft.')] }; };
     };
-    const decider: JevDecider = async (_key, _state, questions): Promise<Record<string, JevAnswer>> => 'intent' in questions
-      ? { intent: { type: 'choice', choice: 'create', confidence: 0.95, probabilities: { create: 0.95 } } }
-      : approvedDecider(_key, _state, questions);
-    const session = await createChatStream(store, { ...body, messages: [{ role: 'user', content: 'Create the approved draft and link it as a prerequisite.' }] }, factory, decider);
+    const session = await createChatStream(store, { ...body, messages: [{ role: 'user', content: 'Create the approved draft and link it as a prerequisite.' }] }, factory);
     for await (const piece of session.tokens(new AbortController().signal)) { void piece; }
     expect(offered).toContain('create_doc');
     expect(offered).toContain('link_blocks');
-  });
-
-  it('offers the new read-only analysis tools and scores documents without changing them', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    const before = await store.getCanvas('product-roadmap');
-    const factory: DeepAgentFactory = (_settings, tools) => async function* (messages) {
-      const names = tools.map(item => item.name);
-      expect(names).toEqual(['search_docs', 'read_doc', 'show_doc_on_canvas', 'show_group_on_canvas', 'analyze_canvas', 'find_duplicates', 'connect_across_canvases', 'score_documents', 'list_tasks']);
-      const scores = JSON.parse(String(await tools.find(item => item.name === 'score_documents')!.invoke({}))) as Array<{ quality: { score: number } }>;
-      expect(scores).toHaveLength(before.blocks.length);
-      expect(scores.every(item => item.quality.score === 1)).toBe(true);
-      expect(await tools.find(item => item.name === 'connect_across_canvases')!.invoke({})).toBe('[]');
-      yield { messages: [...messages, new AIMessage('I checked document quality.')] };
-    };
-    const decider: JevDecider = async (_key, _state, questions): Promise<Record<string, JevAnswer>> => {
-      if ('intent' in questions) return { intent: { type: 'choice', choice: 'analyze', confidence: 1, probabilities: { analyze: 1 } } };
-      return Object.fromEntries(Object.entries(questions).map(([id, question]) => [id, question.type === 'score'
-        ? { type: 'score', score: 4, confidence: 1, probabilities: { '4': 1 } }
-        : { type: 'noul', noul: 1 }]));
-    };
-    const session = await createChatStream(store, { ...body, messages: [{ role: 'user', content: 'Score these documents.' }] }, factory, decider);
-    for await (const chunk of session.tokens(new AbortController().signal)) { void chunk; }
-    expect((await store.getCanvas('product-roadmap')).blocks.map(block => block.quality)).toEqual(before.blocks.map(block => block.quality));
   });
 
   it('uses the current unsaved draft for advice and refuses to overwrite its saved document', async () => {
@@ -287,87 +149,9 @@ describe('Deep Agent chat stream', () => {
       viewContext: { selectedBlockIds: ['launch-checklist'], readerBlockId: 'launch-checklist',
         editingBlockId: 'launch-checklist', editorHasUnsavedChanges: true,
         editorDraft: { title: 'Launch checklist', kind: 'markdown', content: '# My unfinished checklist' } },
-    }, factory, approvedDecider);
+    }, factory);
     for await (const chunk of session.tokens(new AbortController().signal)) { void chunk; }
     expect((await store.getCanvas('product-roadmap')).blocks.find(block => block.id === 'launch-checklist')!.content).toBe(original);
-  });
-
-  it('marks an unsupported answer and preserves normal chat when verification fails', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    const factory: DeepAgentFactory = () => async function* (messages) {
-      yield { messages: [...messages, new AIMessage('The launch was canceled yesterday.')] };
-    };
-    const unsupported: JevDecider = async (_key, state, questions): Promise<Record<string, JevAnswer>> => {
-      if ('intent' in questions) return { intent: { type: 'choice', choice: 'answer', confidence: 0.5, probabilities: { answer: 0.5 } } };
-      expect(state).toMatchObject({ answer: 'The launch was canceled yesterday.', sources: expect.arrayContaining([expect.objectContaining({ title: 'Roadmap overview' })]) });
-      expect(questions).toHaveProperty('claim_0');
-      return { has_claims: { type: 'noul', noul: 1 }, claim_0: { type: 'noul', noul: 0.1 },
-        source_0: { type: 'choice', choice: 'none', confidence: 1, probabilities: { none: 1 } } };
-    };
-    const flagged = await createChatStream(store, body, factory, unsupported);
-    const flaggedEvents = [];
-    for await (const event of flagged.events!(new AbortController().signal)) flaggedEvents.push(event);
-    expect(flaggedEvents.filter(event => event.kind === 'text').map(event => event.kind === 'text' ? event.content : '').join('')).toBe('The launch was canceled yesterday.');
-    expect(flaggedEvents.slice(-2)).toMatchObject([
-      { kind: 'verification', verification: { status: 'checking' } },
-      { kind: 'verification', verification: { status: 'unsupported', score: 0.1,
-        claims: [{ text: 'The launch was canceled yesterday.', score: 0.1, supported: false }] } },
-    ]);
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const noVerification: JevDecider = async (_key, _state, questions): Promise<Record<string, JevAnswer>> => {
-      if ('intent' in questions) return { intent: { type: 'choice', choice: 'answer', confidence: 0.9, probabilities: { answer: 0.9 } } };
-      throw new Error('Jev offline');
-    };
-    const normal = await createChatStream(store, body, factory, noVerification);
-    const normalChunks: string[] = [];
-    for await (const chunk of normal.tokens(new AbortController().signal)) normalChunks.push(chunk);
-    expect(normalChunks.join('')).toBe('The launch was canceled yesterday.');
-    expect(warn).toHaveBeenCalledWith('Jev answer verification unavailable; sending the chat answer without verification.');
-    warn.mockRestore();
-  });
-
-  it('verifies with documents read this turn before similarity matches and skips claims-free badges', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    let sources: Array<{ blockId: string; content: { outline: string } }> = [];
-    const factory: DeepAgentFactory = (_settings, tools) => async function* (messages) {
-      await tools.find(item => item.name === 'read_doc')!.invoke({ blockId: 'pitch-slides' });
-      await tools.find(item => item.name === 'search_docs')!.invoke({ query: 'Launch checklist' });
-      yield { messages: [...messages, new AIMessage('The pitch deck discusses Acme Team goals.')] };
-    };
-    const decider: JevDecider = async (_key, state, questions): Promise<Record<string, JevAnswer>> => {
-      if ('intent' in questions) return { intent: { type: 'choice', choice: 'answer', confidence: 1, probabilities: { answer: 1 } } };
-      expect(questions).toHaveProperty('has_claims');
-      expect(questions).toHaveProperty('claim_0');
-      sources = (state as { sources: typeof sources }).sources;
-      return { has_claims: { type: 'noul', noul: 1 }, claim_0: { type: 'noul', noul: 0.91 },
-        source_0: { type: 'choice', choice: 's0', confidence: 1, probabilities: { s0: 1 } } };
-    };
-    const session = await createChatStream(store, { ...body, messages: [{ role: 'user', content: 'Summarize the pitch.' }] }, factory, decider);
-    const events = [];
-    for await (const event of session.events!(new AbortController().signal)) events.push(event);
-    expect(sources[0].blockId).toBe('pitch-slides');
-    expect(sources.some(source => source.blockId === 'launch-checklist')).toBe(true);
-    expect(sources[0].content.outline).toContain('Acme Team');
-    expect(sources.length).toBeLessThanOrEqual(12);
-    expect(events.at(-1)).toMatchObject({ kind: 'verification', verification: { status: 'supported', score: 0.91,
-      checkedClaims: 1, totalClaims: 1,
-      claims: [{ supported: true, source: { blockId: 'pitch-slides', evidence: {
-        claim: 'The pitch deck discusses Acme Team goals.', passageKind: 'approximation',
-        navigation: { kind: 'document', blockId: 'pitch-slides' },
-      } } }] } });
-
-    const noClaims: JevDecider = async (_key, _state, questions): Promise<Record<string, JevAnswer>> => 'intent' in questions
-      ? { intent: { type: 'choice', choice: 'answer', confidence: 1, probabilities: { answer: 1 } } }
-      : { has_claims: { type: 'noul', noul: 0.1 }, supported: { type: 'noul', noul: 0.1 } };
-    const plainFactory: DeepAgentFactory = () => async function* (messages) {
-      yield { messages: [...messages, new AIMessage('Happy to help.')] };
-    };
-    const plain = await createChatStream(store, { ...body, messages: [{ role: 'user', content: 'Thanks' }] }, plainFactory, noClaims);
-    const plainEvents = [];
-    for await (const event of plain.events!(new AbortController().signal)) plainEvents.push(event);
-    expect(plainEvents.at(-1)).toEqual({ kind: 'verification', verification: { status: 'no_claims' } });
   });
 
   it('uses the selected agent profile and only the enabled plugin tools', async () => {
@@ -380,14 +164,13 @@ describe('Deep Agent chat stream', () => {
       prompt = systemPrompt;
       return async function* (messages) { yield { messages: [...messages, new AIMessage('I found the document.')] }; };
     };
-    const decider = vi.fn(approvedDecider);
-    const session = await createChatStream(store, body, factory, decider);
+    const session = await createChatStream(store, body, factory);
     const chunks: string[] = [];
     for await (const chunk of session.tokens(new AbortController().signal)) chunks.push(chunk);
     expect(chunks.join('')).toBe('I found the document.');
-    expect(names).toEqual(['search_docs', 'read_doc', 'show_doc_on_canvas', 'show_group_on_canvas']);
+    expect(names).toEqual(['search_docs', 'read_doc', 'show_doc_on_canvas', 'show_group_on_canvas',
+      'jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox']);
     expect(prompt).toContain('Investigate relevant documents');
-    expect(decider).not.toHaveBeenCalled();
   });
 
   it('rejects invalid history, absent credentials, and missing canvases before starting', async () => {
@@ -417,7 +200,7 @@ describe('Deep Agent chat stream', () => {
     expect(missingKey.status).toBe(400);
     expect(await missingKey.json()).toEqual({ error: 'Set an OpenRouter API key in Settings before using chat' });
     await fetch(base + '/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'private-key', jevApiKey: 'test-jev-key', model: 'vendor/model' }) });
+      body: JSON.stringify({ apiKey: 'private-key', model: 'vendor/model' }) });
     const response = await post('/api/chat/stream', body);
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/event-stream');
@@ -437,7 +220,7 @@ describe('Deep Agent chat stream', () => {
     };
     const base = await serverFixture(factory);
     await fetch(base + '/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'private-openrouter-key', jevApiKey: 'private-jev-key', model: 'vendor/model' }) });
+      body: JSON.stringify({ apiKey: 'private-openrouter-key', model: 'vendor/model' }) });
     const response = await fetch(base + '/api/chat/stream', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const stream = await response.text();
     const frames = stream.split('\n\n').filter(Boolean);
@@ -451,7 +234,7 @@ describe('Deep Agent chat stream', () => {
     ]);
     expect(frames.some(frame => frame.includes('"content":"I found the document."'))).toBe(true);
     expect(frames.at(-1)).toBe('data: [DONE]');
-    expect(stream).not.toMatch(/private query|private document body|private-openrouter-key|private-jev-key/);
+    expect(stream).not.toMatch(/private query|private document body|private-openrouter-key/);
   });
 
   it('sanitizes tool labels and handles partial Deep Agents snapshots', async () => {
@@ -467,7 +250,7 @@ describe('Deep Agent chat stream', () => {
       yield { messages: [...messages, planning, call, new ToolMessage({ content: 'hidden', tool_call_id: 'tool-2' })] };
       yield { messages: [...messages, planning, call, new ToolMessage({ content: 'hidden', tool_call_id: 'tool-2' }), new AIMessage('Done.')] };
     };
-    const session = await createChatStream(store, body, factory, approvedDecider);
+    const session = await createChatStream(store, body, factory);
     const events = [];
     for await (const event of session.events!(new AbortController().signal)) events.push(event);
     expect(events.filter(event => event.kind === 'step')).toEqual([
@@ -477,56 +260,8 @@ describe('Deep Agent chat stream', () => {
       { kind: 'step', step: { type: 'thinking', message: 'Reviewing the tool result' } },
     ]);
     expect(events.filter(event => event.kind === 'text').at(-1)).toEqual({ kind: 'text', content: 'Done.' });
-    expect(events.at(-1)).toEqual({ kind: 'verification', verification: { status: 'supported', score: 1 } });
-  });
-
-  it('streams model tokens as they arrive and resets a note written before a tool call', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'openrouter-key', model: 'vendor/model' });
-    const top = { langgraph_node: 'model_request', langgraph_checkpoint_ns: 'model_request:1' };
-    const nested = { langgraph_node: 'model_request', langgraph_checkpoint_ns: 'tools:1|model_request:2' };
-    const factory: DeepAgentFactory = () => async function* (messages) {
-      yield ['messages', [new AIMessageChunk({ content: 'Let me look. ', id: 'm1' }), top]];
-      yield ['messages', [new AIMessageChunk({ content: '', id: 'm1', tool_call_chunks: [{ name: 'search_docs', args: '{}', id: 'c1', index: 0 }] }), top]];
-      const call = new AIMessage({ content: 'Let me look. ', tool_calls: [{ id: 'c1', name: 'search_docs', args: {} }] });
-      yield ['values', { messages: [...messages, call] }];
-      const result = new ToolMessage({ content: 'private', tool_call_id: 'c1', name: 'search_docs' });
-      yield ['values', { messages: [...messages, call, result] }];
-      yield ['messages', [new AIMessageChunk({ content: 'Subagent text', id: 's1' }), nested]];
-      yield ['messages', [new AIMessageChunk({ content: 'Found ', id: 'm2' }), top]];
-      yield ['messages', [new AIMessageChunk({ content: 'it.', id: 'm2' }), top]];
-      yield ['values', { messages: [...messages, call, result, new AIMessage('Found it.')] }];
-    };
-    const session = await createChatStream(store, body, factory, approvedDecider);
-    const events = [];
-    for await (const event of session.events!(new AbortController().signal)) events.push(event);
-    const visible = events.filter(event => event.kind !== 'step');
-    expect(visible).toEqual([
-      { kind: 'text', content: 'Let me look. ' },
-      { kind: 'reset' },
-      { kind: 'text', content: 'Found ' },
-      { kind: 'text', content: 'it.' },
-      { kind: 'verification', verification: { status: 'checking' } },
-      { kind: 'verification', verification: { status: 'supported', score: 1 } },
-    ]);
-    expect(events).toContainEqual({ kind: 'step', step: { type: 'tool_start', id: 'c1', name: 'search_docs', message: 'Running search_docs' } });
-  });
-
-  it('uses the selected provider base URL and a custom profile', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ provider: 'custom', baseUrl: 'http://llm.internal:11434/v1', model: 'llama3.1',
-      customProfiles: [{ name: 'Sales coach', instructions: 'Coach the sales team on next steps.' }], agentProfile: 'custom-sales-coach' });
-    let received: unknown;
-    let prompt = '';
-    const factory: DeepAgentFactory = (settings, _tools, systemPrompt) => {
-      received = settings;
-      prompt = systemPrompt;
-      return async function* (messages) { yield { messages: [...messages, new AIMessage('Ready.')] }; };
-    };
-    const session = await createChatStream(store, body, factory, approvedDecider);
-    for await (const chunk of session.tokens(new AbortController().signal)) void chunk;
-    expect(received).toMatchObject({ provider: 'custom', baseURL: 'http://llm.internal:11434/v1', model: 'llama3.1', apiKey: 'not-needed' });
-    expect(prompt).toContain('Coach the sales team on next steps.');
+    expect(events.at(-1)).toEqual({ kind: 'text', content: 'Done.' });
+    expect(events.some(event => String(event.kind).includes('verification'))).toBe(false);
   });
 
   it('stops rich progress when its agent is canceled during snapshots or an upstream failure', async () => {
@@ -538,7 +273,7 @@ describe('Deep Agent chat stream', () => {
       afterSnapshot.abort();
       yield { messages: [...messages, new AIMessage('Hidden')] };
     };
-    const session = await createChatStream(store, body, snapshotFactory, approvedDecider);
+    const session = await createChatStream(store, body, snapshotFactory);
     const events = [];
     for await (const event of session.events!(afterSnapshot.signal)) events.push(event);
     expect(events).toEqual([{ kind: 'step', step: { type: 'thinking', message: 'Working on your request' } }]);
@@ -548,89 +283,10 @@ describe('Deep Agent chat stream', () => {
       duringFailure.abort();
       throw new Error('Private upstream details');
     };
-    const failed = await createChatStream(store, body, failureFactory, approvedDecider);
+    const failed = await createChatStream(store, body, failureFactory);
     const failureEvents = [];
     for await (const event of failed.events!(duringFailure.signal)) failureEvents.push(event);
     expect(failureEvents).toEqual([]);
-  });
-
-  it('turns an agent failure into a clear JSON upstream error without exposing the key', async () => {
-    const factory: DeepAgentFactory = () => async function* () { throw new Error('private-key connection details'); };
-    const base = await serverFixture(factory);
-    await fetch(base + '/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'private-key', model: 'vendor/model' }) });
-    const response = await fetch(base + '/api/chat/stream', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    expect(response.status).toBe(502);
-    expect(await response.json()).toEqual({ error: 'OpenRouter request failed. Check the model and API key in Settings.' });
-  });
-
-  it.each([
-    [401, 'The API key was rejected. Check it in Settings.'],
-    [402, 'The account has insufficient credits. Check billing with the provider.'],
-    [429, 'The provider rate limit was reached. Retry shortly.'],
-  ])('shows a safe provider reason for upstream status %i', async (status, reason) => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'private-key', model: 'vendor/model' });
-    const factory: DeepAgentFactory = () => async function* () {
-      throw Object.assign(new Error('private-key details'), { status });
-    };
-    const session = await createChatStream(store, body, factory, approvedDecider);
-    await expect(async () => { for await (const chunk of session.tokens(new AbortController().signal)) void chunk; })
-      .rejects.toMatchObject({ status: 502, message: `OpenRouter request failed (${status}). ${reason}` });
-  });
-
-  it('validates message shapes and final Deep Agent output', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    const noOutput: DeepAgentFactory = () => async function* () { yield { messages: [new HumanMessage('Only user')] }; };
-    await expect(createChatStream(store, { ...body, canvasId: '' }, noOutput)).rejects.toMatchObject({ status: 400 });
-    for (const messages of [null, Array(101).fill({ role: 'user', content: 'hi' }), [null],
-      [{ role: 'user', content: null }], [{ role: 'tool', content: 'result' }]]) {
-      await expect(createChatStream(store, { ...body, messages }, noOutput)).rejects.toMatchObject({ status: 400 });
-    }
-    const session = await createChatStream(store, body, noOutput);
-    await expect(async () => { for await (const piece of session.tokens(new AbortController().signal)) { void piece; } })
-      .rejects.toMatchObject({ status: 502, message: 'OpenRouter returned no final answer' });
-    const noText: DeepAgentFactory = () => async function* () { yield { messages: [new AIMessage('')] }; };
-    const empty = await createChatStream(store, body, noText);
-    await expect(async () => { for await (const piece of empty.tokens(new AbortController().signal)) { void piece; } })
-      .rejects.toMatchObject({ status: 502, message: 'OpenRouter returned no text' });
-    const run = openRouterAgent({ model: 'vendor/model', apiKey: 'key' }, [], 'Prompt');
-    const aborted = new AbortController();
-    aborted.abort();
-    await expect(run([new HumanMessage('Hello')], aborted.signal)).rejects.toThrow('aborted');
-  });
-
-  it('splits long final answers into ordered SSE deltas', async () => {
-    const answer = 'A'.repeat(600);
-    const factory: DeepAgentFactory = () => async function* (messages) {
-      yield { messages: [...messages, new AIMessage(answer)] };
-    };
-    const base = await serverFixture(factory);
-    await fetch(base + '/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'key', model: 'vendor/model' }) });
-    const response = await fetch(base + '/api/chat/stream', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    const chunks = (await response.text()).split('\n\n').filter(item => item.startsWith('data: {'))
-      .map(item => JSON.parse(item.slice(6)) as { choices: Array<{ delta: { content: string } }> });
-    expect(chunks.slice(0, 3).map(chunk => chunk.choices[0].delta.content).join('')).toBe(answer);
-    expect(chunks).toHaveLength(4);
-  });
-
-  it('sends an error event for failures after SSE headers were sent', async () => {
-    const session: ChatStreamSession = { model: 'vendor/model', async *tokens() { yield 'First part. '; throw new Error('secret details'); } };
-    const server = createServer((_request, response) => { void sendChatStream(response, session); });
-    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-    servers.push(server);
-    const address = server.address();
-    if (!address || typeof address === 'string') throw new Error('Missing server address');
-    const response = await fetch(`http://127.0.0.1:${address.port}`);
-    const text = await response.text();
-    expect(response.status).toBe(200);
-    expect(text).toContain('First part.');
-    expect(text).toContain('event: error\ndata: {"message":"Chat stream stopped. Check the model settings."}');
-    expect(text).not.toContain('secret details');
-    expect(text).toContain('"finish_reason":"stop"');
-    expect(text).toContain('data: [DONE]');
   });
 
   it('keeps API errors readable after headers and closes empty streams cleanly', async () => {
@@ -673,84 +329,4 @@ describe('Deep Agent chat stream', () => {
     for await (const chunk of interrupted.tokens(caught.signal)) chunks.push(chunk);
     expect(chunks).toEqual([]);
   });
-
-  it('aborts an in-flight Deep Agent before SSE headers when the client disconnects', async () => {
-    let started: () => void = () => {};
-    const entered = new Promise<void>(resolve => { started = resolve; });
-    let observed: AbortSignal | undefined;
-    const session: ChatStreamSession = { model: 'vendor/model', async *tokens(signal) {
-      observed = signal;
-      started();
-      await new Promise<void>(resolve => signal.addEventListener('abort', () => resolve(), { once: true }));
-      yield 'Too late';
-    } };
-    const server = createServer((_request, response) => { void sendChatStream(response, session); });
-    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-    servers.push(server);
-    const address = server.address();
-    if (!address || typeof address === 'string') throw new Error('Missing server address');
-    const controller = new AbortController();
-    const request = fetch(`http://127.0.0.1:${address.port}`, { signal: controller.signal });
-    await entered;
-    controller.abort();
-    await expect(request).rejects.toThrow();
-    await vi.waitFor(() => expect(observed?.aborted).toBe(true));
-  });
-
-  it('aborts an in-flight Deep Agent after SSE headers when the client disconnects', async () => {
-    let observed: AbortSignal | undefined;
-    const session: ChatStreamSession = { model: 'vendor/model', async *tokens(signal) {
-      observed = signal;
-      yield 'First piece';
-      await new Promise<void>(resolve => signal.addEventListener('abort', () => resolve(), { once: true }));
-      throw new Error('Stopped after disconnect');
-    } };
-    const server = createServer((_request, response) => { void sendChatStream(response, session); });
-    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-    servers.push(server);
-    const address = server.address();
-    if (!address || typeof address === 'string') throw new Error('Missing server address');
-    const controller = new AbortController();
-    const response = await fetch(`http://127.0.0.1:${address.port}`, { signal: controller.signal });
-    const reader = response.body?.getReader();
-    expect(reader).toBeDefined();
-    expect(new TextDecoder().decode((await reader!.read()).value)).toContain('First piece');
-    controller.abort();
-    await vi.waitFor(() => expect(observed?.aborted).toBe(true));
-  });
-
-  it('asks one Jev question per claim and flags the answer when any claim is unsupported', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    const answer = 'The launch date moved to March. The beta test group grew to fifty people.';
-    const factory: DeepAgentFactory = () => async function* (messages) { yield { messages: [...messages, new AIMessage(answer)] }; };
-    let seenQuestions: Record<string, unknown> = {};
-    const decider: JevDecider = async (_key, _state, questions): Promise<Record<string, JevAnswer>> => {
-      if ('intent' in questions) return { intent: { type: 'choice', choice: 'answer', confidence: 1, probabilities: { answer: 1 } } };
-      seenQuestions = questions;
-      return { has_claims: { type: 'noul', noul: 1 }, claim_0: { type: 'noul', noul: 0.9 }, claim_1: { type: 'noul', noul: 0.2 },
-        source_0: { type: 'choice', choice: 's0', confidence: 1, probabilities: { s0: 1 } },
-        source_1: { type: 'choice', choice: 'none', confidence: 1, probabilities: { none: 1 } } };
-    };
-    const session = await createChatStream(store, body, factory, decider);
-    const events = [];
-    for await (const event of session.events!(new AbortController().signal)) events.push(event);
-    expect(Object.keys(seenQuestions).sort()).toEqual(['claim_0', 'claim_1', 'has_claims', 'source_0', 'source_1']);
-    expect(events.at(-1)).toMatchObject({ kind: 'verification', verification: { status: 'unsupported', score: 0.2,
-      claims: [{ supported: true }, { supported: false }] } });
-  });
-
-  it('aborts the routing signal once its deadline elapses', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    let seenSignal: AbortSignal | undefined;
-    const decider: JevDecider = (_key, _state, _questions, _fetcher, options) => new Promise((_resolve, reject) => {
-      seenSignal = options?.signal;
-      options?.signal?.addEventListener('abort', () => reject(new Error('Jev request was cancelled')));
-    });
-    const factory: DeepAgentFactory = () => async function* (messages) { yield { messages: [...messages, new AIMessage('Hi.')] }; };
-    // routeIntent's decider never resolves on its own, so createChatStream only proceeds once the 1.5s routing deadline aborts it.
-    await createChatStream(store, body, factory, decider);
-    expect(seenSignal?.aborted).toBe(true);
-  }, 10_000);
 });

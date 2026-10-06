@@ -34,3 +34,6 @@ Thumbs.db
 /JEV_FIXES_HANDOFF.md
 /*.png
 /*.excalidraw
+
+# Local benchmark runs and implementation scratch files
+/work/

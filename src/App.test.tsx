@@ -4,7 +4,6 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { EditorView } from 'codemirror';
 import { App } from './App';
 import type { CanvasBlock, CanvasDocument, ChatSettings, WorkspaceSummary } from '../shared/types';
-import type { InsightItem, InsightReport } from '../shared/insights';
 import type { AnswerCanvasResult, CanvasNavigationTarget, ResearchCanvasPatch } from '../shared/answer-canvas';
 
 const initialWorkspace: WorkspaceSummary = { id: 'team', name: 'Product team', canvases: [{ id: 'planning', name: 'Planning' }] };
@@ -34,7 +33,6 @@ function fixture(options: {
   empty?: boolean;
   initialBlocks?: CanvasBlock[];
   hasApiKey?: boolean;
-  hasJevApiKey?: boolean;
   chatReplies?: Array<{ message: string; changed: boolean } | { error: string } | Promise<{ message: string; changed: boolean } | { error: string }>>;
   answerCanvas?: AnswerCanvasResult;
   researchPatch?: ResearchCanvasPatch;
@@ -50,26 +48,17 @@ function fixture(options: {
   searchResults?: Array<{ canvasId: string; blockId: string; title: string; excerpt: string }>;
   failWorkspaces?: boolean;
   failCanvasAfterFirst?: boolean;
-  insightsReport?: InsightReport;
-  duplicatesReport?: Array<InsightItem & { canvasIds: [string, string] }>;
   failLayout?: boolean;
-  failAutomation?: boolean;
-  intakeSuggestion?: { canvasId: string; purpose?: string; workArea?: string; tags: string[];
-    linkTargets: Array<{ blockId: string; title: string; confidence: number }> };
 } = {}) {
   const workspaces = options.empty ? [] : [structuredClone(initialWorkspace)];
   const canvas: CanvasDocument = { id: 'planning', name: 'Planning', workspaceId: 'team', blocks: structuredClone(options.initialBlocks ?? []) };
   const canvases = new Map<string, CanvasDocument>([[canvas.id, canvas]]);
-  let settings: ChatSettings = { provider: 'openrouter', model: 'openai/gpt-4o-mini', systemPrompt: '', hasApiKey: options.hasApiKey ?? false, hasJevApiKey: options.hasJevApiKey ?? false, reviewers: '' };
+  let settings: ChatSettings = { provider: 'openrouter', model: 'openai/gpt-4o-mini', systemPrompt: '', hasApiKey: options.hasApiKey ?? false };
   const requests: { path: string; method: string; body: unknown }[] = [];
   let chatIndex = 0;
   let canvasReads = 0;
-  let lastMerge: { canvasId: string; before: CanvasBlock[] } | null = null;
-  let lastCanvasRun: { canvasId: string; runId: string; kind: string; before: CanvasBlock[];
-    changes: Array<{ id: string; canvasId: string; confidence: number; action: InsightItem['action']; expectedContentHashes: Record<string, string> }> } | null = null;
-
   const fetchResponse = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const requestPath = String(input);
+    const requestPath = String(input).replace(/^(\/api\/canvases\/[^/?]+)\?summary=1$/, '$1');
     const method = init?.method ?? 'GET';
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
     requests.push({ path: requestPath, method, body });
@@ -94,7 +83,7 @@ function fixture(options: {
     if (requestPath === '/api/settings' && method === 'GET') return Response.json(settings);
     if (requestPath === '/api/settings' && method === 'PUT') {
       if (options.failSettingsSave) return Response.json({ error: 'Settings could not be saved' }, { status: 503 });
-      settings = { ...settings, model: String(body?.model), systemPrompt: String(body?.systemPrompt), reviewers: String(body?.reviewers), agentProfile: body?.agentProfile as ChatSettings['agentProfile'], agentPlugins: body?.agentPlugins as ChatSettings['agentPlugins'], hasApiKey: Boolean(body?.apiKey) || settings.hasApiKey, hasJevApiKey: Boolean(body?.jevApiKey) || settings.hasJevApiKey };
+      settings = { ...settings, model: String(body?.model), systemPrompt: String(body?.systemPrompt), agentProfile: body?.agentProfile as ChatSettings['agentProfile'], agentPlugins: body?.agentPlugins as ChatSettings['agentPlugins'], hasApiKey: Boolean(body?.apiKey) || settings.hasApiKey };
       return Response.json(settings);
     }
     const newCanvas = requestPath.match(/^\/api\/workspaces\/([^/]+)\/canvases$/);
@@ -118,38 +107,6 @@ function fixture(options: {
       for (const workspace of workspaces) workspace.canvases = workspace.canvases.filter(item => item.id !== canvasRoute[1]);
       return Response.json({ ok: true });
     }
-    const insightsRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/insights$/);
-    if (insightsRoute && method === 'POST') return Response.json({ ...options.insightsReport, canvasId: insightsRoute[1], query: String(body?.query ?? '') });
-    const duplicatesRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/duplicates$/);
-    if (duplicatesRoute && method === 'POST') return Response.json(options.duplicatesReport ?? []);
-    const intakeRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/intake\/preview$/);
-    if (intakeRoute && method === 'POST') return Response.json(options.intakeSuggestion ?? {
-      canvasId: intakeRoute[1], tags: [], linkTargets: [],
-    });
-    const feedbackRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/insights\/feedback$/);
-    if (feedbackRoute && method === 'POST') return Response.json({ ok: true });
-    const mergeRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/merge$/);
-    if (mergeRoute && method === 'POST') {
-      const document = canvases.get(mergeRoute[1]);
-      const keeper = document?.blocks.find(block => block.id === body?.keepBlockId);
-      if (!document || !keeper) return Response.json({ error: 'Merge document missing' }, { status: 404 });
-      const ids = body?.mergeBlockIds as string[];
-      const hashes = body?.expectedContentHashes as Record<string, string>;
-      if ([keeper.id, ...ids].some(id => document.blocks.find(block => block.id === id)?.contentHash !== hashes[id])) {
-        return Response.json({ error: 'A merge document changed. Review the proposed merge again.' }, { status: 409 });
-      }
-      lastMerge = { canvasId: mergeRoute[1], before: structuredClone(document.blocks) };
-      keeper.content = String(body?.content);
-      document.blocks.forEach(block => { if (ids.includes(block.id)) block.archived = true; });
-      return Response.json({ mergeId: 'merge-1', keepBlockId: keeper.id, archivedBlockIds: ids, contentHash: 'merged-hash' });
-    }
-    if (requestPath === '/api/merges/merge-1/undo' && method === 'POST') {
-      if (!lastMerge) return Response.json({ error: 'Merge not found' }, { status: 404 });
-      const document = canvases.get(lastMerge.canvasId)!;
-      document.blocks = lastMerge.before;
-      lastMerge = null;
-      return Response.json({ mergeId: 'merge-1', reverted: true });
-    }
     const moveRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/blocks\/([^/]+)\/move$/);
     if (moveRoute && method === 'POST') {
       const source = canvases.get(moveRoute[1]);
@@ -171,39 +128,6 @@ function fixture(options: {
       }
       return Response.json(document);
     }
-    const automationRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/automations$/);
-    if (automationRoute && method === 'POST') {
-      if (options.failAutomation) return Response.json({ error: 'Jev is unavailable' }, { status: 502 });
-      const document = canvases.get(automationRoute[1])!;
-      const kind = String(body?.kind);
-      if (body?.dryRun !== false) {
-        const action: InsightItem['action'] = kind === 'layout'
-          ? { type: 'layout', positions: document.blocks.map((block, index) => ({ blockId: block.id, x: 80 + index * 558, y: 80, group: index ? 'area:sales' : 'area:frontend' })) }
-          : kind === 'connection'
-            ? document.blocks[0].links.length ? { type: 'unlink', fromBlockId: 'alpha', toBlockId: 'beta' } : { type: 'link', fromBlockId: 'alpha', toBlockId: 'beta' }
-            : { type: 'update', blockId: 'alpha', patch: kind === 'purpose' ? { purpose: 'guide' } : { reviewer: 'Engineering' } };
-        lastCanvasRun = { canvasId: document.id, runId: 'fixture-canvas-run', kind, before: structuredClone(document.blocks),
-          changes: [{ id: 'fixture-change', canvasId: document.id, confidence: 0.95, action, expectedContentHashes: {} }] };
-      } else if (lastCanvasRun?.canvasId === document.id && body?.runId === lastCanvasRun.runId &&
-        (body?.actionIds as string[])?.includes('fixture-change')) {
-        const action = lastCanvasRun.changes[0].action;
-        if (action?.type === 'layout') for (const position of action.positions) {
-          const block = document.blocks.find(item => item.id === position.blockId);
-          if (block) Object.assign(block, position);
-        }
-        if (action?.type === 'link') document.blocks[0].links = ['beta'];
-        if (action?.type === 'unlink') document.blocks[0].links = [];
-        if (action?.type === 'update') Object.assign(document.blocks[0], action.patch);
-      }
-      return Response.json({ runId: lastCanvasRun?.runId, workspaceId: document.workspaceId, canvasId: document.id,
-        kind, dryRun: body?.dryRun !== false, changes: lastCanvasRun?.changes ?? [],
-        groups: [{ canvasId: document.id, canvasName: document.name, count: 1 }],
-        ...(body?.dryRun === false ? { applied: ['fixture-change'], skipped: [] } : {}) });
-    }
-    if (requestPath === '/api/jev-runs/fixture-canvas-run/undo' && method === 'POST' && lastCanvasRun) {
-      canvases.get(lastCanvasRun.canvasId)!.blocks = structuredClone(lastCanvasRun.before);
-      return Response.json({ reverted: ['fixture-change'], skipped: [] });
-    }
     const blocksRoute = requestPath.match(/^\/api\/canvases\/([^/]+)\/blocks$/);
     if (blocksRoute && method === 'POST') {
       const document = canvases.get(blocksRoute[1]);
@@ -223,6 +147,7 @@ function fixture(options: {
       const document = canvases.get(blockRoute[1]);
       const block = document?.blocks.find(item => item.id === blockRoute[2]);
       if (!document || !block) return Response.json({ error: 'Block missing' }, { status: 404 });
+      if (method === 'GET') return Response.json(block);
       if (method === 'PUT') {
         if (options.failBlockUpdate) return Response.json({ error: 'Document could not be saved' }, { status: 503 });
         Object.assign(block, body);
@@ -242,7 +167,6 @@ function fixture(options: {
         .filter(block => (block.title + block.content).toLowerCase().includes(query))
         .map(block => ({ canvasId: document.id, blockId: block.id, title: block.title, excerpt: block.content }))));
     }
-    if (requestPath === '/api/chat/intents' && method === 'POST') return Response.json({ token: 'merge-intent', expiresAt: '2026-09-26T20:00:00.000Z' }, { status: 201 });
     if (requestPath === '/api/chat/stream' && method === 'POST') {
       const replyIndex = chatIndex++;
       const reply = await (options.chatReplies?.[replyIndex] ?? { message: 'Canvas summarized.', changed: false });
@@ -365,20 +289,19 @@ describe('App composition', () => {
     expect(screen.getByRole('dialog', { name: 'Delete canvas' })).toBeTruthy();
     expect(server.canvases.has('planning')).toBe(true);
   });
-  it('shows a cached canvas immediately and revalidates it with an ETag on return', async () => {
+  it('requests fresh canvas metadata on each navigation and shows server updates on return', async () => {
     const server = fixture();
     server.workspaces[0].canvases.push({ id: 'research', name: 'Research' });
     server.canvases.set('research', { id: 'research', name: 'Research', workspaceId: 'team', blocks: [] });
-    const conditionalReads: string[] = [];
+    const reads: Array<{ path: string; init?: RequestInit }> = [];
+    const returnRead = deferred<void>();
+    let holdReturn = false;
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const path = String(input);
-      const match = path.match(/^\/api\/canvases\/(planning|research)$/);
+      const match = path.match(/^\/api\/canvases\/(planning|research)\?summary=1$/);
       if (match) {
-        const etag = new Headers(init?.headers).get('If-None-Match');
-        if (etag) {
-          conditionalReads.push(`${match[1]}:${etag}`);
-          return new Response(null, { status: 304, headers: { ETag: etag } });
-        }
+        reads.push({ path, init });
+        if (holdReturn && match[1] === 'planning') await returnRead.promise;
         const response = await server.fetchResponse(input, init);
         return new Response(await response.text(), { status: response.status,
           headers: { 'content-type': 'application/json', ETag: `"${match[1]}-v1"` } });
@@ -389,10 +312,18 @@ describe('App composition', () => {
     expect(await screen.findByRole('region', { name: 'Planning infinite canvas' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open canvas: Research' }));
     expect(await screen.findByRole('region', { name: 'Research infinite canvas' })).toBeTruthy();
+    server.canvas.name = 'Planning refreshed from server';
+    holdReturn = true;
     fireEvent.click(screen.getByRole('button', { name: 'Open canvas: Planning' }));
-    expect(screen.getByRole('region', { name: 'Planning infinite canvas' })).toBeTruthy();
-    expect(screen.queryByText('Loading canvas…')).toBeNull();
-    await waitFor(() => expect(conditionalReads).toContain('planning:"planning-v1"'));
+    expect(await screen.findByRole('heading', { name: 'Loading canvas…' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Planning infinite canvas' })).toBeNull();
+    await act(async () => { returnRead.resolve(); });
+    expect(await screen.findByRole('region', { name: 'Planning refreshed from server infinite canvas' })).toBeTruthy();
+    expect(reads.map(read => read.path)).toEqual(['/api/canvases/planning?summary=1', '/api/canvases/research?summary=1', '/api/canvases/planning?summary=1']);
+    for (const read of reads) {
+      expect(read.init?.cache).toBe('no-store');
+      expect(new Headers(read.init?.headers).has('If-None-Match')).toBe(false);
+    }
   });
 
   it('shows the SymbiKnow identity and keeps the selected dark mode after remount', async () => {
@@ -445,19 +376,16 @@ describe('App composition', () => {
     const settingsDialog = screen.getByRole('dialog', { name: 'Settings' });
     fireEvent.change(within(settingsDialog).getByLabelText('Model'), { target: { value: 'anthropic/claude-sonnet-4' } });
     fireEvent.change(within(settingsDialog).getByLabelText(/^OpenRouter API key/), { target: { value: 'sk-or-v1-secret' } });
-    fireEvent.change(within(settingsDialog).getByLabelText(/^TypeSafe Jev API key/), { target: { value: 'jev-secret' } });
     fireEvent.change(within(settingsDialog).getByLabelText('System prompt'), { target: { value: 'Be concise.' } });
-    fireEvent.change(within(settingsDialog).getByLabelText(/^Review teams/), { target: { value: 'Product, Engineering' } });
     fireEvent.click(within(settingsDialog).getByRole('button', { name: 'Save settings' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Settings' })).toBeNull());
     expect(await screen.findByText('anthropic/claude-sonnet-4', {}, { timeout: 5000 })).toBeTruthy();
     expect(document.body.textContent).not.toContain('sk-or-v1-secret');
-    expect(document.body.textContent).not.toContain('jev-secret');
     expect(server.requests.find(request => request.path === '/api/settings' && request.method === 'PUT')?.body)
-      .toMatchObject({ model: 'anthropic/claude-sonnet-4', apiKey: 'sk-or-v1-secret', jevApiKey: 'jev-secret', systemPrompt: 'Be concise.', reviewers: 'Product, Engineering' });
+      .toMatchObject({ model: 'anthropic/claude-sonnet-4', apiKey: 'sk-or-v1-secret', systemPrompt: 'Be concise.' });
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
-    expect(within(screen.getByRole('dialog', { name: 'Settings' })).getAllByText('Connected')).toHaveLength(2);
+    expect(within(screen.getByRole('dialog', { name: 'Settings' })).getAllByText('Connected')).toHaveLength(1);
     expect(within(screen.getByRole('dialog', { name: 'Settings' })).getByText(/A key is saved/)).toBeTruthy();
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Settings' })).getByRole('button', { name: 'Cancel' }));
   });
@@ -475,7 +403,7 @@ describe('App composition', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save settings' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Settings' })).toBeNull());
     expect(server.requests.find(request => request.path === '/api/settings' && request.method === 'PUT')?.body)
-      .toMatchObject({ agentProfile: 'planner', agentPlugins: ['document_read', 'jev_insights', 'tasks', 'external_mcp'] });
+      .toMatchObject({ agentProfile: 'planner', agentPlugins: ['document_read', 'tasks', 'external_mcp'] });
   });
 
   it('opens a full-page reader with its own URL, pages through documents, and returns with Back', async () => {
@@ -648,6 +576,7 @@ describe('App composition', () => {
     fireEvent.click(await within(search).findByRole('button', { name: 'Edit Brainstorm' }));
     const reopened = await screen.findByRole('dialog', { name: 'Block editor' });
     expect((within(reopened).getByLabelText('Title') as HTMLInputElement).value).toBe('Brainstorm');
+    await within(reopened).findByLabelText('Markdown source');
     expect(editorText(reopened)).toContain('Find a path.');
   });
 
@@ -773,28 +702,6 @@ describe('App composition', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('reviews Jev intake suggestions before saving an uploaded document', async () => {
-    const existing: CanvasBlock = { id: 'roadmap', file: 'roadmap.md', title: 'Roadmap', kind: 'markdown',
-      content: '# Roadmap', x: 10, y: 20, width: 350, height: 250, links: [] };
-    const server = fixture({ hasJevApiKey: true, initialBlocks: [existing], intakeSuggestion: {
-      canvasId: 'planning', purpose: 'plan', workArea: 'product', tags: ['launch'],
-      linkTargets: [{ blockId: 'roadmap', title: 'Roadmap', confidence: 0.9 }],
-    } });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const file = new File(['# Launch'], 'Launch.md', { type: 'text/markdown' });
-    Object.defineProperty(file, 'text', { value: async () => '# Launch' });
-    fireEvent.change(document.querySelector('input[type=file]') as HTMLInputElement, { target: { files: [file] } });
-    const review = await screen.findByRole('dialog', { name: 'Review Jev upload suggestions' });
-    expect(server.canvas.blocks).toHaveLength(1);
-    fireEvent.click(within(review).getByLabelText('Tags: launch'));
-    fireEvent.click(within(review).getByRole('button', { name: 'Add document' }));
-    await waitFor(() => expect(server.canvas.blocks).toHaveLength(2));
-    expect(server.canvas.blocks[1]).toMatchObject({ title: 'Launch', purpose: 'plan', workArea: 'product', tags: [], links: ['roadmap'] });
-    expect(server.requests).toContainEqual(expect.objectContaining({ path: '/api/canvases/planning/intake/preview', method: 'POST' }));
-  });
-
   it('edits and deletes an existing Markdown file through the search result', async () => {
     const existing: CanvasBlock = { id: 'outline', file: 'outline.md', title: 'Outline', kind: 'markdown', content: '# Old', x: 10, y: 20, width: 350, height: 250, links: [] };
     const server = fixture({ initialBlocks: [existing] });
@@ -834,17 +741,20 @@ describe('App composition', () => {
       { error: 'OpenRouter unavailable' },
       { message: 'The roadmap is ready.', changed: false },
     ] });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
+    const fetcher = vi.fn(server.fetchResponse);
+    vi.stubGlobal('fetch', fetcher);
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
+    const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
     const send = (message: string) => {
       fireEvent.change(compose, { target: { value: message } });
       fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     };
     send('Update roadmap');
     expect(await screen.findByText('I updated the roadmap.')).toBeTruthy();
-    expect(server.requests.filter(request => request.path === '/api/canvases/planning')).toHaveLength(2);
+    const canvasReads = fetcher.mock.calls.filter(([path]) => String(path).startsWith('/api/canvases/planning'));
+    expect(canvasReads.map(([path]) => String(path))).toEqual(['/api/canvases/planning?summary=1', '/api/canvases/planning', '/api/canvases/planning?summary=1']);
+    expect(canvasReads.every(([, init]) => init?.cache === 'no-store')).toBe(true);
     send('What now?');
     expect((await screen.findByRole('alert')).textContent).toContain('OpenRouter unavailable');
     const failedRequest = server.requests.filter(request => request.path === '/api/chat/stream').at(-1);
@@ -880,6 +790,76 @@ describe('App composition', () => {
     expect(requests[1].body).toMatchObject({ messages: [{ role: 'user', content: 'Second question' }] });
     expect(screen.getByRole('heading', { name: 'Planning' })).toBeTruthy();
   });
+
+  it('starts an empty chat after a generated research action without replaying that action', async () => {
+    window.localStorage.setItem('symbiknow:research-session', JSON.stringify({
+      turns: [{ id: 2, query: 'Original question', answer: 'Research answer', sources: [], status: 'complete',
+        patch: { query: 'Original question', blocks: [{ id: 'seed', type: 'text', title: 'Seed block',
+          content: 'Research body', sourceIds: [] }, { id: 'second', type: 'text', title: 'Second block', content: 'Second body', sourceIds: [] }], edges: [] } }],
+      edits: { added: [], changed: {}, deleted: [], addedEdges: [], deletedEdges: [] }, layout: 'mindmap',
+    }));
+    const server = fixture({ hasApiKey: true });
+    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
+    render(<App/>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open research canvas' }));
+    const cards = within(await screen.findByRole('region', { name: 'Research canvas' }));
+    fireEvent.click(cards.getByRole('button', { name: 'Step 1: Seed block' }));
+    const first = await cards.findByText('Seed block', { selector: '.canvas-card__identity strong' });
+    const second = await cards.findByText('Second block', { selector: '.canvas-card__identity strong' });
+    fireEvent.click(first.closest('.react-flow__pane') ?? document.querySelector('.answer-canvas .react-flow__pane')!);
+    fireEvent.keyDown(window, { key: 'Control', ctrlKey: true });
+    for (const title of [first, second]) fireEvent.keyDown(title.closest('.react-flow__node')!, { key: 'Enter', code: 'Enter', ctrlKey: true });
+    fireEvent.keyUp(window, { key: 'Control' });
+    fireEvent.click(await cards.findByRole('button', { name: 'AI: summarize these' }));
+    expect(await screen.findByText('Canvas summarized.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Discard and start' }));
+    expect(screen.getByText('Hi, I’m Symbi.')).toBeTruthy();
+    expect(server.requests.filter(request => request.path === '/api/chat/stream')).toHaveLength(1);
+    expect(screen.queryByText(/Summarize these research blocks/)).toBeNull();
+  });
+
+  it.each(['another canvas', 'a new editor', 'a closed editor'] as const)(
+    'ignores a pending Search Edit response after switching to %s', async destination => {
+      const block: CanvasBlock = { id: 'old-note', title: 'Old note', kind: 'markdown', content: '# Old note',
+        file: 'old-note.md', contentHash: 'aaaaaaaaaaaaaaaa', x: 0, y: 0, width: 320, height: 240, links: [] };
+      const server = fixture({ initialBlocks: [block] });
+      server.workspaces[0].canvases.push({ id: 'other', name: 'Other' });
+      server.canvases.set('other', { id: 'other', name: 'Other', workspaceId: 'team', blocks: [] });
+      const pending = deferred<Response>();
+      let holdRead = false;
+      let requested = false;
+      vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === '/api/canvases/planning?summary=1' && holdRead) {
+          holdRead = false; requested = true;
+          return pending.promise;
+        }
+        return server.fetchResponse(input, init);
+      }));
+      render(<App/>);
+      expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Search documents' }));
+      const search = screen.getByRole('dialog', { name: 'Search documents' });
+      fireEvent.change(within(search).getByRole('textbox', { name: 'Search every Markdown file' }), { target: { value: 'Old' } });
+      const edit = await within(search).findByRole('button', { name: 'Edit Old note' });
+      holdRead = true;
+      fireEvent.click(edit);
+      expect(requested).toBe(true);
+      if (destination === 'another canvas') {
+        fireEvent.click(screen.getByRole('button', { name: 'Open canvas: Other' }));
+        expect(await screen.findByRole('heading', { name: 'Other' })).toBeTruthy();
+      } else {
+        fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
+        expect(screen.getByRole('heading', { name: 'New block' })).toBeTruthy();
+        if (destination === 'a closed editor') fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+      }
+      await act(async () => pending.resolve(Response.json(server.canvas)));
+      if (destination === 'a new editor') {
+        expect(screen.getByRole('heading', { name: 'New block' })).toBeTruthy();
+        expect(screen.getByLabelText('Title')).toHaveProperty('value', 'Untitled note');
+      } else expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Edit block' })).toBeNull();
+    });
 
   it('restores temporary research after refresh and asks before clearing it', async () => {
     window.localStorage.setItem('symbiknow:research-session', JSON.stringify({
@@ -1074,11 +1054,11 @@ describe('App composition', () => {
       { id: 'flow', type: 'diagram', title: 'Release flow', content: '```mermaid\nflowchart LR\nQA-->Release\n```', sourceIds: ['planning:qa'] },
       { id: 'next', type: 'task', title: 'Next actions', content: '- [ ] Re-run QA', sourceIds: [] },
     ], edges: [{ from: 'summary', to: 'flow', label: 'explains' }, { from: 'flow', to: 'next', label: 'unblocks' }] };
-    const server = fixture({ hasApiKey: true, hasJevApiKey: true, initialBlocks: [block], answerCanvas, researchPatch });
+    const server = fixture({ hasApiKey: true, initialBlocks: [block], answerCanvas, researchPatch });
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
+    const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: answerCanvas.query } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     const board = await screen.findByRole('region', { name: 'Research canvas' });
@@ -1117,7 +1097,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    const compose = screen.getByRole('textbox', { name: 'Message Symbi' });
+    const compose = await screen.findByRole('textbox', { name: 'Message Symbi' });
     fireEvent.change(compose, { target: { value: source.query } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     const board = await screen.findByRole('region', { name: 'Research canvas' });
@@ -1129,7 +1109,8 @@ describe('App composition', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open research canvas' }));
     const reopened = screen.getByRole('region', { name: 'Research canvas' });
     expect(within(reopened).getByText(/2 documents/)).toBeTruthy();
-    expect(within(reopened).getByRole('navigation', { name: 'Research questions' }).querySelectorAll('button')).toHaveLength(1);
+    expect(within(reopened).queryByRole('navigation', { name: 'Research questions' })).toBeNull();
+    expect(within(reopened).getByText('Answer outline · 2 steps')).toBeTruthy();
   });
 
   it('returns to the research canvas after the agent navigates to a cited document', async () => {
@@ -1236,7 +1217,7 @@ describe('App composition', () => {
     expect(server.canvas.blocks[0]).toMatchObject({ title: 'MCP note', content: '# From WebMCP' });
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input) === '/api/canvases/planning' && !init?.method) return Response.json({ error: 'Canvas unavailable' }, { status: 503 });
+      if (String(input) === '/api/canvases/planning?summary=1' && !init?.method) return Response.json({ error: 'Canvas unavailable' }, { status: 503 });
       return server.fetchResponse(input, init);
     }));
     await registered.get('create_doc')?.({ title: 'MCP follow-up', content: '# Follow-up' });
@@ -1364,7 +1345,7 @@ describe('App composition', () => {
   it('ignores an obsolete canvas load failure after switching canvases', async () => {
     const pending = deferred<Response>();
     const server = fixture();
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/canvases/planning' ? pending.promise : server.fetchResponse(input, init)));
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/canvases/planning?summary=1' ? pending.promise : server.fetchResponse(input, init)));
     render(<App/>);
     expect(await screen.findByRole('button', { name: 'New canvas' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'New canvas' }));
@@ -1564,270 +1545,5 @@ describe('App composition', () => {
     cleanup();
     content.resolve('# Note');
     await waitFor(() => expect(server.canvas.blocks).toHaveLength(1));
-  });
-
-  it('applies Jev metadata, edge, and layout suggestions to the saved canvas', async () => {
-    const blocks: CanvasBlock[] = [
-      { id: 'alpha', file: 'alpha.md', title: 'Alpha', kind: 'markdown', content: '# Alpha', x: 10, y: 20, width: 350, height: 250, links: [] },
-      { id: 'beta', file: 'beta.md', title: 'Beta', kind: 'markdown', content: '# Beta', x: 60, y: 70, width: 350, height: 250, links: [] },
-    ];
-    const report: InsightReport = {
-      canvasId: 'planning', query: '', analyzed: 2, total: 2,
-      readingOrder: [{ blockId: 'alpha', title: 'Alpha', score: 0.9, confidence: 0.9 }],
-      relevance: [{ blockId: 'beta', title: 'Beta', score: 0.8, confidence: 0.9 }],
-      items: [
-        { id: 'purpose', category: 'purpose', title: 'Label Alpha', detail: 'Name its role.', blockIds: ['alpha'], confidence: 0.9,
-          action: { type: 'update', blockId: 'alpha', patch: { purpose: 'guide', reviewer: 'Engineering' } } },
-        { id: 'edge', category: 'connection', title: 'Connect documents', detail: 'Add a link.', blockIds: ['alpha', 'beta'], confidence: 0.9,
-          action: { type: 'link', fromBlockId: 'alpha', toBlockId: 'beta' } },
-        { id: 'layout', category: 'layout', title: 'Arrange canvas', detail: 'Place related documents together.', blockIds: ['alpha', 'beta'], confidence: 0.9,
-          action: { type: 'layout', positions: [{ blockId: 'alpha', x: 200, y: 300 }, { blockId: 'beta', x: 600, y: 300 }] } },
-      ],
-    };
-    const server = fixture({ initialBlocks: blocks, hasJevApiKey: true, insightsReport: report });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Analyze canvas' }));
-    expect(await screen.findByText('Label Alpha')).toBeTruthy();
-    expect(within(screen.getByRole('region', { name: 'Suggested reading order' })).getByRole('button', { name: 'Open Alpha' })).toBeTruthy();
-    fireEvent.click(within(screen.getByText('Label Alpha').closest('article')!).getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(server.canvas.blocks[0]).toMatchObject({ purpose: 'guide', reviewer: 'Engineering' }));
-    fireEvent.click(within(screen.getByRole('heading', { name: 'Connect documents' }).closest('article')!).getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(server.canvas.blocks[0].links).toContain('beta'));
-    fireEvent.click(within(screen.getByText('Arrange canvas').closest('article')!).getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(server.canvas.blocks.map(block => [block.x, block.y])).toEqual([[200, 300], [600, 300]]));
-    expect(server.requests.some(request => request.path === '/api/canvases/planning/layout' && request.method === 'PUT')).toBe(true);
-    fireEvent.click(within(screen.getByRole('region', { name: 'Suggested reading order' })).getByRole('button', { name: 'Open Alpha' }));
-    expect(screen.getByRole('dialog', { name: 'Alpha full page' })).toBeTruthy();
-  });
-
-  it('drafts a merge in preview chat and applies only the reviewed Markdown with source hashes', async () => {
-    const blocks: CanvasBlock[] = [
-      { id: 'guide', file: 'guide.md', title: 'Guide', kind: 'markdown', content: '# Guide\nOld step', contentHash: 'hash-guide', x: 10, y: 20, width: 350, height: 250, links: [] },
-      { id: 'notes', file: 'notes.md', title: 'Notes', kind: 'markdown', content: '# Notes\nUnique step', contentHash: 'hash-notes', x: 60, y: 70, width: 350, height: 250, links: [] },
-    ];
-    const report: InsightReport = { canvasId: 'planning', query: '', analyzed: 2, total: 2, readingOrder: [], relevance: [], items: [
-      { id: 'merge', category: 'merge', title: 'Merge Guide and Notes', detail: 'Keep both steps.', blockIds: ['guide', 'notes'], confidence: 0.92,
-        action: { type: 'merge', keepBlockId: 'guide', mergeBlockIds: ['notes'], plan: { keep: 'Guide', fold: ['Unique step'], conflicts: [], drop: [] } } },
-    ] };
-    const server = fixture({ initialBlocks: blocks, hasApiKey: true, hasJevApiKey: true, insightsReport: report,
-      chatReplies: [{ message: 'Proposed merge:\n```markdown\n# Guide\nOld step\nUnique step\n```', changed: false }] });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    await screen.findByRole('heading', { name: 'Planning' });
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    fireEvent.click(within((await screen.findByText('Merge Guide and Notes')).closest('article')!).getByRole('button', { name: 'Merge in chat' }));
-    const review = await screen.findByRole('dialog', { name: 'Review merge draft' });
-    expect(server.requests.find(request => request.path === '/api/chat/intents')?.body).toEqual({ canvasId: 'planning', action: 'merge documents', blockIds: ['guide', 'notes'] });
-    expect(server.requests.find(request => request.path === '/api/chat/stream')?.body).toMatchObject({ previewMerge: true, intentToken: 'merge-intent' });
-    expect(server.requests.some(request => request.path === '/api/canvases/planning/merge')).toBe(false);
-    expect(within(review).getByRole('region', { name: 'Proposed changes' }).textContent).toContain('+ Unique step');
-    expect(within(review).getByText('Notes')).toBeTruthy();
-    fireEvent.click(within(review).getByRole('button', { name: 'Apply merge' }));
-    await waitFor(() => expect(server.requests.some(request => request.path === '/api/canvases/planning/merge')).toBe(true));
-    const request = server.requests.find(entry => entry.path === '/api/canvases/planning/merge');
-    expect(request?.body).toEqual({ keepBlockId: 'guide', mergeBlockIds: ['notes'], content: '# Guide\nOld step\nUnique step',
-      expectedContentHashes: { guide: 'hash-guide', notes: 'hash-notes' } });
-    await waitFor(() => expect(server.canvas.blocks.find(block => block.id === 'notes')?.archived).toBe(true));
-    expect(server.requests).toContainEqual(expect.objectContaining({ path: '/api/canvases/planning/insights/feedback',
-      body: { itemId: 'merge', category: 'merge', confidence: 0.92, decision: 'applied' } }));
-    fireEvent.click(screen.getByRole('button', { name: 'Undo merge' }));
-    await waitFor(() => expect(server.canvas.blocks.find(block => block.id === 'notes')?.archived).toBeUndefined());
-    expect(server.canvas.blocks.find(block => block.id === 'guide')?.content).toBe('# Guide\nOld step');
-    expect(server.requests).toContainEqual(expect.objectContaining({ path: '/api/merges/merge-1/undo', method: 'POST' }));
-  });
-
-  it('moves a suggested document to another canvas and reloads the source', async () => {
-    const block: CanvasBlock = { id: 'guide', file: 'guide.md', title: 'Guide', kind: 'markdown', content: '# Guide', x: 10, y: 20, width: 350, height: 250, links: [] };
-    const report: InsightReport = { canvasId: 'planning', query: '', analyzed: 1, total: 1, readingOrder: [], relevance: [], items: [
-      { id: 'move', category: 'move', title: 'Move Guide', detail: 'Better in Reference.', blockIds: ['guide'], confidence: 0.86,
-        action: { type: 'move', blockId: 'guide', toCanvasId: 'reference' } },
-    ] };
-    const server = fixture({ initialBlocks: [block], hasJevApiKey: true, insightsReport: report });
-    server.canvases.set('reference', { id: 'reference', name: 'Reference', workspaceId: 'team', blocks: [] });
-    server.workspaces[0].canvases.push({ id: 'reference', name: 'Reference' });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    await screen.findByRole('heading', { name: 'Planning' });
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    fireEvent.click(within((await screen.findByText('Move Guide')).closest('article')!).getByRole('button', { name: 'Move document' }));
-    await waitFor(() => expect(server.canvas.blocks).toHaveLength(0));
-    expect(server.canvases.get('reference')?.blocks.map(item => item.id)).toEqual(['guide']);
-    expect(server.requests).toContainEqual(expect.objectContaining({ path: '/api/canvases/planning/blocks/guide/move', method: 'POST', body: { targetCanvasId: 'reference' } }));
-  });
-
-  it('drafts a missing document in chat and follows a named reading path', async () => {
-    const blocks: CanvasBlock[] = ['guide', 'plan', 'aside'].map((id, index) => ({ id, file: `${id}.md`, title: id[0].toUpperCase() + id.slice(1), kind: 'markdown', content: `# ${id}`, x: index * 400, y: 0, width: 350, height: 250, links: [] }));
-    const report: InsightReport = { canvasId: 'planning', query: '', analyzed: 3, total: 3, readingOrder: [], relevance: [],
-      readingPaths: [{ id: 'path', name: 'Onboarding', blockIds: ['guide', 'plan'] }], items: [
-        { id: 'gap', category: 'gap', title: 'Document the API', detail: 'Missing API guide.', blockIds: ['guide'], confidence: 0.8 },
-      ] };
-    const server = fixture({ initialBlocks: blocks, hasApiKey: true, hasJevApiKey: true, insightsReport: report });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    await screen.findByRole('heading', { name: 'Planning' });
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    fireEvent.click(within((await screen.findByText('Document the API')).closest('article')!).getByRole('button', { name: 'Draft it in chat' }));
-    await waitFor(() => expect(server.requests.some(request => request.path === '/api/chat/stream')).toBe(true));
-    const chatRequest = server.requests.find(request => request.path === '/api/chat/stream');
-    expect(chatRequest?.body).not.toHaveProperty('previewMerge');
-    expect(JSON.stringify(chatRequest?.body)).toContain('Document the API');
-    expect(JSON.stringify(chatRequest?.body)).toContain('relation prerequisite');
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start path' }));
-    const reader = await screen.findByRole('dialog', { name: 'Guide full page' });
-    expect(within(reader).getByRole('navigation', { name: 'Reading path: Onboarding' })).toBeTruthy();
-    expect(within(reader).getByText('1 / 2')).toBeTruthy();
-    fireEvent.click(within(reader).getByRole('button', { name: 'Next document' }));
-    expect(await screen.findByRole('dialog', { name: 'Plan full page' })).toBeTruthy();
-    expect(screen.getByText('2 / 2')).toBeTruthy();
-  });
-
-  it('opens targeted duplicate results from a canvas card and explains cross-canvas merge limits', async () => {
-    const block: CanvasBlock = { id: 'guide', file: 'guide.md', title: 'Guide', kind: 'markdown', content: '# Guide', x: 10, y: 20, width: 350, height: 250, links: [] };
-    const server = fixture({ initialBlocks: [block], hasJevApiKey: true, duplicatesReport: [
-      { id: 'across', category: 'merge', title: 'Guide and Other Guide overlap', detail: 'Review both.', blockIds: ['guide', 'other'], canvasIds: ['planning', 'reference'], confidence: 0.91,
-        action: { type: 'merge', keepBlockId: 'guide', mergeBlockIds: ['other'], plan: { keep: 'guide', fold: [], conflicts: [], drop: [] } } },
-    ] });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    await screen.findByRole('heading', { name: 'Planning' });
-    fireEvent.click(screen.getByRole('button', { name: 'Actions for Guide' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Find duplicates of this document' }));
-    await screen.findByText('Guide and Other Guide overlap');
-    expect(server.requests).toContainEqual(expect.objectContaining({ path: '/api/canvases/planning/duplicates', method: 'POST', body: { crossCanvas: false, blockId: 'guide' } }));
-    expect(screen.getByText('This pair spans canvases. Move the documents onto one canvas before merging.')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Merge in chat' })).toBeNull();
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Include other canvases' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Find duplicates' }));
-    await waitFor(() => expect(server.requests).toContainEqual(expect.objectContaining({ path: '/api/canvases/planning/duplicates', method: 'POST', body: { crossCanvas: true, blockId: 'guide' } })));
-  });
-
-  it('stores a typed supersedes link, marks the target stale, and prunes the type on unlink', async () => {
-    const blocks: CanvasBlock[] = [
-      { id: 'new', file: 'new.md', title: 'New guide', kind: 'markdown', content: '# New', x: 10, y: 20, width: 350, height: 250, links: [] },
-      { id: 'old', file: 'old.md', title: 'Old guide', kind: 'markdown', content: '# Old', x: 60, y: 70, width: 350, height: 250, links: [] },
-    ];
-    const report: InsightReport = { canvasId: 'planning', query: '', analyzed: 2, total: 2, readingOrder: [], relevance: [], items: [
-      { id: 'supersedes', category: 'supersedes', title: 'New guide supersedes Old guide', detail: 'Mark the older guide stale.', blockIds: ['new', 'old'], confidence: 0.9,
-        action: { type: 'link', fromBlockId: 'new', toBlockId: 'old', relation: 'supersedes' } },
-      { id: 'unlink', category: 'connection', title: 'Remove old link', detail: 'Remove the relationship.', blockIds: ['new', 'old'], confidence: 0.9,
-        action: { type: 'unlink', fromBlockId: 'new', toBlockId: 'old' } },
-    ] };
-    const server = fixture({ initialBlocks: blocks, hasJevApiKey: true, insightsReport: report });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    await screen.findByRole('heading', { name: 'Planning' });
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-
-    fireEvent.click(within((await screen.findByText('New guide supersedes Old guide')).closest('article')!).getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(server.canvas.blocks[0]).toMatchObject({ links: ['old'], linkTypes: { old: 'supersedes' } }));
-    await waitFor(() => expect(server.canvas.blocks[1].stale).toBe(true));
-
-    fireEvent.click(within(screen.getByText('Remove old link').closest('article')!).getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(server.canvas.blocks[0]).toMatchObject({ links: [], linkTypes: {} }));
-  });
-
-  it('shows a failed layout suggestion and leaves positions unchanged', async () => {
-    const block: CanvasBlock = { id: 'alpha', file: 'alpha.md', title: 'Alpha', kind: 'markdown', content: '# Alpha', x: 10, y: 20, width: 350, height: 250, links: [] };
-    const report: InsightReport = { canvasId: 'planning', query: '', analyzed: 1, total: 1, readingOrder: [], relevance: [], items: [
-      { id: 'layout', category: 'layout', title: 'Arrange canvas', detail: 'Try a new position.', blockIds: ['alpha'], confidence: 0.9,
-        action: { type: 'layout', positions: [{ blockId: 'alpha', x: 200, y: 300 }] } },
-    ] };
-    const server = fixture({ initialBlocks: [block], hasJevApiKey: true, insightsReport: report, failLayout: true });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    fireEvent.click(within((await screen.findByText('Arrange canvas')).closest('article')!).getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(screen.getAllByRole('alert').some(alert => alert.textContent?.includes('Layout could not be saved'))).toBe(true));
-    expect(server.canvas.blocks[0]).toMatchObject({ x: 10, y: 20 });
-  });
-
-  it('rejects links to documents removed since analysis and ignores missing document shortcuts', async () => {
-    const block: CanvasBlock = { id: 'alpha', file: 'alpha.md', title: 'Alpha', kind: 'markdown', content: '# Alpha', x: 10, y: 20, width: 350, height: 250, links: [] };
-    const report: InsightReport = { canvasId: 'planning', query: '', analyzed: 1, total: 1,
-      readingOrder: [], relevance: [], items: [
-        { id: 'missing-source', category: 'connection', title: 'Missing source', detail: 'Old suggestion.', blockIds: ['missing'], confidence: 0.9,
-          action: { type: 'link', fromBlockId: 'missing', toBlockId: 'alpha' } },
-        { id: 'missing-target', category: 'connection', title: 'Missing target', detail: 'Old suggestion.', blockIds: ['alpha', 'missing'], confidence: 0.9,
-          action: { type: 'link', fromBlockId: 'alpha', toBlockId: 'missing' } },
-      ] };
-    const server = fixture({ initialBlocks: [block], hasJevApiKey: true, insightsReport: report });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze canvas' }));
-    const source = (await screen.findByText('Missing source')).closest('article')!;
-    fireEvent.click(within(source).getByRole('button', { name: 'missing' }));
-    expect(screen.queryByRole('dialog', { name: 'Block editor' })).toBeNull();
-    fireEvent.click(within(source).getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(screen.getAllByRole('alert').some(alert => alert.textContent?.includes('A linked document no longer exists'))).toBe(true));
-    fireEvent.click(within(screen.getByText('Missing target').closest('article')!).getByRole('button', { name: 'Apply suggestion' }));
-    await waitFor(() => expect(server.requests.filter(request => request.path === '/api/canvases/planning' && request.method === 'GET')).toHaveLength(3));
-    expect(server.requests.some(request => request.path.endsWith('/blocks/alpha') && request.method === 'PUT')).toBe(false);
-  });
-
-  it('previews canvas-wide actions, applies selected changes, and reloads the canvas', async () => {
-    const blocks: CanvasBlock[] = [
-      { id: 'alpha', file: 'alpha.md', title: 'Alpha', kind: 'markdown', content: '# Alpha', x: 10, y: 20, width: 350, height: 250, links: [] },
-      { id: 'beta', file: 'beta.md', title: 'Beta', kind: 'markdown', content: '# Beta', x: 60, y: 70, width: 350, height: 250, links: [] },
-    ];
-    const server = fixture({ initialBlocks: blocks, hasJevApiKey: true });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    const run = async (view: 'Groups' | 'Connections' | 'Labels', name: string) => {
-      fireEvent.click(await screen.findByRole('tab', { name: view }));
-      fireEvent.click(screen.getByRole('button', { name }));
-      const preview = await screen.findByRole('region', { name: 'Canvas change preview' });
-      await waitFor(() => expect(within(preview).getByText(/1 selected of 1 proposed changes/)).toBeTruthy());
-      expect(server.requests.at(-1)?.body).toMatchObject({ dryRun: true });
-      fireEvent.click(within(preview).getByRole('button', { name: 'Apply selected (1)' }));
-      await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Applied 1 change.'));
-    };
-    await run('Groups', 'Place these groups on the canvas');
-    expect(server.canvas.blocks.map(block => [block.x, block.group])).toEqual([[80, 'area:frontend'], [638, 'area:sales']]);
-    const dashboard = screen.getByRole('region', { name: 'Document groups' });
-    await waitFor(() => expect(within(dashboard).getByText('Frontend')).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: 'Undo this run' }));
-    await waitFor(() => expect(server.canvas.blocks.map(block => block.x)).toEqual([10, 60]));
-    await run('Connections', 'Preview connections');
-    expect(server.canvas.blocks[0].links).toEqual(['beta']);
-    await run('Connections', 'Preview connections');
-    expect(server.canvas.blocks[0].links).toEqual([]);
-    await run('Labels', 'Purposes');
-    await run('Labels', 'Reviewers');
-    expect(server.canvas.blocks[0]).toMatchObject({ purpose: 'guide', reviewer: 'Engineering' });
-    const automations = server.requests.filter(request => request.path === '/api/canvases/planning/automations');
-    expect(automations.map(request => (request.body as { dryRun: boolean }).dryRun)).toEqual([true, false, true, false, true, false, true, false, true, false]);
-    expect(automations[0].body).toMatchObject({ kind: 'layout', groupBy: 'work_area' });
-    expect(server.requests.some(request => request.path === '/api/canvases/planning/insights')).toBe(false);
-  });
-
-  it('reports a failed automation and keeps the buttons usable', async () => {
-    const blocks: CanvasBlock[] = [
-      { id: 'alpha', file: 'alpha.md', title: 'Alpha', kind: 'markdown', content: '# Alpha', x: 10, y: 20, width: 350, height: 250, links: [] },
-    ];
-    const server = fixture({ initialBlocks: blocks, hasJevApiKey: true, failAutomation: true });
-    vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
-    render(<App/>);
-    expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
-    fireEvent.click(await screen.findByRole('tab', { name: 'Connections' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Preview connections' }));
-    await waitFor(() => expect(screen.getAllByRole('alert').some(alert => alert.textContent?.includes('Jev is unavailable'))).toBe(true));
-    fireEvent.click(screen.getByRole('tab', { name: 'Review' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Connections' }));
-    expect(screen.getByRole('button', { name: 'Preview connections' })).toHaveProperty('disabled', false);
   });
 });

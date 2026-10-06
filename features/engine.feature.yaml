@@ -1,0 +1,42 @@
+feature: Standalone Jev engine and SDK reset
+scenarios:
+- name: A caller receives typed decisions through the built SDK
+  steps:
+  - given: a real local Jev provider and the built SDK
+  - when: I submit choice score and noul questions
+  - then: the provider receives exactly the caller context and questions
+  - and: the SDK returns the validated decisions and distributions
+- name: Invalid provider answers fail and a subsequent call recovers
+  steps:
+  - given: a real local Jev provider and the built SDK
+  - when: the provider returns an unoffered choice
+  - then: the SDK rejects the invalid decision
+  - when: I submit choice score and noul questions
+  - then: the SDK returns the validated decisions and distributions
+- name: Transient provider failure is retried
+  steps:
+  - given: a real local Jev provider and the built SDK
+  - when: the provider fails once with a transient status
+  - then: a retry returns validated decisions after two requests
+- name: Caller cancellation prevents network work
+  steps:
+  - given: a real local Jev provider and the built SDK
+  - when: I cancel before submitting a decision
+  - then: the SDK reports cancellation with no provider request
+- name: Empty batches do no network work
+  steps:
+  - given: a real local Jev provider and the built SDK
+  - when: I submit an empty question batch
+  - then: the SDK returns no answers with no provider request
+- name: Oversized state is refused locally
+  steps:
+  - given: a real local Jev provider and the built SDK
+  - when: I submit state exceeding the decision budget
+  - then: the SDK rejects the state with no provider request
+- name: Credentials are not exposed in provider errors
+  steps:
+  - given: a real local Jev provider and the built SDK
+  - when: the provider rejects the supplied API key
+  - then: the SDK returns a safe credential diagnostic
+tags:
+- '@engine'

@@ -98,8 +98,8 @@ describe('canvas storage', () => {
       crossLinks: [{ canvasId: doomed.id, blockId: note.id }],
     });
     await store.createTask(doomed.id, { title: 'Review scratch' }, 'Browser');
-    await mkdir(path.dirname(store.jevCacheFile(doomed.id)), { recursive: true });
-    await writeFile(store.jevCacheFile(doomed.id), '{}');
+    await mkdir(path.dirname(path.join(store.root, 'jev-cache', doomed.id + '.json')), { recursive: true });
+    await writeFile(path.join(store.root, 'jev-cache', doomed.id + '.json'), '{}');
     const mergeJournal = path.join(store.root, 'jev-merges', 'sample.json');
     const runJournal = path.join(store.root, 'jev-runs', 'sample.json');
     await mkdir(path.dirname(mergeJournal), { recursive: true });
@@ -112,7 +112,7 @@ describe('canvas storage', () => {
     await expect(store.getCanvas(doomed.id)).rejects.toMatchObject({ status: 404 });
     await expect(readFile(path.join(store.root, note.file), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(stat(path.join(store.root, '.versions', note.id))).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(stat(store.jevCacheFile(doomed.id))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(path.join(store.root, 'jev-cache', doomed.id + '.json'))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(stat(path.join(store.root, 'tasks', `${doomed.id}.json`))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(stat(mergeJournal)).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(stat(runJournal)).rejects.toMatchObject({ code: 'ENOENT' });
@@ -130,8 +130,8 @@ describe('canvas storage', () => {
     const note = await store.createBlock(first.id, { title: 'Finding', content: 'Private temporary finding' });
     await store.documentHistory(first.id, note.id);
     await store.createTask(second.id, { title: 'Review' }, 'Browser');
-    await mkdir(path.dirname(store.jevCacheFile(first.id)), { recursive: true });
-    await writeFile(store.jevCacheFile(first.id), '{}');
+    await mkdir(path.dirname(path.join(store.root, 'jev-cache', first.id + '.json')), { recursive: true });
+    await writeFile(path.join(store.root, 'jev-cache', first.id + '.json'), '{}');
     expect((await store.search('Private temporary finding')).map(hit => hit.blockId)).toContain(note.id);
 
     await store.deleteWorkspace(workspace.id);
@@ -141,7 +141,7 @@ describe('canvas storage', () => {
     await expect(stat(path.join(store.root, note.file))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(stat(path.join(store.root, '.versions', note.id))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(stat(path.join(store.root, 'tasks', `${second.id}.json`))).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(stat(store.jevCacheFile(first.id))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(path.join(store.root, 'jev-cache', first.id + '.json'))).rejects.toMatchObject({ code: 'ENOENT' });
     expect(await store.search('Private temporary finding')).toEqual([]);
     expect((await store.getCanvas('product-roadmap')).name).toBe('Product Roadmap');
     await expect(store.deleteWorkspace(workspace.id)).rejects.toMatchObject({ status: 404 });
@@ -166,7 +166,7 @@ describe('canvas storage', () => {
     expect((await store.getCanvas(canvas.id)).blocks.map(block => [block.x, block.y])).toEqual(rectangles.map(block => [block.x, block.y]));
   });
 
-  it('creates an imported document with accepted Jev labels, tags, and links in one save', async () => {
+  it('creates an imported document with document labels, tags, and links in one save', async () => {
     const store = await makeStore();
     const added = await store.createBlock('product-roadmap', { title: 'Release notes', content: '# Release notes',
       purpose: 'changelog', workArea: 'product', tags: ['release'], links: ['roadmap-overview'] });
@@ -325,72 +325,42 @@ describe('canvas storage', () => {
     expect(await store.listWorkspaces()).toHaveLength(1);
   });
 
-  it('keeps separate OpenRouter and TypeSafe credentials private with environment fallbacks', async () => {
+  it('keeps provider credentials private with environment fallbacks', async () => {
     const store = await makeStore();
-    expect(await store.getSettings()).toMatchObject({ provider: 'openrouter', model: '', hasApiKey: false, hasJevApiKey: false });
+    expect(await store.getSettings()).toMatchObject({ provider: 'openrouter', model: '', hasApiKey: false });
     expect(await store.getApiKey()).toBe('');
-    expect(await store.getJevApiKey()).toBe('');
     vi.stubEnv('OPENROUTER_API_KEY', 'environment-key');
-    vi.stubEnv('TYPESAFE_API_KEY', 'jev-environment-key');
-    expect(await store.getSettings()).toMatchObject({ hasApiKey: true, hasJevApiKey: true });
+    expect(await store.getSettings()).toMatchObject({ hasApiKey: true });
     expect(await store.getApiKey()).toBe('environment-key');
-    expect(await store.getJevApiKey()).toBe('jev-environment-key');
-
-    const saved = await store.updateSettings({ model: 'openai/gpt-4.1-mini', systemPrompt: 'Help the team.', apiKey: 'private-key', jevApiKey: 'jev-private-key' });
-    expect(saved).toMatchObject({ provider: 'openrouter', model: 'openai/gpt-4.1-mini', systemPrompt: 'Help the team.', reviewers: '', workAreas: '', hasApiKey: true, hasJevApiKey: true });
+    const saved = await store.updateSettings({ model: 'openai/gpt-4.1-mini', systemPrompt: 'Help the team.', apiKey: 'private-key' });
+    expect(saved).toMatchObject({ provider: 'openrouter', model: 'openai/gpt-4.1-mini', systemPrompt: 'Help the team.', hasApiKey: true });
     expect(await store.getApiKey()).toBe('private-key');
-    expect(await store.getJevApiKey()).toBe('jev-private-key');
     expect(JSON.stringify(await store.getSettings())).not.toContain('private-key');
     expect((await stat(path.join(store.root, 'settings.json'))).mode & 0o777).toBe(0o600);
     expect((await store.updateSettings({ systemPrompt: 'Updated instructions' })).systemPrompt).toBe('Updated instructions');
-    expect((await store.updateSettings({ reviewers: ' Product, Engineering ' })).reviewers).toBe('Product, Engineering');
-    expect((await store.updateSettings({ workAreas: ' Field sales, DevRel ' })).workAreas).toBe('Field sales, DevRel');
-    await expect(store.updateSettings({ workAreas: 42 })).rejects.toMatchObject({ status: 400 });
-    await expect(store.updateSettings({ workAreas: 'x'.repeat(2501) })).rejects.toMatchObject({ status: 400 });
-    await expect(store.updateSettings({ reviewers: 42 })).rejects.toMatchObject({ status: 400 });
-    expect((await store.updateSettings({ reviewers: 'x'.repeat(2000) })).reviewers).toHaveLength(2000);
-    await expect(store.updateSettings({ reviewers: 'x'.repeat(2001) })).rejects.toMatchObject({ status: 400 });
     await expect(store.updateSettings({ model: '' })).rejects.toMatchObject({ status: 400 });
     await expect(store.updateSettings({ apiKey: 42 })).rejects.toMatchObject({ status: 400 });
     await expect(store.updateSettings({ apiKey: 'x'.repeat(4097) })).rejects.toMatchObject({ status: 400 });
-    await expect(store.updateSettings({ jevApiKey: 42 })).rejects.toMatchObject({ status: 400 });
-    await expect(store.updateSettings({ jevApiKey: 'x'.repeat(4097) })).rejects.toMatchObject({ status: 400 });
     expect(await store.getApiKey()).toBe('private-key');
     expect((await store.updateSettings({ apiKey: '' })).hasApiKey).toBe(true);
     expect(await store.getApiKey()).toBe('environment-key');
-    expect((await store.updateSettings({ jevApiKey: '' })).hasJevApiKey).toBe(true);
-    expect(await store.getJevApiKey()).toBe('jev-environment-key');
-  });
-
-  it('validates Jev policy thresholds before saving settings', async () => {
-    const store = await makeStore();
-    expect((await store.updateSettings({ jevPolicy: { link: { show: 0.6, apply: 0.9 } } })).jevPolicy?.link)
-      .toEqual({ show: 0.6, apply: 0.9 });
-    for (const jevPolicy of [
-      null, [], { unknown: { show: 0.5, apply: 0.8 } }, { link: { show: -0.1, apply: 0.8 } },
-      { link: { show: 0.9, apply: 0.8 } }, { link: { show: 0.5, apply: 1.1 } },
-      { link: { show: Number.NaN, apply: 0.8 } }, { link: { show: 0.5, apply: 0.8, extra: 1 } },
-    ]) {
-      await expect(store.updateSettings({ jevPolicy })).rejects.toMatchObject({ status: 400 });
-    }
-    expect((await store.getSettings()).jevPolicy?.link).toEqual({ show: 0.6, apply: 0.9 });
   });
 
   it('saves agent profiles and plugin choices while rejecting unknown options', async () => {
     const store = await makeStore();
-    const saved = await store.updateSettings({ agentProfile: 'planner', agentPlugins: ['document_read', 'jev_insights'] });
-    expect(saved).toMatchObject({ agentProfile: 'planner', agentPlugins: ['document_read', 'jev_insights'] });
+    const saved = await store.updateSettings({ agentProfile: 'planner', agentPlugins: ['document_read', 'tasks'] });
+    expect(saved).toMatchObject({ agentProfile: 'planner', agentPlugins: ['document_read', 'tasks'] });
     await expect(store.updateSettings({ agentProfile: 'unknown' })).rejects.toMatchObject({ status: 400 });
     await expect(store.updateSettings({ agentPlugins: ['document_read', 'unknown'] })).rejects.toMatchObject({ status: 400 });
   });
 
-  it('updates older settings files that predate reviewer lists', async () => {
+  it('updates older model settings files', async () => {
     const store = await makeStore();
     await writeFile(path.join(store.root, 'settings.json'), JSON.stringify({
       provider: 'openrouter', model: 'openai/gpt-4o-mini', systemPrompt: 'Old instructions', apiKey: 'saved-key',
     }));
     expect(await store.updateSettings({ systemPrompt: 'Updated instructions' })).toMatchObject({
-      systemPrompt: 'Updated instructions', reviewers: '', hasApiKey: true,
+      systemPrompt: 'Updated instructions', hasApiKey: true,
     });
   });
 

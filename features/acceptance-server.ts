@@ -1,94 +1,103 @@
-import type { AddressInfo } from 'node:net';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { appendFile } from 'node:fs/promises';
-import { AIMessage } from '@langchain/core/messages';
+import { AIMessage, type BaseMessage } from '@langchain/core/messages';
+import type { StructuredToolInterface } from '@langchain/core/tools';
 import { createApiServer } from '../server/index.js';
-import type { JevAnswer, JevDecider, JevQuestion } from '../server/jev.js';
-import type { DeepAgentFactory } from '../server/chat-stream.js';
+import type { DeepAgentFactory } from '../server/chat-agent.js';
+import type { CanvasBlock, SearchHit } from '../shared/types.js';
+import type { ResearchCanvasPatch } from '../shared/answer-canvas.js';
+import { auditedReflexProvider } from './acceptance-provider-audit.js';
 
-type Document = { title: string; kind?: string };
-type Pair = { first: Document; second: Document; existingLink: string };
-type State = { document?: Document; documents?: Document[]; pair?: Pair; pairs?: Pair[] };
+type ResearchBlock = ResearchCanvasPatch['blocks'][number];
 
-function matchingPair(first: string, second: string, a: string, b: string): boolean {
-  return (first === a && second === b) || (first === b && second === a);
+function requiredTool(tools: StructuredToolInterface[], name: string): StructuredToolInterface {
+  const selected = tools.find(item => item.name === name);
+  if (!selected) throw new Error(`Acceptance chat did not expose ${name}`);
+  return selected;
 }
 
-function usefulPair(pair: Pair): boolean {
-  const first = pair.first.title;
-  const second = pair.second.title;
-  return matchingPair(first, second, 'Automation source', 'Automation target')
-    || matchingPair(first, second, 'Group A1', 'Group A2')
-    || matchingPair(first, second, 'Group A1', 'Group B1')
-    || matchingPair(first, second, 'Group B1', 'Group B2');
+async function evidence(tools: StructuredToolInterface[], signal: AbortSignal) {
+  const search = requiredTool(tools, 'search_docs');
+  const hits = JSON.parse(String(await search.invoke({ query: 'Launch evidence' }, { signal }))) as SearchHit[];
+  const hit = hits.find(item => item.title === 'Launch evidence');
+  if (!hit) throw new Error('Acceptance research needs a saved Launch evidence document');
+  const document = JSON.parse(String(await requiredTool(tools, 'read_doc').invoke({
+    blockId: hit.blockId, sourceCanvasId: hit.canvasId,
+  }, { signal }))) as CanvasBlock;
+  return { sourceId: `${hit.canvasId}:${document.id}`, document };
 }
 
-function answer(id: string, question: JevQuestion, state: State): JevAnswer {
-  const document = state.document ?? state.documents?.[Number(id.match(/^d(\d+)/)?.[1] ?? -1)];
-  const pair = state.pair ?? state.pairs?.[Number(id.match(/^p(\d+)/)?.[1] ?? -1)];
-  if (question.type === 'noul') {
-    if (id.startsWith('intake_tag_')) return { type: 'noul', noul: 0.96 };
-    if (id === 'authorized') {
-      const context = state as State & { userRequest?: string; previousAssistant?: string; target?: { title?: string } };
-      const proposed = context.previousAssistant?.includes(`delete ${context.target?.title}`) ?? false;
-      return { type: 'noul', noul: context.userRequest === 'yes' && proposed ? 0.99 : 0.05 };
+function researchBlocks(number: number, sourceId: string): ResearchBlock[] {
+  return [
+    { id: 'summary', type: 'text', title: `Finding ${number}`, content: `Answer ${number}.`, sourceIds: [sourceId] },
+    { id: 'flow', type: 'diagram', title: `Launch flow ${number}`,
+      content: '```mermaid\nflowchart LR\nEvidence-->Decision\n```', sourceIds: [sourceId] },
+    { id: 'next', type: 'task', title: `Next action ${number}`,
+      content: '- [ ] Review the failing tests', sourceIds: [] },
+  ];
+}
+
+function richBlocks(sourceId: string): ResearchBlock[] {
+  return [
+    { id: 'image', type: 'text', kind: 'markdown', title: 'Visual evidence',
+      content: '![Launch status](/symbiknow-favicon.svg)', sourceIds: [sourceId] },
+    { id: 'html', type: 'section', kind: 'html', title: 'HTML report',
+      content: '<!doctype html><html><body><h1>Rendered report</h1></body></html>', sourceIds: [sourceId] },
+    { id: 'diagram', type: 'diagram', kind: 'markdown', title: 'System flow',
+      content: '```mermaid\nflowchart LR\nEvidence-->Decision\n```', sourceIds: [] },
+    { id: 'slides', type: 'section', kind: 'slides', title: 'Briefing slides',
+      content: '---\nmarp: true\n---\n# Release briefing', sourceIds: [] },
+    { id: 'chart', type: 'diagram', kind: 'mdx', title: 'Health chart',
+      content: '<Chart title="Release health" values="2,4,6" />', sourceIds: [] },
+    { id: 'site', type: 'section', kind: 'website', title: 'Documentation site',
+      content: '---\ngenerator: mkdocs\nsource: sites/team-docs\n---\n# Team docs', sourceIds: [] },
+  ];
+}
+
+function answerNumber(messages: BaseMessage[]): number {
+  return messages.filter(message => message instanceof AIMessage && /^Answer \d+\.$/u.test(String(message.content))).length + 1;
+}
+
+async function draw(tools: StructuredToolInterface[], messages: BaseMessage[], latest: string, signal: AbortSignal) {
+  const source = await evidence(tools, signal);
+  const number = answerNumber(messages);
+  const rich = latest === 'Show me every format on a temporary research canvas';
+  const blocks = rich ? richBlocks(source.sourceId) : researchBlocks(number, source.sourceId);
+  const patch: ResearchCanvasPatch = { query: latest, layout: rich ? 'roadmap' : 'architecture', blocks,
+    edges: rich ? [] : [{ from: 'summary', to: 'flow', label: 'explains' }, { from: 'flow', to: 'next', label: 'leads to' }] };
+  const result = JSON.parse(String(await requiredTool(tools, 'draw_research_canvas').invoke(patch, { signal })));
+  return { answer: rich ? 'I mapped each format.' : `Answer ${number}.`, sourceId: source.sourceId,
+    sourceTitle: source.document.title, drawResult: result };
+}
+
+export function acceptanceAgent(dataDir: string): DeepAgentFactory {
+  return (_settings, tools) => async function* (messages, signal) {
+    const latest = String(messages.at(-1)?.content ?? '');
+    await appendFile(path.join(dataDir, 'chat-requests.jsonl'), JSON.stringify({ latest, tools: tools.map(item => item.name) }) + '\n');
+    if (tools.some(item => item.name === 'draw_research_canvas')) {
+      const research = await draw(tools, messages, latest, signal);
+      await appendFile(path.join(dataDir, 'chat-research.jsonl'), JSON.stringify(research) + '\n');
+      yield { messages: [...messages, new AIMessage(research.answer)] };
+      return;
     }
-    if (id.endsWith('_merge_safe')) return { type: 'noul', noul: 0.96 };
-    const removeSavedLink = id.endsWith('_keep') && pair
-      && matchingPair(pair.first.title, pair.second.title, 'Roadmap overview', 'Launch checklist');
-    return { type: 'noul', noul: id.endsWith('_keep') ? (removeSavedLink ? 0.1 : 0.95) : 0.05 };
-  }
-  if (question.type === 'score') {
-    const score = id.endsWith('_link_strength') && pair && usefulPair(pair) ? 4
-      : id.endsWith('_related') || id.endsWith('_strength') || id.endsWith('_dup_degree') ? 4 : 0;
-    return { type: 'score', score, confidence: 0.95,
-      probabilities: Object.fromEntries(question.criteria.map((_, index) => [String(index), Number(index === score)])) };
-  }
-  const choices = Object.keys(question.criteria);
-  let choice = choices[0];
-  if (id === 'intake_purpose') choice = 'guide';
-  else if (id === 'intake_domain') choice = 'engineering';
-  else if (id === 'intake_area') choice = 'software_engineering' in question.criteria ? 'software_engineering' : choices[0];
-  else if (id === 'intake_link') choice = 'b0' in question.criteria ? 'b0' : 'none';
-  else if (id === 'intent') choice = (state as State & { latest?: string }).latest === 'yes' ? 'delete' : choice;
-  else if (id.endsWith('_dup_kind')) choice = 'identical';
-  else if (id.endsWith('_newer')) choice = (state as State & { a?: { title?: string } }).a?.title === 'Setup v2' ? 'a' : 'b';
-  else if (id.endsWith('_relation')) choice = 'same_topic';
-  else if (id.endsWith('_direction')) choice = 'a_to_b';
-  else if (id.endsWith('_domain')) choice = 'engineering' in question.criteria ? 'engineering' : choices[0];
-  else if (id.endsWith('_work_area')) choice = 'software_engineering' in question.criteria ? 'software_engineering' : choices.find(key => key !== 'other') ?? choices[0];
-  else if (id.endsWith('_lane')) choice = document?.title.startsWith('Group B') ? 'work' : 'overview';
-  else if (id.endsWith('_loader')) choice = document?.kind ?? 'markdown';
-  else if (id.endsWith('_purpose') || id.endsWith('_reviewer')) choice = 'other' in question.criteria ? 'other' : 'none';
-  else if (id.endsWith('_link')) choice = pair && usefulPair(pair) ? 'a_to_b' : 'none';
-  return { type: 'choice', choice, confidence: 0.95,
-    probabilities: Object.fromEntries(choices.map(key => [key, Number(key === choice)])) };
+    const answer = latest === 'yes'
+      ? 'Chat cannot delete Temporary Note directly. Open the document and use Delete in its editor, then confirm the deletion there.'
+      : latest === 'Which tests failed?' ? 'The mobile release has two failing tests.' : 'Ready.';
+    yield { messages: [...messages, new AIMessage(answer)] };
+  };
 }
 
-const jevDecider: JevDecider = async (_apiKey, value, questions) => {
-  const state = value as State;
-  await appendFile(`${dataDir}/jev-questions.jsonl`, `${JSON.stringify(Object.keys(questions))}\n`);
-  return Object.fromEntries(Object.entries(questions).map(([id, question]) => [id, answer(id, question, state)]));
-};
+async function start(): Promise<void> {
+  const port = Number(process.env.PORT);
+  const dataDir = process.env.DATA_DIR;
+  if (!Number.isInteger(port) || !dataDir) throw new Error('Acceptance server needs PORT and DATA_DIR');
+  const server = await createApiServer({ dataDir, fetcher: auditedReflexProvider(dataDir), agentFactory: acceptanceAgent(dataDir) });
+  server.listen(port, '127.0.0.1', () => {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Acceptance server did not bind a TCP port');
+    console.log(`SymbiKnow acceptance server listening on ${address.port}`);
+  });
+}
 
-const agentFactory: DeepAgentFactory = (_settings, tools) => async function* (messages) {
-  const latest = String(messages.at(-1)?.content ?? '');
-  if (latest === 'yes') {
-    if (tools.some(item => item.name === 'delete_doc')) throw new Error('Normal Chat exposed a direct document delete tool');
-    yield { messages: [...messages, new AIMessage('Chat cannot delete Temporary Note directly. Open the document and use Delete in its editor, then confirm the deletion there.')] };
-    return;
-  }
-  if (latest.includes('Draft a merge of these documents:')) {
-    yield { messages: [...messages, new AIMessage('```markdown\n# Setup\n\nInstall the client and check configuration.\n```')] };
-    return;
-  }
-  yield { messages: [...messages, new AIMessage('Ready.')] };
-};
-
-const port = Number(process.env.PORT);
-const dataDir = process.env.DATA_DIR;
-if (!Number.isInteger(port) || !dataDir) throw new Error('Acceptance server needs PORT and DATA_DIR');
-const server = await createApiServer({ dataDir, jevDecider, agentFactory });
-server.listen(port, '127.0.0.1', () => {
-  const address = server.address() as AddressInfo;
-  console.log(`SymbiKnow acceptance server listening on ${address.port}`);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await start();

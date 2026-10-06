@@ -16,7 +16,7 @@
 .editor-workspace--split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .editor-workspace .editor-preview { height: 100%; margin-top: 0; }
 .editor-shortcut { color: #98a3b8; font-weight: 600; }
-.editor-shortcut kbd { padding: 1px 5px; border: 1px solid #dfe4ef; border-bottom-width: 2px; border-radius: 5px; background: #fff; font: 600 10px ui-monospace, monospace; }
+.editor-shortcut kbd { padding: 1px 5px; border: 1px solid #dfe4ef; border-bottom-width: 2px; border-radius: 5px; background: #fff; font: 600 11px ui-monospace, monospace; }
 .editor-lock { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 9px 12px; border-radius: 10px; color: #7a4a06; background: #fff7e8; border: 1px solid #f6dfb2; font-size: 12px; }
 .editor-lock button { margin-left: auto; }
 @media (max-width: 900px) { .editor-workspace--split { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 1fr) minmax(160px, 1fr); overflow: auto; } }
@@ -83,11 +83,5 @@
 .block-modal, .block-modal :is(.modal-heading, .modal-form, .modal-actions) { color: var(--sk-text); }
 .block-modal :is(input, select, textarea):focus { border-color: var(--sk-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sk-focus) 18%, transparent); }
 .editor-file-actions .secondary-button { color: var(--sk-text); }
-.smart-intake__suggestions { border-color: var(--sk-border); background: var(--sk-surface); color: var(--sk-text); }
-.smart-intake__suggestions :is(p, label) { color: var(--sk-text); }
-.smart-intake__suggestions input { accent-color: var(--sk-action-bg); }
-.smart-intake__summary { background: var(--sk-surface-soft); color: var(--sk-text); }
-.smart-intake [role='alert'] { border: 1px solid var(--sk-error); border-radius: 8px; padding: 9px 11px; background: var(--sk-error-bg); color: var(--sk-error); }
-.smart-intake__no-suggestions { border: 1px solid var(--sk-border); }
 .block-modal :is(button, input, select, textarea):focus-visible { outline-color: var(--sk-focus); }
 .block-modal button:disabled { color: var(--sk-muted); opacity: .72; }

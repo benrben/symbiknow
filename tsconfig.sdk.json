@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "declaration": true,
+    "outDir": "dist/sdk",
+    "rootDir": "server",
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "server/jev.ts",
+    "server/jev-transport.ts",
+    "server/jev-answers.ts",
+    "server/errors.ts",
+    "server/sdk.ts"
+  ]
+}

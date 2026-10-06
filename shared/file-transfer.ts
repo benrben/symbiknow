@@ -20,42 +20,54 @@ function frontmatterValue(metadata: string, key: string): string {
   return value.replace(/^(['"])(.*)\1$/, '$2').trim();
 }
 
-function bodySignals(body: string): { slideBreaks: number; componentBlock: boolean; proseTag: boolean; exportConst: boolean } {
-  const lines = body.split(/\r?\n/);
-  let fence = '';
-  let slideBreaks = 0;
-  let componentBlock = false;
-  let proseTag = false;
-  let exportConst = false;
+type BodySignals = { slideBreaks: number; componentBlock: boolean; proseTag: boolean; exportConst: boolean };
 
-  lines.forEach((line, index) => {
-    const marker = /^[ \t]{0,3}(`{3,}|~{3,})/.exec(line)?.[1] ?? '';
-    if (fence) {
-      if (marker[0] === fence[0] && marker.length >= fence.length && line.slice(line.indexOf(marker) + marker.length).trim() === '') fence = '';
-      return;
-    }
-    if (marker) { fence = marker; return; }
-    if (index > 0 && index < lines.length - 1 && line.trim() === '---') slideBreaks += 1;
-    if (/^[ \t]*export[ \t]+const\b/.test(line)) exportConst = true;
-    if (/<[A-Z]\w*/.test(line)) {
-      if (/^[ \t]*<[A-Z]\w*/.test(line)) componentBlock = true;
-      else proseTag = true;
-    }
-  });
-
-  return { slideBreaks, componentBlock, proseTag, exportConst };
+function closingFence(line: string, marker: string, fence: string) {
+  return marker[0] === fence[0] && marker.length >= fence.length
+    && line.slice(line.indexOf(marker) + marker.length).trim() === '';
 }
 
-/** Resolve clear loader signatures locally; ask Jev only for a single slide break or a component tag in prose. */
+function slideBreak(line: string, index: number, length: number) {
+  return index > 0 && index < length - 1 && line.trim() === '---';
+}
+
+function proseSignals(line: string, index: number, length: number, signals: BodySignals) {
+  if (slideBreak(line, index, length)) signals.slideBreaks++;
+  if (/^[ \t]*export[ \t]+const\b/.test(line)) signals.exportConst = true;
+  if (!/<[A-Z]\w*/.test(line)) return;
+  if (/^[ \t]*<[A-Z]\w*/.test(line)) signals.componentBlock = true;
+  else signals.proseTag = true;
+}
+
+function bodySignals(body: string): BodySignals {
+  const lines = body.split(/\r?\n/);
+  let fence = '';
+  const signals: BodySignals = { slideBreaks: 0, componentBlock: false, proseTag: false, exportConst: false };
+  lines.forEach((line, index) => {
+    const marker = /^[ \t]{0,3}(`{3,}|~{3,})/.exec(line)?.[1] ?? '';
+    if (fence) { if (closingFence(line, marker, fence)) fence = ''; return; }
+    if (marker) { fence = marker; return; }
+    proseSignals(line, index, lines.length, signals);
+  });
+  return signals;
+}
+
+/** Resolve clear loader signatures locally. */
 export function detectLoader(content: string): LoaderDetection {
   const { metadata, body } = frontmatterParts(content);
+  return metadataLoader(metadata) ?? bodyLoader(bodySignals(body));
+}
+
+function metadataLoader(metadata: string): LoaderDetection | undefined {
   if (frontmatterValue(metadata, 'format').toLowerCase() === 'html') return { kind: 'markdown', confidence: 1 };
   if (/^(mkdocs|hugo|docusaurus)$/i.test(frontmatterValue(metadata, 'generator')) && frontmatterValue(metadata, 'source')) {
     return { kind: 'website', confidence: 1 };
   }
   if (frontmatterValue(metadata, 'marp').toLowerCase() === 'true') return { kind: 'slides', confidence: 1 };
+  return undefined;
+}
 
-  const { slideBreaks, componentBlock, proseTag, exportConst } = bodySignals(body);
+function bodyLoader({ slideBreaks, componentBlock, proseTag, exportConst }: BodySignals): LoaderDetection {
   if (slideBreaks >= 2) return { kind: 'slides', confidence: 1 };
   if (componentBlock || exportConst) return { kind: 'mdx', confidence: 1 };
   if (slideBreaks === 1 || proseTag) return { fallback: true };
@@ -84,7 +96,8 @@ export function storedDocument<T extends { kind?: string; content?: string }>(in
 }
 
 export function uploadedSource(filename: string, source: string): UploadedSource {
-  const name = filename.replaceAll('\\', '/').split('/').at(-1) ?? '';
+  const normalized = filename.replaceAll('\\', '/');
+  const name = normalized.slice(normalized.lastIndexOf('/') + 1);
   if (!/\.(md|mdx|html)$/i.test(name)) throw new Error('Choose a .md, .mdx, or .html file: ' + name);
   const title = name.replace(/\.(md|mdx|html)$/i, '').trim();
   if (!title) throw new Error('The file needs a name before its extension.');

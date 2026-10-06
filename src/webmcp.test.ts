@@ -1,25 +1,43 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { Server } from 'node:http';
+import { runInNewContext } from 'node:vm';
+import type { JsonSchema } from './webmcp-types';
 import type { CanvasBlock, CanvasDocument } from '../shared/types';
 import { createApiServer } from '../server/index';
-import type { JevDecider } from '../server/jev';
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }> };
 type ToolHandler = (args: Record<string, unknown>) => Promise<ToolResult>;
-type ResourceHandler = (uri: string) => Promise<{ contents: Array<{ uri: string; text: string }> }>;
+type ResourceHandler = (uri: string) => Promise<{ contents: Array<{ uri: string; mimeType: string; text: string }> }>;
+
+const nativeInstances: Array<{ inactivityTimer: number }> = [];
+
+async function nativeConstructor() {
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  const source = await readFile('node_modules/@jason.today/webmcp/src/webmcp.js', 'utf8');
+  const adapter = await readFile('public/webmcp-adapter.js', 'utf8');
+  const Native = runInNewContext(source + '\n' + adapter + '\nWebMCP;', {
+    window, document, sessionStorage, console, Promise,
+    setTimeout: window.setTimeout.bind(window), clearTimeout: window.clearTimeout.bind(window),
+  }) as NonNullable<Window['WebMCP']>;
+  return class extends Native {
+    constructor(options?: Record<string, unknown>) {
+      super(options);
+      nativeInstances.push(this as unknown as { inactivityTimer: number });
+    }
+  };
+}
 
 const opened: Array<{ server: Server; dataDir: string }> = [];
 const toolNames = ['search_docs', 'open_doc', 'create_doc', 'upload_file', 'download_file', 'edit_doc', 'remove_doc', 'move_block', 'move_document',
-  'analyze_canvas', 'find_duplicates', 'merge_documents', 'connect_across_canvases', 'score_documents', 'run_workspace_automation', 'undo_jev_run', 'undo_merge',
-  'organize_canvas', 'regroup_canvas', 'connect_documents', 'label_purposes', 'classify_work_areas', 'assign_reviewers', 'cross_connect_canvas',
   'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision'];
 
-async function startServer(jevDecider?: JevDecider): Promise<{ base: string; dataDir: string }> {
+async function startServer(): Promise<{ base: string; dataDir: string }> {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-webmcp-'));
-  const server = await createApiServer({ dataDir, jevDecider });
+  const server = await createApiServer({ dataDir });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   opened.push({ server, dataDir });
   const address = server.address();
@@ -29,6 +47,11 @@ async function startServer(jevDecider?: JevDecider): Promise<{ base: string; dat
 
 afterEach(async () => {
   vi.unstubAllGlobals();
+  for (const widget of nativeInstances.splice(0)) window.clearTimeout(widget.inactivityTimer);
+  document.body.replaceChildren();
+  sessionStorage.clear();
+  delete window.WebMCP;
+  vi.restoreAllMocks();
   for (const item of opened.splice(0)) {
     await new Promise<void>((resolve, reject) => item.server.close(error => error ? reject(error) : resolve()));
     await rm(item.dataDir, { recursive: true, force: true });
@@ -39,29 +62,19 @@ describe('WebMCP document tools', () => {
   it('registers tools and runs create, read, search, edit, move, and remove against the HTTP API', async () => {
     vi.resetModules();
     const { registerWebMCP } = await import('./webmcp');
-    const decider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([id, question]) => {
-      if (question.type === 'noul') return [id, { type: 'noul', noul: id.endsWith('_keep') ? 1 : 0 }];
-      if (question.type === 'score') {
-        const level = id.endsWith('link_strength') ? question.criteria.length - 1 : 0;
-        return [id, { type: 'score', score: level, confidence: 0.95,
-          probabilities: Object.fromEntries(question.criteria.map((_, index) => [index, Number(index === level)])) }];
-      }
-      const choice = id.endsWith('_lane') && id.startsWith('d1') ? 'work'
-        : id.endsWith('_link') ? 'a_to_b' : id.endsWith('_purpose') ? 'guide'
-          : id.endsWith('_reviewer') ? 'r0' : Object.keys(question.criteria)[0];
-      return [id, { type: 'choice', choice, confidence: 0.95, probabilities: { [choice]: 1 } }];
-    }));
-    const { base, dataDir } = await startServer(decider);
+    const { base, dataDir } = await startServer();
     const networkFetch = fetch;
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => networkFetch(new URL(url, base), init));
 
     const tools = new Map<string, ToolHandler>();
     const resources = new Map<string, ResourceHandler>();
-    class BrowserWebMCP {
-      registerTool(name: string, _description: string, _schema: unknown, handler: ToolHandler): void {
+    class BrowserWebMCP extends (await nativeConstructor()) {
+      registerTool(name: string, _description: string, _schema: JsonSchema, handler: ToolHandler): void {
+        super.registerTool(name, _description, _schema, handler);
         tools.set(name, handler);
       }
-      registerResource(name: string, _description: string, _template: unknown, handler: ResourceHandler): void {
+      registerResource(name: string, _description: string, _template: { uri: string; mimeType: string }, handler: ResourceHandler): void {
+        super.registerResource(name, _description, _template, handler);
         resources.set(name, handler);
       }
     }
@@ -121,24 +134,10 @@ describe('WebMCP document tools', () => {
     expect(await run<{ ok: boolean }>('remove_doc', { blockId: html.id })).toEqual({ ok: true });
     expect(await run<{ ok: boolean }>('remove_doc', { blockId: fallback.id })).toEqual({ ok: true });
     await expect(readFile(path.join(dataDir, 'docs', `${created.id}.md`), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-    await networkFetch(new URL('/api/settings', base), { method: 'PUT', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ jevApiKey: 'test-key', reviewers: 'Product' }) });
-    const insights = await run<{ total: number }>('analyze_canvas', {});
-    expect(insights.total).toBe(5);
-    expect((await run<{ query: string }>('analyze_canvas', { query: 'launch' })).query).toBe('launch');
-    const layoutResult = await run<{ kind: string; applied: number; groupBy: string; groups: unknown[] }>('organize_canvas', {});
-    expect(layoutResult).toMatchObject({ kind: 'layout', groupBy: 'work_area' });
-    expect(layoutResult.applied).toBeGreaterThanOrEqual(1);
-    expect(layoutResult.groups.length).toBeGreaterThanOrEqual(1);
-    expect(await run<{ kind: string; applied: number }>('regroup_canvas', {})).toMatchObject({ kind: 'regroup', applied: expect.any(Number) });
-    expect(await run<{ kind: string; applied: number }>('connect_documents', {})).toMatchObject({ kind: 'connection', applied: expect.any(Number) });
-    expect(await run<{ kind: string; applied: number }>('label_purposes', {})).toMatchObject({ kind: 'purpose', applied: expect.any(Number) });
-    expect(await run<{ kind: string; applied: number }>('assign_reviewers', {})).toMatchObject({ kind: 'reviewer', applied: expect.any(Number) });
-    const organized = await networkFetch(new URL('/api/canvases/product-roadmap', base)).then(response => response.json()) as CanvasDocument;
-    expect(new Set(organized.blocks.map(block => block.x)).size).toBeGreaterThan(1);
-    expect(organized.blocks.reduce((count, block) => count + block.links.length, 0)).toBeGreaterThan(3);
-    expect(organized.blocks.every(block => block.purpose === 'guide' && block.reviewer === 'Product')).toBe(true);
-    expect(changed).toBe(17);
+    expect(changed).toBe(12);
+    for (const name of ['analyze_canvas', 'score_documents', 'merge_documents', 'run_workspace_automation', 'undo_jev_run']) {
+      expect(tools.has(name)).toBe(false);
+    }
     dispose();
   }, 20_000);
 
@@ -150,9 +149,9 @@ describe('WebMCP document tools', () => {
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => networkFetch(new URL(url, base), init));
 
     const tools = new Map<string, ToolHandler>();
-    class BrowserWebMCP {
-      registerTool(name: string, _description: string, _schema: unknown, handler: ToolHandler): void { tools.set(name, handler); }
-      registerResource(): void {}
+    class BrowserWebMCP extends (await nativeConstructor()) {
+      registerTool(name: string, _description: string, _schema: JsonSchema, handler: ToolHandler): void { super.registerTool(name, _description, _schema, handler); tools.set(name, handler); }
+      registerResource(name: string, description: string, template: { uri: string; mimeType: string }, handler: ResourceHandler): void { super.registerResource(name, description, template, handler); }
     }
     vi.stubGlobal('window', { WebMCP: BrowserWebMCP });
     let changed = 0;
@@ -167,98 +166,16 @@ describe('WebMCP document tools', () => {
     await expect(tools.get('move_block')?.({ blockId: 'launch-checklist', x: 0, y: Number.NaN }))
       .rejects.toThrow('x and y must be finite numbers.');
     await expect(tools.get('search_docs')?.({ query: ' ' })).rejects.toThrow('query is required.');
-    await expect(tools.get('search_docs')?.({ query: 'api', rank: 'unknown' })).rejects.toThrow('rank must be jev');
-    await expect(tools.get('merge_documents')?.({ keepBlockId: 'a', mergeBlockIds: ['b'], content: '# Combined', expectedContentHashes: { a: 'hash' } }))
-      .rejects.toThrow('Missing expectedContentHash for b');
-    await expect(tools.get('run_workspace_automation')?.({ workspaceId: 'team', kind: 'purpose', dryRun: false }))
-      .rejects.toThrow('actionIds must be a nonempty array');
     expect(changed).toBe(0);
   });
-
-  it('routes new Jev analyses, reviewed writes, workspace preview/apply, and undo', async () => {
-    vi.resetModules();
-    const { registerWebMCP } = await import('./webmcp');
-    const decider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([id, question]) => {
-      if (question.type === 'noul') return [id, { type: 'noul', noul: id.endsWith('_merge_safe') ? 0.95 : 0.1 }];
-      if (question.type === 'score') {
-        const level = id.startsWith('c') || id.endsWith('_strength') ? question.criteria.length - 1 : 0;
-        return [id, { type: 'score', score: level, confidence: 0.95,
-          probabilities: Object.fromEntries(question.criteria.map((_, index) => [index, Number(index === level)])) }];
-      }
-      const choice = id.endsWith('_purpose') ? 'guide' : id.endsWith('_dup_kind') ? 'identical'
-        : id.endsWith('_newer') ? 'a' : id.endsWith('_relation') ? 'same_topic'
-          : id.endsWith('_direction') ? 'both' : Object.keys(question.criteria)[0];
-      return [id, { type: 'choice', choice, confidence: 0.95, probabilities: { [choice]: 1 } }];
-    }));
-    const { base } = await startServer(decider);
-    const networkFetch = fetch;
-    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => networkFetch(new URL(url, base), init));
-    await networkFetch(new URL('/api/settings', base), { method: 'PUT', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ jevApiKey: 'test-key' }) });
-    const tools = new Map<string, ToolHandler>();
-    class BrowserWebMCP {
-      registerTool(name: string, _description: string, _schema: unknown, handler: ToolHandler): void { tools.set(name, handler); }
-      registerResource(): void {}
-    }
-    vi.stubGlobal('window', { WebMCP: BrowserWebMCP });
-    let changed = 0;
-    registerWebMCP(() => 'product-roadmap', () => { changed++; });
-    await vi.waitFor(() => expect(tools.size).toBe(toolNames.length));
-    const run = async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
-      const handler = tools.get(name);
-      if (!handler) throw new Error(`Tool ${name} was not registered`);
-      return JSON.parse((await handler(args)).content[0].text) as T;
-    };
-
-    expect(await run<unknown[]>('find_duplicates', {})).toBeInstanceOf(Array);
-    expect(await run<unknown[]>('connect_across_canvases', {})).toEqual([]);
-    expect(await run<{ total: number }>('score_documents', {})).toMatchObject({ total: 5 });
-    expect(await run<unknown[]>('search_docs', { query: 'Roadmap', rank: 'jev' })).toBeInstanceOf(Array);
-    expect(changed).toBe(0);
-
-    const workspaces = await networkFetch(new URL('/api/workspaces', base)).then(response => response.json()) as Array<{ id: string }>;
-    const before = await networkFetch(new URL('/api/canvases/product-roadmap', base)).then(response => response.json()) as CanvasDocument;
-    type ChangeSet = { runId: string; dryRun: boolean; changes: Array<{ id: string }>; applied?: string[] };
-    const preview = await run<ChangeSet>('run_workspace_automation', { workspaceId: workspaces[0].id, kind: 'purpose' });
-    expect(preview.dryRun).toBe(true);
-    expect(preview.changes.length).toBeGreaterThan(0);
-    const afterPreview = await networkFetch(new URL('/api/canvases/product-roadmap', base)).then(response => response.json()) as CanvasDocument;
-    expect(afterPreview.blocks.map(block => block.purpose)).toEqual(before.blocks.map(block => block.purpose));
-    expect(changed).toBe(0);
-    const applied = await run<ChangeSet>('run_workspace_automation', { workspaceId: workspaces[0].id, kind: 'purpose', dryRun: false,
-      runId: preview.runId, actionIds: [preview.changes[0].id] });
-    expect(applied.applied).toContain(preview.changes[0].id);
-    const undone = await run<{ reverted: string[] }>('undo_jev_run', { runId: preview.runId });
-    expect(undone.reverted).toContain(preview.changes[0].id);
-
-    const first = await run<CanvasBlock>('create_doc', { title: 'Duplicate one', content: '# Shared\nReusable setup instructions for the billing client.' });
-    const second = await run<CanvasBlock>('create_doc', { title: 'Duplicate two', content: '# Shared\nReusable setup instructions for the billing client.' });
-    const merged = await run<{ mergeId: string; keepBlockId: string; archivedBlockIds: string[] }>('merge_documents', {
-      keepBlockId: first.id, mergeBlockIds: [second.id], content: '# Shared\nMerged setup instructions.',
-      expectedContentHashes: { [first.id]: first.contentHash, [second.id]: second.contentHash },
-    });
-    expect(merged).toMatchObject({ keepBlockId: first.id, archivedBlockIds: [second.id] });
-    expect(merged.mergeId).toEqual(expect.any(String));
-    const undoMerge = await run<{ mergeId: string; reverted: boolean }>('undo_merge', { mergeId: merged.mergeId });
-    expect(undoMerge).toEqual({ mergeId: merged.mergeId, reverted: true });
-    const restored = await networkFetch(new URL('/api/canvases/product-roadmap', base)).then(response => response.json()) as CanvasDocument;
-    expect(restored.blocks.find(block => block.id === first.id)?.content).toBe(first.content);
-    expect(restored.blocks.some(block => block.id === second.id)).toBe(true);
-    const target = await networkFetch(new URL(`/api/workspaces/${workspaces[0].id}/canvases`, base), { method: 'POST',
-      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Other canvas' }) }).then(response => response.json()) as CanvasDocument;
-    expect(await run<{ toCanvasId: string; blockId: string }>('move_document', { blockId: first.id, targetCanvasId: target.id }))
-      .toMatchObject({ toCanvasId: target.id, blockId: first.id });
-    expect(await run<{ kind: string }>('cross_connect_canvas', {})).toMatchObject({ kind: 'cross_connect' });
-    expect(changed).toBeGreaterThanOrEqual(6);
-  }, 30_000);
 
   it('retries a failed package script load and then installs the adapter', async () => {
     vi.resetModules();
     const { registerWebMCP } = await import('./webmcp');
     const tools = new Map<string, ToolHandler>();
-    class BrowserWebMCP {
-      registerTool(name: string, _description: string, _schema: unknown, handler: ToolHandler): void { tools.set(name, handler); }
-      registerResource(): void {}
+    class BrowserWebMCP extends (await nativeConstructor()) {
+      registerTool(name: string, _description: string, _schema: JsonSchema, handler: ToolHandler): void { super.registerTool(name, _description, _schema, handler); tools.set(name, handler); }
+      registerResource(name: string, description: string, template: { uri: string; mimeType: string }, handler: ResourceHandler): void { super.registerResource(name, description, template, handler); }
     }
     vi.stubGlobal('window', {});
     const scripts: string[] = [];
@@ -293,9 +210,9 @@ describe('WebMCP document tools', () => {
     vi.resetModules();
     const { registerWebMCP } = await import('./webmcp');
     const tools = new Map<string, ToolHandler>();
-    class BrowserWebMCP {
-      registerTool(name: string, _description: string, _schema: unknown, handler: ToolHandler): void { tools.set(name, handler); }
-      registerResource(): void {}
+    class BrowserWebMCP extends (await nativeConstructor()) {
+      registerTool(name: string, _description: string, _schema: JsonSchema, handler: ToolHandler): void { super.registerTool(name, _description, _schema, handler); tools.set(name, handler); }
+      registerResource(name: string, description: string, template: { uri: string; mimeType: string }, handler: ResourceHandler): void { super.registerResource(name, description, template, handler); }
     }
     vi.stubGlobal('window', { WebMCP: BrowserWebMCP });
     registerWebMCP(() => '', () => {});
@@ -308,9 +225,9 @@ describe('WebMCP document tools', () => {
     vi.resetModules();
     const { registerWebMCP } = await import('./webmcp');
     const tools = new Map<string, ToolHandler>();
-    class BrowserWebMCP {
-      registerTool(name: string, _description: string, _schema: unknown, handler: ToolHandler): void { tools.set(name, handler); }
-      registerResource(): void {}
+    class BrowserWebMCP extends (await nativeConstructor()) {
+      registerTool(name: string, _description: string, _schema: JsonSchema, handler: ToolHandler): void { super.registerTool(name, _description, _schema, handler); tools.set(name, handler); }
+      registerResource(name: string, description: string, template: { uri: string; mimeType: string }, handler: ResourceHandler): void { super.registerResource(name, description, template, handler); }
     }
     vi.stubGlobal('window', {});
     const scripts: string[] = [];
@@ -366,10 +283,10 @@ describe('WebMCP document tools', () => {
     const { registerWebMCP } = await import('./webmcp');
     const tools = new Map<string, ToolHandler>();
     let constructions = 0;
-    class BrowserWebMCP {
-      constructor() { constructions++; }
-      registerTool(name: string, _description: string, _schema: unknown, handler: ToolHandler): void { tools.set(name, handler); }
-      registerResource(): void {}
+    class BrowserWebMCP extends (await nativeConstructor()) {
+      constructor() { super(); constructions++; }
+      registerTool(name: string, _description: string, _schema: JsonSchema, handler: ToolHandler): void { super.registerTool(name, _description, _schema, handler); tools.set(name, handler); }
+      registerResource(name: string, description: string, template: { uri: string; mimeType: string }, handler: ResourceHandler): void { super.registerResource(name, description, template, handler); }
     }
     vi.stubGlobal('window', {});
     const scripts: Array<{ src: string; onload: () => void }> = [];
@@ -394,10 +311,10 @@ describe('WebMCP document tools', () => {
     const { registerWebMCP } = await import('./webmcp');
     let constructions = 0;
     let registrations = 0;
-    class BrowserWebMCP {
-      constructor() { constructions++; }
-      registerTool(): void { registrations++; }
-      registerResource(): void {}
+    class BrowserWebMCP extends (await nativeConstructor()) {
+      constructor() { super(); constructions++; }
+      registerTool(name: string, description: string, schema: JsonSchema, handler: ToolHandler): void { super.registerTool(name, description, schema, handler); registrations++; }
+      registerResource(name: string, description: string, template: { uri: string; mimeType: string }, handler: ResourceHandler): void { super.registerResource(name, description, template, handler); }
     }
     vi.stubGlobal('window', { WebMCP: BrowserWebMCP });
     registerWebMCP(() => 'product-roadmap', () => {});
@@ -411,9 +328,10 @@ describe('WebMCP document tools', () => {
   it('does not register when a host page removes the WebMCP constructor before setup', async () => {
     vi.resetModules();
     const { registerWebMCP } = await import('./webmcp');
+    const Native = await nativeConstructor();
     let reads = 0;
     const host: Record<string, unknown> = {};
-    Object.defineProperty(host, 'WebMCP', { get: () => ++reads === 1 ? class {} : undefined });
+    Object.defineProperty(host, 'WebMCP', { get: () => ++reads === 1 ? Native : undefined });
     vi.stubGlobal('window', host);
     registerWebMCP(() => 'product-roadmap', () => {});
     await new Promise(resolve => setTimeout(resolve, 0));

@@ -84,6 +84,100 @@ describe('AI Elements agent activity', () => {
     expect(onNavigate).toHaveBeenCalledWith({ kind: 'document', canvasId: 'planning', blockId: 'qa',
       title: 'qa', excerpt: 'QA approval moved to Friday.', contentHash: undefined });
   });
+  it('isolates restored investigation research from late events and keeps the next run stoppable', async () => {
+    const previousStream = controlledStream();
+    const nextStream = controlledStream();
+    const snapshot = { turns: [{ id: 9, query: 'Saved research', answer: 'Saved answer', sources: [], status: 'complete' }],
+      edits: { added: [], changed: {}, deleted: [], addedEdges: [], deletedEdges: [] }, layout: 'mindmap' };
+    const record = { id: 'saved-1', workspaceId: 'team', canvasId: 'planning', title: 'Saved review', visibility: 'shared',
+      messages: [{ role: 'user', content: 'Saved question' }, { role: 'assistant', content: 'Saved answer' }],
+      sourceRefs: [], proposalRefs: [], researchSnapshot: snapshot,
+      revision: 1, createdAt: '2026-09-28T10:00:00.000Z', updatedAt: '2026-09-28T10:00:00.000Z' };
+    const persisted = 'symbiknow:test-investigation-research';
+    const props = viewProps();
+    const signals: AbortSignal[] = [];
+    let requests = 0;
+    props.onCanvasPatch.mockImplementation(async (_id, patch) => {
+      const research = JSON.parse(window.localStorage.getItem(persisted)!);
+      research.turns.push({ query: patch.query });
+      window.localStorage.setItem(persisted, JSON.stringify(research));
+    });
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      if (String(input) === '/api/chat/stream') {
+        signals.push(init!.signal as AbortSignal);
+        return new Response(++requests === 1 ? previousStream.body : nextStream.body);
+      }
+      if (String(input) === '/api/investigations/list') return Response.json({ investigations: [{ ...record,
+        messageCount: 2, sourceCount: 0, proposalCount: 0 }] });
+      if (String(input) === '/api/investigations/saved-1') return Response.json(record);
+      throw new Error('Unexpected request ' + String(input));
+    });
+    render(<AIElementsChat {...props} canvas={{ id: 'planning', name: 'Planning', workspaceId: 'team', blocks: [] }}
+      onRestoreResearch={value => window.localStorage.setItem(persisted, JSON.stringify(value))}/>);
+    send('Live question');
+    await act(async () => previousStream.push('data: {"choices":[{"delta":{"content":"Working on the live answer"}}]}\n\n'));
+    fireEvent.click(screen.getByText('Saved investigations'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open' }));
+    expect(await screen.findByText('Saved answer')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull();
+    props.onCanvasAnswer.mockClear();
+    send('Follow up on the saved investigation');
+    await screen.findByRole('button', { name: 'Stop' });
+    const patch = { query: 'Unrelated live research', blocks: [{ id: 'late', type: 'text', title: 'Late block',
+      content: 'Old stream content', sourceIds: [] }], edges: [] };
+    await act(async () => previousStream.push([
+      `event: research_canvas_patch\ndata: ${JSON.stringify(patch)}`,
+      'event: answer_canvas\ndata: {"query":"Old question","canvasId":"planning","selection":"local","sources":[]}',
+      'event: canvas_navigation\ndata: {"kind":"document","canvasId":"planning","blockId":"old","title":"Old source"}',
+      'event: research_verification\ndata: {"status":"unverified","patchIndex":0,"blocks":[]}',
+      'data: {"choices":[{"delta":{"content":"Late old answer"}}]}',
+      'data: [DONE]',
+    ].join('\n\n') + '\n\n'));
+    expect(JSON.parse(window.localStorage.getItem(persisted)!)).toEqual(snapshot);
+    expect(signals[0].aborted).toBe(true);
+    expect(props.onCanvasPatch).not.toHaveBeenCalled();
+    expect(props.onCanvasSources).not.toHaveBeenCalled();
+    expect(props.onCanvasAnswer).not.toHaveBeenCalled();
+    expect(props.onNavigate).not.toHaveBeenCalled();
+    expect(props.onCanvasChanged).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    expect(signals[1].aborted).toBe(true);
+    await act(async () => nextStream.fail(new Error('Stopped')));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeTruthy());
+    expect(screen.queryByText('Late old answer')).toBeNull();
+    await waitFor(() => expect(window.localStorage.getItem('symbiknow:chat-history')).toContain('Saved answer'));
+    expect(window.localStorage.getItem('symbiknow:chat-history')).not.toContain('Late old answer');
+    window.localStorage.removeItem(persisted);
+  });
+  it('ignores a held chat response that resolves after an investigation replaces the conversation', async () => {
+    let resolveResponse!: (response: Response) => void;
+    const response = new Promise<Response>(resolve => { resolveResponse = resolve; });
+    const record = { id: 'saved-2', workspaceId: 'team', canvasId: 'planning', title: 'Saved review', visibility: 'shared',
+      messages: [{ role: 'assistant', content: 'Recovered answer' }], sourceRefs: [], proposalRefs: [],
+      revision: 1, createdAt: '2026-09-28T10:00:00.000Z', updatedAt: '2026-09-28T10:00:00.000Z' };
+    let signal!: AbortSignal;
+    const props = viewProps();
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      if (String(input) === '/api/chat/stream') { signal = init!.signal as AbortSignal; return response; }
+      if (String(input) === '/api/investigations/list') return Response.json({ investigations: [{ ...record,
+        messageCount: 1, sourceCount: 0, proposalCount: 0 }] });
+      if (String(input) === '/api/investigations/saved-2') return Response.json(record);
+      throw new Error('Unexpected request ' + String(input));
+    });
+    render(<AIElementsChat {...props} canvas={{ id: 'planning', name: 'Planning', workspaceId: 'team', blocks: [] }}/>);
+    send('Pending question');
+    await screen.findByRole('button', { name: 'Stop' });
+    fireEvent.click(screen.getByText('Saved investigations'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open' }));
+    expect(await screen.findByText('Recovered answer')).toBeTruthy();
+    await act(async () => resolveResponse(new Response('data: {"choices":[{"delta":{"content":"Old response"}}]}\n\ndata: [DONE]\n\n')));
+    expect(signal.aborted).toBe(true);
+    expect(props.onCanvasAnswer).not.toHaveBeenCalled();
+    expect(props.onCanvasTurnEnd).not.toHaveBeenCalled();
+    expect(props.onCanvasChanged).not.toHaveBeenCalled();
+    expect(screen.queryByText('Old response')).toBeNull();
+  });
   it('reopens a saved pending proposal for before-and-after review', async () => {
     const before: CanvasBlock = { id: 'qa', file: 'qa.md', kind: 'markdown', title: 'QA report', content: '# Before\nold detail',
       x: 10, y: 20, width: 300, height: 200, links: [], contentHash: 'old-hash' };
@@ -146,33 +240,10 @@ describe('AI Elements agent activity', () => {
     expect(onAvatarStateChange).toHaveBeenLastCalledWith('idle');
 
     send('What changed?');
+    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('listening'));
+    await act(async () => { stream.push('event: agent_step\ndata: {"type":"thinking","message":"Evaluating sources"}\n\n'); });
     await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('thinking'));
     await act(async () => { stream.push('data: {"choices":[{"delta":{"content":"The owner changed."}}]}\n\n'); });
-    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('speaking'));
-    await act(async () => { stream.push('data: [DONE]\n\n'); });
-    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('done'));
-  });
-
-  it('shows distinct Jev motion only for active routing, analysis, verification, and action work', async () => {
-    const stream = controlledStream();
-    const onAvatarStateChange = vi.fn();
-    vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
-    render(<AIElementsChat {...viewProps()} jevAvailable onAvatarStateChange={onAvatarStateChange}/>);
-    send('Analyze and organize this canvas');
-    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('jev-routing'));
-    expect(screen.getByText('Jev is choosing the right context…')).toBeTruthy();
-    await act(async () => { stream.push('event: agent_step\ndata: {"type":"tool_start","id":"analysis","name":"analyze_canvas","message":"Analyzing"}\n\n'); });
-    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('jev-analyzing'));
-    await act(async () => { stream.push('event: agent_step\ndata: {"type":"tool_end","id":"analysis","name":"analyze_canvas","message":"Analyzed"}\n\n'); });
-    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('thinking'));
-    await act(async () => { stream.push('event: agent_step\ndata: {"type":"tool_start","id":"action","name":"organize_canvas","message":"Organizing"}\n\n'); });
-    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('jev-applying'));
-    await act(async () => { stream.push('event: agent_step\ndata: {"type":"tool_end","id":"action","name":"organize_canvas","message":"Organized"}\n\n'); });
-    await act(async () => { stream.push('data: {"choices":[{"delta":{"content":"Canvas organized."}}]}\n\n'); });
-    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('speaking'));
-    await act(async () => { stream.push('event: verification\ndata: {"status":"checking"}\n\n'); });
-    await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('jev-verifying'));
-    await act(async () => { stream.push('event: verification\ndata: {"status":"supported"}\n\n'); });
     await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('speaking'));
     await act(async () => { stream.push('data: [DONE]\n\n'); });
     await waitFor(() => expect(onAvatarStateChange).toHaveBeenLastCalledWith('done'));
@@ -187,8 +258,8 @@ describe('AI Elements agent activity', () => {
     const steps = [
       ['search_docs', 'searching', 'Searching documents…'],
       ['read_doc', 'reading', 'Reading the source…'],
-      ['draw_research_canvas', 'working', 'Updating the canvas…'],
-      ['show_doc_on_canvas', 'navigating', 'Opening the right place…'],
+      ['draw_research_canvas', 'organizing', 'Organizing the research canvas…'],
+      ['show_doc_on_canvas', 'moving', 'Opening the right place…'],
       ['external_tool', 'tooling', 'Working with a tool…'],
     ] as const;
     for (const [name, state, label] of steps) {
@@ -238,27 +309,6 @@ describe('AI Elements agent activity', () => {
     expect(props.onReturnNavigation).toHaveBeenCalledOnce();
   });
 
-  it('asks where to work and lets the user choose the current view without opening research', async () => {
-    const choice = { question: 'Help me with this?', options: [
-      { label: 'Build a research canvas', detail: 'Map evidence', prompt: 'Create a temporary research canvas for: Help me with this?' },
-      { label: 'Work on this view', detail: 'Use the current document', prompt: 'Answer in chat using what I am viewing: Help me with this?' },
-      { label: 'Take me to the source', detail: 'Navigate', prompt: 'Navigate to the right document for: Help me with this?' },
-    ] };
-    const props = viewProps();
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(`event: presentation_choice\ndata: ${JSON.stringify(choice)}\n\ndata: {"choices":[{"delta":{"content":"Where should I work?"}}]}\n\ndata: [DONE]\n\n`))
-      .mockResolvedValueOnce(new Response('data: {"choices":[{"delta":{"content":"Here is the answer."}}]}\n\ndata: [DONE]\n\n'));
-    render(<AIElementsChat {...props}/>);
-    send(choice.question);
-    const currentView = await screen.findByRole('button', { name: /Work on this view/ });
-    await waitFor(() => expect((currentView as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.click(currentView);
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-    const request = JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body));
-    expect(request.messages.at(-1)).toEqual({ role: 'user', content: choice.options[1].prompt });
-    expect(props.onCanvasSources).not.toHaveBeenCalled();
-    expect(props.onCanvasPatch).not.toHaveBeenCalled();
-  });
-
   it('submits external prompts once per sequence through the chat stream', async () => {
     const props = viewProps();
     vi.mocked(fetch).mockResolvedValue(new Response('data: [DONE]\n\n'));
@@ -272,42 +322,6 @@ describe('AI Elements agent activity', () => {
     expect(screen.getByText('Compare selected documents')).toBeTruthy();
     const body = JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body));
     expect(body.messages.at(-1)).toEqual({ role: 'user', content: 'Compare selected documents' });
-  });
-
-  it('streams a merge preview and returns the complete fenced Markdown without applying it', async () => {
-    const stream = controlledStream();
-    vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
-    const props = viewProps();
-    const onMergeDraft = vi.fn();
-    render(<AIElementsChat {...props} onMergeDraft={onMergeDraft} promptRequest={{
-      text: 'Draft a merge of two setup guides', sequence: 1, mergeDraft: { keepBlockId: 'guide', mergeBlockIds: ['old-guide'] },
-    }}/>);
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
-    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toMatchObject({ previewMerge: true,
-      messages: [{ role: 'user', content: 'Draft a merge of two setup guides' }] });
-
-    const markdown = '# Merged guide\n\nKeep this section.\n\n```bash\nnpm install\n```\n\n## Open questions\n- Which version is current?';
-    await act(async () => { stream.push(`data: ${JSON.stringify({ choices: [{ delta: { content: `Here is the draft:\n\n\`\`\`\`markdown\n${markdown}\n\`\`\`\`\nReview it before applying.` } }] })}\n\n`); });
-    expect(onMergeDraft).not.toHaveBeenCalled();
-    await act(async () => { stream.push('data: [DONE]\n\n'); });
-
-    await waitFor(() => expect(onMergeDraft).toHaveBeenCalledWith(markdown, { keepBlockId: 'guide', mergeBlockIds: ['old-guide'] }));
-    expect(props.onCanvasChanged).not.toHaveBeenCalled();
-    expect(screen.getByText('Here is the draft:')).toBeTruthy();
-  });
-
-  it('discards the merge intent token after a preview attempt before retrying', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response('event: error\ndata: {"message":"Draft interrupted"}\n\n'))
-      .mockResolvedValueOnce(new Response('data: [DONE]\n\n'));
-    render(<AIElementsChat {...viewProps()} promptRequest={{ text: 'Draft merge', sequence: 1,
-      mergeDraft: { keepBlockId: 'guide', mergeBlockIds: ['notes'], intentToken: 'one-time-token' } }}/>);
-    await screen.findByText('Draft interrupted');
-    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toMatchObject({ previewMerge: true, intentToken: 'one-time-token' });
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-    const retry = JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body));
-    expect(retry.previewMerge).toBe(true);
-    expect(retry.intentToken).toBeUndefined();
   });
 
   it('waits for a canvas and chat key before sending an external prompt', async () => {
@@ -371,7 +385,7 @@ describe('AI Elements agent activity', () => {
     await waitFor(() => expect(props.onUndoEditedBlock).toHaveBeenCalledWith('planning', { before, after }));
     expect(await screen.findByText('Undid edit to QA report.')).toBeTruthy();
   });
-  it('streams the answer live, folds a pre-tool note into activity, and shows Jev verification with a copy action', async () => {
+  it('streams the answer live, folds a pre-tool note into activity, and retains a copy action', async () => {
     const stream = controlledStream();
     vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
     const writeText = vi.fn(async () => undefined);
@@ -384,43 +398,14 @@ describe('AI Elements agent activity', () => {
     await act(async () => { stream.push('data: {"choices":[{"delta":{"content":"The plan moved to **May**."}}]}\n\n'); });
     expect(within(activityPanel()).getByText('Let me check the plan.')).toBeTruthy();
     await act(async () => { stream.push('event: verification\ndata: {"status":"checking"}\n\n'); });
-    expect(screen.getByText('Checking sources')).toBeTruthy();
+    expect(screen.queryByText('Checking sources')).toBeNull();
     await act(async () => { stream.push('event: verification\ndata: {"status":"unsupported","score":0.3}\n\ndata: [DONE]\n\n'); });
-    await waitFor(() => expect(screen.getByRole('note').textContent).toContain('Source check needs review'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull());
+    expect(screen.queryByText('Source check needs review')).toBeNull();
     expect(screen.getByText('May')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Copy answer' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('The plan moved to **May**.'));
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeTruthy();
-  });
-
-  it('expands Jev claim checks and opens the source for a supported claim', async () => {
-    const stream = controlledStream();
-    const onNavigate = vi.fn();
-    vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
-    render(<AIElementsChat {...viewProps()} onNavigate={onNavigate}/>);
-    send('What changed?');
-    await act(async () => { stream.push('data: {"choices":[{"delta":{"content":"The plan moved to May."}}]}\n\n'); });
-    await act(async () => { stream.push('event: verification\ndata: {"status":"supported","score":0.9,"claims":[{"text":"The plan moved to May.","score":0.9,"supported":true,"source":{"canvasId":"planning","blockId":"roadmap","title":"Roadmap"}}],"sources":[{"canvasId":"planning","blockId":"roadmap","title":"Roadmap"}]}\n\ndata: [DONE]\n\n'); });
-    fireEvent.click(await screen.findByText('1 of 1 checked claims match sources'));
-    expect(within(document.querySelector('.ai-chat__verification-detail')!).getByText('The plan moved to May.')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Roadmap' }));
-    expect(onNavigate).toHaveBeenCalledWith({ kind: 'document', canvasId: 'planning', blockId: 'roadmap', title: 'Roadmap' });
-  });
-
-  it('hides the verification badge when the answer has no canvas claims', async () => {
-    const stream = controlledStream();
-    vi.mocked(fetch).mockResolvedValue(new Response(stream.body, { headers: { 'content-type': 'text/event-stream' } }));
-    render(<AIElementsChat {...viewProps()}/>);
-    send('Say hello');
-    await act(async () => { stream.push('data: {"choices":[{"delta":{"content":"Hello!"}}]}\n\nevent: verification\ndata: {"status":"checking"}\n\n'); });
-    expect(screen.getByText('Checking sources')).toBeTruthy();
-
-    await act(async () => { stream.push('event: verification\ndata: {"status":"no_claims"}\n\ndata: [DONE]\n\n'); });
-    await screen.findByRole('button', { name: 'Copy answer' });
-    expect(screen.queryByText('Checking sources')).toBeNull();
-    expect(screen.queryByText(/checked claims match sources/)).toBeNull();
-    expect(screen.queryByRole('note')).toBeNull();
-    expect(screen.getByText('Hello!')).toBeTruthy();
   });
 
   it('shows an error event from the server with a retry', async () => {

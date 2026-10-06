@@ -4,13 +4,12 @@ import os from 'node:os';
 import path from 'node:path';
 import type { Server } from 'node:http';
 import { createApiServer, reportStartupFailure, start } from './index.js';
-import type { JevDecider } from './jev.js';
 
 const opened: Array<{ server: Server; dataDir: string }> = [];
 
-async function serverFixture(jevDecider?: JevDecider): Promise<{ base: string; dataDir: string }> {
+async function serverFixture(): Promise<{ base: string; dataDir: string }> {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-routes-'));
-  const server = await createApiServer({ dataDir, jevDecider });
+  const server = await createApiServer({ dataDir });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   opened.push({ server, dataDir });
   const address = server.address();
@@ -29,9 +28,82 @@ afterEach(async () => {
     await rm(dataDir, { recursive: true, force: true });
   }
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('HTTP route dispatch', () => {
+  it('previews, switches, merges, and restores document versions through HTTP', async () => {
+    const { base } = await serverFixture();
+    const blockRoute = '/api/canvases/product-roadmap/blocks/roadmap-overview';
+    const versions = `${blockRoute}/versions`;
+    const original = await request(base, '/api/canvases/product-roadmap').then(response => response.json()) as { blocks: Array<{ content: string }> };
+    const initial = await request(base, versions).then(response => response.json()) as { commits: Array<{ id: string }> };
+    expect((await request(base, `${versions}/branches`, 'POST', { name: 'agents/draft' })).status).toBe(201);
+    expect((await request(base, `${versions}/switch`, 'POST', { name: 'agents/draft' })).status).toBe(200);
+    await request(base, blockRoute, 'PUT', { content: '# Branch draft' });
+    const preview = await request(base, `${versions}/preview?kind=switch&name=main`);
+    expect(preview.status).toBe(200);
+    expect(await preview.json()).toMatchObject({ before: '# Branch draft', after: original.blocks[0].content });
+    expect((await request(base, `${versions}/switch`, 'POST', { name: 'main' })).status).toBe(200);
+    expect((await request(base, `${versions}/preview?kind=merge&name=agents%2Fdraft`)).status).toBe(200);
+    expect((await request(base, `${versions}/merge`, 'POST', { name: 'agents/draft' })).status).toBe(200);
+    const merged = await request(base, '/api/canvases/product-roadmap').then(response => response.json()) as { blocks: Array<{ content: string }> };
+    expect(merged.blocks[0].content).toBe('# Branch draft');
+    expect((await request(base, `${versions}/preview?kind=restore&revision=${initial.commits[0].id}`)).status).toBe(200);
+    expect((await request(base, `${versions}/restore`, 'POST', { revision: initial.commits[0].id })).status).toBe(200);
+    const restored = await request(base, '/api/canvases/product-roadmap').then(response => response.json()) as { blocks: Array<{ content: string }> };
+    expect(restored.blocks[0].content).toBe(original.blocks[0].content);
+  });
+
+  it.each([
+    ['preview', 'GET', undefined], ['preview?kind=invalid', 'GET', undefined],
+    ['preview?kind=switch', 'GET', undefined], ['preview?kind=restore', 'GET', undefined],
+    ['branches', 'POST', {}], ['switch', 'POST', { name: 42 }], ['merge', 'POST', {}], ['restore', 'POST', { revision: 42 }],
+  ])('preserves client validation for versions/%s', async (suffix, method, body) => {
+    const { base } = await serverFixture();
+    const response = await request(base, `/api/canvases/product-roadmap/blocks/roadmap-overview/versions/${suffix}`, method as string, body);
+    expect(response.status).toBe(400);
+  });
+
+
+
+  it('keeps session login and logout public while protecting authenticated API routes', async () => {
+    vi.stubEnv('SYMBIKNOW_ACCESS_TOKEN', 'workspace-secret');
+    const { base } = await serverFixture();
+    expect(await request(base, '/api/session').then(response => response.json())).toEqual({ authRequired: true, authenticated: false });
+    expect((await request(base, '/api/workspaces')).status).toBe(401);
+    expect((await request(base, '/api/session', 'POST', { token: 'wrong' })).status).toBe(401);
+    const login = await request(base, '/api/session', 'POST', { token: 'workspace-secret' });
+    expect(login.status).toBe(200);
+    const cookie = login.headers.get('set-cookie')!.split(';')[0];
+    expect((await fetch(base + '/api/workspaces', { headers: { cookie } })).status).toBe(200);
+    const logout = await request(base, '/api/session', 'DELETE');
+    expect(await logout.json()).toEqual({ authRequired: true, authenticated: false });
+    expect(logout.headers.get('set-cookie')).toContain('symbiknow_session=;');
+    expect(logout.headers.get('set-cookie')).toContain('allteam_session=;');
+    expect(logout.headers.get('set-cookie')).toContain('Max-Age=0');
+    vi.stubEnv('SYMBIKNOW_ACCESS_TOKEN', '');
+    vi.stubEnv('ALLTEAM_ACCESS_TOKEN', '');
+    expect(await request(base, '/api/session', 'POST', {}).then(response => response.json()))
+      .toEqual({ authRequired: false, authenticated: true });
+  });
+
+  it('preserves unsupported methods and diagnostics validation after endpoint extraction', async () => {
+    const { base } = await serverFixture();
+    const unsupported = [
+      ['/api/session', 'PUT'], ['/api/canvases/product-roadmap/tasks', 'PUT'],
+      ['/api/canvases/product-roadmap/tasks/insights/apply', 'GET'],
+      ['/api/canvases/product-roadmap/blocks/roadmap-overview/versions/branches', 'GET'],
+      ['/api/workspaces/acme-team/automations', 'GET'],
+    ];
+    for (const [route, method] of unsupported) expect((await request(base, route, method)).status).toBe(404);
+    expect((await request(base, '/api/models?provider=invalid')).status).toBe(400);
+    expect((await request(base, '/api/mcp/servers/test', 'POST', { url: 'file:///outside' })).status).toBe(400);
+    expect((await request(base, '/api/canvases/product-roadmap/tasks/insights/apply', 'POST', {})).status).toBe(404);
+  });
+
+
+
   it('deletes a workspace through the API', async () => {
     const { base } = await serverFixture();
     const created = await request(base, '/api/workspaces', 'POST', { name: 'Temporary' });
@@ -71,63 +143,15 @@ describe('HTTP route dispatch', () => {
     expect((await changed.json() as { blocks: Array<{ content: string }> }).blocks.some(block =>
       block.content === '# Externally revised roadmap')).toBe(true);
   });
-  it('reruns Jev connection checks after a reviewed merge and offers undo', async () => {
-    const asked: string[] = [];
-    const decider: JevDecider = async (_key, _state, questions) => {
-      asked.push(...Object.keys(questions));
-      return Object.fromEntries(Object.entries(questions).map(([id, question]) => [id, question.type === 'noul'
-        ? { type: 'noul', noul: 0.1 }
-        : question.type === 'score' ? { type: 'score', score: 0, confidence: 1,
-          probabilities: Object.fromEntries(question.criteria.map((_, index) => [String(index), Number(index === 0)])) }
-          : { type: 'choice', choice: Object.keys(question.criteria)[0], confidence: 1,
-            probabilities: Object.fromEntries(Object.keys(question.criteria).map((value, index) => [value, Number(index === 0)])) }]));
-    };
-    const { base } = await serverFixture(decider);
-    await request(base, '/api/settings', 'PUT', { jevApiKey: 'test-key' });
-    const canvas = await request(base, '/api/canvases/product-roadmap').then(response => response.json()) as {
-      blocks: { id: string; contentHash: string }[];
-    };
-    const [keeper, old] = canvas.blocks;
-    const merged = await request(base, '/api/canvases/product-roadmap/merge', 'POST', {
-      keepBlockId: keeper.id, mergeBlockIds: [old.id], content: '# Combined plan',
-      expectedContentHashes: { [keeper.id]: keeper.contentHash, [old.id]: old.contentHash },
-    });
-    expect(merged.status).toBe(200);
-    const result = await merged.json() as { mergeId: string; postMerge: { status: string } };
-    expect(result.postMerge.status).toBe('complete');
-    expect(asked.some(id => id.includes('_link'))).toBe(true);
-    expect((await request(base, `/api/merges/${result.mergeId}/undo`, 'POST')).status).toBe(200);
-  });
 
-  it('serves Jev insights and persists accepted layout changes through public routes', async () => {
-    const decider: JevDecider = async (_key, _state, questions) => Object.fromEntries(Object.entries(questions).map(([name, question]) => {
-      if (question.type === 'noul') return [name, { type: 'noul', noul: 0.1 }];
-      if (question.type === 'score') return [name, { type: 'score', score: 0, confidence: 1, probabilities: { '0': 1 } }];
-      const choice = Object.keys(question.criteria)[0];
-      return [name, { type: 'choice', choice, confidence: 1, probabilities: { [choice]: 1 } }];
-    }));
-    const { base } = await serverFixture(decider);
-    const route = '/api/canvases/product-roadmap/insights';
-    expect((await request(base, route, 'POST', { query: 'launch' })).status).toBe(400);
-    expect((await request(base, '/api/settings', 'PUT', { model: 'openai/gpt-4o-mini', jevApiKey: 'test-key', reviewers: 'Product, Engineering' })).status).toBe(200);
-    expect((await request(base, route, 'POST', {})).status).toBe(200);
-    expect((await request(base, route, 'POST', { query: 'x'.repeat(501) })).status).toBe(400);
-    const response = await request(base, route, 'POST', { query: 'launch' });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ canvasId: 'product-roadmap', query: 'launch', total: 5 });
-    expect((await request(base, route)).status).toBe(404);
+
+  it('persists manual layout changes through public routes', async () => {
+    const { base } = await serverFixture();
     const layoutRoute = '/api/canvases/product-roadmap/layout';
     expect((await request(base, layoutRoute, 'PUT', { positions: [{ blockId: 'roadmap-overview', x: -120, y: 450 }] })).status).toBe(200);
     expect((await request(base, '/api/canvases/product-roadmap').then(result => result.json()) as { blocks: Array<{ id: string; x: number; y: number }> }).blocks.find(block => block.id === 'roadmap-overview')).toMatchObject({ x: -120, y: 450 });
     expect((await request(base, layoutRoute, 'PUT', { positions: [] })).status).toBe(400);
     expect((await request(base, layoutRoute)).status).toBe(404);
-    const automationRoute = '/api/canvases/product-roadmap/automations';
-    expect((await request(base, automationRoute, 'POST', { kind: 'unknown' })).status).toBe(400);
-    const disconnected = await request(base, automationRoute, 'POST', { kind: 'connection' });
-    expect(disconnected.status).toBe(200);
-    expect(await disconnected.json()).toMatchObject({ kind: 'connection', applied: expect.any(Number) });
-    const unlinked = await request(base, '/api/canvases/product-roadmap').then(result => result.json()) as { blocks: Array<{ links: string[] }> };
-    expect(unlinked.blocks.every(block => block.links.length === 0)).toBe(true);
   });
   it('creates workspaces, canvases, and Markdown files through their routes', async () => {
     const { base } = await serverFixture();
@@ -151,7 +175,9 @@ describe('HTTP route dispatch', () => {
     expect((await request(base, `/api/canvases/${canvasId}`).then(response => response.json()) as { blocks: Array<{ content: string }> }).blocks[0].content).toBe('# Updated');
     expect((await request(base, '/api/search?q=Updated').then(response => response.json()) as unknown[]).length).toBe(1);
     expect(await request(base, '/api/search').then(response => response.json())).toEqual([]);
-    expect((await request(base, `/api/canvases/${canvasId}/blocks/${blockId}`)).status).toBe(404);
+    const loaded = await request(base, `/api/canvases/${canvasId}/blocks/${blockId}`);
+    expect(loaded.status).toBe(200);
+    expect(await loaded.json()).toMatchObject({ id: blockId, content: '# Updated', contentLoaded: true });
     expect((await request(base, `/api/canvases/${canvasId}/blocks/${blockId}`, 'DELETE')).status).toBe(200);
     expect((await request(base, `/api/canvases/${canvasId}/blocks/${blockId}/download`)).status).toBe(404);
     expect((await request(base, `/api/canvases/${canvasId}`).then(response => response.json()) as { blocks: unknown[] }).blocks).toEqual([]);

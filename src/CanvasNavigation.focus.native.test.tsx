@@ -1,0 +1,133 @@
+// @vitest-environment jsdom
+import { act, fireEvent, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { cameraFrames, holdNativeNodeMeasurements, nativeCameraClock } from './CanvasOverview.readiness.test.helpers';
+import { block, canvas, installCanvasBrowser, instance, mount, props, state } from './canvas-model.test.helpers';
+
+installCanvasBrowser();
+const saved = { x: 33, y: 44, zoom: .9 };
+describe('co-batched saved viewport and destination document focus in the installed renderer', () => {
+  it('retains a research document focus until initial native geometry and fitting finish', async () => {
+    nativeCameraClock(); const release = holdNativeNodeMeasurements();
+    const initial = { ...props(), focusSelect: false, focusZoom: 1 };
+    const view = mount({ canvasProps: initial });
+    await cameraFrames(96);
+    view.change({ canvasProps: { ...initial, focusRequest: { blockId: 'b', sequence: 1 } } });
+    await cameraFrames(400);
+    release(); await cameraFrames(1000);
+    expect(state().selected).toEqual([]);
+    expect(instance().getViewport()).toEqual({ x: -60, y: 260, zoom: 1 });
+    expect(document.querySelector('[data-id="b"] .canvas-card__body')).toBeTruthy();
+  });
+  it('waits for the requested research source and leaves a later manual camera untouched by retained focus', async () => {
+    nativeCameraClock();
+    const initial = { ...props(canvas([block('a')])), focusSelect: false };
+    const view = mount({ canvasProps: initial });
+    await cameraFrames(1000);
+    const before = instance().getViewport();
+    const requested = { ...initial, focusRequest: { blockId: 'later', sequence: 1 } };
+    view.change({ canvasProps: requested });
+    await cameraFrames(400);
+    expect(instance().getViewport()).toEqual(before);
+    const arrived = { ...requested, canvas: canvas([block('a'), block('later', { x: 400 })]) };
+    view.change({ canvasProps: arrived });
+    await cameraFrames(1000);
+    expect(instance().getViewport()).toEqual({ x: -60, y: 260, zoom: 1 });
+    act(() => { void instance().setViewport({ x: 40, y: 50, zoom: .63 }, { duration: 0 }); });
+    await cameraFrames(64);
+    view.change({ canvasProps: { ...arrived, focusZoom: .8 } });
+    await cameraFrames(1000);
+    expect(instance().getViewport()).toEqual({ x: 40, y: 50, zoom: .63 });
+    expect(state().selected).toEqual([]);
+  });
+  it.each([false, true])('selects the fresh destination while its saved camera survives pending geometry (cross canvas %s)', async crossCanvas => {
+    nativeCameraClock(); const release = holdNativeNodeMeasurements();
+    const initial = props(); const view = mount({ canvasProps: initial });
+    await cameraFrames(96);
+    const destination = crossCanvas ? canvas([block('destination', { x: 700, y: 250 })], 'other') : initial.canvas;
+    const target = crossCanvas ? 'destination' : 'b';
+    view.change({ canvasProps: { ...initial, canvas: destination,
+      viewportRequest: { ...saved, sequence: 1 }, focusRequest: { blockId: target, sequence: 1 } } });
+    release(); await cameraFrames(1000);
+    expect(state().selected).toEqual([target]);
+    expect(instance().getViewport()).toEqual(saved);
+  });
+  it('selects a focused document supplied with its saved viewport at first mount without replacing that camera', async () => {
+    nativeCameraClock(); const release = holdNativeNodeMeasurements();
+    mount({ canvasProps: { ...props(), viewportRequest: { ...saved, sequence: 1 }, focusRequest: { blockId: 'b', sequence: 1 } } });
+    await cameraFrames(96); release(); await cameraFrames(1000);
+    expect(state().selected).toEqual(['b']);
+    expect(instance().getViewport()).toEqual(saved);
+  });
+  it('keeps retained old focus invalidated when a document is selected and native saved props refresh after an explicit viewport', async () => {
+    nativeCameraClock();
+    const initial = { ...props(), focusRequest: { blockId: 'a', sequence: 1 } };
+    const view = mount({ canvasProps: initial });
+    await cameraFrames(1000);
+    const node = document.querySelector('[data-id="b"]');
+    if (!node) throw new Error('Missing installed destination node');
+    fireEvent.click(node);
+    expect(state().selected).toEqual(['b']);
+    const explicit = { ...initial, viewportRequest: { ...saved, sequence: 1 } };
+    view.change({ canvasProps: explicit });
+    await cameraFrames(1000);
+    view.change({ canvasProps: { ...explicit, canvas: { ...initial.canvas, blocks: initial.canvas.blocks.map(value => ({ ...value })) } } });
+    await cameraFrames(1000);
+    expect(state().selected).toEqual(['b']);
+    expect(instance().getViewport()).toEqual(saved);
+  });
+  it('honors a fresh nonselecting focus alongside the saved viewport without changing camera or selection defaults', async () => {
+    nativeCameraClock(); const release = holdNativeNodeMeasurements();
+    const initial = { ...props(), focusSelect: false };
+    const view = mount({ canvasProps: initial });
+    await cameraFrames(96);
+    view.change({ canvasProps: { ...initial, viewportRequest: { ...saved, sequence: 1 }, focusRequest: { blockId: 'b', sequence: 1 } } });
+    release(); await cameraFrames(1000);
+    expect(state().selected).toEqual([]);
+    expect(state().nodes.find(node => node.id === 'b')?.highlighted).toBe(true);
+    expect(instance().getViewport()).toEqual(saved);
+  });
+  it('does not revive a removed selection or carry surviving IDs into a different native canvas binding', async () => {
+    nativeCameraClock();
+    const initial = props(); const view = mount({ canvasProps: initial });
+    await cameraFrames(1000);
+    const node = document.querySelector('[data-id="b"]');
+    if (!node) throw new Error('Missing native selected document');
+    fireEvent.click(node);
+    expect(state().selected).toEqual(['b']);
+    view.change({ canvasProps: { ...initial, canvas: { ...initial.canvas, blocks: initial.canvas.blocks.filter(value => value.id !== 'b') } } });
+    await cameraFrames(1000);
+    expect(instance().getNode('b')).toBeUndefined();
+    expect(state().selected).toEqual([]);
+    view.change({ canvasProps: initial });
+    await cameraFrames(1000);
+    const restored = document.querySelector('[data-id="b"]');
+    if (!restored) throw new Error('Missing restored document');
+    fireEvent.click(restored);
+    expect(state().selected).toEqual(['b']);
+    view.change({ canvasProps: { ...initial, canvas: canvas([block('b')], 'other') } });
+    await cameraFrames(1000);
+    expect(state().selected).toEqual([]);
+    expect(instance().getNode('b')?.selected).not.toBe(true);
+  });
+  it('does not revive a selected document hidden by a collapsed group when saved props refresh', async () => {
+    nativeCameraClock();
+    const initial = props(canvas([block('a', { group: 'Work' }), block('b', { group: 'Work', x: 400 })]));
+    const view = mount({ canvasProps: initial });
+    await cameraFrames(1000);
+    const node = document.querySelector('[data-id="b"]');
+    if (!node) throw new Error('Missing grouped document');
+    fireEvent.click(node);
+    expect(state().selected).toEqual(['b']);
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Work' }));
+    await cameraFrames(1000);
+    expect(document.querySelector('[data-id="b"]')).toBeNull();
+    view.change({ canvasProps: { ...initial, canvas: { ...initial.canvas, blocks: initial.canvas.blocks.map(value => ({ ...value })) } } });
+    await cameraFrames(1000);
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Work' }));
+    await cameraFrames(1000);
+    expect(document.querySelector('[data-id="b"]')).toBeTruthy();
+    expect(state().selected).toEqual([]);
+    expect(instance().getNode('b')?.selected).not.toBe(true);
+  });
+});

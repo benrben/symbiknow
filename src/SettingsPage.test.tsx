@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ChatSettings } from '../shared/types';
-import { defaultJevPolicy } from '../shared/policy';
 import { SettingsPage } from './SettingsPage';
 
-const base: ChatSettings = { provider: 'openrouter', model: 'openai/gpt-4o-mini', systemPrompt: '', hasApiKey: true, hasJevApiKey: false,
-  reviewers: '', workAreas: '', providerKeys: { openrouter: true }, secretNames: ['GITHUB_TOKEN'], mcpServers: [], mcpTokens: [] };
+const base: ChatSettings = { provider: 'openrouter', model: 'openai/gpt-4o-mini', systemPrompt: '', hasApiKey: true,
+  providerKeys: { openrouter: true }, secretNames: ['GITHUB_TOKEN'], mcpServers: [], mcpTokens: [] };
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
@@ -21,11 +20,6 @@ beforeEach(() => {
         tools: body?.tools, createdAt: '2026-09-26T00:00:00.000Z' }] } }, { status: 201 });
     if (path.startsWith('/api/models')) return Response.json([{ id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', tools: true, context: 200000 }, { id: 'vendor/tiny', name: 'Tiny' }]);
     if (path === '/api/mcp/servers/test') return Response.json({ ok: true, tools: [{ name: 'search_issues', capabilities: ['search', 'read'] }, { name: 'create_issue', description: 'Create an issue' }] });
-    if (path === '/api/settings/jev-feedback') return Response.json([]);
-    if (path === '/api/jev/usage') return Response.json({ model: 'jev-1.13.0',
-      month: { requests: 0, questions: 0, inputTokens: 0, outputTokens: 0, estimatedCostUsd: 0 },
-      today: { requests: 0, questions: 0, inputTokens: 0, outputTokens: 0, estimatedCostUsd: 0 } });
-    if (path === '/api/jev/calibration') return Response.json([]);
     return Response.json({ error: 'unexpected ' + path }, { status: 500 });
   }));
 });
@@ -33,10 +27,21 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('settings page', () => {
+  it('tracks a section exactly at the activation line when an earlier section is absent', () => {
+    render(<SettingsPage settings={base} busy={false} onSave={vi.fn()} onCancel={vi.fn()} onSettings={vi.fn()}/>);
+    const scroller = document.querySelector<HTMLElement>('.settings-page__scroll')!;
+    vi.spyOn(scroller, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100, 800, 600));
+    document.getElementById('settings-models')!.remove();
+    vi.spyOn(document.getElementById('settings-agents')!, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 400, 800, 400));
+    vi.spyOn(document.getElementById('settings-secrets')!, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 401, 800, 400));
+    fireEvent.scroll(scroller);
+    expect(screen.getByRole('button', { name: 'Agents & secrets' }).getAttribute('aria-current')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Secrets' }).getAttribute('aria-current')).toBeNull();
+  });
   it('tracks the section at the scroll position and keeps clicked navigation active', () => {
     render(<SettingsPage settings={base} busy={false} onSave={vi.fn()} onCancel={vi.fn()} onSettings={vi.fn()}/>);
     const scroller = document.querySelector<HTMLElement>('.settings-page__scroll')!;
-    const positions: Record<string, number> = { models: -1600, agents: -1300, secrets: -900, servers: -400, connect: 380, plugins: 1100, activity: 1600, jev: 2200 };
+    const positions: Record<string, number> = { models: -1600, agents: -1300, secrets: -900, servers: -400, connect: 380, plugins: 1100, activity: 1600 };
     vi.spyOn(scroller, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100, 800, 600));
     for (const [id, top] of Object.entries(positions)) {
       const section = document.getElementById(`settings-${id}`)!;
@@ -50,6 +55,28 @@ describe('settings page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Models' }));
     expect(screen.getByRole('button', { name: 'Models' }).getAttribute('aria-current')).toBe('true');
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+    fireEvent.scroll(scroller);
+    expect(screen.getByRole('button', { name: 'Models' }).getAttribute('aria-current')).toBe('true');
+    fireEvent(scroller, new Event('scrollend'));
+    fireEvent.scroll(scroller);
+    expect(screen.getByRole('button', { name: 'Workspace access' }).getAttribute('aria-current')).toBe('true');
+  });
+
+  it('marks the last section at the bottom of the scroll and resumes tracking after a jump settles on its own', () => {
+    vi.useFakeTimers();
+    onTestFinished(() => { vi.useRealTimers(); });
+    const view = render(<SettingsPage settings={base} busy={false} onSave={vi.fn()} onCancel={vi.fn()} onSettings={vi.fn()}/>);
+    const scroller = document.querySelector<HTMLElement>('.settings-page__scroll')!;
+    Object.defineProperties(scroller, { scrollTop: { value: 900, configurable: true }, scrollHeight: { value: 1500, configurable: true },
+      clientHeight: { value: 600, configurable: true } });
+    fireEvent.click(screen.getByRole('button', { name: 'Models' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Models' }));
+    fireEvent.scroll(scroller);
+    expect(screen.getByRole('button', { name: 'Models' }).getAttribute('aria-current')).toBe('true');
+    act(() => { vi.advanceTimersByTime(900); });
+    fireEvent.scroll(scroller);
+    expect(document.querySelector('[aria-current="true"]')?.textContent).toBe('Symbi Reflex');
+    view.unmount();
   });
 
   it('keeps client instructions hidden until chosen and creates a token shown once', async () => {
@@ -80,11 +107,11 @@ describe('settings page', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Tool scope' }), { target: { value: 'selected' } });
     expect(screen.queryByRole('checkbox', { name: 'create_doc' })).toBeNull();
     fireEvent.click(screen.getByRole('checkbox', { name: 'read_doc' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'run_workspace_automation' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'search_docs' }));
     fireEvent.click(screen.getByRole('button', { name: 'Create token' }));
     await screen.findByText('atm_secretvalue');
     const call = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input) === '/api/mcp/tokens' && init?.method === 'POST');
-    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ name: 'Scoped agent', access: 'propose', allowedCanvasIds: ['planning'], tools: ['read_doc', 'run_workspace_automation'] });
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ name: 'Scoped agent', access: 'propose', allowedCanvasIds: ['planning'], tools: ['read_doc', 'search_docs'] });
   });
 
   it('shows a stored token’s effective canvas and tool limits', async () => {
@@ -117,8 +144,6 @@ describe('settings page', () => {
         { id: 'a1', tokenId: 'k1', tokenName: 'Laptop', access: 'read', allowedCanvasIds: ['planning'], tools: ['read_doc'], tool: 'read_document', startedAt: '2026-09-28T10:00:00.000Z', endedAt: '2026-09-28T10:00:01.000Z', outcome: 'success', canvasIds: ['planning'], documentIds: ['launch-plan'], revision: 'abc123def456' },
         { id: 'a2', tokenId: 'k1', tokenName: 'Laptop', access: 'write', tool: 'update_document', startedAt: '2026-09-28T09:58:00.000Z', endedAt: '2026-09-28T09:58:01.000Z', outcome: 'error', error: 'Conflict detected', canvasIds: ['planning'], documentIds: ['launch-plan'] },
       ] });
-      if (path === '/api/jev/calibration' || path === '/api/settings/jev-feedback') return Response.json([]);
-      if (path === '/api/jev/usage') return Response.json({ model: 'jev', month: { requests: 0, questions: 0, inputTokens: 0, outputTokens: 0, estimatedCostUsd: 0 } });
       return Response.json({});
     });
     const onOpenHistory = vi.fn();
@@ -149,7 +174,6 @@ describe('settings page', () => {
         return activityCalls === 1 ? Response.json({ error: 'Activity temporarily unavailable' }, { status: 503 }) : Response.json({ entries: [] });
       }
       if (path === '/api/mcp/info') return Response.json({ origin: 'https://canvas.example.com', endpoint: 'https://canvas.example.com/mcp', publicUrlConfigured: true, accessProtected: false, activeSessions: 0 });
-      if (path === '/api/jev/calibration' || path === '/api/settings/jev-feedback') return Response.json([]);
       return Response.json({});
     });
     render(<SettingsPage settings={base} busy={false} onSave={vi.fn()} onCancel={vi.fn()} onSettings={vi.fn()}/>);
@@ -172,7 +196,6 @@ describe('settings page', () => {
       if (path === '/api/mcp/tokens' && init?.method === 'POST') return Response.json({ error: 'Token service unavailable' }, { status: 503 });
       if (path === '/api/mcp/activity') return Response.json({ entries: [] });
       if (path === '/api/workspaces') return Response.json([]);
-      if (path === '/api/jev/calibration' || path === '/api/settings/jev-feedback') return Response.json([]);
       return Response.json({});
     });
     render(<SettingsPage settings={base} busy={false} onSave={vi.fn()} onCancel={vi.fn()} onSettings={vi.fn()}/>);
@@ -247,80 +270,5 @@ describe('settings page', () => {
       secrets: { LINEAR_KEY: 'lin_private', GITHUB_TOKEN: null },
       mcpServers: [{ id: 'linear', name: 'Linear', url: 'https://mcp.linear.app/mcp', enabled: true, bearerSecret: 'LINEAR_KEY' }],
     });
-  });
-
-  it('shows every confidence threshold and saves edits with reviewer expertise', async () => {
-    const onSave = vi.fn<(payload: Record<string, unknown>) => Promise<void>>(async () => undefined);
-    render(<SettingsPage settings={{ ...base, tagVocabulary: 'onboarding', jevPolicy: { link: { show: 0.7, apply: 0.8 } } }} busy={false}
-      onSave={onSave} onCancel={vi.fn()} onSettings={vi.fn()}/>);
-
-    const table = screen.getByRole('table', { name: 'Jev confidence thresholds' });
-    expect(within(table).getAllByRole('row')).toHaveLength(Object.keys(defaultJevPolicy).length + 1);
-    expect(screen.getByRole('spinbutton', { name: 'Connect documents show' })).toHaveProperty('value', '0.7');
-    expect(screen.getByRole('spinbutton', { name: 'Connect documents apply' })).toHaveProperty('value', '0.8');
-    expect(screen.getByRole('spinbutton', { name: 'Verify answers apply' })).toHaveProperty('value', '0.7');
-
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Connect documents show' }), { target: { value: '0.85' } });
-    expect(screen.getByRole('button', { name: 'Save settings' })).toHaveProperty('disabled', true);
-    expect(screen.getByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Show cannot exceed Apply'));
-
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Connect documents apply' }), { target: { value: '0.9' } });
-    fireEvent.change(screen.getByRole('textbox', { name: 'Review teams' }), { target: { value: 'Dana: backend, billing, Postgres\nAri: product strategy' } });
-    expect(screen.getByRole('textbox', { name: 'Review teams' })).toHaveProperty('maxLength', 2000);
-    expect(screen.getByRole('textbox', { name: 'Tag vocabulary' })).toHaveProperty('value', 'onboarding');
-    expect(screen.getByRole('textbox', { name: 'Tag vocabulary' })).toHaveProperty('maxLength', 2500);
-    fireEvent.change(screen.getByRole('textbox', { name: 'Tag vocabulary' }), { target: { value: 'onboarding\nbilling' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
-
-    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0]).toMatchObject({
-      reviewers: 'Dana: backend, billing, Postgres\nAri: product strategy',
-      tagVocabulary: 'onboarding\nbilling',
-      jevPolicy: { ...defaultJevPolicy, link: { show: 0.85, apply: 0.9 } },
-    });
-  });
-
-  it('shows feedback rates and suggests a lower threshold only for well reviewed buckets', async () => {
-    const baseFetch = vi.mocked(fetch);
-    baseFetch.mockImplementation(async (input: RequestInfo | URL) => {
-      const path = String(input);
-      if (path === '/api/settings/jev-feedback') return Response.json([{ category: 'connection', bucket: '0.75–0.85', applied: 19, dismissed: 1, applyRate: 0.95 },
-        { category: 'merge', bucket: '0.75–0.85', applied: 5, dismissed: 0, applyRate: 1 }]);
-      if (path === '/api/jev/calibration') return Response.json([]);
-      if (path === '/api/jev/usage') return Response.json({ model: 'jev-1.13.0',
-        month: { requests: 0, questions: 0, inputTokens: 0, outputTokens: 0, estimatedCostUsd: 0 },
-        today: { requests: 0, questions: 0, inputTokens: 0, outputTokens: 0, estimatedCostUsd: 0 } });
-      return Response.json({ origin: 'https://canvas.example.com', endpoint: 'https://canvas.example.com/mcp', publicUrlConfigured: true, accessProtected: true, activeSessions: 0 });
-    });
-    render(<SettingsPage settings={base} busy={false} onSave={vi.fn()} onCancel={vi.fn()} onSettings={vi.fn()}/>);
-    const table = await screen.findByRole('table', { name: 'Jev feedback rates' });
-    expect(within(table).getByText('95%')).toBeTruthy();
-    expect(within(table).getByText('Consider lowering Apply to 0.75')).toBeTruthy();
-    const mergeRow = within(table).getByRole('rowheader', { name: 'merge' }).closest('tr')!;
-    expect(within(mergeRow).queryByText('Consider lowering Apply to 0.75')).toBeNull();
-  });
-
-  it('shows Jev usage this month and lets Use fill the draft show threshold', async () => {
-    const baseFetch = vi.mocked(fetch);
-    baseFetch.mockImplementation(async (input: RequestInfo | URL) => {
-      const path = String(input);
-      if (path === '/api/jev/usage') return Response.json({ model: 'jev-1.13.0',
-        month: { requests: 3, questions: 6, inputTokens: 1000, outputTokens: 40, estimatedCostUsd: 0.042 },
-        today: { requests: 1, questions: 2, inputTokens: 500, outputTokens: 20, estimatedCostUsd: 0.021 } });
-      if (path === '/api/jev/calibration') return Response.json([{ kind: 'link', suggestedShow: 0.75, sampleSize: 45 }]);
-      return Response.json([]);
-    });
-    render(<SettingsPage settings={base} busy={false} onSave={vi.fn()} onCancel={vi.fn()} onSettings={vi.fn()}/>);
-
-    expect(await screen.findByText(/This month: 3 requests, 1,040 tokens, \$0.0420 estimated\./)).toBeTruthy();
-    expect(screen.getByText('jev-1.13.0')).toBeTruthy();
-
-    const table = screen.getByRole('table', { name: 'Jev confidence thresholds' });
-    const linkRow = within(table).getByRole('rowheader', { name: 'Connect documents' }).closest('tr')!;
-    expect(await within(linkRow).findByText(/Show ≥ 0.75 \(n=45\)/)).toBeTruthy();
-    expect(screen.getByRole('spinbutton', { name: 'Connect documents show' })).toHaveProperty('value', '0.65');
-    fireEvent.click(within(linkRow).getByRole('button', { name: 'Use' }));
-    expect(screen.getByRole('spinbutton', { name: 'Connect documents show' })).toHaveProperty('value', '0.75');
-    expect(screen.getByRole('spinbutton', { name: 'Connect documents apply' })).toHaveProperty('value', '0.75');
   });
 });

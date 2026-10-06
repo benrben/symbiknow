@@ -4,7 +4,7 @@ import { act, createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { CanvasBlock } from '../shared/types';
-import { BlockContent, calculateResult, compileRestrictedMdx, toggleTaskCheckbox, validateRestrictedMdx } from './Loaders';
+import { BlockContent, calculateResult, compileRestrictedMdx, imageName, toggleTaskCheckbox, validateRestrictedMdx } from './Loaders';
 
 const renderers = vi.hoisted(() => ({
   highlight: vi.fn(), diagram: vi.fn(), slides: vi.fn(),
@@ -140,6 +140,15 @@ describe('MDX calculator', () => {
 });
 
 describe('block loaders', () => {
+  it('describes every Markdown and HTML image, keeping written alt text and titles', () => {
+    const html = renderBlock('markdown', '![Flow chart](a.png) ![](docs/release_plan-v2.svg?raw=1) <img src="team%20photo.jpg"> ![](x.png "Captioned")');
+    expect(html).toContain('alt="Flow chart"');
+    expect(html).toContain('alt="Image: release plan v2"');
+    expect(html).toContain('alt="Image: team photo"');
+    expect(html).toContain('alt="Captioned"');
+    expect(imageName(undefined)).toBe('Image');
+    expect(imageName('https://example.com/')).toBe('Image');
+  });
   it('renders safe HTML inside Markdown and previews uploaded HTML documents in a sandbox', () => {
     const inline = renderBlock('markdown', '# Intro\n\n<div><strong>HTML detail</strong></div><script>window.bad = true</script>');
     expect(inline).toContain('<strong>HTML detail</strong>');

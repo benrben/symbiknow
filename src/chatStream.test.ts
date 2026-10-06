@@ -71,30 +71,6 @@ describe('canvas chat SSE transport', () => {
     expect(onResearchPatch).toHaveBeenCalledWith(patch);
   });
 
-  it('delivers an explicit choice of research, current view, or navigation', async () => {
-    const onPresentationChoice = vi.fn();
-    const choice = { question: 'Help me with this?', options: [
-      { label: 'Build a research canvas', detail: 'Map evidence', prompt: 'Create a temporary research canvas for: Help me with this?' },
-      { label: 'Work on this view', detail: 'Use current view', prompt: 'Answer in chat using the current view: Help me with this?' },
-    ] };
-    await streamCanvasChat({ canvasId: 'planning', messages: [{ role: 'user', content: choice.question }],
-      signal: new AbortController().signal, onChunk: vi.fn(), onPresentationChoice,
-      fetcher: async () => new Response(chunks(`event: presentation_choice\ndata: ${JSON.stringify(choice)}\n\n`, 'data: [DONE]\n\n')) });
-    expect(onPresentationChoice).toHaveBeenCalledWith(choice);
-  });
-
-  it('marks merge drafting requests as previews without changing ordinary chat requests', async () => {
-    const bodies: unknown[] = [];
-    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
-      expect(input).toBe('/api/chat/stream');
-      bodies.push(JSON.parse(String(init?.body)));
-      return new Response(chunks('data: [DONE]\n\n'));
-    };
-    await streamCanvasChat({ canvasId: 'planning', messages: [{ role: 'user', content: 'Draft merge' }], previewMerge: true, intentToken: 'one-time-token',
-      signal: new AbortController().signal, onChunk: vi.fn(), fetcher });
-    expect(bodies).toEqual([{ canvasId: 'planning', messages: [{ role: 'user', content: 'Draft merge' }], previewMerge: true, intentToken: 'one-time-token' }]);
-  });
-
   it('surfaces server and interrupted stream failures', async () => {
     const request = { canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk: vi.fn() };
     await expect(streamCanvasChat({ ...request, fetcher: async () => Response.json({ error: 'OpenRouter unavailable' }, { status: 502 }) }))
@@ -151,11 +127,10 @@ describe('canvas chat SSE transport', () => {
     expect(onChunk).toHaveBeenCalledWith('Done');
   });
 
-  it('reports answer resets and Jev verification, and throws on an error event', async () => {
+  it('reports answer resets, and throws on an error event', async () => {
     const onChunk = vi.fn();
     const onReset = vi.fn();
-    const onVerification = vi.fn();
-    await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk, onReset, onVerification,
+        await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk, onReset,
       fetcher: async () => new Response(chunks(
         'data: {"choices":[{"delta":{"content":"Let me check."}}]}\n\n',
         'event: answer_reset\ndata: {}\n\n',
@@ -163,12 +138,12 @@ describe('canvas chat SSE transport', () => {
         'event: verification\ndata: {"status":"checking"}\n\n',
         'event: verification\ndata: {"status":"unsupported","score":0.2}\n\n',
         'event: verification\ndata: {"status":"no_claims"}\n\n',
+        'event: verification\ndata: {"status":"unverified","checkedClaims":0,"totalClaims":0}\n\n',
         'event: verification\ndata: {"status":"bogus"}\n\n',
         'data: [DONE]\n\n',
       )) });
     expect(onChunk.mock.calls.map(call => call[0])).toEqual(['Let me check.', 'Answer.']);
     expect(onReset).toHaveBeenCalledTimes(1);
-    expect(onVerification.mock.calls.map(call => call[0])).toEqual([{ status: 'checking' }, { status: 'unsupported', score: 0.2 }, { status: 'no_claims' }]);
     await expect(streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk: vi.fn(),
       fetcher: async () => new Response(chunks('event: error\ndata: {"message":"Tool call limit reached"}\n\n')) })).rejects.toThrow('Tool call limit reached');
   });
@@ -197,4 +172,137 @@ describe('canvas chat SSE transport', () => {
     await expect(streamCanvasChat({ ...request, signal: pending.signal, fetcher: async () => { throw new Error('cancelled during fetch'); } }))
       .rejects.toThrow('cancelled during fetch');
   });
+});
+
+const malformedStructuredFrames = [
+  ['verification', { status: 'supported', sources: [null] }],
+  ['verification', { status: 'supported', claims: [null] }],
+  ['answer_canvas', { query: 'Question', canvasId: 'planning', selection: 'local', sources: [null] }],
+  ['research_canvas_patch', { query: 'Question', blocks: [null], edges: [] }],
+  ['research_canvas_patch', { query: 'Question', blocks: [], edges: [null] }],
+  ['presentation_choice', { question: 'Question', options: [null] }],
+  ['chat_proposal', { id: 'proposal', canvasId: 'planning', status: 'pending', changes: [null] }],
+] as const;
+
+it.each(malformedStructuredFrames)('ignores malformed nested %s entries and continues the reply', async (event, payload) => {
+  const onChunk = vi.fn();
+  await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk,
+    fetcher: async () => new Response(chunks(
+      `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`,
+      'data: {"choices":[{"delta":{"content":"Still usable"}}]}\n\ndata: [DONE]\n\n',
+    )) });
+  expect(onChunk).toHaveBeenCalledExactlyOnceWith('Still usable');
+});
+
+const evidence = { claim: 'QA failed', passage: 'QA failed', passageKind: 'exact', checkedAt: '2026-10-01T00:00:00Z',
+  navigation: { kind: 'document', canvasId: 'planning', blockId: 'qa' } };
+const verificationSource = { canvasId: 'planning', blockId: 'qa', title: 'QA report', contentHash: 'hash', excerpt: 'QA failed', evidence };
+const proposalChange = { id: 'edit-1', type: 'edit', blockId: 'qa', title: 'QA report', before: {}, after: {}, canApply: false };
+const proposal = { id: 'proposal-1', canvasId: 'planning', status: 'pending', changes: [proposalChange], expiresAt: '2026-10-01T01:00:00Z' };
+
+const structuredEvents = [
+  { event: 'answer_canvas', callback: 'onAnswerCanvas', payload: { query: 'Question', canvasId: 'planning', selection: 'local', sources: [verificationSource] } },
+  { event: 'canvas_navigation', callback: 'onNavigation', payload: { kind: 'group', canvasId: 'planning', group: 'purpose:spec', title: 'Specs' } },
+  { event: 'research_canvas_patch', callback: 'onResearchPatch', payload: { query: 'Question', blocks: [
+    { id: 'summary', title: 'Summary', content: 'QA failed', kind: 'markdown', type: 'text', sourceIds: [] },
+  ], edges: [{ from: 'summary', to: 'next' }] } },
+  { event: 'chat_proposal', callback: 'onProposal', payload: proposal },
+] as const;
+
+describe('typed chat event boundary', () => {
+  it.each(structuredEvents)('forwards valid $event payloads exactly and ignores non-object payloads', async ({ event, callback, payload }) => {
+    const receive = vi.fn();
+    const frames = [null, false, 7, 'invalid', payload].map(value => `event: ${event}\ndata: ${JSON.stringify(value)}\n\n`);
+    await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk: vi.fn(), [callback]: receive,
+      fetcher: async () => new Response(chunks(...frames, 'data: [DONE]\n\n')) });
+    expect(receive).toHaveBeenCalledExactlyOnceWith(payload);
+  });
+
+  it('accepts omitted optional handlers without changing the answer stream', async () => {
+    const frames = structuredEvents.map(({ event, payload }) => `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+    const onChunk = vi.fn();
+    await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk,
+      fetcher: async () => new Response(chunks(...frames,
+        'event: agent_step\ndata: {"type":"thinking","message":"Thinking"}\n\n',
+        'event: answer_reset\ndata: {}\n\n',
+        'data: {"choices":[{"delta":{"content":"Answer"}}]}\n\ndata: [DONE]\n\n')) });
+    expect(onChunk).toHaveBeenCalledExactlyOnceWith('Answer');
+  });
+
+  it('ignores invalid document and group navigation without redirecting the conversation', async () => {
+    const onNavigation = vi.fn();
+    const invalid = [{ kind: 'document', canvasId: 'planning', title: 'QA', blockId: 1 },
+      { kind: 'group', canvasId: 'planning', title: 'QA', group: 1 },
+      { kind: 'workspace', canvasId: 'planning', title: 'QA' }, { kind: 'document', canvasId: 1, title: 'QA', blockId: 'qa' }];
+    await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk: vi.fn(), onNavigation,
+      fetcher: async () => new Response(chunks(...invalid.map(value => `event: canvas_navigation\ndata: ${JSON.stringify(value)}\n\n`), 'data: [DONE]\n\n')) });
+    expect(onNavigation).not.toHaveBeenCalled();
+  });
+
+  it('validates research patch block kinds before delivering them', async () => {
+    const invalidPatch = { query: 'Question', blocks: [{ id: 'summary', title: 'Summary', content: 'QA failed', kind: 'binary', type: 'text', sourceIds: [] }], edges: [] };
+    const invalidChoice = { question: 'Question', options: [] };
+    const onResearchPatch = vi.fn();
+    await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk: vi.fn(), onResearchPatch,
+      fetcher: async () => new Response(chunks(`event: research_canvas_patch\ndata: ${JSON.stringify(invalidPatch)}\n\n`,
+        `event: presentation_choice\ndata: ${JSON.stringify(invalidChoice)}\n\n`, 'data: [DONE]\n\n')) });
+    expect(onResearchPatch).not.toHaveBeenCalled();
+  });
+
+  it('validates proposal snapshots, applicability and expiry without weakening pending status', async () => {
+    const invalid = [{ ...proposal, status: 'applied' }, { ...proposal, expiresAt: 1 },
+      { ...proposal, changes: [{ ...proposalChange, type: 'execute' }] },
+      { ...proposal, changes: [{ ...proposalChange, title: 1 }] },
+      { ...proposal, changes: [{ ...proposalChange, before: 'text' }] },
+      { ...proposal, changes: [{ ...proposalChange, after: 'text' }] },
+      { ...proposal, changes: [{ ...proposalChange, canApply: 'yes' }] }];
+    const valid = { id: 'create', canvasId: 'planning', status: 'pending', changes: [{ ...proposalChange, type: 'create', before: null, after: null }] };
+    const onProposal = vi.fn();
+    await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk: vi.fn(), onProposal,
+      fetcher: async () => new Response(chunks(...[...invalid, valid].map(value => `event: chat_proposal\ndata: ${JSON.stringify(value)}\n\n`), 'data: [DONE]\n\n')) });
+    expect(onProposal).toHaveBeenCalledExactlyOnceWith(valid);
+  });
+});
+
+it('parses multiline data and UTF-8 split inside a character, including unknown event names', async () => {
+  const text = 'event: constructor\ndata: {"choices":\ndata: [{"delta":{"content":"שלום ✓"}}]}\n\ndata: [DONE]\n\n';
+  const bytes = new TextEncoder().encode(text);
+  const body = new ReadableStream<Uint8Array>({ start(controller) {
+    for (const byte of bytes) controller.enqueue(new Uint8Array([byte]));
+    controller.close();
+  } });
+  const onChunk = vi.fn();
+  await streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk,
+    fetcher: async () => new Response(body) });
+  expect(onChunk).toHaveBeenCalledExactlyOnceWith('שלום ✓');
+  expect(body.locked).toBe(false);
+});
+
+it('preserves parsing, reader and consumer failures while cancelling and releasing the stream', async () => {
+  const failure = new Error('The consumer failed');
+  const cancel = vi.fn();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) { controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Answer"}}]}\n\n')); }, cancel,
+  });
+  await expect(streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal,
+    onChunk: () => { throw failure; }, fetcher: async () => new Response(body) })).rejects.toBe(failure);
+  expect(cancel).toHaveBeenCalledOnce();
+  expect(body.locked).toBe(false);
+  await expect(streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal,
+    onChunk: vi.fn(), fetcher: async () => new Response(chunks('data: {not JSON}\n\n')) })).rejects.toBeInstanceOf(SyntaxError);
+  const readerFailure = new DOMException('Aborted while reading', 'AbortError');
+  const failedBody = new ReadableStream<Uint8Array>({ start(controller) { controller.error(readerFailure); } });
+  await expect(streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal,
+    onChunk: vi.fn(), fetcher: async () => new Response(failedBody) })).rejects.toBe(readerFailure);
+  expect(failedBody.locked).toBe(false);
+});
+
+it('uses the standard fetch transport and supplies a fallback for an empty server error event', async () => {
+  const fetcher = vi.fn(async () => new Response(chunks('event: error\ndata: {}\n\n')));
+  vi.stubGlobal('fetch', fetcher);
+  try {
+    await expect(streamCanvasChat({ canvasId: 'planning', messages: [], signal: new AbortController().signal, onChunk: vi.fn() }))
+      .rejects.toThrow('The assistant stopped. Please retry.');
+    expect(fetcher).toHaveBeenCalledOnce();
+  } finally { vi.unstubAllGlobals(); }
 });

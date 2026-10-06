@@ -91,8 +91,9 @@ describe('MCP activity ledger', () => {
         { requestInit: { headers: { authorization: 'Bearer ' + writerToken } } }));
       try {
         const createdDoc = await writer.callTool({ name: 'create_doc', arguments: { canvasId: 'product-roadmap', title: 'Activity proof', content: 'private document body' } });
-        const document = JSON.parse((createdDoc.content as Array<{ text: string }>)[0].text) as { id: string };
-        await writer.callTool({ name: 'delete_doc', arguments: { canvasId: 'product-roadmap', blockId: document.id } });
+        const document = JSON.parse((createdDoc.content as Array<{ text: string }>)[0].text) as { id: string; contentHash: string };
+        expect((await writer.callTool({ name: 'delete_doc', arguments: { canvasId: 'product-roadmap', blockId: document.id,
+          expectedContentHash: document.contentHash } })).isError).not.toBe(true);
       } finally { await writer.close(); }
       const store = new CanvasStore(dataDir);
       const entries = (await store.mcpActivity()).entries;

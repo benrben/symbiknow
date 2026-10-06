@@ -32,4 +32,24 @@ describe('normalizeEvidence', () => {
     expect(normalizeEvidence({ ...candidate, documentId: '' })).toBeNull();
     expect(normalizeEvidence({ ...candidate, checkedAt: 'unknown' })).toBeNull();
   });
+
+  it.each(['claim', 'passage', 'canvasId', 'documentId'] as const)('rejects a blank %s even with a checked source', field => {
+    expect(normalizeEvidence({ ...candidate, sourceText: candidate.passage, [field]: ' \t\n ' })).toBeNull();
+  });
+
+  it('normalizes line endings for the quote check while preserving the passage and exact provenance', () => {
+    const reference = normalizeEvidence({ ...candidate, claim: ' Claim with Ω ', canvasId: ' research ', documentId: ' evidence ',
+      passage: ' Line one\r\nLine two\rLine three ', sourceText: '# Private heading\nLine one\nLine two\nLine three\nPrivate remainder',
+      revision: 'native-commit-123', checkedAt: '2026-09-28T13:00:00+03:00' });
+    expect(reference).toEqual({ claim: 'Claim with Ω', passage: 'Line one\r\nLine two\rLine three', passageKind: 'exact',
+      canvasId: 'research', documentId: 'evidence', documentTitle: candidate.documentTitle, contentHash: candidate.contentHash,
+      revision: 'native-commit-123', checkedAt: '2026-09-28T10:00:00.000Z', navigation: { kind: 'document', canvasId: 'research', blockId: 'evidence' } });
+    expect(JSON.stringify(reference)).not.toContain('Private');
+  });
+
+  it.each([undefined, ''])('keeps missing optional provenance omitted (%s)', absent => {
+    const reference = normalizeEvidence({ ...candidate, documentTitle: absent, contentHash: absent, revision: absent, sourceText: '' });
+    expect(reference).toMatchObject({ passageKind: 'approximation', passageLabel: 'Approximate source context; open the document to verify the claim.' });
+    expect(reference).not.toHaveProperty('documentTitle'); expect(reference).not.toHaveProperty('contentHash'); expect(reference).not.toHaveProperty('revision');
+  });
 });

@@ -1,0 +1,15 @@
+feature: One living companion in the chat header
+tags:
+- '@chat-avatar'
+scenarios:
+- name: The single enlarged avatar stays with the conversation across answers and reload
+  steps:
+  - given: a fresh workspace
+  - when: I configure the native avatar conversation
+  - and: I open SymbiKnow in a browser
+  - and: I open the single companion chat
+  - then: the chat has one 56 pixel avatar in its header
+  - when: I complete two native chat answers
+  - then: the conversation keeps one avatar and both answers
+  - when: I reload the companion conversation and reduce motion
+  - then: the single companion retains its artwork and respects reduced motion

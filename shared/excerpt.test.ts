@@ -80,4 +80,11 @@ describe('document excerpts', () => {
       outline: '# Short', head: content, tail: '', extracts: '',
     });
   });
+
+  it('uses the reserved middle budget when no focus is specified', () => {
+    const content = `${'A'.repeat(700)} MIDDLE CLAIM ${'Z'.repeat(700)}`;
+    const result = excerpt(content, { budget: 900 });
+    expect(result.extracts).toContain('MIDDLE CLAIM');
+    expect(result.head.length + result.tail.length + result.extracts.length).toBeLessThanOrEqual(900);
+  });
 });

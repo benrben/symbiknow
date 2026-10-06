@@ -70,8 +70,9 @@ export function researchCanvasDocument(turns: AnswerCanvasTurn[], layout: Resear
 export function exportEditedResearchMarkdown(turns: AnswerCanvasTurn[], layout: ResearchLayout, edits: ResearchCanvasEdits): string {
   const graph = editedResearchGraph(turns, layout, edits);
   const connections = graph.edges.length ? `\n## Connections\n${graph.edges.map(edge => {
-    const from = graph.blocks.find(block => block.id === edge.source)?.title ?? edge.source;
-    const to = graph.blocks.find(block => block.id === edge.target)?.title ?? edge.target;
+    // editedResearchGraph filters both endpoints against the surviving blocks.
+    const from = graph.blocks.find(block => block.id === edge.source)!.title;
+    const to = graph.blocks.find(block => block.id === edge.target)!.title;
     return `- ${from} → ${to} (${edge.label})`;
   }).join('\n')}\n` : '';
   return `# Research canvas: ${turns[0]?.query ?? 'Untitled'}\n\nLayout: ${layout}\n\n${graph.blocks.map(block => block.markdown).join('\n---\n\n')}${connections}`;

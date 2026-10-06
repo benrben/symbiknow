@@ -8,8 +8,16 @@ import remarkParse from 'remark-parse';
 import remarkStringify from 'remark-stringify';
 import { unified } from 'unified';
 import type { CanvasBlock } from '../shared/types';
+import { useDocumentContent } from './useDocumentContent';
 
 const ReactPlayer = lazy(() => import('react-player'));
+
+/** Document images often lack alt text; the file name is a better description for screen readers than nothing. */
+export function imageName(src: unknown): string {
+  const file = typeof src === 'string' ? src.split(/[?#]/)[0].split('/').slice(-1).join('') : '';
+  const words = decodeURIComponent(file).replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ').trim();
+  return words ? `Image: ${words}` : 'Image';
+}
 
 interface BlockContentProps {
   block: CanvasBlock;
@@ -153,7 +161,6 @@ function HtmlDocument({ title, source, fullPage }: { title: string; source: stri
 function MarkdownContent({ block, onUpdateBlock, onError, fullPage }: Pick<BlockContentProps, 'block' | 'onUpdateBlock' | 'onError' | 'fullPage'>) {
   const [savingTask, setSavingTask] = useState(false);
   const markdown = bodyWithoutFrontmatter(block.content);
-  let taskIndex = 0;
 
   async function setTask(index: number, checked: boolean) {
     const updated = toggleTaskCheckbox(block.content, index, checked);
@@ -167,8 +174,6 @@ function MarkdownContent({ block, onUpdateBlock, onError, fullPage }: Pick<Block
     }
   }
 
-  if (uploadedHtml(block.content)) return <HtmlDocument title={block.title} source={markdown} fullPage={fullPage}/>;
-
   return <div className="loader-markdown">
     <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]} components={{
       pre: ({ children }) => <div className="loader-pre">{children}</div>,
@@ -180,9 +185,14 @@ function MarkdownContent({ block, onUpdateBlock, onError, fullPage }: Pick<Block
         return <code>{children}</code>;
       },
       input: ({ checked }) => {
-        const index = taskIndex++;
-        return <input type="checkbox" checked={Boolean(checked)} disabled={savingTask} onChange={(event) => void setTask(index, event.target.checked)} />;
+        return <input type="checkbox" checked={Boolean(checked)} disabled={savingTask} onChange={event => {
+          // Derive order from the committed DOM; render callbacks may run twice.
+          const input = event.currentTarget;
+          const inputs = input.closest('.loader-markdown')!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+          void setTask([...inputs].indexOf(input), input.checked);
+        }} />;
       },
+      img: ({ src, alt, title }) => <img src={src} alt={alt || title || imageName(src)} title={title} loading="lazy" />,
       a: ({ href, children }) => {
         const media = videoKind(href);
         if (media === 'direct') {
@@ -359,7 +369,31 @@ function MdxContent({ content }: { content: string }) {
   return <div className="loader-markdown loader-mdx-rendered"><Component components={{ Calculator, Chart }} /></div>;
 }
 
+function sameRenderedBlock(before: CanvasBlock, after: CanvasBlock): boolean {
+  if (before.contentLoaded === false || after.contentLoaded === false) return before === after;
+  return before.id === after.id && before.title === after.title
+    && before.kind === after.kind && before.content === after.content;
+}
+
+function sameContentProps(before: BlockContentProps, after: BlockContentProps): boolean {
+  return before.canvasId === after.canvasId && before.fullPage === after.fullPage
+    && before.onUpdateBlock === after.onUpdateBlock && before.onError === after.onError
+    && sameRenderedBlock(before.block, after.block);
+}
+
 export const BlockContent = memo(function BlockContent(props: BlockContentProps) {
+  if (props.block.contentLoaded === false) return <DeferredBlockContent {...props}/>;
+  return <LoadedBlockContent {...props}/>;
+}, sameContentProps);
+
+function DeferredBlockContent(props: BlockContentProps) {
+  const content = useDocumentContent(props.block, props.canvasId);
+  if (content.error) return <div className="loader-error" role="alert">{content.error} <button type="button" onClick={content.retry}>Retry loading document</button></div>;
+  if (!content.block) return <div className="loader-loading" role="status">Loading document…</div>;
+  return <LoadedBlockContent {...props} block={content.block}/>;
+}
+
+function LoadedBlockContent(props: BlockContentProps) {
   // An HTML page renders as a page whatever loader was chosen for it.
   if (uploadedHtml(props.block.content)) return <HtmlDocument title={props.block.title} source={bodyWithoutFrontmatter(props.block.content)} fullPage={props.fullPage}/>;
   switch (props.block.kind) {
@@ -368,7 +402,4 @@ export const BlockContent = memo(function BlockContent(props: BlockContentProps)
     case 'website': return <WebsitePreview {...props} />;
     case 'mdx': return <MdxContent content={props.block.content} />;
   }
-}, (before, after) => before.canvasId === after.canvasId && before.fullPage === after.fullPage
-  && before.onUpdateBlock === after.onUpdateBlock && before.onError === after.onError
-  && before.block.id === after.block.id && before.block.title === after.block.title
-  && before.block.kind === after.block.kind && before.block.content === after.block.content);
+}

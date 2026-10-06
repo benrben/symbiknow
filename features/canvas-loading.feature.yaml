@@ -1,0 +1,28 @@
+feature: Fresh loading of a large canvas
+scenarios:
+- name: A large canvas opens its overview before reading visible files and preserves fresh edits
+  steps:
+  - given: a fresh workspace
+  - when: I create an empty canvas for group automations
+  - and: I seed 600 grouped documents for a cold canvas load
+  - and: I open the large canvas while recording real document requests
+  - then: the initial overview contains fresh metadata and reads no document bodies
+  - when: I open Reflex on the large canvas
+  - then: all six confidence controls appear without fetching full canvas content
+  - when: I return to chat on the large canvas
+  - and: I open the small release group on the large canvas
+  - then: only that group's visible documents are requested
+  - when: I read and edit the selected cold document
+  - then: its edit survives disk readback and a browser reload
+  - when: I change that document on disk and return from another canvas
+  - then: the reader shows the fresh outside edit without a cached body
+- name: An expanded rich canvas stays responsive without resize observer feedback
+  steps:
+  - given: a fresh workspace
+  - when: I create an empty canvas for group automations
+  - and: I seed 158 ungrouped responsive HTML sources
+  - and: I open the large canvas while recording real document requests
+  - and: I expand the rich Ungrouped canvas and resize its viewport
+  - then: the rich previews and Reflex controls remain usable without browser errors
+  - when: I reload the expanded rich canvas
+  - then: its original source bytes and dimensions remain unchanged

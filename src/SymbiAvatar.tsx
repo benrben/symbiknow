@@ -1,3 +1,3 @@
-import './symbi-avatar.css';
+import './assistant-avatar.css';
 
 export { SymbiAvatar, type SymbiState } from './SymbiAvatarArt';

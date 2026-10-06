@@ -40,7 +40,12 @@ When('I search the canvas for {string}', async function (query) {
 
 Then('I see a match counter while the canvas stays visible', async function () {
   assert.equal(await this.page.locator('.canvas-surface').count(), 1);
-  assert.match(await this.page.locator('.canvas-search__count').innerText(), /1 of 1/);
+  const search = this.page.getByRole('dialog', { name: 'Search documents' });
+  const count = await search.locator('.canvas-search__result').count();
+  assert.ok(count >= 1, 'Search must show the document on this canvas');
+  assert.equal(await search.locator('.canvas-search__section').first().locator('.canvas-search__result').count(), 1);
+  assert.equal(await search.locator('.canvas-search__count strong').innerText(), `1 of ${count}`);
+  assert.equal(await search.locator('.canvas-search__count span').innerText(), `1 on this canvas · ${count - 1} elsewhere`);
   assert.deepEqual(this.pageErrors, []);
 });
 
@@ -77,20 +82,19 @@ Then('I can see the group connection on the canvas and move the view', async fun
   assert.deepEqual(this.pageErrors, []);
 });
 
-When('I browse the group list', async function () {
-  await this.page.locator('.canvas-surface').getByRole('button', { name: 'Show group list', exact: true }).click();
-  await this.page.getByRole('navigation', { name: 'Group overview' }).waitFor();
+When('I open the mini-map group list', async function () {
+  await this.page.getByRole('navigation', { name: 'Mini-map groups' }).locator('summary').click();
 });
 
-Then('the group preview shows the {string} title', async function (title) {
-  const board = this.page.getByRole('navigation', { name: 'Group overview' });
-  await board.locator('.canvas-overview-board__preview-title', { hasText: title }).waitFor();
-  assert.equal(await board.locator('.canvas-overview-board__previews i').count(), 0);
+Then('the mini-map lists the Research group', async function () {
+  await this.page.getByRole('navigation', { name: 'Mini-map groups' }).getByRole('button', { name: /^Research/ }).waitFor();
+  assert.equal(await this.page.getByRole('button', { name: 'Show group list', exact: true }).count(), 0);
+  assert.equal(await this.page.getByRole('navigation', { name: 'Group overview' }).count(), 0);
   assert.deepEqual(this.pageErrors, []);
 });
 
 When('I open the Research group', async function () {
-  await this.page.getByRole('navigation', { name: 'Group overview' }).getByRole('button', { name: /Research/ }).click();
+  await this.page.getByRole('navigation', { name: 'Mini-map groups' }).getByRole('button', { name: /^Research/ }).click();
 });
 
 Then('the Notes subgroup appears on the canvas', async function () {
@@ -106,6 +110,25 @@ When('I open the Notes subgroup', async function () {
 Then('the canvas shows the real document preview', async function () {
   await this.page.locator('.canvas-card', { hasText: 'This note has real details' }).waitFor();
   assert.match(await this.page.locator('.canvas-zoom-label').innerText(), /Files/);
+  assert.deepEqual(this.pageErrors, []);
+});
+
+When('I read the {string} nested document', async function (title) {
+  await this.page.getByRole('button', { name: `Read ${title} full page` }).click();
+  const reader = this.page.getByRole('dialog', { name: `${title} full page` });
+  await reader.getByText('This note has real details', { exact: true }).waitFor();
+});
+
+Then('reloading keeps the nested document and its group', async function () {
+  await this.page.reload({ waitUntil: 'networkidle' });
+  await this.page.locator('.canvas-surface').waitFor();
+  const result = await request(this, `/api/canvases/${this.canvasId}`);
+  const source = result.body.blocks.find(block => block.title === 'Real note');
+  const target = result.body.blocks.find(block => block.title === 'Other note');
+  assert.equal(source.content, 'This note has real details');
+  assert.equal(source.group, 'custom:research/notes');
+  assert.deepEqual(source.tags, ['example']);
+  assert.deepEqual(source.links, [target.id]);
   assert.deepEqual(this.pageErrors, []);
 });
 
@@ -225,11 +248,12 @@ Then('I see connection focus and its linked document', async function () {
   assert.deepEqual(this.pageErrors, []);
 });
 
-When('I preview and cancel arrange by connections', async function () {
+When('I pull linked documents close and restore their positions', async function () {
   const result = await request(this, `/api/canvases/${this.canvasId}`);
   this.originalPositions = result.body.blocks.map(block => ({ id: block.id, x: block.x, y: block.y }));
-  await this.page.getByRole('button', { name: 'Arrange by connections' }).click();
-  await this.page.getByRole('button', { name: 'Cancel layout' }).click();
+  assert.equal(await this.page.getByRole('button', { name: 'Arrange by connections' }).count(), 0);
+  await this.page.getByRole('button', { name: 'Pull neighbors close' }).click();
+  await this.page.getByRole('button', { name: 'Restore positions' }).click();
 });
 
 Then('reloading the canvas keeps the original positions', async function () {
@@ -237,30 +261,19 @@ Then('reloading the canvas keeps the original positions', async function () {
   assert.deepEqual(result.body.blocks.map(block => ({ id: block.id, x: block.x, y: block.y })), this.originalPositions);
 });
 
-When('I preview and accept tag grouping', async function () {
-  await this.page.getByRole('button', { name: 'Browse groups', exact: true }).click();
-  await this.page.getByRole('complementary', { name: 'Browse groups' }).getByRole('button', { name: 'Organize with Jev' }).click();
-  await this.page.getByRole('tabpanel', { name: 'Groups view' }).getByRole('button', { name: 'Customize grouping' }).click();
-  await this.page.getByRole('tab', { name: 'By tags' }).click();
-  await this.page.getByRole('button', { name: 'Show preview on canvas' }).click();
-  await this.page.getByText('Previewing suggested groups').waitFor();
-  await this.page.getByRole('button', { name: 'Accept grouping' }).click();
-  await this.page.getByRole('button', { name: 'Undo grouping' }).waitFor();
-});
-
-Then('reloading the canvas puts {string} in a tag group', async function (title) {
-  const result = await request(this, `/api/canvases/${this.canvasId}`);
-  assert.equal(result.body.blocks.find(block => block.title === title)?.group, 'custom:tags/api');
-});
-
-When('I undo the suggested grouping', async function () {
-  await this.page.getByRole('button', { name: 'Undo grouping' }).click();
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const result = await request(this, `/api/canvases/${this.canvasId}`);
-    if (result.body.blocks.find(block => block.id === this.block.id)?.group === 'custom:research/benchmarks') return;
-    await new Promise(resolve => setTimeout(resolve, 100));
+Then('manual grouping controls are absent', async function () {
+  for (const name of ['Group documents', 'Show preview on canvas', 'Accept grouping', 'Undo grouping']) {
+    assert.equal(await this.page.getByRole('button', { name, exact: true }).count(), 0);
   }
-  throw new Error('The original nested group was not restored.');
+  assert.equal(await this.page.getByRole('complementary', { name: 'Suggested groups' }).count(), 0);
+  assert.equal(await this.page.getByRole('tab', { name: 'By tags' }).count(), 0);
+  assert.equal(await this.page.getByRole('button', { name: 'Browse groups', exact: true }).count(), 1);
+  assert.deepEqual(this.pageErrors, []);
+});
+
+When('I reload the current canvas in the browser', async function () {
+  await this.page.reload({ waitUntil: 'networkidle' });
+  await this.page.locator('.canvas-surface').waitFor();
 });
 
 When('I create a second canvas called {string}', async function (name) {
@@ -268,24 +281,26 @@ When('I create a second canvas called {string}', async function (name) {
   const created = await request(this, `/api/workspaces/${workspaces.body[0].id}/canvases`, 'POST', { name });
   assert.equal(created.status, 201);
   this.secondCanvasId = created.body.id;
+  this.navigationCanvasBefore = (await request(this, `/api/canvases/${this.canvasId}`)).body;
 });
 
-When('I save a bookmark called {string}', async function (name) {
-  await this.page.getByRole('button', { name: 'Bookmarks and recently viewed' }).click();
-  await this.page.getByPlaceholder('Name this place').fill(name);
-  await this.page.getByRole('button', { name: 'Pin' }).click();
-});
-
-When('I navigate to {string} and back', async function (name) {
+When('I navigate to {string} and back using the sidebar', async function (name) {
   await this.page.getByRole('button', { name: `Open canvas: ${name}`, exact: true }).click();
-  await this.page.getByRole('heading', { name }).waitFor();
-  await this.page.getByRole('button', { name: 'Back to previous canvas view' }).click();
-  await this.page.locator('.canvas-label').getByRole('heading', { name: 'Product Roadmap' }).waitFor();
+  await this.page.locator('.canvas-label').getByRole('heading', { name }).waitFor();
+  const originalName = this.navigationCanvasBefore.name;
+  await this.page.getByRole('button', { name: `Open canvas: ${originalName}`, exact: true }).click();
+  await this.page.locator('.canvas-label').getByRole('heading', { name: originalName }).waitFor();
 });
 
-Then('the {string} bookmark remains after reloading', async function (name) {
+Then('the canvas reloads without the floating navigation bar', async function () {
   await this.page.reload({ waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Bookmarks and recently viewed' }).click();
-  assert.equal(await this.page.locator('.canvas-navigation__item strong', { hasText: name }).count(), 1);
+  await this.page.locator('.canvas-label').getByRole('heading', { name: this.navigationCanvasBefore.name }).waitFor();
+  assert.equal(await this.page.locator('.canvas-navigation').count(), 0);
+  for (const name of ['Back to previous canvas view', 'Forward to next canvas view', 'Bookmarks and recently viewed', 'Hide header', 'Show header']) {
+    assert.equal(await this.page.getByRole('button', { name, exact: true }).count(), 0);
+  }
+  assert.deepEqual((await request(this, `/api/canvases/${this.canvasId}`)).body, this.navigationCanvasBefore);
+  assert.equal((await request(this, `/api/canvases/${this.secondCanvasId}`)).body.name, 'Second canvas');
+  assert.equal(await this.page.getByRole('button', { name: 'Search documents', exact: true }).count(), 1);
   assert.deepEqual(this.pageErrors, []);
 });

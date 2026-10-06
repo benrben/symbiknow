@@ -1,0 +1,23 @@
+feature: Tasks use the ordinary canvas board and durable task records
+scenarios:
+  - name: Task status columns stay visible and a drag saves status without moving documents
+    steps:
+      - given: a fresh workspace
+      - when: I add a Markdown block called "Release evidence" containing "# Release evidence"
+      - and: I open the current canvas in a browser
+      - and: I open the Tasks canvas page
+      - then: the four task status columns are visible in order
+      - when: I create a task called "Review release" in the Blocked column
+      - then: the task is durable in Blocked
+      - when: I drag "Review release" to the Done column
+      - then: the task is durable in Done and document positions are unchanged
+      - when: I reload the Tasks canvas page
+      - then: the task remains in Done with no browser errors
+  - name: Saved order within a status column survives a canvas reload
+    steps:
+      - given: a fresh workspace
+      - when: I create three ordered tasks on the current canvas
+      - and: I open the current canvas in a browser
+      - and: I open the Tasks canvas page
+      - and: I drag the last task before the first task in To do
+      - then: the task order is saved and remains after reloading the board

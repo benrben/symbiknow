@@ -1,0 +1,22 @@
+feature: Ordinary workflows remain available with Symbi Reflex off
+scenarios:
+  - name: Canvas chat and settings remain available without a Tasks tab
+    steps:
+      - given: a fresh workspace
+      - when: I add a Markdown block called "Ordinary Note" containing "# Native canvas document"
+      - and: I open the current canvas in a browser
+      - and: I search for "Ordinary Note" and choose Show on canvas
+      - then: the ordinary app is visible without Jev action controls
+      - when: I open the restored chat and settings without a Tasks tab
+      - then: ordinary settings remain without Jev action settings
+  - name: Retired canvas-scoped analysis endpoints remain unavailable
+    steps:
+      - given: a fresh workspace
+      - when: I request the removed Jev action endpoints
+      - then: every removed Jev action returns not found
+  - name: A plain uploaded document saves without Jev analysis
+    steps:
+      - given: a fresh workspace
+      - when: I open the current canvas in a browser
+      - and: I upload a plain document without Jev suggestions
+      - then: the uploaded document survives reload without a Jev request

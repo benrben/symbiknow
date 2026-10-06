@@ -1,116 +1,17 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { rmSync } from 'node:fs';
 import type { CanvasBlock, CanvasDocument } from '../shared/types.js';
 import { ApiError, CanvasStore, contentHash } from './storage.js';
+import type { AppliedState, ChatProposal, ChatProposalChange, ChatProposalReceipt } from './chat-proposal-types.js';
+import { lifetime, proposalFile, readState, saveState } from './chat-proposal-journal.js';
+import { stateHash } from './chat-proposal-values.js';
+import { documentReviewState } from '../shared/document-state.js';
+import { preflightCausalParentUndo, withCausalParentUndo, type JevParentUndo } from './jev/parent-undo.js';
+import { initializeJevStamp } from './jev/stamps.js';
 
-export type ChatProposalChange = {
-  id: string; type: 'create' | 'edit' | 'delete' | 'move' | 'link'; blockId: string; title: string;
-  before: CanvasBlock | null; after: CanvasBlock | null; expectedContentHash: string | null; expectedStateHash: string | null;
-  canApply: boolean;
-};
-export type ChatProposal = { id: string; canvasId: string; status: 'pending'; expiresAt: string; changes: ChatProposalChange[] };
-export type ChatProposalReceipt = { id: string; status: 'applied' | 'partial'; applied: string[]; skipped: { id: string; reason: string }[];
-  createdBlockIds: Record<string, string>; documents: { id: string; before: CanvasBlock | null; after: CanvasBlock | null }[] };
+export type { ChatProposal, ChatProposalChange, ChatProposalReceipt } from './chat-proposal-types.js';
 
-type PendingState = { version: 1; kind: 'pending'; expires: number; proposal: ChatProposal };
-type AppliedState = { version: 1; kind: 'applied'; expires: number; canvasId: string; receipt: ChatProposalReceipt };
-type StoredState = PendingState | AppliedState;
 const busy = new Set<string>();
-const lifetime = 60 * 60_000;
-const proposalId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function proposalFile(store: CanvasStore, id: string): string {
-  if (!proposalId.test(id)) throw new ApiError(410, 'This Chat proposal is no longer available. Ask Chat to prepare a fresh proposal.');
-  return path.join(store.root, 'chat-proposals', `${id}.json`);
-}
-function isRecord(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === 'object' && !Array.isArray(value); }
-function isString(value: unknown): value is string { return typeof value === 'string'; }
-function isStringArray(value: unknown): value is string[] { return Array.isArray(value) && value.every(isString); }
-function validBlock(value: unknown): value is CanvasBlock {
-  if (!isRecord(value)) return false;
-  const block = value as Partial<CanvasBlock>;
-  const identity = [block.id, block.title, block.content, block.file].every(isString);
-  const geometry = ['x', 'y', 'width', 'height'].every(key => Number.isFinite(block[key as keyof CanvasBlock]));
-  const hash = block.contentHash === undefined || block.contentHash === contentHash(block.content ?? '');
-  return [identity, geometry, hash, isStringArray(block.links), ['markdown', 'slides', 'website', 'mdx'].includes(block.kind ?? '')].every(Boolean);
-}
-function validSnapshot(value: unknown): value is CanvasBlock | null { return value === null || validBlock(value); }
-function validChangeIdentity(change: ChatProposalChange): boolean {
-  return [isString(change.id), change.id === change.blockId, isString(change.title),
-    ['create', 'edit', 'delete', 'move', 'link'].includes(change.type)].every(Boolean);
-}
-function validChangeSnapshots(change: ChatProposalChange): boolean {
-  if (!validSnapshot(change.before) || !validSnapshot(change.after)) return false;
-  return [(change.before?.id ?? change.blockId) === change.blockId,
-    (change.after?.id ?? change.blockId) === change.blockId, change.canApply === Boolean(change.after)].every(Boolean);
-}
-function validChangeHashes(change: ChatProposalChange): boolean {
-  const content = change.before ? contentHash(change.before.content) : null;
-  const state = change.before ? stateHash(change.before) : null;
-  return change.expectedContentHash === content && change.expectedStateHash === state;
-}
-function validChange(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  const change = value as ChatProposalChange;
-  return validChangeIdentity(change) && validChangeSnapshots(change) && validChangeHashes(change);
-}
-function validPendingState(state: Record<string, unknown>, id: string): boolean {
-  if (!isRecord(state.proposal)) return false;
-  const proposal = state.proposal as ChatProposal;
-  if (!Array.isArray(proposal.changes)) return false;
-  const unique = new Set(proposal.changes.map(change => change?.id)).size === proposal.changes.length;
-  return [proposal.id === id, proposal.status === 'pending', isString(proposal.canvasId),
-    isString(proposal.expiresAt) && !Number.isNaN(Date.parse(proposal.expiresAt)),
-    proposal.changes.length > 0, proposal.changes.every(validChange), unique].every(Boolean);
-}
-function validSkipped(value: unknown): boolean {
-  return isRecord(value) && isString(value.id) && isString(value.reason);
-}
-function validReceiptDocument(value: unknown): boolean {
-  return isRecord(value) && isString(value.id) && validSnapshot(value.before) && validSnapshot(value.after);
-}
-function validAppliedState(state: Record<string, unknown>, id: string): boolean {
-  if (!isRecord(state.receipt)) return false;
-  const receipt = state.receipt as ChatProposalReceipt;
-  const lists = [isStringArray(receipt.applied), Array.isArray(receipt.skipped) && receipt.skipped.every(validSkipped),
-    Array.isArray(receipt.documents) && receipt.documents.every(validReceiptDocument)];
-  const ids = isRecord(receipt.createdBlockIds) && Object.values(receipt.createdBlockIds).every(isString);
-  return [isString(state.canvasId), receipt.id === id, ['applied', 'partial'].includes(receipt.status), ids, ...lists].every(Boolean);
-}
-function validState(value: unknown, id: string): value is StoredState {
-  if (!isRecord(value)) return false;
-  if (value.version !== 1 || !Number.isFinite(value.expires)) return false;
-  if (value.kind === 'pending') return validPendingState(value, id);
-  if (value.kind === 'applied') return validAppliedState(value, id);
-  return false;
-}
-function readState(store: CanvasStore, id: string): StoredState {
-  const file = proposalFile(store, id);
-  let parsed: unknown;
-  try { parsed = JSON.parse(readFileSync(file, 'utf8')); }
-  catch { throw new ApiError(410, 'This Chat proposal is no longer available. Ask Chat to prepare a fresh proposal.'); }
-  if (!validState(parsed, id)) throw new ApiError(410, 'This Chat proposal is no longer available. Ask Chat to prepare a fresh proposal.');
-  if (parsed.expires < Date.now()) {
-    rmSync(file, { force: true });
-    throw new ApiError(410, 'This Chat proposal expired. Ask Chat to prepare a fresh proposal.');
-  }
-  return parsed;
-}
-function saveState(store: CanvasStore, id: string, state: StoredState): void {
-  const file = proposalFile(store, id);
-  const temporary = `${file}.${randomUUID()}.tmp`;
-  mkdirSync(path.dirname(file), { recursive: true });
-  try {
-    writeFileSync(temporary, JSON.stringify(state), { mode: 0o600 });
-    renameSync(temporary, file);
-  } finally { rmSync(temporary, { force: true }); }
-}
-function stateHash(block: CanvasBlock): string {
-  const state = { ...block };
-  delete state.contentHash;
-  delete state.lock;
-  return createHash('sha256').update(JSON.stringify(state)).digest('hex').slice(0, 16);
-}
 function clone(block: CanvasBlock): CanvasBlock { return structuredClone(block); }
 function cloneOrNull(block: CanvasBlock | null): CanvasBlock | null { return block ? clone(block) : null; }
 function expectedHashes(before: CanvasBlock | null): Pick<ChatProposalChange, 'expectedContentHash' | 'expectedStateHash'> {
@@ -144,7 +45,7 @@ export class ChatProposalDraft {
     const after = this.projected.get(blockId) ?? null;
     if (!before && !after) { this.changed.delete(blockId); return; }
     this.changed.set(blockId, { id: blockId, type: recordedType(before, after, this.changed.get(blockId), type),
-      blockId, title: after?.title ?? before!.title, before: cloneOrNull(before), after: cloneOrNull(after),
+      blockId, title: (after ?? before!).title, before: cloneOrNull(before), after: cloneOrNull(after),
       ...expectedHashes(before), canApply: Boolean(after) });
   }
   create(input: { title: string; content: string; kind?: CanvasBlock['kind']; x?: number; y?: number }): CanvasBlock {
@@ -192,10 +93,13 @@ function pendingProposal(store: CanvasStore, id: string): ChatProposal {
 }
 
 type ApplySelection = { applicable: ChatProposalChange[]; skipped: ChatProposalReceipt['skipped'] };
-function selectedChanges(proposal: ChatProposal, changeIds?: string[]): ApplySelection {
+function validateSelection(proposal: ChatProposal, changeIds?: string[]): void {
   if (changeIds && new Set(changeIds).size !== changeIds.length) throw new ApiError(400, 'Unknown or duplicate change ID');
   const known = new Set(proposal.changes.map(change => change.id));
   if (changeIds?.some(id => !known.has(id))) throw new ApiError(400, 'Unknown or duplicate change ID');
+}
+function selectedChanges(proposal: ChatProposal, changeIds?: string[]): ApplySelection {
+  validateSelection(proposal, changeIds);
   const selected = proposal.changes.filter(change => !changeIds || changeIds.includes(change.id));
   if (!selected.length) throw new ApiError(400, 'Select at least one proposed change');
   const applicable = selected.filter(change => change.canApply);
@@ -216,7 +120,7 @@ async function assertCurrentDocuments(store: CanvasStore, proposal: ChatProposal
   const canvas = await store.getCanvas(proposal.canvasId);
   const current = new Map(canvas.blocks.map(block => [block.id, block]));
   const conflicts = applicable.filter(change => change.before && (!current.has(change.blockId)
-    || stateHash(current.get(change.blockId)!) !== change.expectedStateHash)).map(change => ({ id: change.id, reason: 'Document changed since preview' }));
+    || stateHash(current.get(change.blockId)!) !== stateHash(change.before))).map(change => ({ id: change.id, reason: 'Document changed since preview' }));
   if (conflicts.length) throw new ChatProposalConflict(conflicts);
   return current;
 }
@@ -224,6 +128,10 @@ async function assertCurrentDocuments(store: CanvasStore, proposal: ChatProposal
 type ApplyProgress = Pick<ChatProposalReceipt, 'createdBlockIds' | 'documents' | 'applied'>;
 function emptyProgress(): ApplyProgress { return { createdBlockIds: {}, documents: [], applied: [] }; }
 function savedId(progress: ApplyProgress, blockId: string): string { return progress.createdBlockIds[blockId] ?? blockId; }
+function savedLinkTypes(progress: ApplyProgress, types: CanvasBlock['linkTypes']): CanvasBlock['linkTypes'] {
+  if (!types) return undefined;
+  return Object.fromEntries(Object.entries(types).map(([id, relation]) => [savedId(progress, id), relation]));
+}
 async function saveCreatedChanges(store: CanvasStore, proposal: ChatProposal, changes: ChatProposalChange[], progress: ApplyProgress): Promise<void> {
   for (const change of changes.filter(item => item.type === 'create')) {
     const after = change.after!;
@@ -240,7 +148,7 @@ async function saveExistingChanges(store: CanvasStore, proposal: ChatProposal, c
     const after = change.after!;
     const saved = await store.updateBlock(proposal.canvasId, change.blockId, {
       title: after.title, content: after.content, kind: after.kind, x: after.x, y: after.y,
-      links: after.links.map(id => savedId(progress, id)), linkTypes: after.linkTypes,
+      links: after.links.map(id => savedId(progress, id)), linkTypes: savedLinkTypes(progress, after.linkTypes),
       expectedContentHash: change.expectedContentHash,
     }, 'Symbi');
     progress.applied.push(change.id);
@@ -252,19 +160,19 @@ async function saveCreatedLinks(store: CanvasStore, proposal: ChatProposal, chan
     const after = change.after!;
     const id = savedId(progress, change.blockId);
     const saved = await store.updateBlock(proposal.canvasId, id, {
-      links: after.links.map(link => savedId(progress, link)), linkTypes: after.linkTypes,
+      links: after.links.map(link => savedId(progress, link)), linkTypes: savedLinkTypes(progress, after.linkTypes),
     }, 'Symbi');
-    const document = progress.documents.find(item => item.after?.id === id);
-    if (document) document.after = saved;
+    progress.documents = progress.documents.map(item => item.after?.id === id ? { ...item, after: saved } : item);
   }
 }
-async function commitChanges(store: CanvasStore, proposal: ChatProposal, changes: ChatProposalChange[], progress: ApplyProgress): Promise<unknown> {
+type CommitResult = { ok: true } | { ok: false; failure: unknown };
+async function commitChanges(store: CanvasStore, proposal: ChatProposal, changes: ChatProposalChange[], progress: ApplyProgress): Promise<CommitResult> {
   try {
     await saveCreatedChanges(store, proposal, changes, progress);
     await saveExistingChanges(store, proposal, changes, progress);
     await saveCreatedLinks(store, proposal, changes, progress);
-    return undefined;
-  } catch (failure) { return failure; }
+    return { ok: true };
+  } catch (failure) { return { ok: false, failure }; }
 }
 
 function discoverSavedCreate(change: ChatProposalChange, latest: CanvasBlock[], before: Map<string, CanvasBlock>, progress: ApplyProgress): CanvasBlock | undefined {
@@ -300,9 +208,9 @@ async function applyPending(store: CanvasStore, id: string, changeIds?: string[]
   assertSelectedLinks(proposal, applicable);
   const before = await assertCurrentDocuments(store, proposal, applicable);
   const progress = emptyProgress();
-  const failure = await commitChanges(store, proposal, applicable, progress);
-  if (failure) await reconcileApplyFailure(store, proposal, applicable, before, progress, skipped, failure);
-  const receipt: ChatProposalReceipt = { id, status: skipped.length || failure ? 'partial' : 'applied', skipped, ...progress };
+  const result = await commitChanges(store, proposal, applicable, progress);
+  if (!result.ok) await reconcileApplyFailure(store, proposal, applicable, before, progress, skipped, result.failure);
+  const receipt: ChatProposalReceipt = { id, status: skipped.length || !result.ok ? 'partial' : 'applied', skipped, ...progress };
   saveState(store, id, { version: 1, kind: 'applied', canvasId: proposal.canvasId, receipt, expires: Date.now() + lifetime });
   return receipt;
 }
@@ -321,24 +229,40 @@ async function assertUndoCurrent(store: CanvasStore, run: AppliedState): Promise
   const canvas = await store.getCanvas(run.canvasId);
   const current = new Map(canvas.blocks.map(block => [block.id, block]));
   const conflicts = run.receipt.documents.filter(item => !item.after || !current.has(item.after.id)
-    || stateHash(current.get(item.after.id)!) !== stateHash(item.after)).map(item => ({ id: item.after?.id ?? '', reason: 'Document changed since apply' }));
+    || stateHash(current.get(item.after.id)!) !== stateHash(item.after)).map(item => ({ id: item.after!.id, reason: 'Document changed since apply' }));
   if (conflicts.length) throw new ChatProposalConflict(conflicts);
+}
+function restoredPlacement(before: CanvasBlock): Parameters<CanvasStore['updateBlock']>[2] {
+  return { group: before.group ?? null, purpose: before.purpose ?? '',
+    reviewer: before.reviewer ?? '', workArea: before.workArea ?? '' };
+}
+function restoredMetadata(before: CanvasBlock): Parameters<CanvasStore['updateBlock']>[2] {
+  return { linkTypes: before.linkTypes ?? {}, ...restoredPlacement(before),
+    crossLinks: before.crossLinks ?? [], headline: before.headline ?? null, freshness: before.freshness ?? null };
+}
+function restoredTags(before: CanvasBlock): Parameters<CanvasStore['updateBlock']>[2] {
+  return before.tags === undefined ? {} : { tags: before.tags };
 }
 function restorePatch(before: CanvasBlock, after: CanvasBlock): Parameters<CanvasStore['updateBlock']>[2] {
   return { title: before.title, content: before.content, kind: before.kind,
     x: before.x, y: before.y, width: before.width, height: before.height, links: before.links,
-    linkTypes: before.linkTypes ?? {}, group: before.group ?? null,
-    ...(before.tags === undefined ? {} : { tags: before.tags }),
-    purpose: before.purpose ?? '', reviewer: before.reviewer ?? '', workArea: before.workArea ?? '',
+    ...restoredMetadata(before), ...restoredTags(before),
     expectedContentHash: contentHash(after.content) };
 }
 async function revertDocument(store: CanvasStore, canvasId: string, item: ReceiptDocument): Promise<void> {
   if (!item.before) { await store.deleteBlock(canvasId, item.after!.id, 'Symbi'); return; }
   await store.updateBlock(canvasId, item.after!.id, restorePatch(item.before, item.after!), 'Symbi');
+  await store.jevExecutor.setOwnership(canvasId, item.after!.id, initializeJevStamp(item.before).jevOwnership!);
 }
 async function revertDocuments(store: CanvasStore, run: AppliedState, ordered: ReceiptDocument[]): Promise<unknown> {
+  const peers: JevParentUndo[] = ordered.map(item => item.before ? { kind: 'edited', before: item.before, after: item.after! } : { kind: 'created', after: item.after! });
   for (const item of ordered) {
-    try { await revertDocument(store, run.canvasId, item); }
+    try {
+      const canvas = await store.getCanvas(run.canvasId, true);
+      const parent: JevParentUndo = item.before ? { kind: 'edited', before: item.before, after: item.after! } : { kind: 'created', after: item.after! };
+      await withCausalParentUndo(store, canvas.workspaceId, canvas.id, [parent],
+        { id: 'browser-reviewer', kind: 'user', access: 'write', canApprove: true }, () => revertDocument(store, run.canvasId, item), { peers });
+    }
     catch (error) { return error; }
   }
   return undefined;
@@ -346,7 +270,9 @@ async function revertDocuments(store: CanvasStore, run: AppliedState, ordered: R
 function wasReverted(item: ReceiptDocument, current: Map<string, CanvasBlock>): boolean {
   if (!item.before) return !current.has(item.after!.id);
   const latest = current.get(item.after!.id);
-  return Boolean(latest && stateHash(latest) === stateHash(item.before));
+  if (!latest) return false;
+  const expected = { ...item.before, jevOwnership: initializeJevStamp(item.before).jevOwnership, contentHash: contentHash(item.before.content) };
+  return documentReviewState(latest) === documentReviewState(expected);
 }
 async function finalizeUndo(store: CanvasStore, id: string, run: AppliedState, ordered: ReceiptDocument[], failure: unknown): Promise<UndoResult> {
   const latest = new Map((await store.getCanvas(run.canvasId)).blocks.map(block => [block.id, block]));
@@ -361,7 +287,18 @@ async function finalizeUndo(store: CanvasStore, id: string, run: AppliedState, o
 }
 async function undoApplied(store: CanvasStore, id: string): Promise<UndoResult> {
   const run = appliedRun(store, id);
-  await assertUndoCurrent(store, run);
+  // Per-document causal guards include the source generation and the original parent snapshot.
+  // Preserve the existing all-document preflight when no causal enrichment changed the receipt.
+  const canvas = await store.getCanvas(run.canvasId, true);
+  const current = new Map(canvas.blocks.map(block => [block.id, block]));
+  const conflicts = run.receipt.documents.filter(item => {
+    const block = item.after && current.get(item.after.id);
+    return !block || block.incarnation !== item.after!.incarnation || block.sourceGeneration !== item.after!.sourceGeneration;
+  }).map(item => ({ id: item.after?.id ?? '', reason: 'Document changed since apply' }));
+  if (conflicts.length) throw new ChatProposalConflict(conflicts);
+  if (run.receipt.documents.every(item => current.get(item.after!.id)!.jevMutationId === item.after!.jevMutationId)) await assertUndoCurrent(store, run);
+  await preflightCausalParentUndo(store, canvas.workspaceId, canvas.id, run.receipt.documents.map(item =>
+    item.before ? { kind: 'edited', before: item.before, after: item.after! } : { kind: 'created', after: item.after! }));
   const ordered = [...run.receipt.documents.filter(item => item.before), ...run.receipt.documents.filter(item => !item.before)];
   const failure = await revertDocuments(store, run, ordered);
   return finalizeUndo(store, id, run, ordered, failure);

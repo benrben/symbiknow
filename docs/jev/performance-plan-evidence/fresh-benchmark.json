@@ -1,0 +1,1398 @@
+{
+  "initialHistory": {
+    "receipts": 3050,
+    "proposals": 3050,
+    "profiles": 11,
+    "bytes": 17510654
+  },
+  "retainedCorpusDocuments": 158,
+  "beforeBytes": 17511109,
+  "afterBytes": 17433234,
+  "elapsedToCheckpointMs": 21386.470042,
+  "idleMs": 21518.214208000005,
+  "durableRevisions": 40,
+  "provider": {
+    "kind": "native-local-loopback",
+    "calls": 4,
+    "questions": 462,
+    "serverMs": 3.647957999997743,
+    "realProviderCalls": 0
+  },
+  "proof": {
+    "all13": true,
+    "successfulCheckpoint": true,
+    "allJobsCompleted": true,
+    "policyUnchanged": true,
+    "sourceUnchanged": true,
+    "historicalReceiptsUnchanged": true,
+    "historicalProposalsUnchanged": true,
+    "actualLedgerUnchanged": true
+  },
+  "stages": {
+    "assign_owner:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 197.19583299999795
+    },
+    "assign_owner:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 462.372000000003
+    },
+    "assign_owner:followups.resume": {
+      "count": 1,
+      "elapsedMs": 462.3868750000038
+    },
+    "assign_owner:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 462.39650000000256
+    },
+    "assign_owner:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 0.32054199999402044
+    },
+    "assign_owner:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 254.95779200000106
+    },
+    "assign_owner:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 276.02045799999905
+    },
+    "assign_owner:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.010083000001031905
+    },
+    "assign_owner:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 392.9005410000027
+    },
+    "assign_owner:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.7381249999962165
+    },
+    "assign_owner:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 29.499334000007366
+    },
+    "assign_owner:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.1959159999969415
+    },
+    "assign_owner:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 0.28666700000030687
+    },
+    "assign_owner:workspace.read": {
+      "count": 5,
+      "elapsedMs": 819.4162500000093
+    },
+    "assign_owner:workspace.write": {
+      "count": 3,
+      "elapsedMs": 516.6140830000004
+    },
+    "attach_doc_to_task:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 254.6128749999989
+    },
+    "attach_doc_to_task:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 524.1876249999987
+    },
+    "attach_doc_to_task:followups.resume": {
+      "count": 1,
+      "elapsedMs": 524.2014589999962
+    },
+    "attach_doc_to_task:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 524.2152080000014
+    },
+    "attach_doc_to_task:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 0.34929099999862956
+    },
+    "attach_doc_to_task:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 264.4890000000014
+    },
+    "attach_doc_to_task:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 222.87912499999948
+    },
+    "attach_doc_to_task:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.013167000004614238
+    },
+    "attach_doc_to_task:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 399.0107910000006
+    },
+    "attach_doc_to_task:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.8346249999958673
+    },
+    "attach_doc_to_task:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 29.20391699999891
+    },
+    "attach_doc_to_task:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.2107079999987036
+    },
+    "attach_doc_to_task:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 6.1334160000042175
+    },
+    "attach_doc_to_task:workspace.read": {
+      "count": 5,
+      "elapsedMs": 828.8808730000019
+    },
+    "attach_doc_to_task:workspace.write": {
+      "count": 3,
+      "elapsedMs": 525.7554170000076
+    },
+    "executor.recoverInside": {
+      "count": 13,
+      "elapsedMs": 2635.472418999987
+    },
+    "file:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 191.6687920000004
+    },
+    "file:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 460.1140839999971
+    },
+    "file:followups.resume": {
+      "count": 1,
+      "elapsedMs": 460.2068750000035
+    },
+    "file:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 460.2183750000004
+    },
+    "file:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 141.21920799999862
+    },
+    "file:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 247.16237499999988
+    },
+    "file:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 258.8537499999984
+    },
+    "file:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.007000000001426088
+    },
+    "file:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 362.7024170000004
+    },
+    "file:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.7661249999946449
+    },
+    "file:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 29.430500000002212
+    },
+    "file:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.1564159999979893
+    },
+    "file:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 0.24737500000264845
+    },
+    "file:workspace.read": {
+      "count": 5,
+      "elapsedMs": 766.6682920000021
+    },
+    "file:workspace.write": {
+      "count": 3,
+      "elapsedMs": 512.0958329999958
+    },
+    "flag_conflict:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 242.500291999997
+    },
+    "flag_conflict:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 512.3064999999988
+    },
+    "flag_conflict:followups.resume": {
+      "count": 1,
+      "elapsedMs": 512.3342909999992
+    },
+    "flag_conflict:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 512.3491670000003
+    },
+    "flag_conflict:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 12.883874999999534
+    },
+    "flag_conflict:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 285.9131249999991
+    },
+    "flag_conflict:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 223.96474999999919
+    },
+    "flag_conflict:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.008000000001629815
+    },
+    "flag_conflict:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 384.72445799999696
+    },
+    "flag_conflict:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.8652090000032331
+    },
+    "flag_conflict:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 24.73308199999883
+    },
+    "flag_conflict:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.277290999991237
+    },
+    "flag_conflict:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 5.875332999996317
+    },
+    "flag_conflict:workspace.read": {
+      "count": 5,
+      "elapsedMs": 806.0958330000067
+    },
+    "flag_conflict:workspace.write": {
+      "count": 3,
+      "elapsedMs": 549.6580409999951
+    },
+    "flag_duplicate:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 191.263208999997
+    },
+    "flag_duplicate:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 462.96933400000125
+    },
+    "flag_duplicate:followups.resume": {
+      "count": 1,
+      "elapsedMs": 463.00079099999857
+    },
+    "flag_duplicate:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 463.0134590000016
+    },
+    "flag_duplicate:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 12.794042000001355
+    },
+    "flag_duplicate:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 252.25633399999788
+    },
+    "flag_duplicate:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 262.5480000000025
+    },
+    "flag_duplicate:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.010167000000365078
+    },
+    "flag_duplicate:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 381.01033299999835
+    },
+    "flag_duplicate:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.7748330000031274
+    },
+    "flag_duplicate:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 23.694458000005397
+    },
+    "flag_duplicate:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.1866250000020955
+    },
+    "flag_duplicate:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 6.013541000000259
+    },
+    "flag_duplicate:workspace.read": {
+      "count": 5,
+      "elapsedMs": 791.9185819999984
+    },
+    "flag_duplicate:workspace.write": {
+      "count": 3,
+      "elapsedMs": 514.5264580000076
+    },
+    "followups.admitStep": {
+      "count": 12,
+      "elapsedMs": 5751.917876999993
+    },
+    "followups.complete": {
+      "count": 1,
+      "elapsedMs": 444.226791999994
+    },
+    "followups.context": {
+      "count": 2,
+      "elapsedMs": 19.611667000001034
+    },
+    "followups.pendingSource": {
+      "count": 2,
+      "elapsedMs": 0.1872910000020056
+    },
+    "followups.queue": {
+      "count": 1,
+      "elapsedMs": 700.5622919999987
+    },
+    "followups.resume": {
+      "count": 12,
+      "elapsedMs": 5801.223084000001
+    },
+    "followups.startRoot": {
+      "count": 1,
+      "elapsedMs": 471.14974999999686
+    },
+    "label:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 191.4679580000011
+    },
+    "label:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 458.80425000000105
+    },
+    "label:followups.resume": {
+      "count": 1,
+      "elapsedMs": 458.8237499999959
+    },
+    "label:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 458.83583300000464
+    },
+    "label:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 0.3865829999995185
+    },
+    "label:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 263.16808299999684
+    },
+    "label:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 270.9995839999974
+    },
+    "label:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 6.8220840000067255
+    },
+    "label:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 365.9306250000009
+    },
+    "label:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.7829169999968144
+    },
+    "label:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 32.96058400000766
+    },
+    "label:store.getCanvasBlock": {
+      "count": 1,
+      "elapsedMs": 0.5434170000007725
+    },
+    "label:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.261333000002196
+    },
+    "label:store.listWorkspaces": {
+      "count": 3,
+      "elapsedMs": 6.375082999998995
+    },
+    "label:workspace.read": {
+      "count": 5,
+      "elapsedMs": 783.4767070000016
+    },
+    "label:workspace.write": {
+      "count": 3,
+      "elapsedMs": 513.9293739999994
+    },
+    "link:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 194.736791000003
+    },
+    "link:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 504.62804199999664
+    },
+    "link:followups.resume": {
+      "count": 1,
+      "elapsedMs": 504.6495420000065
+    },
+    "link:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 504.66195800000423
+    },
+    "link:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 12.9466670000038
+    },
+    "link:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 254.61520899999596
+    },
+    "link:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 265.4656660000037
+    },
+    "link:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.01112499999726424
+    },
+    "link:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 382.302042000003
+    },
+    "link:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.8873329999987618
+    },
+    "link:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 24.603167000001122
+    },
+    "link:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.309666000001016
+    },
+    "link:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 6.362625000001572
+    },
+    "link:workspace.read": {
+      "count": 5,
+      "elapsedMs": 793.9051660000041
+    },
+    "link:workspace.write": {
+      "count": 3,
+      "elapsedMs": 561.3563329999961
+    },
+    "profile:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 76.84216699999888
+    },
+    "profile:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 395.2138339999983
+    },
+    "profile:followups.context": {
+      "count": 1,
+      "elapsedMs": 10.333916999999929
+    },
+    "profile:followups.pendingSource": {
+      "count": 2,
+      "elapsedMs": 0.1872910000020056
+    },
+    "profile:followups.queue": {
+      "count": 1,
+      "elapsedMs": 700.5622919999987
+    },
+    "profile:followups.startRoot": {
+      "count": 1,
+      "elapsedMs": 471.14974999999686
+    },
+    "profile:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 700.6108329999988
+    },
+    "profile:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 423.2006249999977
+    },
+    "profile:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 339.4148329999989
+    },
+    "profile:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 217.8145000000004
+    },
+    "profile:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.9870420000006561
+    },
+    "profile:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 378.4254589999982
+    },
+    "profile:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.7796260000031907
+    },
+    "profile:store.getCanvas": {
+      "count": 8,
+      "elapsedMs": 63.609500999999
+    },
+    "profile:store.getCanvasBlock": {
+      "count": 1,
+      "elapsedMs": 0.5424579999998969
+    },
+    "profile:store.listTasks": {
+      "count": 3,
+      "elapsedMs": 9.457000000002154
+    },
+    "profile:store.listWorkspaces": {
+      "count": 4,
+      "elapsedMs": 5.362917999998899
+    },
+    "profile:workspace.read": {
+      "count": 7,
+      "elapsedMs": 954.8915000000052
+    },
+    "profile:workspace.write": {
+      "count": 3,
+      "elapsedMs": 567.4890419999974
+    },
+    "recall:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 209.6376670000027
+    },
+    "recall:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 488.7857920000024
+    },
+    "recall:followups.resume": {
+      "count": 1,
+      "elapsedMs": 488.8009170000005
+    },
+    "recall:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 488.8133749999979
+    },
+    "recall:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 42.43791600000259
+    },
+    "recall:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 354.23933399999805
+    },
+    "recall:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 224.71570800000336
+    },
+    "recall:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.008750000000873115
+    },
+    "recall:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 377.74954199999775
+    },
+    "recall:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.744250000003376
+    },
+    "recall:store.getCanvas": {
+      "count": 7,
+      "elapsedMs": 57.91754300000321
+    },
+    "recall:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.232457999998587
+    },
+    "recall:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 0.22525100000348175
+    },
+    "recall:workspace.read": {
+      "count": 5,
+      "elapsedMs": 760.7369599999947
+    },
+    "recall:workspace.write": {
+      "count": 3,
+      "elapsedMs": 569.3218330000018
+    },
+    "recheck_links:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 197.9988749999975
+    },
+    "recheck_links:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 469.5582499999946
+    },
+    "recheck_links:followups.resume": {
+      "count": 1,
+      "elapsedMs": 469.5720829999991
+    },
+    "recheck_links:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 469.59845900000073
+    },
+    "recheck_links:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 0.3553749999991851
+    },
+    "recheck_links:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 284.5085410000029
+    },
+    "recheck_links:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 268.94454200000473
+    },
+    "recheck_links:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.006999999997788109
+    },
+    "recheck_links:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 375.80633300000045
+    },
+    "recheck_links:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.9565410000068368
+    },
+    "recheck_links:store.getCanvas": {
+      "count": 7,
+      "elapsedMs": 53.893332999999984
+    },
+    "recheck_links:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.4550000000017462
+    },
+    "recheck_links:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 0.3345010000048205
+    },
+    "recheck_links:workspace.read": {
+      "count": 5,
+      "elapsedMs": 786.9572499999995
+    },
+    "recheck_links:workspace.write": {
+      "count": 3,
+      "elapsedMs": 526.4709590000057
+    },
+    "runtime.continueJob": {
+      "count": 13,
+      "elapsedMs": 6501.990375000012
+    },
+    "runtime.evaluateJob": {
+      "count": 13,
+      "elapsedMs": 650.5090819999896
+    },
+    "runtime.fillExecutions": {
+      "count": 14,
+      "elapsedMs": 2163.660206000004
+    },
+    "runtime.finishJob": {
+      "count": 13,
+      "elapsedMs": 3591.9426259999927
+    },
+    "runtime.jobContext": {
+      "count": 13,
+      "elapsedMs": 3154.9380840000085
+    },
+    "runtime.refreshQueuedSources": {
+      "count": 13,
+      "elapsedMs": 8.774043000004895
+    },
+    "runtime.run": {
+      "count": 1,
+      "elapsedMs": 503.9496670000008
+    },
+    "runtime.takeJob": {
+      "count": 13,
+      "elapsedMs": 4950.983333
+    },
+    "score_quality:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 246.67445899999439
+    },
+    "score_quality:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 513.6564579999977
+    },
+    "score_quality:followups.resume": {
+      "count": 1,
+      "elapsedMs": 513.6752919999999
+    },
+    "score_quality:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 513.685166999996
+    },
+    "score_quality:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 0.7155409999977564
+    },
+    "score_quality:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 278.7517080000034
+    },
+    "score_quality:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 218.66700000000128
+    },
+    "score_quality:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.8734589999949094
+    },
+    "score_quality:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 393.78408299999865
+    },
+    "score_quality:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.7927079999935813
+    },
+    "score_quality:store.getCanvas": {
+      "count": 7,
+      "elapsedMs": 53.16187499999796
+    },
+    "score_quality:store.getCanvasBlock": {
+      "count": 1,
+      "elapsedMs": 0.572041999999783
+    },
+    "score_quality:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.190875000007509
+    },
+    "score_quality:store.listWorkspaces": {
+      "count": 3,
+      "elapsedMs": 6.07687600000645
+    },
+    "score_quality:workspace.read": {
+      "count": 5,
+      "elapsedMs": 809.8689179999928
+    },
+    "score_quality:workspace.write": {
+      "count": 3,
+      "elapsedMs": 505.1365420000002
+    },
+    "store.ensureJevStamps": {
+      "count": 26,
+      "elapsedMs": 10.626000999996904
+    },
+    "store.getCanvas": {
+      "count": 66,
+      "elapsedMs": 497.0556690000267
+    },
+    "store.getCanvasBlock": {
+      "count": 3,
+      "elapsedMs": 1.6579170000004524
+    },
+    "store.listTasks": {
+      "count": 28,
+      "elapsedMs": 43.66378800000166
+    },
+    "store.listWorkspaces": {
+      "count": 31,
+      "elapsedMs": 55.65571200001796
+    },
+    "suggest_home_canvas:followups.complete": {
+      "count": 1,
+      "elapsedMs": 444.226791999994
+    },
+    "suggest_home_canvas:followups.context": {
+      "count": 1,
+      "elapsedMs": 9.277750000001106
+    },
+    "suggest_home_canvas:followups.resume": {
+      "count": 1,
+      "elapsedMs": 444.23120899999776
+    },
+    "suggest_home_canvas:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 444.2417080000014
+    },
+    "suggest_home_canvas:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 0.377874999998312
+    },
+    "suggest_home_canvas:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 256.8106669999979
+    },
+    "suggest_home_canvas:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 221.59458399999858
+    },
+    "suggest_home_canvas:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.008415999996941537
+    },
+    "suggest_home_canvas:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 379.1527500000011
+    },
+    "suggest_home_canvas:store.ensureJevStamps": {
+      "count": 1,
+      "elapsedMs": 0.40287499999976717
+    },
+    "suggest_home_canvas:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 31.33970799999952
+    },
+    "suggest_home_canvas:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 8.01954200000182
+    },
+    "suggest_home_canvas:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 0.35675100000662496
+    },
+    "suggest_home_canvas:workspace.read": {
+      "count": 4,
+      "elapsedMs": 733.2357080000147
+    },
+    "suggest_home_canvas:workspace.write": {
+      "count": 3,
+      "elapsedMs": 523.6749999999956
+    },
+    "vocab_lifecycle:executor.recoverInside": {
+      "count": 1,
+      "elapsedMs": 240.23733400000128
+    },
+    "vocab_lifecycle:followups.admitStep": {
+      "count": 1,
+      "elapsedMs": 499.3217080000031
+    },
+    "vocab_lifecycle:followups.resume": {
+      "count": 1,
+      "elapsedMs": 499.34000000000015
+    },
+    "vocab_lifecycle:runtime.continueJob": {
+      "count": 1,
+      "elapsedMs": 499.35033300000214
+    },
+    "vocab_lifecycle:runtime.evaluateJob": {
+      "count": 1,
+      "elapsedMs": 2.5215419999985897
+    },
+    "vocab_lifecycle:runtime.finishJob": {
+      "count": 1,
+      "elapsedMs": 255.65562499999942
+    },
+    "vocab_lifecycle:runtime.jobContext": {
+      "count": 1,
+      "elapsedMs": 222.47041700000045
+    },
+    "vocab_lifecycle:runtime.refreshQueuedSources": {
+      "count": 1,
+      "elapsedMs": 0.007750000000669388
+    },
+    "vocab_lifecycle:runtime.takeJob": {
+      "count": 1,
+      "elapsedMs": 377.48395900000105
+    },
+    "vocab_lifecycle:store.ensureJevStamps": {
+      "count": 2,
+      "elapsedMs": 0.7964170000013837
+    },
+    "vocab_lifecycle:store.getCanvas": {
+      "count": 4,
+      "elapsedMs": 36.23054200000479
+    },
+    "vocab_lifecycle:store.listTasks": {
+      "count": 2,
+      "elapsedMs": 2.3549999999995634
+    },
+    "vocab_lifecycle:store.listWorkspaces": {
+      "count": 2,
+      "elapsedMs": 5.995666999991954
+    },
+    "vocab_lifecycle:workspace.read": {
+      "count": 5,
+      "elapsedMs": 777.4262509999971
+    },
+    "vocab_lifecycle:workspace.write": {
+      "count": 3,
+      "elapsedMs": 514.1883749999979
+    },
+    "workspace.read": {
+      "count": 68,
+      "elapsedMs": 10690.858373000025
+    },
+    "workspace.readQueued": {
+      "count": 14,
+      "elapsedMs": 2161.770370999988
+    },
+    "workspace.write": {
+      "count": 40,
+      "elapsedMs": 7092.9282060000005
+    }
+  },
+  "ioByPhase": {
+    "admission:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 200.55058299999655,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "admission:runtime.run": {
+      "reads": 1,
+      "readMs": 76.82949999999983,
+      "writes": 1,
+      "writeMs": 192.710916
+    },
+    "assign_owner:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 197.18304199999693,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "assign_owner:followups.admitStep": {
+      "reads": 1,
+      "readMs": 76.83062500000233,
+      "writes": 1,
+      "writeMs": 172.24749999999767
+    },
+    "assign_owner:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 70.77058300000499,
+      "writes": 1,
+      "writeMs": 172.43004199999996
+    },
+    "assign_owner:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 253.90725000000384,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "assign_owner:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 220.72475000000122,
+      "writes": 1,
+      "writeMs": 171.93654100000276
+    },
+    "attach_doc_to_task:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 254.5975830000025,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "attach_doc_to_task:followups.admitStep": {
+      "reads": 1,
+      "readMs": 72.52804099999776,
+      "writes": 1,
+      "writeMs": 174.50162500000442
+    },
+    "attach_doc_to_task:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 73.18741600000067,
+      "writes": 1,
+      "writeMs": 179.74304200000188
+    },
+    "attach_doc_to_task:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 201.3202500000043,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "attach_doc_to_task:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 227.24758299999667,
+      "writes": 1,
+      "writeMs": 171.51075000000128
+    },
+    "file:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 191.65145800000028,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "file:followups.admitStep": {
+      "reads": 1,
+      "readMs": 75.96500000000015,
+      "writes": 1,
+      "writeMs": 176.02166699999725
+    },
+    "file:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 68.35704199999964,
+      "writes": 1,
+      "writeMs": 167.2324579999986
+    },
+    "file:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 237.0792500000025,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "file:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 193.61554199999955,
+      "writes": 1,
+      "writeMs": 168.84170799999993
+    },
+    "flag_conflict:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 242.486834000003,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "flag_conflict:followups.admitStep": {
+      "reads": 1,
+      "readMs": 76.171875,
+      "writes": 1,
+      "writeMs": 171.4172499999986
+    },
+    "flag_conflict:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 78.40679100000125,
+      "writes": 1,
+      "writeMs": 200.67808299999888
+    },
+    "flag_conflict:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 202.13583300000028,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "flag_conflict:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 206.89450000000215,
+      "writes": 1,
+      "writeMs": 177.56270799999766
+    },
+    "flag_duplicate:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 191.24612499999785,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "flag_duplicate:followups.admitStep": {
+      "reads": 1,
+      "readMs": 76.33041599999706,
+      "writes": 1,
+      "writeMs": 173.49283400000422
+    },
+    "flag_duplicate:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 75.03641599999537,
+      "writes": 1,
+      "writeMs": 171.05608300000313
+    },
+    "flag_duplicate:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 238.4994580000057,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "flag_duplicate:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 210.80616700000246,
+      "writes": 1,
+      "writeMs": 169.9775410000002
+    },
+    "label:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 191.45041599999968,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "label:followups.admitStep": {
+      "reads": 1,
+      "readMs": 78.17599999999948,
+      "writes": 1,
+      "writeMs": 172.6592079999973
+    },
+    "label:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 73.8918330000015,
+      "writes": 1,
+      "writeMs": 174.65200000000186
+    },
+    "label:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 247.7149999999965,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "label:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 192.24345800000447,
+      "writes": 1,
+      "writeMs": 166.6181660000002
+    },
+    "link:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 194.70916600000055,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "link:followups.admitStep": {
+      "reads": 1,
+      "readMs": 76.34654099999898,
+      "writes": 1,
+      "writeMs": 211.00687499999913
+    },
+    "link:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 76.11170900000434,
+      "writes": 1,
+      "writeMs": 171.7677079999994
+    },
+    "link:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 243.330750000001,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "link:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 203.40699999999924,
+      "writes": 1,
+      "writeMs": 178.58174999999756
+    },
+    "profile:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 76.82733400000143,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "profile:followups.admitStep": {
+      "reads": 1,
+      "readMs": 118.40912500000195,
+      "writes": 1,
+      "writeMs": 176.29537499999788
+    },
+    "profile:followups.queue": {
+      "reads": 1,
+      "readMs": 218.7288329999974,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "profile:followups.startRoot": {
+      "reads": 1,
+      "readMs": 75.82645899999989,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "profile:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 75.18233300000065,
+      "writes": 1,
+      "writeMs": 214.9393749999981
+    },
+    "profile:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 189.04770800000188,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "profile:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 200.869708000002,
+      "writes": 1,
+      "writeMs": 176.25429200000144
+    },
+    "recall:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 209.62437499999942,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "recall:followups.admitStep": {
+      "reads": 1,
+      "readMs": 80.5233339999977,
+      "writes": 1,
+      "writeMs": 181.6183749999982
+    },
+    "recall:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 72.48287500000151,
+      "writes": 1,
+      "writeMs": 216.85833300000377
+    },
+    "recall:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 191.55016700000124,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "recall:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 206.55620899999485,
+      "writes": 1,
+      "writeMs": 170.84512499999983
+    },
+    "recheck_links:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 197.98520799999824,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "recheck_links:followups.admitStep": {
+      "reads": 1,
+      "readMs": 78.16879200000403,
+      "writes": 1,
+      "writeMs": 176.0850000000064
+    },
+    "recheck_links:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 70.52191700000549,
+      "writes": 1,
+      "writeMs": 173.88791700000002
+    },
+    "recheck_links:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 241.25162499999715,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "recheck_links:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 199.02970799999457,
+      "writes": 1,
+      "writeMs": 176.49804199999926
+    },
+    "score_quality:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 246.65841699999874,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "score_quality:followups.admitStep": {
+      "reads": 1,
+      "readMs": 77.15699999999924,
+      "writes": 1,
+      "writeMs": 167.70945799999754
+    },
+    "score_quality:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 70.97587499999645,
+      "writes": 1,
+      "writeMs": 168.54929200000333
+    },
+    "score_quality:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 191.27195899999788,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "score_quality:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 223.80566700000054,
+      "writes": 1,
+      "writeMs": 168.87779199999932
+    },
+    "suggest_home_canvas:followups.complete": {
+      "reads": 1,
+      "readMs": 258.8204160000023,
+      "writes": 1,
+      "writeMs": 175.8536249999961
+    },
+    "suggest_home_canvas:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 72.22237500000483,
+      "writes": 1,
+      "writeMs": 172.84137499999633
+    },
+    "suggest_home_canvas:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 198.25900000000547,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "suggest_home_canvas:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 203.9339170000021,
+      "writes": 1,
+      "writeMs": 174.9800000000032
+    },
+    "vocab_lifecycle:executor.recoverInside": {
+      "reads": 1,
+      "readMs": 240.22270899999785,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "vocab_lifecycle:followups.admitStep": {
+      "reads": 1,
+      "readMs": 70.15437499999825,
+      "writes": 1,
+      "writeMs": 166.61475000000064
+    },
+    "vocab_lifecycle:runtime.finishJob": {
+      "reads": 1,
+      "readMs": 70.21816699999908,
+      "writes": 1,
+      "writeMs": 173.32562499999767
+    },
+    "vocab_lifecycle:runtime.jobContext": {
+      "reads": 1,
+      "readMs": 193.84162500000093,
+      "writes": 0,
+      "writeMs": 0
+    },
+    "vocab_lifecycle:runtime.takeJob": {
+      "reads": 1,
+      "readMs": 202.98937500000102,
+      "writes": 1,
+      "writeMs": 174.2479999999996
+    }
+  },
+  "actionCompletions": [
+    {
+      "action": "profile",
+      "elapsedMs": 2033.6544170000016
+    },
+    {
+      "action": "file",
+      "elapsedMs": 3875.3954169999997
+    },
+    {
+      "action": "vocab_lifecycle",
+      "elapsedMs": 5371.604667
+    },
+    {
+      "action": "label",
+      "elapsedMs": 6899.774208000003
+    },
+    {
+      "action": "score_quality",
+      "elapsedMs": 8423.868500000004
+    },
+    {
+      "action": "link",
+      "elapsedMs": 9983.903250000003
+    },
+    {
+      "action": "flag_duplicate",
+      "elapsedMs": 11535.610292000005
+    },
+    {
+      "action": "flag_conflict",
+      "elapsedMs": 13075.433083000004
+    },
+    {
+      "action": "recheck_links",
+      "elapsedMs": 14648.349500000004
+    },
+    {
+      "action": "attach_doc_to_task",
+      "elapsedMs": 16192.722417000004
+    },
+    {
+      "action": "assign_owner",
+      "elapsedMs": 17773.576500000003
+    },
+    {
+      "action": "recall",
+      "elapsedMs": 19411.992333000002
+    },
+    {
+      "action": "suggest_home_canvas",
+      "elapsedMs": 20942.235792
+    }
+  ],
+  "caveat": "Stage timings are inclusive and overlap; do not sum them. Full retained corpus and receipt history are kept; only copied pending jobs are cancelled. Strict unsupported local answers exercise the lowest-provider-latency ALL13 path, including real derived receipts and durable checkpoint. This is a local floor, not a real-provider latency claim."
+}

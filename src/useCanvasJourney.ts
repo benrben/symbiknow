@@ -15,7 +15,11 @@ function readSaved<T>(key: string, fallback: T): T {
 
 function save(key: string, value: unknown) {
   try { window.localStorage.setItem(key, JSON.stringify(value)); }
-  catch { /* Private browsing may not allow local storage; navigation still works for this session. */ }
+  catch { console.warn('Canvas navigation preferences cannot be saved; they remain available for this session.'); }
+}
+
+function sameViewport(before: CanvasViewport | undefined, after: CanvasViewport): boolean {
+  return Boolean(before && before.x === after.x && before.y === after.y && before.zoom === after.zoom);
 }
 
 export function useCanvasJourney() {
@@ -43,7 +47,7 @@ export function useCanvasJourney() {
     setJourney(current => {
       if (current.index < 0 || current.entries[current.index]?.canvasId !== canvasId) return current;
       const old = current.entries[current.index].viewport;
-      if (old && old.x === viewport.x && old.y === viewport.y && old.zoom === viewport.zoom) return current;
+      if (sameViewport(old, viewport)) return current;
       const entries = [...current.entries];
       entries[current.index] = { ...entries[current.index], viewport };
       return { ...current, entries };

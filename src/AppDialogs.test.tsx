@@ -111,11 +111,14 @@ describe('ModalOverlay', () => {
     const setDialog = vi.fn();
     const model = { dialog: 'canvas', setDialog, busy: true, draftBlock: {}, draftName: '',
       setDraftName: vi.fn(), createNamed: vi.fn() } as unknown as AppDialogModel;
-    const { container } = render(<ModalOverlay model={model}/>);
+    const { container, rerender } = render(<ModalOverlay model={model}/>);
     const dialog = screen.getByRole('dialog', { name: 'Create new' });
     fireEvent.keyDown(dialog, { key: 'Escape' });
     fireEvent.mouseDown(container.querySelector('.modal-overlay')!);
     expect(setDialog).not.toHaveBeenCalled();
+    rerender(<ModalOverlay model={{ ...model, busy: false }}/>);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(setDialog).toHaveBeenCalledExactlyOnceWith(null);
     expect(dialog).toBeTruthy();
   });
 
@@ -138,5 +141,36 @@ describe('ModalOverlay', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(saveBlock).toHaveBeenCalledOnce();
+  });
+});
+
+describe('editor keyboard recovery', () => {
+  it('returns focus to the editor field after dismissing an unsaved warning', () => {
+    function Harness() {
+      const [draftBlock, setDraftBlock] = useState({ title: 'Original', content: 'text', kind: 'markdown' as const });
+      const model = { dialog: 'block', setDialog: vi.fn(), draftBlock, setDraftBlock, saveBlock: vi.fn(), busy: false, showChat: false,
+        canvas: { blocks: [] }, canvasId: 'canvas', importEditedFile: vi.fn(), deleteBlock: vi.fn(),
+        takeOverLock: vi.fn(), openDocumentAssistant: vi.fn() } as unknown as AppDialogModel;
+      return <ModalOverlay model={model}/>;
+    }
+    render(<Harness/>);
+    const title = screen.getByRole('textbox', { name: 'Title' });
+    title.focus();
+    fireEvent.change(title, { target: { value: 'Changed' } });
+    fireEvent.keyDown(title, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue editing' }));
+    expect(document.activeElement).toBe(title);
+  });
+
+  it('allows Tab to leave the nonmodal editor when the document assistant is open', () => {
+    const model = { dialog: 'block', setDialog: vi.fn(), draftBlock: { title: 'Original', content: 'text', kind: 'markdown' },
+      setDraftBlock: vi.fn(), saveBlock: vi.fn(), busy: false, showChat: true, canvas: { blocks: [] }, canvasId: 'canvas',
+      importEditedFile: vi.fn(), deleteBlock: vi.fn(), takeOverLock: vi.fn(), openDocumentAssistant: vi.fn() } as unknown as AppDialogModel;
+    render(<ModalOverlay model={model}/>);
+    const dialog = screen.getByRole('dialog', { name: 'Block editor' });
+    expect(dialog.getAttribute('aria-modal')).toBe('false');
+    const save = within(dialog).getByRole('button', { name: 'Save block' });
+    save.focus();
+    expect(fireEvent.keyDown(save, { key: 'Tab' })).toBe(true);
   });
 });

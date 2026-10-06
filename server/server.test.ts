@@ -1,16 +1,18 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { Server } from 'node:http';
 import type { CanvasBlock, CanvasDocument, WorkspaceSummary } from '../shared/types.js';
 import { createApiServer } from './index.js';
+import { AIMessage } from '@langchain/core/messages';
+import type { DeepAgentFactory } from './chat-stream.js';
 
 const opened: Array<{ server: Server; dataDir: string }> = [];
 
-async function app(fetcher?: typeof fetch): Promise<{ base: string; dataDir: string; server: Server }> {
+async function app(agentFactory?: DeepAgentFactory): Promise<{ base: string; dataDir: string; server: Server }> {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-server-'));
-  const server = await createApiServer({ dataDir, fetcher });
+  const server = await createApiServer({ dataDir, agentFactory });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   opened.push({ server, dataDir });
   const address = server.address();
@@ -64,29 +66,28 @@ describe('canvas HTTP API', () => {
 
   it('keeps the OpenRouter key private and stores settings with restricted permissions', async () => {
     const { base, dataDir } = await app();
-    const saved = await json(base, '/api/settings', 'PUT', { model: 'openai/gpt-4.1-mini', apiKey: 'secret-key', jevApiKey: 'jev-secret', systemPrompt: 'Help the team.' });
-    expect(saved.data).toMatchObject({ provider: 'openrouter', model: 'openai/gpt-4.1-mini', systemPrompt: 'Help the team.', reviewers: '', workAreas: '', hasApiKey: true, hasJevApiKey: true });
+    const saved = await json(base, '/api/settings', 'PUT', { model: 'openai/gpt-4.1-mini', apiKey: 'secret-key', systemPrompt: 'Help the team.' });
+    expect(saved.data).toMatchObject({ provider: 'openrouter', model: 'openai/gpt-4.1-mini', systemPrompt: 'Help the team.', hasApiKey: true });
     expect(JSON.stringify(await json(base, '/api/settings'))).not.toContain('secret-key');
-    expect(JSON.stringify(await json(base, '/api/settings'))).not.toContain('jev-secret');
     expect((await stat(path.join(dataDir, 'settings.json'))).mode & 0o777).toBe(0o600);
     expect((await json(base, '/api/chat', 'POST', { canvasId: 'product-roadmap', messages: [] })).status).toBe(400);
   });
 
-  it('runs an OpenRouter tool loop and saves the model requested edit', async () => {
-    let calls = 0;
-    const fetcher = vi.fn(async (_url: string, init: RequestInit) => {
-      calls++;
-      expect(init.headers).toMatchObject({ Authorization: 'Bearer test-key' });
-      const body = JSON.parse(String(init.body)) as { tools: Array<{ function: { name: string } }>; messages: Array<{ role: string; tool_call_id?: string }> };
-      expect(body.tools.some(tool => tool.function.name === 'edit_doc')).toBe(true);
-      if (calls === 1) return new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id: 'call-1', type: 'function', function: { name: 'edit_doc', arguments: JSON.stringify({ blockId: 'launch-checklist', content: '# Launch checklist\n- [x] Beta tested\n' }) } }] } }] }), { status: 200 });
-      expect(body.messages.at(-1)).toMatchObject({ role: 'tool', tool_call_id: 'call-1' });
-      return new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'Updated the launch checklist.' } }] }), { status: 200 });
-    }) as unknown as typeof fetch;
-    const { base } = await app(fetcher);
+  it('uses the selected provider and saves a model edit only after proposal review', async () => {
+    const factory: DeepAgentFactory = (settings, tools) => async function* (messages, signal) {
+      expect(settings.apiKey).toBe('test-key');
+      await tools.find(tool => tool.name === 'edit_doc')!.invoke({ blockId: 'launch-checklist',
+        content: '# Launch checklist\n- [x] Beta tested\n' }, { signal });
+      yield { messages: [...messages, new AIMessage('Review the launch checklist edit.')] };
+    };
+    const { base } = await app(factory);
     await json(base, '/api/settings', 'PUT', { apiKey: 'test-key', model: 'vendor/tool-model' });
     const reply = await json(base, '/api/chat', 'POST', { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Mark beta tested.' }] });
-    expect(reply).toEqual({ status: 200, data: { message: 'Updated the launch checklist.', changed: true } });
+    expect(reply).toMatchObject({ status: 200, data: { message: 'Review the launch checklist edit.', changed: false, proposalId: expect.any(String) } });
+    const before = await json<CanvasDocument>(base, '/api/canvases/product-roadmap');
+    expect(before.data.blocks.find(item => item.id === 'launch-checklist')?.content).not.toContain('[x] Beta tested');
+    const proposalId = (reply.data as { proposalId: string }).proposalId;
+    expect((await json(base, `/api/chat/proposals/${proposalId}/apply`, 'POST', {})).status).toBe(200);
     const canvas = await json<CanvasDocument>(base, '/api/canvases/product-roadmap');
     expect(canvas.data.blocks.find(item => item.id === 'launch-checklist')?.content).toContain('[x] Beta tested');
   });

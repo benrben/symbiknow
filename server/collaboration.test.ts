@@ -29,9 +29,19 @@ async function call<T = unknown>(base: string, route: string, options: { method?
   return { status: response.status, headers: response.headers, data: await response.json().catch(() => null) as T };
 }
 
+async function disconnect(base: string, client: Client, transport: StreamableHTTPClientTransport) {
+  try { await transport.terminateSession(); }
+  finally {
+    await client.close();
+    // This native serialized write waits for advisory token metadata before fixture deletion.
+    expect((await call(base, '/api/settings', { method: 'PUT', body: {} })).status).toBe(200);
+  }
+}
+
 afterEach(async () => {
   vi.unstubAllEnvs();
   for (const item of opened.splice(0)) {
+    item.server.closeAllConnections();
     await new Promise<void>(resolve => item.server.close(() => resolve()));
     await rm(item.dataDir, { recursive: true, force: true });
   }
@@ -125,29 +135,43 @@ describe('agent collaboration', () => {
     expect(info.data.endpoint).toBe(`${base}/mcp`);
 
     const client = new Client({ name: 'codex-mcp-client', version: '1.0.0' });
-    await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { authorization: `Bearer ${created.data.token}` } } }));
+    const transport = new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { authorization: `Bearer ${created.data.token}` } } });
+    const retainedTools = ['ask_symbi', 'symbi_reflex', 'list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'create_doc',
+      'edit_doc', 'delete_doc', 'move_block', 'link_blocks', 'unlink_blocks', 'upload_file', 'download_file',
+      'claim_doc', 'release_doc', 'list_tasks', 'create_task', 'update_task', 'delete_task', 'task_history', 'undo_task',
+      'claim_task', 'comment_task', 'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'delete_branch',
+      'restore_revision', 'import_documents'];
+    const removedTools = ['analyze_canvas', 'find_duplicates', 'merge_documents', 'undo_merge', 'connect_across_canvases', 'score_documents',
+      'run_workspace_automation', 'regroup_canvas', 'organize_canvas', 'connect_documents', 'label_purposes', 'classify_work_areas', 'assign_reviewers'];
     try {
+      await client.connect(transport);
       const tools = await client.listTools();
       const upload = tools.tools.find(tool => tool.name === 'upload_file')!;
       expect(Object.keys(upload.inputSchema.properties ?? {})).not.toContain('sourcePath');
-      expect(tools.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['claim_doc', 'list_tasks', 'claim_task', 'regroup_canvas']));
+      const names = tools.tools.map(tool => tool.name);
+      expect(names.sort()).toEqual([...retainedTools].sort());
+      for (const name of removedTools) expect(names).not.toContain(name);
       const output = await client.callTool({ name: 'upload_file', arguments: { canvasId: 'product-roadmap', filename: 'remote.html', content: '<h1>Remote</h1>' } });
       const uploaded = JSON.parse((output.content as Array<{ text: string }>)[0].text) as CanvasBlock;
       expect(uploaded.content).toContain('format: html');
       const history = await call<{ commits: Array<{ author: string }> }>(base, `/api/canvases/product-roadmap/blocks/${uploaded.id}/versions`);
       expect(history.data.commits[0].author).toBe('Codex - laptop');
-    } finally { await client.close(); }
+    } finally { await disconnect(base, client, transport); }
 
     const pathClient = new Client({ name: 'claude-ai', version: '1.0.0' });
-    await pathClient.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp/t/${created.data.token}`)));
-    expect((await pathClient.listTools()).tools.length).toBeGreaterThan(20);
-    await pathClient.close();
+    const pathTransport = new StreamableHTTPClientTransport(new URL(`${base}/mcp/t/${created.data.token}`));
+    try {
+      await pathClient.connect(pathTransport);
+      expect((await pathClient.listTools()).tools.map(tool => tool.name).sort()).toEqual([...retainedTools].sort());
+    } finally { await disconnect(base, pathClient, pathTransport); }
 
     const tokenId = created.data.settings.mcpTokens![0].id;
     await call(base, `/api/mcp/tokens/${tokenId}`, { method: 'DELETE' });
     const revoked = new Client({ name: 'late', version: '1.0.0' });
-    await expect(revoked.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`),
-      { requestInit: { headers: { authorization: `Bearer ${created.data.token}` } } }))).rejects.toThrow();
+    try {
+      await expect(revoked.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`),
+        { requestInit: { headers: { authorization: `Bearer ${created.data.token}` } } }))).rejects.toThrow();
+    } finally { await revoked.close(); }
   });
 
   it('requires the access token for the API when one is configured', async () => {

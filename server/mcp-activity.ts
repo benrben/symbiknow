@@ -40,6 +40,14 @@ export function mcpActivityRefs(args: unknown): { canvasIds: string[]; documentI
   };
 }
 
+function matchingString(value: unknown, pattern: RegExp): string | undefined {
+  return typeof value === 'string' && pattern.test(value) ? value : undefined;
+}
+
+function firstRevision(commits: Array<{ id?: unknown }> | undefined): string | undefined {
+  return matchingString(commits?.[0]?.id, revisionPattern);
+}
+
 export function mcpResultIds(result: unknown): { documentId?: string; revision?: string } {
   if (!result || typeof result !== 'object') return {};
   const content = (result as { content?: Array<{ text?: unknown }> }).content;
@@ -49,9 +57,8 @@ export function mcpResultIds(result: unknown): { documentId?: string; revision?:
     const value = JSON.parse(text) as Record<string, unknown>;
     const status = value.status as { commits?: Array<{ id?: unknown }> } | undefined;
     const commits = value.commits as Array<{ id?: unknown }> | undefined;
-    return { documentId: typeof value.id === 'string' && idPattern.test(value.id) ? value.id : undefined,
-      revision: typeof status?.commits?.[0]?.id === 'string' && revisionPattern.test(status.commits[0].id) ? status.commits[0].id
-        : typeof commits?.[0]?.id === 'string' && revisionPattern.test(commits[0].id) ? commits[0].id : undefined };
+    return { documentId: matchingString(value.id, idPattern),
+      revision: firstRevision(status?.commits) ?? firstRevision(commits) };
   } catch { return {}; }
 }
 

@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import type { CanvasBlock, CanvasDocument } from '../shared/types';
 import type { Connection, Edge } from '@xyflow/react';
 import { Canvas } from './Canvas';
+import { canvasFitPadding } from './canvas-view-helpers';
 
 type RenderNode = { id: string; type: string; data: { block: CanvasBlock; title?: string; count?: number }; position: { x: number; y: number }; width?: number; height?: number };
 type PositionChange = { type: 'position'; id: string; position?: { x: number; y: number }; dragging?: boolean };
@@ -28,7 +29,7 @@ type FlowProps = {
   onInit?: (instance: { fitView: typeof flow.fitView; getZoom: () => number; getViewport: () => { x: number; y: number; zoom: number }; setViewport: typeof flow.viewport; zoomTo: typeof flow.zoomTo }) => void;
 };
 
-const flow = vi.hoisted(() => ({ current: null as unknown, center: vi.fn(), viewport: vi.fn(), viewportValue: { x: 0, y: 0, zoom: 1 }, fitView: vi.fn(async () => true), zoomTo: vi.fn(async () => true), mounts: 0, commits: [] as string[][], previewRenders: new Map<string, number>() }));
+const flow = vi.hoisted(() => ({ current: null as unknown, center: vi.fn(async () => true), viewport: vi.fn(), viewportValue: { x: 0, y: 0, zoom: 1 }, fitView: vi.fn(async () => true), zoomTo: vi.fn(async () => true), mounts: 0, commits: [] as string[][], previewRenders: new Map<string, number>() }));
 
 vi.mock('@xyflow/react', async () => {
   const React = await import('react');
@@ -45,6 +46,7 @@ vi.mock('@xyflow/react', async () => {
     },
     useReactFlow: () => ({ setCenter: flow.center, setViewport: flow.viewport, getZoom: () => 1 }),
     useStore: () => true,
+    useStoreApi: () => ({ getState: () => ({ width: 1000, height: 800, transform: [0, 0, 1] }), subscribe: () => () => undefined }),
     ReactFlow: (props: FlowProps) => {
       React.useEffect(() => {
         flow.mounts++;
@@ -123,7 +125,7 @@ describe('infinite canvas', () => {
     expect(flow.commits.slice(commitsBeforeSwitch)[0]).toContain('b');
     expect(flow.commits.slice(commitsBeforeSwitch).every(ids => !ids.includes('a'))).toBe(true);
     expect(currentFlow().nodes.some(node => node.id === 'a')).toBe(false);
-    await waitFor(() => expect(flow.fitView).toHaveBeenCalledWith({ padding: 0.12, maxZoom: 1, duration: 0 }));
+    await waitFor(() => expect(flow.fitView).toHaveBeenCalledWith({ padding: canvasFitPadding, maxZoom: 1, duration: 0 }));
     expect(flow.mounts).toBe(1);
     expect(screen.queryByRole('button', { name: 'Close inspector' })).toBeNull();
     view.rerender(<Canvas canvas={third} viewportRequest={{ x: 42, y: 17, zoom: 0.8, sequence: 1 }} {...props}/>);
@@ -226,7 +228,7 @@ describe('infinite canvas', () => {
     expect(within(first).getByTitle('Reviewer: Engineering')).toHaveProperty('className', 'canvas-card__reviewer');
   });
 
-  it('shows a quality meter and opens cross-canvas portal chips from a card', async () => {
+  it('opens cross-canvas portal chips from a card', async () => {
     const onOpenCrossLink = vi.fn();
     const linked = { ...block('a'), quality: { score: 0.76, at: '2026-09-26T12:00:00Z' }, crossLinks: [
       { canvasId: 'billing', blockId: 'client', relation: 'implements' as const },
@@ -234,9 +236,6 @@ describe('infinite canvas', () => {
     ] };
     render(<Canvas canvas={canvas([linked])} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()} onSelectBlock={vi.fn()} onOpenCrossLink={onOpenCrossLink} crossLinkLabels={{ 'billing:client': 'Billing · Billing client' }}/>);
     const card = await screen.findByTestId('node-a');
-    const quality = within(card).getByRole('meter', { name: 'Quality for Document a' });
-    expect(quality.getAttribute('value')).toBe('0.76');
-    expect(within(card).getByTitle('Document quality: 76%')).toBeTruthy();
     expect(within(card).getByTitle('2 cross-canvas links').textContent).toBe('↗ 2');
     expect(within(card).getByText('↗ Other canvas: Billing · Billing client')).toBeTruthy();
     fireEvent.click(within(card).getByRole('button', { name: 'Open related document client on canvas billing' }));
@@ -264,20 +263,6 @@ describe('infinite canvas', () => {
     expect(onSelectBlock.mock.calls.map(call => call[0].id)).toEqual(['a', 'b']);
     fireEvent.doubleClick(within(first).getByRole('button', { name: 'Preview Document a' }));
     expect(onSelectBlock).toHaveBeenCalledTimes(2);
-  });
-
-  it('offers focused Jev analysis from each document card', async () => {
-    const onAnalyzeBlock = vi.fn();
-    render(<Canvas canvas={canvas([block('a')])} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()}
-      onSelectBlock={vi.fn()} onAnalyzeBlock={onAnalyzeBlock}/>);
-    const card = await screen.findByTestId('node-a');
-    const actions = within(card).getByRole('button', { name: 'Actions for Document a' });
-    for (const [label, focus] of [['Find related documents', 'related'], ['Check for conflicts', 'conflicts'], ['Suggest labels', 'labels']] as const) {
-      fireEvent.click(actions);
-      fireEvent.click(within(card).getByRole('menuitem', { name: label }));
-      expect(onAnalyzeBlock).toHaveBeenLastCalledWith('a', focus);
-      expect(actions.getAttribute('aria-expanded')).toBe('false');
-    }
   });
 
   it('persists card drag and resize, adds valid links, and groups deleted edges by source', async () => {
@@ -374,16 +359,12 @@ describe('infinite canvas', () => {
     expect(screen.getByText('Groups · 20%')).toBeTruthy();
     expect(currentFlow().panOnScroll).toBe(false);
     expect(currentFlow().zoomOnScroll).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Show group list' }));
-    const overview = screen.getByRole('navigation', { name: 'Group overview' });
-    expect(within(overview).getByText('Document a')).toBeTruthy();
-    expect(within(overview).getByText('Document b')).toBeTruthy();
-    expect(overview.querySelector('.canvas-overview-board__previews i')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show group list' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Group overview' })).toBeNull();
     expect(screen.getByRole('navigation', { name: 'Mini-map groups' }).textContent).toContain('Research');
     act(() => currentFlow().onMove({}, { x: 0, y: 0, zoom: 0.5 }));
     expect(currentFlow().nodes.filter(node => node.type === 'document')).toHaveLength(0);
     expect(screen.getByText('Groups · 50%')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Show connections' }));
     fireEvent.click(screen.getByTestId('node-group:custom:research').querySelector('.canvas-group')!);
     fireEvent.click(screen.getByTestId('node-group:custom:research/benchmarks').querySelector('.canvas-group')!);
     act(() => currentFlow().onMove({}, { x: 0, y: 0, zoom: 0.5 }));
@@ -441,10 +422,11 @@ describe('infinite canvas', () => {
     render(<Canvas canvas={canvas(docs)} searchQuery="api" searchMatchIds={['a']} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()} onSelectBlock={vi.fn()}/>);
     await waitFor(() => expect(currentFlow().nodes.filter(node => node.type === 'document')).toHaveLength(2));
     act(() => currentFlow().onMove({}, { x: 0, y: 0, zoom: 0.2 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Show group list' }));
-    const board = screen.getByRole('navigation', { name: 'Group overview' });
-    expect(within(board).getByRole('button', { name: /Research/ }).className).toContain('is-search-match');
-    expect(within(board).getByRole('button', { name: /Planning/ }).className).toContain('is-search-dimmed');
+    const board = screen.getByRole('navigation', { name: 'Mini-map groups' });
+    fireEvent.click(within(board).getByText(/^Map ·/));
+    expect(within(board).getAllByLabelText('Search matches in group')).toHaveLength(1);
+    expect(within(board).getByRole('button', { name: /Research/ }).textContent).toContain('●');
+    expect(within(board).getByRole('button', { name: /Planning/ }).textContent).not.toContain('●');
   });
 
   it('shows cross-group connections on the canvas and highlights a group’s links on hover', async () => {
@@ -480,8 +462,9 @@ describe('infinite canvas', () => {
   it('opens a group document from the drill view in the inspector', async () => {
     render(<Canvas canvas={canvas([{ ...block('a'), group: 'custom:research' }, { ...block('b'), group: 'custom:research', x: 800 }])} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()} onSelectBlock={vi.fn()}/>);
     act(() => currentFlow().onMove({}, { x: 0, y: 0, zoom: 0.2 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Show group list' }));
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Group overview' })).getByRole('button', { name: /Research/ }));
+    const groups = screen.getByRole('navigation', { name: 'Mini-map groups' });
+    fireEvent.click(within(groups).getByText(/^Map ·/));
+    fireEvent.click(within(groups).getByRole('button', { name: /Research/ }));
     act(() => currentFlow().onMove({}, { x: 0, y: 0, zoom: 0.8 }));
     expect(currentFlow().nodes.some(node => node.type === 'document')).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Browse files' }));
@@ -526,17 +509,6 @@ describe('infinite canvas', () => {
     expect(currentFlow().nodes.find(node => node.id === 'b')?.position.x).not.toBe(600);
     fireEvent.click(screen.getByRole('button', { name: 'Restore positions' }));
     expect(currentFlow().nodes.find(node => node.id === 'b')?.position.x).toBe(600);
-  });
-
-  it('previews a connection layout and applies it only after confirmation', async () => {
-    const onMoveBlocks = vi.fn(async () => undefined);
-    render(<Canvas canvas={canvas([block('a', ['b']), { ...block('b'), x: 0, y: 600 }])} onUpdateBlock={vi.fn()} onDeleteBlock={vi.fn()} onSelectBlock={vi.fn()} onMoveBlocks={onMoveBlocks}/>);
-    await waitFor(() => expect(currentFlow().nodes.filter(node => node.type === 'document')).toHaveLength(2));
-    fireEvent.click(screen.getByRole('button', { name: 'Arrange by connections' }));
-    expect(onMoveBlocks).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Cancel layout' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply layout' }));
-    await waitFor(() => expect(onMoveBlocks).toHaveBeenCalledWith(expect.arrayContaining([{ blockId: 'a', x: 0, y: 0 }])));
   });
 
   it('uses the selection inspector for linked documents and bulk tagging', async () => {

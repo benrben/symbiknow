@@ -23,7 +23,7 @@ export function patchFromMarkdown(query: string, answer: string, sources: Answer
   if (!sections.length) sections.push({ title: 'Key finding', content: answer.trim() || 'Research in progress.', type: 'text' });
   const blocks: ResearchCanvasBlock[] = sections.slice(0, 12).map((section, index) => ({
     id: `section-${index + 1}`, type: section.type, title: section.title, content: section.content,
-    sourceIds: index === 0 || sections.length === 1 ? sourceIds : [],
+    sourceIds: index === 0 ? sourceIds : [],
   }));
   return { query, blocks, edges: [] };
 }

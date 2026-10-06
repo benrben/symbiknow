@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-05",
+  "scope": "Existing behavior baseline; no production changes; not new architecture certification",
+  "paidProviderCalls": 0,
+  "retainedAppStarted": false,
+  "totalDistinctPassedTests": 257,
+  "totalFiles": 25,
+  "suites": [
+    {
+      "name": "runtime",
+      "passed": 65,
+      "files": 8,
+      "command": "TYPESAFE_API_KEY='' ./node_modules/.bin/vitest run --no-file-parallelism server/jev/runtime-shutdown.native.test.ts server/jev/runtime-automatic-resume.native.test.ts server/jev/runtime-automatic-guards.native.test.ts server/jev/runtime-parallel-policy.test.ts server/jev/runtime-scheduler.test.ts server/jev/runtime-maintenance-completed.native.test.ts server/jev/runtime-followup-retry.native.test.ts server/jev/runtime-parallel-failure.native.test.ts",
+      "initialRun": "60 passed; 3 failed and 2 skipped due loopback listen EPERM; initial shell wrapper masked exit, not used as certification",
+      "rerunCommand": "TYPESAFE_API_KEY='' ./node_modules/.bin/vitest run --no-file-parallelism server/jev/runtime-followup-retry.native.test.ts server/jev/runtime-parallel-failure.native.test.ts",
+      "rerunPassed": 5,
+      "rerunExit": 0,
+      "rerunDurationSeconds": 3.1
+    },
+    {
+      "name": "storage",
+      "passed": 116,
+      "files": 9,
+      "exit": 0,
+      "durationSeconds": 29.93,
+      "command": "TYPESAFE_API_KEY= OPENAI_API_KEY= ./node_modules/.bin/vitest run --fileParallelism=false server/jev/workspace-checkpoint.native.test.ts server/jev/proposal-workspace-transaction.native.test.ts server/jev/runtime-workspace-completion.native.test.ts server/jev/proposal-executor.boundary.native.test.ts server/storage-jev-executor.native.test.ts server/jev/move-undo.native.test.ts server/jev/parent-undo.native.test.ts server/jev/parent-undo.boundary.native.test.ts server/jev/workspace-read-cache.native.test.ts"
+    },
+    {
+      "name": "provider_grouping",
+      "passed": 48,
+      "files": 6,
+      "exit": 0,
+      "durationSeconds": 0.959,
+      "initialRun": "Loopback listen EPERM; final run supersedes it",
+      "command": "./node_modules/.bin/vitest run server/jev/actions/discovery-batch.native.test.ts server/jev/actions/question-batch-recovery.test.ts server/jev/actions/question-batch-recovery.native.test.ts server/jev/actions/grouping-flow.native.test.ts server/jev/actions/group-topics.test.ts server/jev/actions/group-assessment.test.ts --reporter=dot"
+    },
+    {
+      "name": "ui",
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "files": 2,
+      "exit": 0,
+      "command": "TYPESAFE_API_KEY='' ./node_modules/.bin/vitest run src/useJevWorkspace.native.test.tsx src/JevAutomaticPanel.native.test.tsx --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=/private/tmp/jev-plan-20261005-ui-tests.json"
+    }
+  ]
+}

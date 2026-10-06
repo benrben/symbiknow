@@ -74,11 +74,6 @@ Feature: Markdown canvas
     And I delete the current canvas in the browser
     Then the deleted canvas is gone after reloading
 
-  Scenario: Canvas insights require a TypeSafe Jev key
-    Given a fresh workspace
-    When I request canvas insights without an API key
-    Then the insights request is rejected with a settings error
-
   Scenario: A suggested canvas layout stays after reloading
     Given a fresh workspace
     When I arrange the "Roadmap overview" block at x -360 and y 640
@@ -93,33 +88,6 @@ Feature: Markdown canvas
     Given a fresh workspace
     When I connect "Roadmap overview" to "Launch checklist"
     Then reloading the canvas keeps that connection
-
-  Scenario: The Connect documents button applies a Jev-rated link across the canvas
-    Given a fresh workspace
-    When I add a Markdown block called "Automation source" containing "Read this first"
-    And I add a Markdown block called "Automation target" containing "Read this next"
-    And I open Insights with a moderate-confidence Jev connection from "Automation source" to "Automation target"
-    And I press the Connect documents automation
-    Then reloading the canvas keeps that connection
-
-  Scenario: Jev automations create separate document groups and three useful links
-    Given a fresh workspace
-    When I create an empty canvas for group automations
-    And I add a Markdown block called "Group A1" containing "Overview one"
-    And I add a Markdown block called "Group A2" containing "Overview two"
-    And I add a Markdown block called "Group B1" containing "Work one"
-    And I add a Markdown block called "Group B2" containing "Work two"
-    And I open Insights with two Jev groups and three suggested connections
-    And I analyze the canvas and see two document groups
-    And I preview and apply group placement and connections
-    Then reloading the canvas shows two groups and three new edges
-
-  Scenario: Connect documents removes an edge Jev rejects
-    Given a fresh workspace
-    When I connect "Roadmap overview" to "Launch checklist"
-    And I open Insights with Jev rejecting that connection
-    And I press the Connect documents automation
-    Then reloading the canvas no longer has that connection
 
   Scenario: New chat clears the conversation without changing the canvas
     Given a fresh workspace
@@ -140,50 +108,7 @@ Feature: Markdown canvas
     And I can switch between source and a live HTML preview in the editor
     And I can download its Markdown file and upload an edited version
 
-  Scenario: Connect documents does not save a low-confidence link
-    Given a fresh workspace
-    When I add a Markdown block called "A" containing "A source document about release planning"
-    And I add a Markdown block called "B" containing "A target document about release planning"
-    And I open Insights with a 0.5-confidence Jev connection from "A" to "B"
-    And I press the Connect documents automation with no eligible link
-    Then reloading the canvas has no link from "A" to "B"
-
-  Scenario: A Marp deck is suggested the slides loader without asking Jev
-    Given a fresh workspace
-    When I add a Marp Markdown deck called "Deck"
-    And I request canvas insights
-    Then the report suggests the slides loader for "Deck"
-    And Jev received no loader question
-
-  Scenario: Unchanged documents are not sent to Jev twice
-    Given a fresh workspace
-    When I request canvas insights twice
-    Then the second request sends no document questions to Jev
-
-  Scenario: Merging duplicates from a suggestion keeps history and links
-    Given a fresh workspace
-    When I add two near-identical documents "Setup v1" and "Setup v2" and link "Readme" to "Setup v1"
-    And I choose Merge in chat on the duplicate suggestion and apply the merge
-    Then only "Setup v2" is visible
-    And "Readme" links to "Setup v2"
-    And the history of "Setup v1" still has its last content
-
   Scenario: Chat confirmation leaves document deletion to the document controls
     Given a fresh workspace
     When the assistant asks to delete "Temporary Note" and I reply "yes"
     Then "Temporary Note" remains until I use its document controls
-
-  Scenario: A cross-canvas connection opens the other canvas
-    Given two canvases with related documents "Rate limits" and "Billing client"
-    When I run Connect across canvases with a confident Jev relation
-    And I choose the cross-canvas chip on "Rate limits"
-    Then the "Billing client" document opens on its own canvas
-
-  Scenario: A workspace dry run changes nothing until applied
-    Given two canvases with unlabeled documents
-    When I preview Classify work areas for the workspace
-    Then no document is labeled
-    When I apply the selected changes
-    Then the selected documents are labeled
-    When I undo the run
-    Then no document is labeled

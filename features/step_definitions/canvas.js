@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { createServer } from 'node:net';
 import { promisify } from 'node:util';
 import { After, Before, Given, Then, When, setDefaultTimeout } from '@cucumber/cucumber';
-import { chromium } from 'playwright';
+import { launchAcceptanceBrowser } from './browser-launch.js';
 
 const run = promisify(execFile);
 let browserBuild;
@@ -15,6 +15,7 @@ async function ensureBrowserBuild() {
     .catch(error => { browserBuild = undefined; throw error; });
   await browserBuild;
 }
+
 setDefaultTimeout(60_000);
 
 async function freePort() {
@@ -47,7 +48,7 @@ async function findMarkdownFile(directory, expected) {
   return null;
 }
 
-Before(async function () {
+Before({ tags: 'not @engine' }, async function () {
   this.dataDir = await mkdtemp(join(tmpdir(), 'symbiknow-acceptance-'));
   this.port = await freePort();
   this.baseUrl = `http://127.0.0.1:${this.port}`;
@@ -69,7 +70,7 @@ Before(async function () {
   throw new Error(`Server did not start: ${this.serverOutput}`);
 });
 
-After(async function () {
+After({ tags: 'not @engine' }, async function () {
   await this.browser?.close();
   if (this.server && this.server.exitCode === null) {
     const stopped = new Promise(resolve => this.server.once('exit', resolve));
@@ -92,21 +93,9 @@ When('I create an empty canvas for group automations', async function () {
   this.canvasId = result.body.id;
 });
 
-When('I create a temporary workspace with two canvases', async function () {
-  const created = await request(this, '/api/workspaces', 'POST', { name: 'Temporary team' });
-  assert.equal(created.status, 201);
-  this.temporaryWorkspaceId = created.body.id;
-  const first = await request(this, `/api/workspaces/${this.temporaryWorkspaceId}/canvases`, 'POST', { name: 'Temporary notes' });
-  const second = await request(this, `/api/workspaces/${this.temporaryWorkspaceId}/canvases`, 'POST', { name: 'More notes' });
-  assert.equal(first.status, 201);
-  assert.equal(second.status, 201);
-  this.canvasId = first.body.id;
-  this.secondTemporaryCanvasId = second.body.id;
-});
-
 When('I open SymbiKnow in a browser', async function () {
   await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
+  this.browser = await launchAcceptanceBrowser();
   this.page = await this.browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
   this.pageErrors = [];
   this.page.on('pageerror', error => this.pageErrors.push(error.message));
@@ -117,7 +106,7 @@ When('I open SymbiKnow in a browser', async function () {
 
 When('I open the current canvas in a browser', async function () {
   await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
+  this.browser = await launchAcceptanceBrowser();
   this.page = await this.browser.newPage({ viewport: { width: 1440, height: 900 } });
   this.pageErrors = [];
   this.page.on('pageerror', error => this.pageErrors.push(error.message));
@@ -259,25 +248,6 @@ When('I delete the current canvas in the browser', async function () {
   await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
 });
 
-When('I delete the temporary workspace in the browser', async function () {
-  await this.page.getByRole('button', { name: 'Delete workspace: Temporary team' }).click();
-  const dialog = this.page.getByRole('dialog', { name: 'Delete workspace' });
-  await dialog.getByText('2 canvases', { exact: false }).waitFor();
-  await dialog.getByRole('button', { name: 'Delete workspace' }).click();
-  await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
-});
-
-Then('the deleted workspace and both canvases are gone after reloading', async function () {
-  await this.page.reload({ waitUntil: 'networkidle' });
-  await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
-  const workspaces = await request(this, '/api/workspaces');
-  assert.equal(workspaces.body.some(workspace => workspace.id === this.temporaryWorkspaceId), false);
-  assert.equal((await request(this, `/api/canvases/${this.canvasId}`)).status, 404);
-  assert.equal((await request(this, `/api/canvases/${this.secondTemporaryCanvasId}`)).status, 404);
-  await assert.rejects(readFile(join(this.dataDir, this.block.file), 'utf8'), { code: 'ENOENT' });
-  assert.deepEqual(this.pageErrors, []);
-});
-
 Then('the deleted canvas is gone after reloading', async function () {
   await this.page.reload({ waitUntil: 'networkidle' });
   await this.page.getByRole('region', { name: 'Product Roadmap infinite canvas' }).waitFor();
@@ -350,15 +320,6 @@ Then('the chat request is rejected with a settings error', function () {
   assert.match(this.chatResponse.body.error, /key|settings|config/i);
 });
 
-When('I request canvas insights without an API key', async function () {
-  this.insightsResponse = await request(this, `/api/canvases/${this.canvasId}/insights`, 'POST', { query: 'launch' });
-});
-
-Then('the insights request is rejected with a settings error', function () {
-  assert.equal(this.insightsResponse.status, 400);
-  assert.match(this.insightsResponse.body.error, /TypeSafe|key|settings/i);
-});
-
 async function canvasBlock(world, title) {
   const result = await request(world, `/api/canvases/${world.canvasId}`);
   assert.equal(result.status, 200);
@@ -404,147 +365,9 @@ Then('reloading the canvas keeps that connection', async function () {
   assert.ok(from.links.includes(this.connection.toId));
 });
 
-When('I open Insights with a moderate-confidence Jev connection from {string} to {string}', async function (fromTitle, toTitle) {
-  const from = await canvasBlock(this, fromTitle);
-  const to = await canvasBlock(this, toTitle);
-  const settings = await request(this, '/api/settings', 'PUT', { model: 'openai/gpt-4o-mini', jevApiKey: 'acceptance-placeholder' });
-  assert.equal(settings.status, 200);
-  const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
-  const report = { canvasId: this.canvasId, query: '', analyzed: canvas.blocks.length, total: canvas.blocks.length,
-    readingOrder: [], relevance: [], items: [{ id: 'jev-link', category: 'connection', title: 'Connect these documents',
-      detail: 'Jev rated this as a useful reading connection.', blockIds: [from.id, to.id], confidence: 0.77 }] };
-  await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
-  this.page = await this.browser.newPage();
-  this.pageErrors = [];
-  this.page.on('pageerror', error => this.pageErrors.push(error.message));
-  await this.page.route(`**/api/canvases/${this.canvasId}/insights`, route => route.fulfill({ status: 200,
-    contentType: 'application/json', body: JSON.stringify(report) }));
-  await this.page.goto(this.baseUrl, { waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Insights' }).click();
-  this.connection = { fromTitle, toId: to.id };
-});
-
-When('I press the Connect documents automation', async function () {
-  await this.page.getByRole('tab', { name: 'Connections' }).click();
-  await this.page.getByRole('button', { name: 'Preview connections' }).click();
-  const preview = this.page.getByRole('region', { name: 'Canvas change preview' });
-  await preview.waitFor();
-  await preview.getByRole('button', { name: /Apply selected/ }).click();
-  await this.page.getByRole('status').filter({ hasText: 'Applied 1 change.' }).waitFor();
-  assert.deepEqual(this.pageErrors, []);
-});
-
-When('I open Insights with two Jev groups and three suggested connections', async function () {
-  const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
-  const byTitle = Object.fromEntries(canvas.blocks.map((block) => [block.title, block]));
-  const names = ['Group A1', 'Group A2', 'Group B1', 'Group B2'];
-  this.groupDocs = names.map((name) => byTitle[name]);
-  assert.ok(this.groupDocs.every(Boolean));
-  this.initialEdgeCount = canvas.blocks.reduce((count, block) => count + block.links.length, 0);
-  const pairs = [[0, 1], [0, 2], [2, 3]];
-  const report = { canvasId: this.canvasId, query: '', analyzed: canvas.blocks.length, total: canvas.blocks.length,
-    readingOrder: canvas.blocks.map((block, index) => ({ blockId: block.id, title: block.title,
-      score: index / canvas.blocks.length, confidence: 0.9,
-      lane: block.title.startsWith('Group A') ? 'overview' : 'work' })), relevance: [],
-    classification: canvas.blocks.map(block => ({ blockId: block.id, title: block.title,
-      lane: block.title.startsWith('Group B') ? 'work' : 'overview', laneConfidence: 0.9 })), groupBy: 'lane',
-    items: pairs.map(([from, to], index) => ({ id: `link-${index}`, category: 'connection', title: 'Connect documents',
-      detail: 'Jev selected this link.', blockIds: [this.groupDocs[from].id, this.groupDocs[to].id], confidence: 0.75 })) };
-  const settings = await request(this, '/api/settings', 'PUT', { model: 'openai/gpt-4o-mini', jevApiKey: 'acceptance-placeholder', groupBy: 'lane' });
-  assert.equal(settings.status, 200);
-  await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
-  this.page = await this.browser.newPage();
-  this.pageErrors = [];
-  this.page.on('pageerror', error => this.pageErrors.push(error.message));
-  await this.page.route(`**/api/canvases/${this.canvasId}/insights`, route => route.fulfill({ status: 200,
-    contentType: 'application/json', body: JSON.stringify(report) }));
-  await this.page.goto(`${this.baseUrl}/?canvas=${this.canvasId}`, { waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Insights' }).click();
-});
-
-When('I press the Organize positions automation', async function () {
-  await this.page.getByRole('tab', { name: 'Groups' }).click();
-  await this.page.getByRole('button', { name: 'Place these groups on the canvas' }).click();
-  const preview = this.page.getByRole('region', { name: 'Canvas change preview' });
-  await preview.getByRole('button', { name: /Apply selected/ }).click();
-  await this.page.getByRole('status').filter({ hasText: 'Applied 1 change.' }).waitFor();
-  assert.deepEqual(this.pageErrors, []);
-});
-
-When('I analyze the canvas and see two document groups', async function () {
-  await this.page.getByRole('button', { name: 'Analyze canvas' }).click();
-  await this.page.getByRole('tab', { name: 'Groups' }).click();
-  const dashboard = this.page.getByRole('region', { name: 'Document groups' });
-  await dashboard.waitFor();
-  await dashboard.getByText('Overview', { exact: true }).waitFor();
-  await dashboard.getByText('Active work', { exact: true }).waitFor();
-  assert.deepEqual(this.pageErrors, []);
-});
-
-When('I press the Connect documents automation for three links', async function () {
-  await this.page.getByRole('tab', { name: 'Connections' }).click();
-  await this.page.getByRole('button', { name: 'Preview connections' }).click();
-  await this.page.getByRole('region', { name: 'Canvas change preview' }).getByRole('button', { name: /Apply selected/ }).click();
-  await this.page.getByRole('status').filter({ hasText: 'Applied 3 changes.' }).waitFor();
-  assert.deepEqual(this.pageErrors, []);
-});
-
-When('I preview and apply group placement and connections', async function () {
-  await this.page.getByRole('tab', { name: 'Groups' }).click();
-  await this.page.getByRole('button', { name: 'Place these groups on the canvas' }).click();
-  await this.page.getByRole('region', { name: 'Canvas change preview' }).getByRole('button', { name: /Apply selected/ }).click();
-  await this.page.getByRole('status').filter({ hasText: 'Applied ' }).waitFor();
-  await this.page.getByRole('tab', { name: 'Connections' }).click();
-  await this.page.getByRole('button', { name: 'Preview connections' }).click();
-  await this.page.getByRole('region', { name: 'Canvas change preview' }).getByRole('button', { name: /Apply selected/ }).click();
-  await this.page.getByRole('status').filter({ hasText: 'Applied 3 changes.' }).waitFor();
-  assert.deepEqual(this.pageErrors, []);
-});
-
-Then('reloading the canvas shows two groups and three new edges', async function () {
-  const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
-  const updated = this.groupDocs.map((original) => canvas.blocks.find((block) => block.id === original.id));
-  assert.equal(updated[0].x, updated[1].x);
-  assert.equal(updated[2].x, updated[3].x);
-  assert.deepEqual(updated.map(block => block.group), ['lane:overview', 'lane:overview', 'lane:work', 'lane:work']);
-  assert.ok(Math.abs(updated[0].x - updated[2].x) >= updated[0].width + 150);
-  const edgeCount = canvas.blocks.reduce((count, block) => count + block.links.length, 0);
-  assert.equal(edgeCount - this.initialEdgeCount, 3);
-  await this.page.reload({ waitUntil: 'networkidle' });
-  await this.page.getByLabel(/Overview group, \d+ documents/).waitFor();
-  await this.page.getByLabel(/Active work group, \d+ documents/).waitFor();
-  assert.deepEqual(this.pageErrors, []);
-});
-
-When('I open Insights with Jev rejecting that connection', async function () {
-  const from = await canvasBlock(this, this.connection.fromTitle);
-  const report = { canvasId: this.canvasId, query: '', analyzed: 5, total: 5, readingOrder: [], relevance: [],
-    items: [{ id: 'unlink-saved-edge', category: 'connection', title: 'Remove this link',
-      detail: 'Jev found the saved edge unhelpful.', blockIds: [from.id, this.connection.toId], confidence: 0.95,
-      action: { type: 'unlink', fromBlockId: from.id, toBlockId: this.connection.toId } }] };
-  const settings = await request(this, '/api/settings', 'PUT', { model: 'openai/gpt-4o-mini', jevApiKey: 'acceptance-placeholder' });
-  assert.equal(settings.status, 200);
-  await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
-  this.page = await this.browser.newPage();
-  this.pageErrors = [];
-  this.page.on('pageerror', error => this.pageErrors.push(error.message));
-  await this.page.route(`**/api/canvases/${this.canvasId}/insights`, route => route.fulfill({ status: 200,
-    contentType: 'application/json', body: JSON.stringify(report) }));
-  await this.page.goto(this.baseUrl, { waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Insights' }).click();
-});
-
-Then('reloading the canvas no longer has that connection', async function () {
-  const from = await canvasBlock(this, this.connection.fromTitle);
-  assert.equal(from.links.includes(this.connection.toId), false);
-});
-
 When('I send a chat message then press New chat', async function () {
   await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
+  this.browser = await launchAcceptanceBrowser();
   this.page = await this.browser.newPage();
   this.chatRequests = [];
   this.pageErrors = [];
@@ -577,7 +400,7 @@ Then('the next chat request contains only the new message', async function () {
 
 When('I drag the chat divider wider', async function () {
   await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
+  this.browser = await launchAcceptanceBrowser();
   this.page = await this.browser.newPage({ viewport: { width: 1440, height: 900 } });
   this.pageErrors = [];
   this.page.on('pageerror', error => this.pageErrors.push(error.message));
@@ -607,7 +430,7 @@ Then('the chat panel keeps its new width after reloading', async function () {
 
 When('I upload an HTML page', async function () {
   await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
+  this.browser = await launchAcceptanceBrowser();
   this.page = await this.browser.newPage({ viewport: { width: 1440, height: 900 } });
   this.pageErrors = [];
   this.page.on('pageerror', error => this.pageErrors.push(error.message));
@@ -678,187 +501,17 @@ Then('I can download its Markdown file and upload an edited version', async func
   assert.deepEqual(this.pageErrors, []);
 });
 
-async function configureJev(world, withChat = false) {
+async function configureChat(world) {
   const result = await request(world, '/api/settings', 'PUT', {
-    model: 'openai/gpt-4o-mini', jevApiKey: 'acceptance-placeholder',
-    ...(withChat ? { apiKey: 'acceptance-chat-key' } : {}),
+    model: 'openai/gpt-4o-mini', apiKey: 'acceptance-chat-key',
   });
   assert.equal(result.status, 200);
 }
 
-async function questionLog(world) {
-  try {
-    return (await readFile(join(world.dataDir, 'jev-questions.jsonl'), 'utf8')).trim().split('\n')
-      .filter(Boolean).flatMap(line => JSON.parse(line));
-  } catch (error) {
-    if (error.code === 'ENOENT') return [];
-    throw error;
-  }
-}
-
-async function emptyWorkspace(world, names) {
-  const created = await request(world, '/api/workspaces', 'POST', { name: 'Acceptance workspace' });
-  assert.equal(created.status, 201);
-  world.workspaceId = created.body.id;
-  world.canvasIds = [];
-  for (const name of names) {
-    const canvas = await request(world, `/api/workspaces/${world.workspaceId}/canvases`, 'POST', { name });
-    assert.equal(canvas.status, 201);
-    world.canvasIds.push(canvas.body.id);
-  }
-  world.canvasId = world.canvasIds[0];
-}
-
-When('I add a Marp Markdown deck called {string}', async function (title) {
-  const result = await request(this, `/api/canvases/${this.canvasId}/blocks`, 'POST', {
-    title, kind: 'markdown', content: '---\nmarp: true\n---\n# One\n---\n# Two',
-  });
-  assert.equal(result.status, 201);
-});
-
-When('I open Insights with a 0.5-confidence Jev connection from {string} to {string}', async function (fromTitle, toTitle) {
-  const from = await canvasBlock(this, fromTitle);
-  const to = await canvasBlock(this, toTitle);
-  await configureJev(this);
-  const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
-  const report = { canvasId: this.canvasId, query: '', analyzed: canvas.blocks.length, total: canvas.blocks.length,
-    readingOrder: [], relevance: [], items: [{ id: 'low-jev-link', category: 'connection', title: 'Review this connection',
-      detail: 'Jev gave this link a 0.5 confidence score.', blockIds: [from.id, to.id], confidence: 0.5 }] };
-  await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
-  this.page = await this.browser.newPage();
-  this.pageErrors = [];
-  this.page.on('pageerror', error => this.pageErrors.push(error.message));
-  await this.page.route(`**/api/canvases/${this.canvasId}/insights`, route => route.fulfill({ status: 200,
-    contentType: 'application/json', body: JSON.stringify(report) }));
-  await this.page.goto(`${this.baseUrl}/?canvas=${this.canvasId}`, { waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Insights' }).click();
-});
-
-When('I press the Connect documents automation with no eligible link', async function () {
-  await this.page.getByRole('tab', { name: 'Connections' }).click();
-  await this.page.getByRole('button', { name: 'Preview connections' }).click();
-  await this.page.getByRole('region', { name: 'Canvas change preview' }).getByText('0 selected of 0 proposed changes').waitFor();
-  assert.deepEqual(this.pageErrors, []);
-});
-
-Then('reloading the canvas has no link from {string} to {string}', async function (fromTitle, toTitle) {
-  const from = await canvasBlock(this, fromTitle);
-  const to = await canvasBlock(this, toTitle);
-  assert.equal(from.links.includes(to.id), false);
-  await this.page.reload({ waitUntil: 'networkidle' });
-  assert.deepEqual(this.pageErrors, []);
-});
-
-When('I request canvas insights', async function () {
-  await configureJev(this);
-  this.questionsBefore = await questionLog(this);
-  this.insightsResponse = await request(this, `/api/canvases/${this.canvasId}/insights`, 'POST', { query: '' });
-  assert.equal(this.insightsResponse.status, 200, JSON.stringify(this.insightsResponse.body));
-  this.questionsAfter = await questionLog(this);
-});
-
-Then('the report suggests the slides loader for {string}', async function (title) {
-  const block = await canvasBlock(this, title);
-  assert.ok(this.insightsResponse.body.items.some(item => item.category === 'loader'
-    && item.blockIds.includes(block.id) && item.action?.patch?.kind === 'slides'));
-});
-
-Then('Jev received no loader question', async function () {
-  const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
-  const deckIndex = canvas.blocks.findIndex(block => block.title === 'Deck');
-  assert.ok(deckIndex >= 0);
-  assert.equal(this.questionsAfter.slice(this.questionsBefore.length).includes(`d${deckIndex}_loader`), false);
-});
-
-When('I request canvas insights twice', async function () {
-  await configureJev(this);
-  const first = await request(this, `/api/canvases/${this.canvasId}/insights`, 'POST', { query: '' });
-  assert.equal(first.status, 200, JSON.stringify(first.body));
-  this.questionsAfterFirst = await questionLog(this);
-  const second = await request(this, `/api/canvases/${this.canvasId}/insights`, 'POST', { query: '' });
-  assert.equal(second.status, 200, JSON.stringify(second.body));
-  this.questionsAfterSecond = await questionLog(this);
-});
-
-Then('the second request sends no document questions to Jev', function () {
-  const secondQuestions = this.questionsAfterSecond.slice(this.questionsAfterFirst.length);
-  assert.equal(secondQuestions.some(id => /^d\d+_/.test(id)), false, secondQuestions.join(', '));
-});
-
-When('I add two near-identical documents {string} and {string} and link {string} to {string}', async function (firstTitle, secondTitle, sourceTitle, targetTitle) {
-  await emptyWorkspace(this, ['Duplicate documents']);
-  const content = '# Setup\n\nInstall the client and check configuration. These steps prepare the service for production.\n';
-  for (const title of [firstTitle, secondTitle]) {
-    const response = await request(this, `/api/canvases/${this.canvasId}/blocks`, 'POST', { title, content, kind: 'markdown' });
-    assert.equal(response.status, 201);
-  }
-  const source = await request(this, `/api/canvases/${this.canvasId}/blocks`, 'POST', { title: sourceTitle, content: '# Readme\nSee setup instructions.' });
-  assert.equal(source.status, 201);
-  const target = await canvasBlock(this, targetTitle);
-  const linked = await request(this, `/api/canvases/${this.canvasId}/blocks/${source.body.id}`, 'PUT', { links: [target.id] });
-  assert.equal(linked.status, 200);
-  this.mergeOriginal = await canvasBlock(this, firstTitle);
-  this.mergeTarget = await canvasBlock(this, secondTitle);
-  await configureJev(this, true);
-});
-
-When('I choose Merge in chat on the duplicate suggestion and apply the merge', async function () {
-  const candidates = await request(this, `/api/canvases/${this.canvasId}/duplicates`, 'POST', {});
-  assert.equal(candidates.status, 200, JSON.stringify(candidates.body));
-  const suggestion = candidates.body.find(item => item.action?.keepBlockId === this.mergeTarget.id
-    && item.action?.mergeBlockIds.includes(this.mergeOriginal.id));
-  assert.ok(suggestion, 'Expected a reviewable duplicate suggestion that keeps Setup v2');
-  await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
-  this.page = await this.browser.newPage();
-  this.pageErrors = [];
-  this.page.on('pageerror', error => this.pageErrors.push(error.message));
-  await this.page.goto(`${this.baseUrl}/?canvas=${this.canvasId}`, { waitUntil: 'networkidle' });
-  await this.page.getByRole('button', { name: 'Insights' }).click();
-  await this.page.getByRole('tab', { name: 'Duplicates' }).click();
-  const finder = this.page.getByRole('region', { name: 'Find duplicates' });
-  await finder.getByLabel('Document to check for duplicates').selectOption(this.mergeOriginal.id);
-  await finder.getByRole('button', { name: 'Find duplicates' }).click();
-  await finder.getByRole('button', { name: 'Merge in chat' }).click();
-  const review = this.page.getByRole('dialog', { name: 'Review merge draft' });
-  await review.waitFor();
-  await review.getByRole('region', { name: 'Proposed changes' }).waitFor();
-  await review.getByRole('button', { name: 'Apply merge' }).click();
-  await review.waitFor({ state: 'hidden' });
-  assert.deepEqual(this.pageErrors, []);
-});
-
-Then('only {string} is visible', async function (title) {
-  const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
-  assert.equal(canvas.blocks.some(block => block.title === title), true);
-  assert.equal(canvas.blocks.some(block => block.id === this.mergeOriginal.id), false);
-  assert.equal(canvas.blocks.some(block => block.id === this.mergeTarget.id), true);
-  await this.page.reload({ waitUntil: 'networkidle' });
-  assert.equal(await this.page.locator('.canvas-card__identity strong', { hasText: title }).count(), 1);
-  assert.deepEqual(this.pageErrors, []);
-});
-
-Then('{string} links to {string}', async function (fromTitle, toTitle) {
-  const from = await canvasBlock(this, fromTitle);
-  const to = await canvasBlock(this, toTitle);
-  assert.ok(from.links.includes(to.id));
-});
-
-Then('the history of {string} still has its last content', async function (title) {
-  const archived = this.mergeOriginal;
-  assert.equal(archived.title, title);
-  const response = await request(this, `/api/canvases/${this.canvasId}/blocks/${archived.id}/versions`);
-  assert.equal(response.status, 200, JSON.stringify(response.body));
-  assert.ok(response.body.commits?.length > 0);
-  const stored = await readFile(join(this.dataDir, archived.file), 'utf8');
-  assert.equal(stored, archived.content);
-});
-
 When('the assistant asks to delete {string} and I reply {string}', async function (title, reply) {
   const created = await request(this, `/api/canvases/${this.canvasId}/blocks`, 'POST', { title, content: '# Temporary\nDelete after approval.' });
   assert.equal(created.status, 201);
-  await configureJev(this, true);
+  await configureChat(this);
   const response = await fetch(`${this.baseUrl}/api/chat/stream`, { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ canvasId: this.canvasId, messages: [
       { role: 'user', content: `Can you remove ${title}?` },
@@ -875,90 +528,4 @@ When('the assistant asks to delete {string} and I reply {string}', async functio
 Then('{string} remains until I use its document controls', async function (title) {
   const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
   assert.equal(canvas.blocks.some(block => block.title === title), true);
-});
-
-Given('two canvases with related documents {string} and {string}', async function (firstTitle, secondTitle) {
-  await emptyWorkspace(this, ['API design', 'Billing']);
-  const content = '# API client\n\nThe API client uses rate limits and billing quotas. Check the quota before each request.';
-  const first = await request(this, `/api/canvases/${this.canvasIds[0]}/blocks`, 'POST', { title: firstTitle, content });
-  const second = await request(this, `/api/canvases/${this.canvasIds[1]}/blocks`, 'POST', { title: secondTitle, content });
-  assert.equal(first.status, 201);
-  assert.equal(second.status, 201);
-  this.firstCrossBlock = first.body;
-  this.secondCrossBlock = second.body;
-  await configureJev(this);
-});
-
-When('I run Connect across canvases with a confident Jev relation', async function () {
-  const result = await request(this, `/api/canvases/${this.canvasId}/automations`, 'POST', { kind: 'cross_connect' });
-  assert.equal(result.status, 200, JSON.stringify(result.body));
-  const first = await canvasBlock(this, this.firstCrossBlock.title);
-  assert.ok(first.crossLinks?.some(link => link.canvasId === this.canvasIds[1] && link.blockId === this.secondCrossBlock.id));
-  await ensureBrowserBuild();
-  this.browser = await chromium.launch({ headless: true });
-  this.page = await this.browser.newPage();
-  this.pageErrors = [];
-  this.page.on('pageerror', error => this.pageErrors.push(error.message));
-  await this.page.goto(`${this.baseUrl}/?canvas=${this.canvasId}`, { waitUntil: 'networkidle' });
-  await this.page.locator('.canvas-surface').waitFor();
-});
-
-When('I choose the cross-canvas chip on {string}', async function (title) {
-  const card = this.page.locator('.canvas-card').filter({ has: this.page.locator('.canvas-card__identity strong', { hasText: title }) });
-  await card.getByRole('button', { name: `Open related document ${this.secondCrossBlock.id} on canvas ${this.canvasIds[1]}` }).click();
-});
-
-Then('the {string} document opens on its own canvas', async function (title) {
-  await this.page.getByRole('dialog', { name: `${title} full page` }).waitFor();
-  assert.match(this.page.url(), new RegExp(`canvas=${this.canvasIds[1]}`));
-  assert.match(this.page.url(), new RegExp(`doc=${this.secondCrossBlock.id}`));
-  assert.deepEqual(this.pageErrors, []);
-});
-
-Given('two canvases with unlabeled documents', async function () {
-  await emptyWorkspace(this, ['Project plan', 'Project delivery']);
-  for (const [index, canvasId] of this.canvasIds.entries()) {
-    const result = await request(this, `/api/canvases/${canvasId}/blocks`, 'POST', {
-      title: index === 0 ? 'Backend API plan' : 'Frontend client plan', content: '# Plan\nBuild and test the product API client.',
-    });
-    assert.equal(result.status, 201);
-  }
-  await configureJev(this);
-});
-
-When('I preview Classify work areas for the workspace', async function () {
-  const result = await request(this, `/api/workspaces/${this.workspaceId}/automations`, 'POST', { kind: 'work_area' });
-  assert.equal(result.status, 200, JSON.stringify(result.body));
-  assert.equal(result.body.dryRun, true);
-  assert.ok(result.body.changes.length >= 2);
-  this.workspacePreview = result.body;
-});
-
-Then('no document is labeled', async function () {
-  for (const canvasId of this.canvasIds) {
-    const canvas = (await request(this, `/api/canvases/${canvasId}`)).body;
-    assert.ok(canvas.blocks.every(block => !block.workArea));
-  }
-});
-
-When('I apply the selected changes', async function () {
-  const ids = this.workspacePreview.changes.map(change => change.id);
-  const result = await request(this, `/api/workspaces/${this.workspaceId}/automations`, 'POST', {
-    kind: 'work_area', dryRun: false, runId: this.workspacePreview.runId, actionIds: ids,
-  });
-  assert.equal(result.status, 200, JSON.stringify(result.body));
-  assert.deepEqual(result.body.applied, ids);
-});
-
-Then('the selected documents are labeled', async function () {
-  for (const canvasId of this.canvasIds) {
-    const canvas = (await request(this, `/api/canvases/${canvasId}`)).body;
-    assert.ok(canvas.blocks.every(block => Boolean(block.workArea)));
-  }
-});
-
-When('I undo the run', async function () {
-  const result = await request(this, `/api/jev-runs/${this.workspacePreview.runId}/undo`, 'POST');
-  assert.equal(result.status, 200, JSON.stringify(result.body));
-  assert.equal(result.body.reverted.length, this.workspacePreview.changes.length);
 });

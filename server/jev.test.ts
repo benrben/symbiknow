@@ -32,7 +32,9 @@ describe('TypeSafe Jev adapter', () => {
 
   it('requires a key and skips requests without questions', async () => {
     const fetcher = vi.fn(async () => Response.json({ answers }));
-    await expect(decideWithJev('', {}, questions, fetcher)).rejects.toMatchObject({ status: 400 });
+    await expect(decideWithJev('', {}, questions, fetcher)).rejects.toMatchObject({
+      status: 400, message: 'A TypeSafe Jev API key is required',
+    });
     expect(await decideWithJev('key', {}, {}, fetcher)).toEqual({});
     expect(fetcher).not.toHaveBeenCalled();
   });
@@ -42,7 +44,7 @@ describe('TypeSafe Jev adapter', () => {
     await expect(decideWithJev(key, {}, questions, async () => { throw Error(key); }, { baseDelayMs: 0 }))
       .rejects.toMatchObject({ status: 502, message: 'Could not reach TypeSafe Jev' });
     await expect(decideWithJev(key, {}, questions, async () => new Response(key, { status: 401 })))
-      .rejects.toMatchObject({ status: 502, message: 'TypeSafe Jev rejected the API key (401). Check the Jev key in Settings.' });
+      .rejects.toMatchObject({ status: 502, message: 'TypeSafe Jev rejected the API key (401). Check the supplied API key.' });
   });
 
   it('surfaces safe provider validation messages without echoing request input', async () => {

@@ -30,12 +30,14 @@ Feature: Discovering and organizing a large canvas
     And I open the current canvas in a browser
     And I zoom out to the group overview
     Then I can see the group connection on the canvas and move the view
-    When I browse the group list
-    Then the group preview shows the "Real note" title
+    When I open the mini-map group list
+    Then the mini-map lists the Research group
     When I open the Research group
     Then the Notes subgroup appears on the canvas
     When I open the Notes subgroup
     Then the canvas shows the real document preview
+    When I read the "Real note" nested document
+    Then reloading keeps the nested document and its group
 
   Scenario: Large canvases open through supergroups, groups, subgroups, and files
     Given a fresh workspace
@@ -53,7 +55,7 @@ Feature: Discovering and organizing a large canvas
     When I zoom out to the subgroup map
     Then I see connected Notes and Benchmarks subgroups
 
-  Scenario: Connection focus and layout preview leave saved positions alone until applied
+  Scenario: Connection focus and temporary neighbor pull preserve saved positions
     Given a fresh workspace
     When I create an empty canvas for group automations
     And I add a Markdown block called "Source" containing "The source"
@@ -62,27 +64,16 @@ Feature: Discovering and organizing a large canvas
     And I open the current canvas in a browser
     And I select the "Source" card
     Then I see connection focus and its linked document
-    When I preview and cancel arrange by connections
+    When I pull linked documents close and restore their positions
     Then reloading the canvas keeps the original positions
 
-  Scenario: Suggested tag groups can be accepted and undone
-    Given a fresh workspace
-    When I create an empty canvas for group automations
-    And I add a Markdown block called "API plan" containing "Endpoint choices"
-    And I assign the new document to nested group "custom:research/benchmarks" with tag "api"
-    And I open the current canvas in a browser
-    And I preview and accept tag grouping
-    Then reloading the canvas puts "API plan" in a tag group
-    When I undo the suggested grouping
-    Then reloading the canvas keeps the nested group and tag
-
-  Scenario: Bookmarks and canvas history let me return to a named place
+  Scenario: Sidebar navigation and canvas zoom work without the floating navigation bar
     Given a fresh workspace
     When I create a second canvas called "Second canvas"
     And I open the current canvas in a browser
-    And I save a bookmark called "Starting point"
-    And I navigate to "Second canvas" and back
-    Then the "Starting point" bookmark remains after reloading
+    And I navigate to "Second canvas" and back using the sidebar
+    And I zoom out to the group overview
+    Then the canvas reloads without the floating navigation bar
 
   Scenario: Follow-up answers extend one live evidence canvas
     Given a fresh workspace
@@ -127,3 +118,14 @@ Feature: Discovering and organizing a large canvas
     And I open the current canvas in a browser
     And I ask for rich research blocks
     Then I can view and save the rich blocks with their original formats
+
+  Scenario: Saved groups remain available without manual grouping controls
+    Given a fresh workspace
+    When I create an empty canvas for group automations
+    And I add a Markdown block called "API plan" containing "Endpoint choices"
+    And I assign the new document to nested group "custom:research/benchmarks" with tag "api"
+    And I open the current canvas in a browser
+    Then manual grouping controls are absent
+    When I reload the current canvas in the browser
+    Then manual grouping controls are absent
+    And reloading the canvas keeps the nested group and tag

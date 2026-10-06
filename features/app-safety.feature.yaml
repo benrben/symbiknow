@@ -1,0 +1,58 @@
+feature: Reviewed app safety
+scenarios:
+- name: Removed canvas controls and floating navigation stay absent
+  steps:
+  - given: a fresh workspace
+  - when: I open the current canvas in a browser
+  - then: removed canvas controls and floating navigation are absent
+- name: Compact navigation can create workspaces and canvases
+  steps:
+  - given: a fresh workspace
+  - when: I open the current canvas in a browser
+  - and: I use the compact navigation to create a workspace and canvas
+  - then: the compact navigation creations survive reload
+- name: Moving a document preserves references and related task context
+  steps:
+  - given: a fresh workspace
+  - when: I move a document referenced by a third canvas and a task
+  - then: reloading all affected canvases preserves the moved reference and tasks
+- name: Reviewed creation Undo preserves later edits and cross-canvas citations
+  steps:
+  - given: a fresh workspace
+  - when: I open the current canvas in a browser
+  - and: I review a new document before a later human edit and citation
+  - then: reviewed deletion refuses the later edit and saved citation
+  - when: I deliberately remove the citation and review the current document
+  - then: the reviewed deletion survives reload and retains document history
+- name: Reviewed edit Undo preserves simultaneous human metadata
+  steps:
+  - given: a fresh workspace
+  - when: I open the current canvas in a browser
+  - and: a human updates metadata after I review an agent document edit
+  - then: restoring the old reviewed edit refuses to overwrite the human metadata
+  - when: I review the current document before restoring its source
+  - then: the restored source and human metadata survive reload
+- name: Damaged research entries preserve valid answers and manual notes
+  steps:
+  - given: a fresh workspace
+  - when: I open the current canvas in a browser
+  - and: I reopen research with valid answers and damaged saved entries
+  - then: the recovered research retains its answer and manual note
+  - when: I save the recovered research as files
+  - then: recovered answers and their citations survive reload
+- name: Saved document selection survives navigation and a file
+    refresh
+  steps:
+  - given: a fresh workspace
+  - when: I prepare two saved documents for view history
+  - and: I open the current canvas in a browser
+  - and: I select the first document after viewing another document
+  - then: the selected document remains selected after saving its checkbox
+  - when: I close the saved document inspector
+  - then: the saved checkbox survives browser reload and reselection
+- name: Zoom controls keep documents and revision history unchanged
+  steps:
+  - given: a fresh workspace
+  - when: I open the current canvas in a browser
+  - and: I return the camera through the zoom controls before its deferred end report
+  - then: reloading after camera changes preserves documents and revision history

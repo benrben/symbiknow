@@ -6,6 +6,20 @@ import { AIMessage } from '@langchain/core/messages';
 import type { Server } from 'node:http';
 import { CanvasStore } from './storage.js';
 import { ChatProposalDraft, ChatProposalConflict, applyChatProposal, getChatProposal, undoChatProposal } from './chat-proposals.js';
+function expectRestoredCanvas(current: { blocks: import('../shared/types.js').CanvasBlock[] }, previous: typeof current) {
+  const logical = (canvas: typeof current, original: typeof current) => ({ ...canvas, blocks: canvas.blocks.map(source => {
+    const block = { ...source }; delete block.incarnation; delete block.sourceGeneration; delete block.metadataRevision; delete block.jevMutationId;
+    if (!original.blocks.find(item => item.id === block.id)?.jevOwnership) delete block.jevOwnership;
+    return block;
+  }) });
+  expect(logical(current, previous)).toEqual(logical(previous, previous));
+  for (const block of current.blocks) {
+    const old = previous.blocks.find(item => item.id === block.id)!;
+    if (old.incarnation) expect(block.incarnation).toBe(old.incarnation);
+    if (block.sourceGeneration) expect(block.sourceGeneration).toBeGreaterThanOrEqual(old.sourceGeneration ?? 0);
+  }
+}
+
 import { createChatStream, type DeepAgentFactory } from './chat-stream.js';
 import { createApiServer } from './index.js';
 
@@ -42,7 +56,7 @@ describe('Chat document proposals', () => {
     await receiptStore.init();
     expect(getChatProposal(receiptStore, proposal.id)).toEqual(receipt);
     expect(await undoChatProposal(receiptStore, proposal.id)).toMatchObject({ status: 'reverted' });
-    expect(await receiptStore.getCanvas(canvas.id)).toEqual(canvas);
+    expectRestoredCanvas(await receiptStore.getCanvas(canvas.id), canvas);
     expect(() => getChatProposal(receiptStore, proposal.id)).toThrow(/no longer available/);
   });
 
@@ -74,7 +88,7 @@ describe('Chat document proposals', () => {
     const restarted = new CanvasStore(store.root);
     await restarted.init();
     await expect(applyChatProposal(restarted, proposal.id)).rejects.toMatchObject({ status: 410 });
-    expect(await restarted.getCanvas(canvas.id)).toEqual(canvas);
+    expectRestoredCanvas(await restarted.getCanvas(canvas.id), canvas);
     await writeFile(file, '{"version":1,"kind":"pending","proposal":{"id":"bad"}}');
     expect(() => getChatProposal(restarted, proposal.id)).toThrow(/no longer available/);
     const secondDraft = new ChatProposalDraft(restarted, canvas.id, canvas);
@@ -103,7 +117,7 @@ describe('Chat document proposals', () => {
     expect(proposal.changes.find(change => change.blockId === original.id)).toMatchObject({
       before: { content: original.content }, after: { content: '# Revised checklist' }, expectedContentHash: original.contentHash,
     });
-    expect(await store.getCanvas(before.id)).toEqual(before);
+    expectRestoredCanvas(await store.getCanvas(before.id), before);
     const receipt = await applyChatProposal(store, proposal.id, [created.id]);
     expect(receipt).toMatchObject({ status: 'applied', applied: [created.id], skipped: [] });
     const savedId = receipt.createdBlockIds[created.id];
@@ -125,7 +139,7 @@ describe('Chat document proposals', () => {
     await expect(applyChatProposal(store, proposal.id, ['launch-checklist'])).rejects.toMatchObject({ status: 400,
       message: 'Select the new documents referenced by the selected links',
     });
-    expect(await store.getCanvas(canvas.id)).toEqual(canvas);
+    expectRestoredCanvas(await store.getCanvas(canvas.id), canvas);
     expect(getChatProposal(store, proposal.id)).toMatchObject({ status: 'pending' });
   });
 
@@ -189,7 +203,7 @@ describe('Chat document proposals', () => {
     await applyChatProposal(store, proposal.id);
     const undone = await undoChatProposal(store, proposal.id);
     expect(undone).toMatchObject({ status: 'reverted', reverted: expect.arrayContaining([created.id, 'launch-checklist']) });
-    expect(await store.getCanvas(before.id)).toEqual(before);
+    expectRestoredCanvas(await store.getCanvas(before.id), before);
   });
 
   it('reports a partial apply with saved snapshots and keeps Undo available', async () => {
@@ -233,7 +247,7 @@ describe('Chat document proposals', () => {
       skipped: [{ id: 'roadmap-overview', reason: 'Undo stopped' }] });
     spy.mockRestore();
     expect(await undoChatProposal(store, proposal.id)).toMatchObject({ status: 'reverted', reverted: ['roadmap-overview'] });
-    expect(await store.getCanvas(canvas.id)).toEqual(canvas);
+    expectRestoredCanvas(await store.getCanvas(canvas.id), canvas);
   });
 
   it('emits a full proposal from Chat, with no saved document before Apply', async () => {
@@ -252,7 +266,7 @@ describe('Chat document proposals', () => {
     for await (const event of session.events!(new AbortController().signal)) events.push(event);
     const proposal = events.find(event => event.kind === 'proposal');
     expect(proposal).toMatchObject({ kind: 'proposal', proposal: { canvasId: before.id, changes: [{ before: { content: expect.any(String) }, after: { content: '# Proposed checklist' } }] } });
-    expect(await store.getCanvas(before.id)).toEqual(before);
+    expectRestoredCanvas(await store.getCanvas(before.id), before);
   });
 
   it('serves proposal, Apply, and Undo through the HTTP contract', async () => {

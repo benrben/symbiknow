@@ -1,215 +1,116 @@
 feature: Markdown canvas
 scenarios:
-  - name: SymbiKnow explains the shared infinite canvas and remembers dark mode
-    steps:
-      - given: a fresh workspace
-      - when: I open SymbiKnow in a browser
-      - then: the app identifies an infinite canvas for people and AI
-      - when: I switch to dark mode
-      - then: the dark canvas remains selected after reloading
-      - when: I switch to light mode
-      - then: the light canvas is selected
-
-  - name: A document remains available after reloading the canvas
-    steps:
-      - given: a fresh workspace
-      - when: I add a Markdown block called "Launch Notes" containing "Ship the beta"
-      - then: the canvas contains the "Launch Notes" block
-      - and: the block is backed by a Markdown file containing "Ship the beta"
-      - and: searching for "Ship the beta" finds the block
-
-  - name: An unchanged canvas skips its body and an external edit refreshes it
-    steps:
-      - given: a fresh workspace
-      - when: I add a Markdown block called "Refresh check" containing "Before"
-      - and: I load the canvas and remember its revision
-      - then: loading the unchanged canvas sends no body
-      - when: I edit the Markdown file outside the app from "Before" to "After"
-      - then: loading with the old revision returns the updated document
-
-  - name: New manual and assistant cards do not cover existing cards
-    steps:
-      - given: a fresh workspace
-      - when: I create an empty canvas for group automations
-      - and: I add a Markdown block called "First note" containing "# First"
-      - and: I add a Markdown block called "Second note" containing "# Second"
-      - and: I create a Markdown block called "Assistant note" at x 100 and y 100
-      - then: reloading the canvas shows three cards without overlap
-
-  - name: Creating and finding a document reveals its card
-    steps:
-      - given: a fresh workspace
-      - when: I create an empty canvas for group automations
-      - and: I open the current canvas in a browser
-      - and: I save a new block titled "First note"
-      - and: I save a new block titled "Second note"
-      - then: the new card is highlighted and the cards do not overlap
-      - when: I search for "First note" and choose Show on canvas
-      - then: the searched card is highlighted without opening its editor
-
-  - name: The OpenRouter key is saved without being returned to the browser
-    steps:
-      - given: a fresh workspace
-      - when: I configure the OpenRouter model "openai/gpt-4o-mini" and an API key
-      - then: the settings report that an API key is saved
-      - and: the settings response does not reveal the API key
-
-  - name: Chat explains missing configuration
-    steps:
-      - given: a fresh workspace
-      - when: I send a chat message without an API key
-      - then: the chat request is rejected with a settings error
-
-  - name: Streaming chat explains missing configuration
-    steps:
-      - given: a fresh workspace
-      - when: I send a streaming chat message without an API key
-      - then: the chat request is rejected with a settings error
-
-  - name: A deleted document stays deleted after reloading the canvas
-    steps:
-      - given: a fresh workspace
-      - when: I add a Markdown block called "Temporary Note" containing "Remove this note"
-      - and: I delete the new document
-      - then: reloading the canvas does not restore the deleted document
-      - and: the deleted Markdown file is gone
-
-  - name: Deleting a canvas from the sidebar removes its documents and returns to a surviving canvas
-    steps:
-      - given: a fresh workspace
-      - when: I create an empty canvas for group automations
-      - and: I add a Markdown block called "Scratch note" containing "Disposable research"
-      - and: I open the current canvas in a browser
-      - and: I delete the current canvas in the browser
-      - then: the deleted canvas is gone after reloading
-
-  - name: Canvas insights require a TypeSafe Jev key
-    steps:
-      - given: a fresh workspace
-      - when: I request canvas insights without an API key
-      - then: the insights request is rejected with a settings error
-
-  - name: A suggested canvas layout stays after reloading
-    steps:
-      - given: a fresh workspace
-      - when: I arrange the "Roadmap overview" block at x -360 and y 640
-      - then: reloading the canvas keeps "Roadmap overview" at x -360 and y 640
-
-  - name: Purpose and reviewer labels stay with the block
-    steps:
-      - given: a fresh workspace
-      - when: I label "Roadmap overview" as "guide" for "Engineering"
-      - then: reloading the canvas shows "Roadmap overview" as "guide" for "Engineering"
-
-  - name: An accepted connection becomes a saved canvas edge
-    steps:
-      - given: a fresh workspace
-      - when: I connect "Roadmap overview" to "Launch checklist"
-      - then: reloading the canvas keeps that connection
-
-  - name: The Connect documents button applies a Jev-rated link across the canvas
-    steps:
-      - given: a fresh workspace
-      - when: I add a Markdown block called "Automation source" containing "Read this first"
-      - and: I add a Markdown block called "Automation target" containing "Read this next"
-      - and: I open Insights with a moderate-confidence Jev connection from "Automation source" to "Automation target"
-      - and: I press the Connect documents automation
-      - then: reloading the canvas keeps that connection
-
-  - name: Jev automations create separate document groups and three useful links
-    steps:
-      - given: a fresh workspace
-      - when: I create an empty canvas for group automations
-      - and: I add a Markdown block called "Group A1" containing "Overview one"
-      - and: I add a Markdown block called "Group A2" containing "Overview two"
-      - and: I add a Markdown block called "Group B1" containing "Work one"
-      - and: I add a Markdown block called "Group B2" containing "Work two"
-      - and: I open Insights with two Jev groups and three suggested connections
-      - and: I analyze the canvas and see two document groups
-      - and: I preview and apply group placement and connections
-      - then: reloading the canvas shows two groups and three new edges
-
-  - name: Connect documents removes an edge Jev rejects
-    steps:
-      - given: a fresh workspace
-      - when: I connect "Roadmap overview" to "Launch checklist"
-      - and: I open Insights with Jev rejecting that connection
-      - and: I press the Connect documents automation
-      - then: reloading the canvas no longer has that connection
-
-  - name: New chat clears the conversation without changing the canvas
-    steps:
-      - given: a fresh workspace
-      - when: I configure the OpenRouter model "openai/gpt-4o-mini" and an API key
-      - and: I send a chat message then press New chat
-      - then: the next chat request contains only the new message
-
-  - name: The chat panel can be resized and remembers its width
-    steps:
-      - given: a fresh workspace
-      - when: I drag the chat divider wider
-      - then: the chat panel keeps its new width after reloading
-
-  - name: An uploaded HTML page is previewed in Markdown and can be edited as a downloaded file
-    steps:
-      - given: a fresh workspace
-      - when: I upload an HTML page
-      - then: the canvas shows its HTML preview inside a Markdown block
-      - and: I can read the whole page and return to the canvas
-      - and: I can switch between source and a live HTML preview in the editor
-      - and: I can download its Markdown file and upload an edited version
-
-  - name: Connect documents does not save a low-confidence link
-    steps:
-      - given: a fresh workspace
-      - when: I add a Markdown block called "A" containing "A source document about release planning"
-      - and: I add a Markdown block called "B" containing "A target document about release planning"
-      - and: I open Insights with a 0.5-confidence Jev connection from "A" to "B"
-      - and: I press the Connect documents automation with no eligible link
-      - then: reloading the canvas has no link from "A" to "B"
-
-  - name: A Marp deck is suggested the slides loader without asking Jev
-    steps:
-      - given: a fresh workspace
-      - when: I add a Marp Markdown deck called "Deck"
-      - and: I request canvas insights
-      - then: the report suggests the slides loader for "Deck"
-      - and: Jev received no loader question
-
-  - name: Unchanged documents are not sent to Jev twice
-    steps:
-      - given: a fresh workspace
-      - when: I request canvas insights twice
-      - then: the second request sends no document questions to Jev
-
-  - name: Merging duplicates from a suggestion keeps history and links
-    steps:
-      - given: a fresh workspace
-      - when: I add two near-identical documents "Setup v1" and "Setup v2" and link "Readme" to "Setup v1"
-      - and: I choose Merge in chat on the duplicate suggestion and apply the merge
-      - then: only "Setup v2" is visible
-      - and: '"Readme" links to "Setup v2"'
-      - and: the history of "Setup v1" still has its last content
-
-  - name: Chat confirmation leaves document deletion to the document controls
-    steps:
-      - given: a fresh workspace
-      - when: the assistant asks to delete "Temporary Note" and I reply "yes"
-      - then: '"Temporary Note" remains until I use its document controls'
-
-  - name: A cross-canvas connection opens the other canvas
-    steps:
-      - given: two canvases with related documents "Rate limits" and "Billing client"
-      - when: I run Connect across canvases with a confident Jev relation
-      - and: I choose the cross-canvas chip on "Rate limits"
-      - then: the "Billing client" document opens on its own canvas
-
-  - name: A workspace dry run changes nothing until applied
-    steps:
-      - given: two canvases with unlabeled documents
-      - when: I preview Classify work areas for the workspace
-      - then: no document is labeled
-      - when: I apply the selected changes
-      - then: the selected documents are labeled
-      - when: I undo the run
-      - then: no document is labeled
+- name: SymbiKnow explains the shared infinite canvas and remembers dark mode
+  steps:
+  - given: a fresh workspace
+  - when: I open SymbiKnow in a browser
+  - then: the app identifies an infinite canvas for people and AI
+  - when: I switch to dark mode
+  - then: the dark canvas remains selected after reloading
+  - when: I switch to light mode
+  - then: the light canvas is selected
+- name: A document remains available after reloading the canvas
+  steps:
+  - given: a fresh workspace
+  - when: I add a Markdown block called "Launch Notes" containing "Ship the beta"
+  - then: the canvas contains the "Launch Notes" block
+  - and: the block is backed by a Markdown file containing "Ship the beta"
+  - and: searching for "Ship the beta" finds the block
+- name: An unchanged canvas skips its body and an external edit refreshes it
+  steps:
+  - given: a fresh workspace
+  - when: I add a Markdown block called "Refresh check" containing "Before"
+  - and: I load the canvas and remember its revision
+  - then: loading the unchanged canvas sends no body
+  - when: I edit the Markdown file outside the app from "Before" to "After"
+  - then: loading with the old revision returns the updated document
+- name: New manual and assistant cards do not cover existing cards
+  steps:
+  - given: a fresh workspace
+  - when: I create an empty canvas for group automations
+  - and: I add a Markdown block called "First note" containing "# First"
+  - and: I add a Markdown block called "Second note" containing "# Second"
+  - and: I create a Markdown block called "Assistant note" at x 100 and y 100
+  - then: reloading the canvas shows three cards without overlap
+- name: Creating and finding a document reveals its card
+  steps:
+  - given: a fresh workspace
+  - when: I create an empty canvas for group automations
+  - and: I open the current canvas in a browser
+  - and: I save a new block titled "First note"
+  - and: I save a new block titled "Second note"
+  - then: the new card is highlighted and the cards do not overlap
+  - when: I search for "First note" and choose Show on canvas
+  - then: the searched card is highlighted without opening its editor
+- name: The OpenRouter key is saved without being returned to the browser
+  steps:
+  - given: a fresh workspace
+  - when: I configure the OpenRouter model "openai/gpt-4o-mini" and an API key
+  - then: the settings report that an API key is saved
+  - and: the settings response does not reveal the API key
+- name: Chat explains missing configuration
+  steps:
+  - given: a fresh workspace
+  - when: I send a chat message without an API key
+  - then: the chat request is rejected with a settings error
+- name: Streaming chat explains missing configuration
+  steps:
+  - given: a fresh workspace
+  - when: I send a streaming chat message without an API key
+  - then: the chat request is rejected with a settings error
+- name: A deleted document stays deleted after reloading the canvas
+  steps:
+  - given: a fresh workspace
+  - when: I add a Markdown block called "Temporary Note" containing "Remove this note"
+  - and: I delete the new document
+  - then: reloading the canvas does not restore the deleted document
+  - and: the deleted Markdown file is gone
+- name: Deleting a canvas from the sidebar removes its documents and returns to a
+    surviving canvas
+  steps:
+  - given: a fresh workspace
+  - when: I create an empty canvas for group automations
+  - and: I add a Markdown block called "Scratch note" containing "Disposable research"
+  - and: I open the current canvas in a browser
+  - and: I delete the current canvas in the browser
+  - then: the deleted canvas is gone after reloading
+- name: A suggested canvas layout stays after reloading
+  steps:
+  - given: a fresh workspace
+  - when: I arrange the "Roadmap overview" block at x -360 and y 640
+  - then: reloading the canvas keeps "Roadmap overview" at x -360 and y 640
+- name: Purpose and reviewer labels stay with the block
+  steps:
+  - given: a fresh workspace
+  - when: I label "Roadmap overview" as "guide" for "Engineering"
+  - then: reloading the canvas shows "Roadmap overview" as "guide" for "Engineering"
+- name: An accepted connection becomes a saved canvas edge
+  steps:
+  - given: a fresh workspace
+  - when: I connect "Roadmap overview" to "Launch checklist"
+  - then: reloading the canvas keeps that connection
+- name: New chat clears the conversation without changing the canvas
+  steps:
+  - given: a fresh workspace
+  - when: I configure the OpenRouter model "openai/gpt-4o-mini" and an API key
+  - and: I send a chat message then press New chat
+  - then: the next chat request contains only the new message
+- name: The chat panel can be resized and remembers its width
+  steps:
+  - given: a fresh workspace
+  - when: I drag the chat divider wider
+  - then: the chat panel keeps its new width after reloading
+- name: An uploaded HTML page is previewed in Markdown and can be edited as a downloaded
+    file
+  steps:
+  - given: a fresh workspace
+  - when: I upload an HTML page
+  - then: the canvas shows its HTML preview inside a Markdown block
+  - and: I can read the whole page and return to the canvas
+  - and: I can switch between source and a live HTML preview in the editor
+  - and: I can download its Markdown file and upload an edited version
+- name: Chat confirmation leaves document deletion to the document controls
+  steps:
+  - given: a fresh workspace
+  - when: the assistant asks to delete "Temporary Note" and I reply "yes"
+  - then: '"Temporary Note" remains until I use its document controls'

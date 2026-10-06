@@ -7,7 +7,7 @@ export function preferredTheme(): Theme {
     const saved = window.localStorage.getItem(storageKey);
     if (saved === 'light' || saved === 'dark') return saved;
   } catch {
-    // The system preference still works when storage is unavailable.
+    console.warn('Saved theme preferences cannot be read; using the system preference.');
   }
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
@@ -18,6 +18,6 @@ export function applyTheme(theme: Theme): void {
   try {
     window.localStorage.setItem(storageKey, theme);
   } catch {
-    // Theme selection still applies for this page when storage is unavailable.
+    console.warn('Theme preferences cannot be saved in this browser.');
   }
 }

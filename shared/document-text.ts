@@ -1,4 +1,4 @@
-/** Readable text of a document for search, Jev, and excerpts: no frontmatter, and for HTML no styles, scripts, or tags. */
+/** Readable text of a document for search and excerpts: no frontmatter, and for HTML no styles, scripts, or tags. */
 export function documentText(content: string): string {
   const html = /^---\r?\nformat:\s*html\s*\r?\n---/i.test(content);
   const body = content.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '');

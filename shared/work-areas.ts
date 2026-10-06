@@ -1,4 +1,4 @@
-/** Fixed Jev Choice options for the primary work area of a document. */
+/** Fixed labels for the primary work area of a document. */
 export const workAreaOptions: Record<string, string> = {
   developers: 'General software development for developers',
   frontend: 'Browser interfaces and frontend code',
@@ -123,7 +123,7 @@ export const workAreaOptions: Record<string, string> = {
   other: 'No listed work area fits this document',
 };
 
-/** Built-in work areas grouped for Jev's first, broad choice. */
+/** Built-in work areas grouped by domain. */
 export const workAreaDomains = {
   engineering: [
     'developers', 'frontend', 'backend', 'fullstack', 'mobile', 'ios', 'android', 'desktop',
@@ -196,7 +196,7 @@ function addCustomAreas(options: Record<string, string>, custom: string): void {
   }
 }
 
-/** Jev's second choice, limited to the selected domain (or top two domains). */
+/** Work areas limited to the selected domain (or top two domains). */
 export function workAreaChoicesForDomains(domains: string | readonly string[], custom: string): Record<string, string> {
   const selected = typeof domains === 'string' ? [domains] : domains;
   const options: Record<string, string> = {};

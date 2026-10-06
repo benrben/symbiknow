@@ -1,17 +1,8 @@
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import type { CanvasNavigationTarget } from '../shared/answer-canvas';
-import type { InsightAction, InsightItem, ReadingPath } from '../shared/insights';
 import type { CanvasBlock, CanvasDocument, ChatSettings, WorkspaceSummary } from '../shared/types';
 import type { BlockDraft, Dialog } from './app-model-helpers';
 import type { SettingsPayload } from './SettingsPage';
-
-type MergeReview = {
-  canvasId: string;
-  item: InsightItem;
-  action: Extract<InsightAction, { type: 'merge' }>;
-  blocks: CanvasBlock[];
-  content: string;
-};
 
 /** The data and commands used by dialog surfaces, independent of App's full model. */
 export interface AppDialogModel {
@@ -52,7 +43,6 @@ export interface AppDialogModel {
   versionRevision: string | undefined;
   refreshAfterVersionChange: () => Promise<void>;
   readerId: string;
-  readingPath: ReadingPath | null;
   sourceFocus: Extract<CanvasNavigationTarget, { kind: 'document' }> | null;
   showReaderDocument: (blockId: string) => void;
   closeReader: () => void;
@@ -60,8 +50,4 @@ export interface AppDialogModel {
   openBlock: (block: CanvasBlock) => void;
   openCrossLink: (canvasId: string, blockId: string) => void;
 
-  mergeReview: MergeReview | null;
-  setMergeReview: Dispatch<SetStateAction<MergeReview | null>>;
-  mergeBusy: boolean;
-  applyMergeReview: () => Promise<void>;
 }

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SymbiKnow System Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: one reading column with a page header band; tables, code and diagrams scroll inside their own boxes. */
+:root {
+  color-scheme: light;
+  --bg: #f7f5ef;
+  --surface: #ffffff;
+  --soft: #f1f3ed;
+  --ink: #172b31;
+  --muted: #52666a;
+  --line: #d5dfd8;
+  --mint: #bce7c9;
+  --mint-ink: #1f5a3a;
+  --blue: #3858b8;
+  --coral: #c8603e;
+  --amber: #8a5a14;
+  --amber-bg: #fff4de;
+  --red: #a92e43;
+  --red-bg: #fff0f2;
+  --blue-bg: #e9edff;
+  --font-display: 'Space Grotesk', 'Avenir Next', system-ui, sans-serif;
+  --font-body: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14252a; --surface: #1c2e34; --soft: #23363b; --ink: #eaf1ed; --muted: #aabfba; --line: #3d5558;
+    --mint: #2f5a46; --mint-ink: #c9f0d6; --blue: #afc0ff; --coral: #f3a587; --amber: #ffd28b; --amber-bg: #3e3423;
+    --red: #ffb4be; --red-bg: #40272d; --blue-bg: #263256; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14252a; --surface: #1c2e34; --soft: #23363b; --ink: #eaf1ed; --muted: #aabfba; --line: #3d5558;
+  --mint: #2f5a46; --mint-ink: #c9f0d6; --blue: #afc0ff; --coral: #f3a587; --amber: #ffd28b; --amber-bg: #3e3423;
+  --red: #ffb4be; --red-bg: #40272d; --blue-bg: #263256; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--font-body); }
+a { color: var(--blue); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+.top { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; }
+.top__inner { max-width: 980px; margin: 0 auto; padding-block: 28px 22px; display: grid; gap: 10px; }
+.eyebrow { font: 500 12px/1.2 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--blue); margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.2; letter-spacing: -.02em; }
+h1 { font-size: clamp(28px, 4.2vw, 40px); margin: 0; }
+h2 { font-size: 24px; margin: 0 0 12px; padding-top: 8px; }
+h3 { font-size: 18px; margin: 22px 0 8px; }
+.lede { font-size: 18px; color: var(--muted); max-width: 68ch; margin: 0; }
+.snapshot { font: 13px/1.5 var(--font-mono); color: var(--muted); margin: 0; }
+nav.pages { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; padding-top: 6px; }
+nav.pages a { text-decoration: none; color: var(--muted); }
+nav.pages a[aria-current="page"] { color: var(--ink); font-weight: 600; text-decoration: underline; text-decoration-color: var(--mint-ink); }
+main { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 40px; }
+section { display: grid; gap: 4px; min-width: 0; }
+p, li { max-width: 72ch; }
+p { margin: 0 0 10px; }
+ul, ol { margin: 0 0 10px; padding-left: 22px; }
+li { margin-bottom: 4px; }
+code { font: .88em var(--font-mono); background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
+pre { margin: 6px 0 12px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 13px/1.55 var(--font-mono); }
+pre code { background: none; border: 0; padding: 0; font-size: inherit; overflow-wrap: normal; }
+.codehead { font: 12px var(--font-mono); color: var(--muted); margin: 10px 0 -2px; }
+.table { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 6px 0 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px/1.3 var(--font-mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--soft); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+.chip { display: inline-block; font: 600 11px/1.6 var(--font-mono); letter-spacing: .03em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.chip.done { background: var(--mint); color: var(--mint-ink); }
+.chip.partial { background: var(--amber-bg); color: var(--amber); }
+.chip.todo { background: var(--soft); color: var(--muted); border: 1px solid var(--line); }
+.chip.issue { background: var(--red-bg); color: var(--red); }
+.chip.info { background: var(--blue-bg); color: var(--blue); }
+.note { border: 1px solid var(--line); border-left: 4px solid var(--blue); background: var(--surface); border-radius: 6px; padding: 12px 14px; }
+.note.warn { border-left-color: var(--amber); }
+.note.bad { border-left-color: var(--red); }
+.note p:last-child, .note ul:last-child { margin-bottom: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
+.card h3 { margin-top: 0; font-size: 16px; }
+.card p { font-size: 14px; margin-bottom: 6px; }
+.card .path { font: 12px var(--font-mono); color: var(--muted); }
+.diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 6px 0 12px; }
+.diagram svg { display: block; min-width: 720px; width: 100%; height: auto; font-family: var(--font-body); }
+.diagram .n { fill: var(--soft); stroke: var(--line); stroke-width: 1.2; }
+.diagram .n-mint { fill: var(--mint); stroke: var(--mint-ink); stroke-width: 1; }
+.diagram .n-blue { fill: var(--blue-bg); stroke: var(--blue); stroke-width: 1; }
+.diagram .n-amber { fill: var(--amber-bg); stroke: var(--amber); stroke-width: 1; }
+.diagram .n-zone { fill: none; stroke: var(--line); stroke-dasharray: 5 4; stroke-width: 1.2; }
+.diagram .t { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.diagram .s { fill: var(--muted); font-size: 11px; }
+.diagram .z { fill: var(--muted); font: 600 11px var(--font-mono); letter-spacing: .06em; }
+.diagram .e { stroke: var(--muted); stroke-width: 1.4; fill: none; marker-end: url(#arrow); }
+.diagram .e-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; marker-end: url(#arrow); }
+.diagram .el { fill: var(--muted); font-size: 11px; }
+.diagram .ah { fill: var(--muted); }
+dl.terms { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 8px 18px; margin: 0; }
+dl.terms dt { font: 600 14px var(--font-mono); }
+dl.terms dd { margin: 0; max-width: 70ch; }
+@media (max-width: 560px) { dl.terms { grid-template-columns: 1fr; } dl.terms dd { margin-bottom: 8px; } }
+.steps { counter-reset: s; list-style: none; padding: 0; display: grid; gap: 8px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 30px 1fr; gap: 10px; max-width: none; }
+.steps li::before { content: counter(s); font: 600 13px/26px var(--font-mono); width: 26px; height: 26px; text-align: center; border-radius: 50%; background: var(--mint); color: var(--mint-ink); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.filters button { font: 500 13px var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+footer { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 0 40px; font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top__inner">
+    <p class="eyebrow">SymbiKnow · Project Atlas</p>
+    <h1>SymbiKnow system map</h1>
+    <p class="lede">How SymbiKnow is built: an infinite canvas where people and AI agents keep knowledge as ordinary files, connect it, and change it safely. Start here, then open the page for the part you are working on.</p>
+    <p class="snapshot">Snapshot of the main working tree, 2026-10-06 (uncommitted changes included). The Markdown pages in this folder hold the details.</p>
+    <nav class="pages" aria-label="Atlas pages">
+      <a href="README.md">Atlas home</a>
+      <a href="architecture.md">Architecture</a>
+      <a href="data-model.md">Data model</a>
+      <a href="safe-collaboration.md">Safe collaboration</a>
+      <a href="symbi-reflex.md">Symbi Reflex</a>
+      <a href="search-and-brain-tools.md">Search & brain tools</a>
+      <a href="mcp-and-api.md">MCP & API</a>
+      <a href="assistant-and-research.md">Assistant</a>
+      <a href="tasks-board.md">Tasks board</a>
+      <a href="plan-status.md">Plan status</a>
+      <a href="operations.md">Run & test</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section>
+  <h2>What SymbiKnow is</h2>
+  <p>SymbiKnow is an infinite canvas for shared knowledge. Every card on a canvas is a real <code>.md</code> file on the server. The canvas stores only positions, sizes, groups, labels, and links. People work in the browser. AI agents join in three ways: through <strong>Symbi</strong>, the chat assistant inside the app; through <strong>MCP</strong>, from Claude Code, Codex, Claude.ai, or any MCP client; and through <strong>WebMCP</strong>, which drives an open browser tab.</p>
+  <p>Every content change is a Git commit in that document's own history, named after the person or agent who made it. Writers pass the <code>contentHash</code> they read, so nobody silently overwrites someone else. A background organizer, <strong>Symbi Reflex</strong> (internally called <strong>Jev</strong>), reads each saved document. It profiles, labels, links, groups, and places the document, and checks every change against exact source evidence before saving.</p>
+</section>
+
+<section>
+  <h2>System map</h2>
+  <p>One Node.js process serves the web app, the JSON API, and the MCP endpoint. Everything durable lives under <code>DATA_DIR</code>. The search index is a rebuildable SQLite file next to it.</p>
+  <div class="diagram" role="img" aria-label="System map: clients call one Node server, which stores files in DATA_DIR and calls external model providers">
+  <svg viewBox="0 0 960 510" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+    <rect class="n-zone" x="10" y="30" width="220" height="470" rx="10"/>
+    <text class="z" x="24" y="52">CLIENTS</text>
+    <rect class="n-zone" x="255" y="30" width="430" height="470" rx="10"/>
+    <text class="z" x="270" y="52">NODE SERVER · server/index.ts</text>
+    <rect class="n-zone" x="710" y="30" width="240" height="470" rx="10"/>
+    <text class="z" x="724" y="52">DATA &amp; PROVIDERS</text>
+
+    <rect class="n-blue" x="25" y="70" width="190" height="56" rx="8"/><text class="t" x="37" y="94">Browser app</text><text class="s" x="37" y="112">React 19 + xyflow canvas</text>
+    <rect class="n-blue" x="25" y="150" width="190" height="56" rx="8"/><text class="t" x="37" y="174">Symbi chat panel</text><text class="s" x="37" y="192">answers stream over SSE</text>
+    <rect class="n-blue" x="25" y="230" width="190" height="56" rx="8"/><text class="t" x="37" y="254">MCP agents</text><text class="s" x="37" y="272">Claude Code, Codex, Claude.ai</text>
+    <rect class="n" x="25" y="310" width="190" height="56" rx="8"/><text class="t" x="37" y="334">WebMCP bridge</text><text class="s" x="37" y="352">drives the open browser tab</text>
+    <rect class="n" x="25" y="390" width="190" height="56" rx="8"/><text class="t" x="37" y="414">Local stdio MCP</text><text class="s" x="37" y="432">npm run mcp (same machine)</text>
+
+    <rect class="n" x="280" y="70" width="380" height="56" rx="8"/><text class="t" x="292" y="94">Router and access checks</text><text class="s" x="292" y="112">/mcp first, then /api/* (token, JSON only, actor), then the app</text>
+    <rect class="n" x="280" y="160" width="118" height="56" rx="8"/><text class="t" x="290" y="184">Canvas API</text><text class="s" x="290" y="202">docs, tasks, history</text>
+    <rect class="n" x="411" y="160" width="118" height="56" rx="8"/><text class="t" x="421" y="184">/mcp endpoint</text><text class="s" x="421" y="202">Streamable HTTP</text>
+    <rect class="n" x="542" y="160" width="118" height="56" rx="8"/><text class="t" x="552" y="184">Chat agent</text><text class="s" x="552" y="202">Deep Agents + tools</text>
+    <rect class="n-amber" x="280" y="250" width="185" height="56" rx="8"/><text class="t" x="292" y="274">Symbi Reflex runtime</text><text class="s" x="292" y="292">Jev: six automatic actions</text>
+    <rect class="n" x="475" y="250" width="185" height="56" rx="8"/><text class="t" x="487" y="274">CanvasStore</text><text class="s" x="487" y="292">serialized, checked writes</text>
+    <rect class="n-mint" x="280" y="340" width="185" height="56" rx="8"/><text class="t" x="292" y="364">Symbi brain API</text><text class="s" x="292" y="382">/api/symbi/ask · /reflex</text>
+    <rect class="n-mint" x="475" y="340" width="185" height="56" rx="8"/><text class="t" x="487" y="364">Index lifecycle</text><text class="s" x="487" y="382">rebuild, refresh on save</text>
+
+    <rect class="n" x="725" y="160" width="210" height="56" rx="8"/><text class="t" x="737" y="184">Chat model provider</text><text class="s" x="737" y="202">OpenRouter · OpenAI · Anthropic</text>
+    <rect class="n" x="725" y="250" width="210" height="70" rx="8"/><text class="t" x="737" y="274">DATA_DIR files</text><text class="s" x="737" y="292">.md sources, canvas + task JSON</text><text class="s" x="737" y="308">Git per document in .versions/</text>
+    <rect class="n-mint" x="725" y="340" width="210" height="56" rx="8"/><text class="t" x="737" y="364">symbi-index.sqlite</text><text class="s" x="737" y="382">FTS5 keywords + MiniLM vectors</text>
+    <rect class="n-amber" x="725" y="430" width="210" height="50" rx="8"/><text class="t" x="737" y="452">TypeSafe Jev API</text><text class="s" x="737" y="469">typed Choice / Score / Noul</text>
+
+    <path class="e" d="M215,98 L280,98"/>
+    <path class="e" d="M215,178 L280,114"/>
+    <path class="e" d="M215,258 L280,118"/>
+    <path class="e-dash" d="M215,338 L280,121"/>
+    <path class="e-dash" d="M215,418 L280,124"/>
+    <path class="e" d="M339,126 L339,160"/>
+    <path class="e" d="M470,126 L470,160"/>
+    <path class="e" d="M601,126 L601,160"/>
+    <path class="e" d="M411,188 L398,188"/>
+    <path class="e" d="M360,216 L520,250"/>
+    <path class="e" d="M601,216 L601,250"/>
+    <path class="e" d="M660,188 L725,188"/>
+    <path class="e" d="M660,282 L725,282"/>
+    <path class="e-dash" d="M475,286 L465,286"/>
+    <path class="e-dash" d="M568,306 L568,340"/>
+    <path class="e" d="M465,368 L475,368"/>
+    <path class="e" d="M660,368 L725,368"/>
+    <path class="e" d="M280,278 L266,278 L266,456 L725,456"/>
+    <path class="e" d="M372,396 L372,456"/>
+    <text class="el" x="470" y="236">tool calls</text>
+    <text class="el" x="572" y="327">save events</text>
+    <text class="el" x="480" y="450">Reflex jobs and brain-tool checks</text>
+  </svg>
+  </div>
+  <p>Dashed arrows are secondary paths. Save events flow from <code>CanvasStore</code> into Reflex and the index lifecycle. The <code>/mcp</code> tools do not touch files directly; each tool calls the same HTTP API the browser uses, so every rule applies to agents too.</p>
+</section>
+
+<section>
+  <h2>Five ideas the whole codebase follows</h2>
+  <div class="grid">
+    <div class="card"><h3>Files are the source of truth</h3><p>Documents are plain Markdown files. Indexes and caches can be deleted and rebuilt from them.</p></div>
+    <div class="card"><h3>Every change is named and restorable</h3><p>Each document has its own Git repository. Commits carry the author: <code>Browser</code>, <code>Symbi</code>, or <code>Claude Code - laptop</code>.</p></div>
+    <div class="card"><h3>No blind overwrites</h3><p>Writes compare a <code>contentHash</code>, revision, or review token inside a serialized write. Changed state returns <code>409</code>.</p></div>
+    <div class="card"><h3>Evidence before automation</h3><p>Reflex changes only what exact source passages support at or above the confidence threshold. Manual choices always win.</p></div>
+    <div class="card"><h3>Agents use the same tools as people</h3><p>MCP, WebMCP, and chat all reach the same API, checks, scopes, and history.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>How to read this atlas</h2>
+  <div class="table"><table>
+    <thead><tr><th>Page</th><th>Read it when you need to…</th></tr></thead>
+    <tbody>
+      <tr><td><a href="architecture.md">Architecture</a></td><td>find your way around the repository, the server request flow, and the React app.</td></tr>
+      <tr><td><a href="data-model.md">Data model</a></td><td>know what is stored where in <code>DATA_DIR</code> and what each field of a card means.</td></tr>
+      <tr><td><a href="safe-collaboration.md">Safe collaboration</a></td><td>change documents without conflicts: hashes, locks, branches, deletion checks.</td></tr>
+      <tr><td><a href="symbi-reflex.md">Symbi Reflex</a></td><td>understand the Jev engine and the six automatic actions.</td></tr>
+      <tr><td><a href="search-and-brain-tools.md">Search &amp; brain tools</a></td><td>work on the new SQLite index, retrieval ranking, <code>ask_symbi</code>, or <code>symbi_reflex</code>.</td></tr>
+      <tr><td><a href="mcp-and-api.md">MCP &amp; API</a></td><td>connect an agent, call an endpoint, or add a tool.</td></tr>
+      <tr><td><a href="assistant-and-research.md">Assistant</a></td><td>change Symbi chat, its tools, proposal review, or the research canvas.</td></tr>
+      <tr><td><a href="tasks-board.md">Tasks board</a></td><td>work on the canvas-style task board.</td></tr>
+      <tr><td><a href="plan-status.md">Plan status</a></td><td>see which <code>plan.md</code> tasks are done, partial, or open, plus known issues.</td></tr>
+      <tr><td><a href="operations.md">Run &amp; test</a></td><td>run, configure, and test the app, or look up a term.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Size of the project</h2>
+  <div class="table"><table>
+    <thead><tr><th>Measure</th><th>Value</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Commits on <code>main</code></td><td>11</td><td>Public release on 2026-09-27; last commit 2026-09-28.</td></tr>
+      <tr><td>Uncommitted changes</td><td>~730 paths</td><td>564 new, 110 modified, 58 deleted. A large refactor plus the <code>plan.md</code> work.</td></tr>
+      <tr><td>Source lines (TS/TSX, no tests)</td><td>~33,000</td><td>In <code>src/</code>, <code>server/</code>, <code>shared/</code>.</td></tr>
+      <tr><td>Unit and integration tests</td><td>4,048 in 395 files</td><td>Vitest. 57 were failing in the latest run while work was in progress; see <a href="plan-status.md">Plan status</a>.</td></tr>
+      <tr><td>Acceptance features</td><td>13</td><td>Cucumber + Playwright in <code>features/</code>.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note warn"><p>This atlas describes the working tree while <code>plan.md</code> was still being implemented, possibly by another session. Files such as <code>server/api-symbi.ts</code> and <code>server/symbi-index-lifecycle.ts</code> changed during the review. Check the code before relying on exact details.</p></div>
+</section>
+</main>
+<footer>SymbiKnow Project Atlas · source: <code>docs/project-atlas/system-map.html</code> · regenerate when the architecture changes.</footer>
+</body>
+</html>

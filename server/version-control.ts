@@ -1,51 +1,40 @@
-import { execFile } from 'node:child_process';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { ApiError } from './errors.js';
-
-const exec = promisify(execFile);
-const sourceFile = 'source.md';
-const branchName = /^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,63}$/;
-const revisionId = /^[0-9a-f]{7,40}$/i;
-
-async function git(root: string, ...args: string[]): Promise<string> {
-  try {
-    const { stdout } = await exec('git', args, { cwd: root, maxBuffer: 8_000_000 });
-    return stdout.trim();
-  } catch (error) {
-    const failure = error as Error & { stderr?: string };
-    throw new Error(failure.stderr?.trim() || failure.message);
-  }
-}
-
-async function gitContent(root: string, revision: string): Promise<string> {
-  try {
-    const { stdout } = await exec('git', ['show', `${revision}:${sourceFile}`], { cwd: root, maxBuffer: 8_000_000 });
-    return stdout;
-  } catch (error) {
-    const failure = error as Error & { stderr?: string };
-    throw new Error(failure.stderr?.trim() || failure.message);
-  }
-}
-
-function checkedBranch(value: string): string {
-  if (!branchName.test(value) || value.includes('..') || value.includes('//') || value.endsWith('.lock')) {
-    throw new ApiError(400, 'Invalid branch name');
-  }
-  return value;
-}
+import { git, gitContent } from './version-git.js';
+import { readSource, sourceFile } from './version-source.js';
+import { commitIdentity, mergeEmail } from './version-identity.js';
+import { hasRepository, serializeInitialization, unbornRepository, workingSource } from './version-initialization.js';
+import { checkedBranch, checkedRevision, revisionDetails } from './version-reference.js';
+import { abortFailedMerge } from './version-merge-recovery.js';
 
 export class DocumentVersions {
   constructor(private readonly root: string) {}
 
   async init(content: string): Promise<void> {
-    try {
-      await access(path.join(this.root, '.git'));
-      if (await this.content() !== content) await this.commit(content, 'Import filesystem edit', 'filesystem');
+    return serializeInitialization(this.root, () => this.initialize(content));
+  }
+
+  /** True when history can be read as it is: the repository exists and already records this saved source. */
+  async matches(content: string): Promise<boolean> {
+    if (!await hasRepository(this.root) || await unbornRepository(this.root)) return false;
+    return await workingSource(this.root) === content && !await git(this.root, 'status', '--porcelain', '--', sourceFile);
+  }
+
+  private async initialize(content: string): Promise<void> {
+    if (!await hasRepository(this.root)) {
+      await this.bootstrap(content);
       return;
     }
-    catch { await mkdir(this.root, { recursive: true }); }
+    const current = await workingSource(this.root);
+    const dirty = current !== content || Boolean(await git(this.root, 'status', '--porcelain', '--', sourceFile));
+    if (!dirty) return;
+    if (await unbornRepository(this.root)) await this.bootstrap(content);
+    else await this.commit(content, 'Import filesystem edit', 'filesystem');
+  }
+
+  private async bootstrap(content: string): Promise<void> {
+    await mkdir(this.root, { recursive: true });
     await git(this.root, 'init', '-q');
     await git(this.root, 'symbolic-ref', 'HEAD', 'refs/heads/main');
     await git(this.root, 'config', 'user.name', 'SymbiKnow');
@@ -59,33 +48,30 @@ export class DocumentVersions {
     await writeFile(path.join(this.root, sourceFile), content);
     await git(this.root, 'add', '--', sourceFile);
     if (!await git(this.root, 'diff', '--cached', '--name-only')) return false;
-    const name = author.replace(/[<>\n]/g, '').slice(0, 48) || 'SymbiKnow';
-    const email = `${name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-') || 'symbiknow'}@symbiknow.local`;
+    const { name, email } = commitIdentity(author);
     await git(this.root, '-c', `user.name=${name}`, '-c', `user.email=${email}`, 'commit', '-q', '-m', message.slice(0, 180));
     return true;
   }
 
   /** An empty commit that records who removed the document. The last content stays in history for recovery. */
   async recordDeletion(message: string, author = 'SymbiKnow'): Promise<void> {
-    const name = author.replace(/[<>\n]/g, '').slice(0, 48) || 'SymbiKnow';
-    const email = `${name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-') || 'symbiknow'}@symbiknow.local`;
+    const { name, email } = commitIdentity(author);
     await git(this.root, '-c', `user.name=${name}`, '-c', `user.email=${email}`, 'commit', '-q', '--allow-empty', '-m', message.slice(0, 180));
   }
 
-  async status() {
+  async status(options: { limit?: number; cursor?: number } = {}) {
     const current = await git(this.root, 'branch', '--show-current');
     const branches = (await git(this.root, 'branch', '--format=%(refname:short)')).split('\n').filter(Boolean);
-    const lines = (await git(this.root, 'log', '-100', '--format=%H%x1f%P%x1f%s%x1f%aI%x1f%an')).split('\n').filter(Boolean);
-    const commits = lines.map(line => {
-      const [id, parents, message, createdAt, author] = line.split('\x1f');
-      return { id, parents: parents ? parents.split(' ') : [], message, createdAt, author };
-    });
+    const limit = options.limit ?? 100;
+    const cursor = options.cursor ?? 0;
+    const lines = (await git(this.root, 'log', `--max-count=${limit}`, `--skip=${cursor}`,
+      '--format=%H%x1f%P%x1f%s%x1f%aI%x1f%an')).split('\n').filter(Boolean);
+    const commits = lines.map(revisionDetails);
     return { current, branches, commits };
   }
 
   private async revisionDetails(target: string) {
-    const [id, parents, message, createdAt, author] = (await git(this.root, 'show', '-s', '--format=%H%x1f%P%x1f%s%x1f%aI%x1f%an', target)).split('\x1f');
-    return { id, parents: parents ? parents.split(' ') : [], message, createdAt, author };
+    return revisionDetails(await git(this.root, 'show', '-s', '--format=%H%x1f%P%x1f%s%x1f%aI%x1f%an', target));
   }
 
   /** Read the resulting source without changing the checked-out branch or document. */
@@ -93,9 +79,8 @@ export class DocumentVersions {
     const before = await this.content();
     await this.requireClean();
     if (kind === 'restore') {
-      if (!revisionId.test(target)) throw new ApiError(400, 'Invalid revision ID');
-      try { await git(this.root, 'cat-file', '-e', `${target}^{commit}`); }
-      catch { throw new ApiError(404, 'Revision not found'); }
+      checkedRevision(target);
+      await this.requireRevision(target);
       return { before, after: await gitContent(this.root, target), scope: 'This document only', revision: await this.revisionDetails(target) };
     }
     await this.requireBranch(target);
@@ -121,10 +106,52 @@ export class DocumentVersions {
     }
   }
 
+  private async requireRevision(revision: string): Promise<void> {
+    try { await git(this.root, 'cat-file', '-e', `${revision}^{commit}`); }
+    catch { throw new ApiError(404, 'Revision not found'); }
+  }
+
   async createBranch(name: string) {
     checkedBranch(name);
     try { await git(this.root, 'branch', name); }
-    catch (error) { throw new ApiError(409, error instanceof Error ? error.message : 'Could not create branch'); }
+    // The native Git adapter always rejects with an Error.
+    catch (error) { throw new ApiError(409, (error as Error).message); }
+    return this.status();
+  }
+
+  /** Read a named branch without changing HEAD or the visible source file. */
+  async branchContent(name: string): Promise<{ content: string; revision: string }> {
+    await this.requireBranch(name);
+    return { content: await gitContent(this.root, name), revision: await git(this.root, 'rev-parse', name) };
+  }
+
+  /** Commit on a detached temporary worktree, then move only the named branch ref. */
+  async commitBranch(name: string, content: string, message: string, author = 'SymbiKnow') {
+    await this.requireBranch(name);
+    if (name === (await this.status()).current) throw new ApiError(409, 'Use the visible document edit for the current branch');
+    const previous = await git(this.root, 'rev-parse', name);
+    const worktree = await mkdtemp(path.join(path.dirname(this.root), 'branch-edit-'));
+    try {
+      await git(this.root, 'worktree', 'add', '--detach', worktree, previous);
+      await writeFile(path.join(worktree, sourceFile), content);
+      await git(worktree, 'add', '--', sourceFile);
+      if (!await git(worktree, 'diff', '--cached', '--name-only')) return this.branchContent(name);
+      const { name: authorName, email } = commitIdentity(author);
+      await git(worktree, '-c', `user.name=${authorName}`, '-c', `user.email=${email}`, 'commit', '-q', '-m', message.slice(0, 180));
+      const revision = await git(worktree, 'rev-parse', 'HEAD');
+      await git(this.root, 'update-ref', `refs/heads/${name}`, revision, previous);
+      return { content, revision };
+    } finally {
+      await git(this.root, 'worktree', 'remove', '--force', worktree).catch(() => undefined);
+      await rm(worktree, { recursive: true, force: true });
+    }
+  }
+
+  async deleteBranch(name: string) {
+    await this.requireBranch(name);
+    if (name === 'main' || name === (await this.status()).current) throw new ApiError(409, 'The current or protected branch cannot be deleted');
+    try { await git(this.root, 'branch', '-d', '--', name); }
+    catch { throw new ApiError(409, 'This branch has unmerged work and cannot be deleted'); }
     return this.status();
   }
 
@@ -139,25 +166,25 @@ export class DocumentVersions {
     await this.requireBranch(name);
     await this.requireClean();
     if (name === (await this.status()).current) throw new ApiError(400, 'Choose another branch to merge');
-    const email = `${author.toLowerCase().replace(/[^a-z0-9._-]+/g, '-') || 'symbiknow'}@symbiknow.local`;
+    const before = await this.content();
+    const email = mergeEmail(author);
     try { await git(this.root, '-c', `user.name=${author}`, '-c', `user.email=${email}`, 'merge', '--no-edit', name); }
     catch {
-      await git(this.root, 'merge', '--abort').catch(() => undefined);
+      await abortFailedMerge(this.root, before);
       throw new ApiError(409, 'Merge conflict in this document. No changes were applied.');
     }
     return { status: await this.status(), content: await this.content() };
   }
 
   async restoreRevision(revision: string, author = 'SymbiKnow') {
-    if (!revisionId.test(revision)) throw new ApiError(400, 'Invalid revision ID');
+    checkedRevision(revision);
     await this.requireClean();
-    try { await git(this.root, 'cat-file', '-e', `${revision}^{commit}`); }
-    catch { throw new ApiError(404, 'Revision not found'); }
+    await this.requireRevision(revision);
     await git(this.root, 'restore', '--source', revision, '--staged', '--worktree', '--', sourceFile);
     const content = await this.content();
     await this.commit(content, `Restore revision ${revision.slice(0, 12)}`, author);
     return { status: await this.status(), content };
   }
 
-  async content(): Promise<string> { return readFile(path.join(this.root, sourceFile), 'utf8'); }
+  async content(): Promise<string> { return readSource(this.root); }
 }

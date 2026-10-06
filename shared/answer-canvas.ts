@@ -1,5 +1,5 @@
 import type { BlockKind } from './types.js';
-import type { EvidenceReference } from './evidence.js';
+import type { EvidenceReference, EvidenceSourceRevision } from './evidence.js';
 
 export interface ChatViewContext {
   selectedBlockIds: string[];
@@ -43,7 +43,8 @@ export interface AnswerCanvasViewFocus {
 }
 
 export type CanvasNavigationTarget =
-  | { kind: 'document'; canvasId: string; blockId: string; title: string; excerpt?: string; contentHash?: string }
+  | ({ kind: 'document'; canvasId: string; blockId: string; title: string; excerpt?: string; contentHash?: string;
+      origin?: 'Chat' | 'Symbi Reflex' } & EvidenceSourceRevision)
   | { kind: 'group'; canvasId: string; group: string; title: string };
 
 export interface AnswerSource {
@@ -80,6 +81,7 @@ export interface ResearchCanvasBlock {
   title: string;
   content: string;
   sourceIds: string[];
+  verification?: { status: 'supported' | 'unsupported' | 'unverified'; checkedClaims: number; totalClaims: number };
   lane?: string;
 }
 

@@ -15,14 +15,38 @@ function documentTitle(canvas: CanvasDocument | null, id?: string): string | und
 }
 
 export function currentViewLabel(canvas: CanvasDocument | null, view: ChatViewContext): string {
-  if (view.viewMode === 'answer') return view.answerFocus?.focusedBlockTitle
-    ? `Research · ${view.answerFocus.focusedBlockTitle}` : 'Research canvas';
+  if (view.viewMode === 'answer') return researchLabel(view);
   if (view.selectedBlockIds.length > 1) return `${view.selectedBlockIds.length} selected documents`;
-  const focused = documentTitle(canvas, view.selectedBlockIds[0] ?? view.readerBlockId ?? view.focusBlockId);
+  const focused = focusedDocumentTitle(canvas, view);
   if (focused) return focused;
-  if (view.editorDraft) return `Draft · ${view.editorDraft.title.trim() || 'Untitled'}`;
-  if (view.activeGroup) return `${groupLabel(view.activeGroup)} group`;
-  if (view.searchQuery?.trim()) return `Search · ${view.searchQuery.trim()}`;
+  return otherViewLabel(canvas, view);
+}
+
+function otherViewLabel(canvas: CanvasDocument | null, view: ChatViewContext): string {
+  return draftLabel(view) ?? activeGroupLabel(view) ?? searchLabel(view) ?? overviewLabel(canvas, view);
+}
+
+function researchLabel(view: ChatViewContext): string {
+  return view.answerFocus?.focusedBlockTitle ? `Research · ${view.answerFocus.focusedBlockTitle}` : 'Research canvas';
+}
+
+function focusedDocumentTitle(canvas: CanvasDocument | null, view: ChatViewContext): string | undefined {
+  return documentTitle(canvas, view.selectedBlockIds[0] ?? view.readerBlockId ?? view.focusBlockId);
+}
+
+function draftLabel(view: ChatViewContext): string | undefined {
+  return view.editorDraft ? `Draft · ${view.editorDraft.title.trim() || 'Untitled'}` : undefined;
+}
+
+function activeGroupLabel(view: ChatViewContext): string | undefined {
+  return view.activeGroup ? `${groupLabel(view.activeGroup)} group` : undefined;
+}
+
+function searchLabel(view: ChatViewContext): string | undefined {
+  return view.searchQuery?.trim() ? `Search · ${view.searchQuery.trim()}` : undefined;
+}
+
+function overviewLabel(canvas: CanvasDocument | null, view: ChatViewContext): string {
   if (view.visibleGroups?.length && view.viewMode !== 'documents') return `${view.visibleGroups.length} visible groups`;
   return canvas?.name ?? 'Current canvas';
 }
@@ -39,12 +63,17 @@ export function chatScopeOptions(canvas: CanvasDocument | null, view: ChatViewCo
     detail: `${view.selectedBlockIds.length} selected`, context: {
       selectedBlockIds: view.selectedBlockIds, viewMode: 'documents', visibleBlockIds: view.selectedBlockIds,
     } });
-  if (turns.length) options.push({ id: 'research', label: 'Research canvas', detail: turns.at(-1)?.query ?? 'Session research', context: {
+  if (turns.length) options.push(researchScope(view, turns));
+  return options;
+}
+
+function researchScope(view: ChatViewContext, turns: AnswerCanvasTurn[]): ScopeOption {
+  // Called only after the nonempty guard; every AnswerCanvasTurn has a query, including a valid empty string.
+  return { id: 'research', label: 'Research canvas', detail: turns.at(-1)!.query, context: {
     selectedBlockIds: [], viewMode: 'answer',
     answerSourceIds: [...new Set(turns.flatMap(turn => turn.sources.map(source => source.blockId)))].slice(-12),
     answerFocus: view.viewMode === 'answer' && view.answerFocus ? view.answerFocus : {
       level: 'big-picture', visibleQuestions: turns.map(turn => turn.query).slice(-8), visibleSourceIds: [],
     },
-  } });
-  return options;
+  } };
 }

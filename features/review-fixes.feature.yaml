@@ -1,0 +1,17 @@
+feature: Desktop review fixes
+scenarios:
+- name: Escape closes only the topmost surface
+  steps:
+  - given: a fresh workspace
+  - when: I open the current canvas in a browser
+  - and: I open a saved document in the reader and then its file history
+  - then: Escape closes the file history and keeps the reader open
+  - and: a second Escape returns to the canvas without changing the document
+- name: Entering a scattered group shows every document
+  steps:
+  - given: a fresh workspace
+  - when: I save three documents of one group far apart on a new canvas
+  - and: I open the current canvas in a browser
+  - and: I open the scattered group
+  - then: every document in the group is visible in the canvas view
+  - and: the saved document positions are unchanged after reload

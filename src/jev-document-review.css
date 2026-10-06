@@ -1,0 +1,24 @@
+.jev-document-review { margin: 0 0 20px; border: 1px solid var(--sk-border, #d7e0dc); border-radius: 10px; padding: 12px 14px; background: var(--sk-surface-soft, #f3f8f6); color: var(--sk-text, #20342c); font-size: 13px; }
+.jev-document-review__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.jev-document-review h2 { margin: 0; font-size: 14px; }
+.jev-document-review__heading span, .jev-document-review small { color: var(--sk-muted, #65736f); }
+.jev-document-review__heading span { font-size: 12px; }
+.jev-document-review__summary { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 7px 0 9px; }
+.jev-document-review__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.jev-document-review details { margin-left: auto; }
+.jev-document-review details[open] { width: 100%; margin-left: 0; }
+.jev-document-review summary { cursor: pointer; color: var(--sk-link, #087f77); font-size: 12px; }
+.jev-document-review__detail-body { border-top: 1px solid var(--sk-border, #d7e0dc); margin-top: 10px; padding-top: 2px; }
+.jev-document-review dl { display: grid; gap: 8px; margin: 16px 0; }
+.jev-document-review dl > div { display: grid; grid-template-columns: 150px 1fr; gap: 12px; }
+.jev-document-review dt { font-weight: 650; }
+.jev-document-review dd { margin: 0; }
+.jev-document-review__scores { display: block; color: var(--sk-muted, #65736f); }
+.jev-document-review blockquote { margin: 3px 0; border-left: 2px solid var(--sk-accent, #087f77); padding-left: 10px; }
+.jev-document-review button { border: 1px solid var(--sk-border, #d7e0dc); border-radius: 8px; padding: 7px 10px; background: var(--sk-surface, #fff); color: var(--sk-text, #20342c); cursor: pointer; }
+.jev-document-review [role="alert"] { color: var(--sk-text, #20342c); }
+.jev-document-review button:disabled { cursor: not-allowed; opacity: .6; }
+@media (max-width: 560px) {
+  .jev-document-review__heading { align-items: start; }
+  .jev-document-review dl > div { grid-template-columns: 1fr; gap: 2px; }
+}

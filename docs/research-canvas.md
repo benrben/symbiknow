@@ -4,9 +4,9 @@ SymbiKnow can turn a research question into a connected, editable canvas. It sta
 
 ## Start with a question
 
-1. Open a canvas and connect a chat model in **Settings → Models**. Set a TypeSafe Jev key in **Settings → TypeSafe Jev** for source selection and answer routing.
+1. Open a canvas and connect a chat model in **Settings → Models**.
 2. Ask a question that benefits from several linked findings, such as “Map the architecture and show how the API, MCP server, and document store connect.” You can explicitly ask for a **temporary research canvas**.
-3. Jev ranks relevant documents. While the agent works, the research canvas shows the selected evidence. The agent can draw several answer blocks and meaningful edges; each block cites the documents that support it.
+3. Local retrieval selects relevant documents. While the agent works, the research canvas shows the selected evidence. The agent can draw several answer blocks and meaningful edges; each block cites the documents that support it.
 
 Quick facts and status questions usually get a direct chat answer. If the request could mean drawing a map, answering from the current view, or finding the right source, the assistant asks you to choose. **Answer briefly in chat** and **Turn this into a map** are also available after a response. Source selection helps the agent choose what to read; it does not prove a claim by itself.
 

@@ -18,7 +18,7 @@ afterEach(cleanup);
 describe('BrowseGroups', () => {
   it('lists saved groups and ungrouped documents and opens the chosen document', () => {
     const onOpenBlock = vi.fn();
-    render(<BrowseGroups canvas={canvas} onOpenBlock={onOpenBlock} onOrganize={vi.fn()} onClose={vi.fn()}/>);
+    render(<BrowseGroups canvas={canvas} onOpenBlock={onOpenBlock} onClose={vi.fn()}/>);
     const launch = screen.getByRole('region', { name: 'Launch' });
     expect(within(launch).getByRole('heading', { name: 'Launch 2' })).toBeTruthy();
     expect(within(launch).getAllByRole('button').map(button => button.textContent)).toEqual(['Alpha notesmarkdown', 'Beta checklistmarkdown']);
@@ -28,18 +28,16 @@ describe('BrowseGroups', () => {
     expect(onOpenBlock).toHaveBeenCalledWith('qa');
   });
 
-  it('offers organization and closes by button or Escape', () => {
-    const onOrganize = vi.fn(); const onClose = vi.fn();
-    render(<BrowseGroups canvas={canvas} onOpenBlock={vi.fn()} onOrganize={onOrganize} onClose={onClose}/>);
-    fireEvent.click(screen.getByRole('button', { name: 'Organize with Jev' }));
-    expect(onOrganize).toHaveBeenCalledOnce();
+  it('closes by button or Escape', () => {
+    const onClose = vi.fn();
+    render(<BrowseGroups canvas={canvas} onOpenBlock={vi.fn()} onClose={onClose}/>);
     fireEvent.keyDown(screen.getByRole('complementary', { name: 'Browse groups' }), { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'Close browse groups' }));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
   it('shows a clear empty state', () => {
-    render(<BrowseGroups canvas={{ ...canvas, blocks: [] }} onOpenBlock={vi.fn()} onOrganize={vi.fn()} onClose={vi.fn()}/>);
+    render(<BrowseGroups canvas={{ ...canvas, blocks: [] }} onOpenBlock={vi.fn()} onClose={vi.fn()}/>);
     expect(screen.getByText('No documents in this canvas yet.')).toBeTruthy();
     expect(screen.queryAllByRole('region')).toHaveLength(0);
   });

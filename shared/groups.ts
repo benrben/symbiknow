@@ -43,11 +43,22 @@ export function groupParent(key: string): string | undefined {
   return groupAncestors(key).at(-1);
 }
 
-export function groupLabel(key: string): string {
+function topLevelLaneLabel(prefix: string, value: string, segment: string): string | undefined {
+  if (prefix === 'lane' && !value.includes('/')) return laneNames[segment as DocumentLane] ?? segment;
+  return undefined;
+}
+
+function groupLabelParts(key: string) {
   const normalized = normalizedGroup(key) ?? key;
   const [prefix, value = ''] = normalized.split(':');
   const segment = value.split('/').at(-1) || prefix;
-  if (prefix === 'lane' && !value.includes('/')) return laneNames[segment as DocumentLane] ?? segment;
+  return { prefix, value, segment };
+}
+
+export function groupLabel(key: string): string {
+  const { prefix, value, segment } = groupLabelParts(key);
+  const lane = topLevelLaneLabel(prefix, value, segment);
+  if (lane !== undefined) return lane;
   if (segment === 'other') return 'Other';
   const words = prefix === 'area' && !value.includes('/') ? workAreaLabel(segment) : segment.replaceAll(/[_-]/g, ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);

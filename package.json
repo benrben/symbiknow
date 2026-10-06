@@ -21,18 +21,24 @@
     "dev:server": "tsx watch server/index.ts",
     "prebuild": "tsx scripts/sync-symbi-avatar-preview.ts",
     "mcp": "tsx server/mcp.ts",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && npm run build:sdk",
     "pretest": "npm run build",
     "test": "node .quality/run-tests.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "start": "tsx server/index.ts"
+    "start": "tsx server/index.ts",
+    "build:sdk": "tsc -p tsconfig.sdk.json",
+    "preacceptance": "npm run build",
+    "acceptance": "node --import tsx ./node_modules/.bin/cucumber-js",
+    "presmoke": "npm run build:sdk",
+    "smoke": "node features/smoke.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/language": "^6.12.4",
     "@fontsource-variable/geist": "^5.3.0",
+    "@huggingface/transformers": "3.8.1",
     "@jason.today/webmcp": "file:vendor/jason.today-webmcp-0.1.13.tgz",
     "@langchain/openai": "^1.5.13",
     "@lezer/highlight": "^1.2.4",
@@ -46,6 +52,7 @@
     "@streamdown/mermaid": "^1.0.2",
     "@xyflow/react": "^12.12.0",
     "ai": "^7.0.114",
+    "better-sqlite3": "12.8.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "codemirror": "^6.0.2",
@@ -93,6 +100,21 @@
   },
   "overrides": {
     "@xmldom/xmldom": "^0.9.12",
-    "lodash-es": "^4.18.1"
-  }
+    "lodash-es": "^4.18.1",
+    "katex": "0.18.2",
+    "source-map-js": "1.2.2",
+    "sharp": "0.35.4"
+  },
+  "main": "./dist/sdk/sdk.js",
+  "types": "./dist/sdk/sdk.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/sdk/sdk.d.ts",
+      "import": "./dist/sdk/sdk.js"
+    }
+  },
+  "files": [
+    "dist/sdk",
+    "docs/jev"
+  ]
 }

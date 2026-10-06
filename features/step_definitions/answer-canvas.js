@@ -1,4 +1,6 @@
 import { strict as assert } from 'node:assert';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Then, When } from '@cucumber/cucumber';
 
 async function waitForBlockInView(page, title) {
@@ -20,49 +22,74 @@ async function waitForBlockInView(page, title) {
   }
 }
 
+async function isolateSavedEvidence(world) {
+  const workspaces = await fetch(`${world.baseUrl}/api/workspaces`).then(response => response.json());
+  const workspace = workspaces.find(item => item.canvases.some(canvas => canvas.id === world.canvasId));
+  assert.ok(workspace);
+  // These scenarios have one reusable source. Hide the unrelated starter documents
+  // through the public API while retaining their canvases for navigation.
+  for (const summary of workspace.canvases) {
+    const canvas = await fetch(`${world.baseUrl}/api/canvases/${summary.id}`).then(response => response.json());
+    for (const block of canvas.blocks.filter(item => item.id !== world.block.id && !item.archived)) {
+      const response = await fetch(`${world.baseUrl}/api/canvases/${canvas.id}/blocks/${block.id}`, {
+        method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ archived: true }),
+      });
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).archived, true);
+    }
+  }
+}
+
 When('I configure chat for the conversation canvas', async function () {
+  await isolateSavedEvidence(this);
   const response = await fetch(`${this.baseUrl}/api/settings`, { method: 'PUT', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ model: 'openai/gpt-4o-mini', apiKey: 'acceptance-chat-key', jevApiKey: 'acceptance-jev-key' }) });
+    body: JSON.stringify({ model: 'openai/gpt-4o-mini', apiKey: 'acceptance-chat-key' }) });
   assert.equal(response.status, 200);
 });
 
+function observeChatRequests(world) {
+  if (world.answerCanvasRequests) return;
+  world.answerCanvasRequests = [];
+  world.page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/chat/stream' && request.method() === 'POST') {
+      world.answerCanvasRequests.push(request.postDataJSON());
+    }
+  });
+}
+
+async function assertNativeResearch(world, count) {
+  const records = (await readFile(join(world.dataDir, 'chat-research.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+  const result = records.at(-1);
+  assert.equal(result.sourceId, `${world.canvasId}:${world.block.id}`);
+  assert.equal(result.sourceTitle, 'Launch evidence');
+  assert.deepEqual(result.drawResult, { drawn: true, blocks: count, edges: count === 3 ? 2 : 0 });
+}
+
 When('I ask {string} with selected evidence', async function (question) {
-  if (!this.answerCanvasRequests) {
-    this.answerCanvasRequests = [];
-    await this.page.route('**/api/chat/stream', async route => {
-      const body = route.request().postDataJSON();
-      this.answerCanvasRequests.push(body);
-      const latest = body.messages.at(-1).content;
-      const chatOnly = latest === 'Which tests failed?';
-      const source = { canvasId: this.canvasId, canvasName: 'Group automations', blockId: this.block.id,
-        title: this.block.title, excerpt: this.block.content, relevance: .95 };
-      const event = { canvasId: this.canvasId, query: latest, selection: 'jev', sources: [source] };
-      const answer = chatOnly ? 'The mobile release has two failing tests.' : `Answer ${this.answerCanvasRequests.length}.`;
-      const patch = { query: latest, layout: 'architecture', blocks: [
-        { id: 'summary', type: 'text', title: `Finding ${this.answerCanvasRequests.length}`, content: answer, sourceIds: [`${this.canvasId}:${this.block.id}`] },
-        { id: 'flow', type: 'diagram', title: `Launch flow ${this.answerCanvasRequests.length}`, content: '```mermaid\nflowchart LR\nEvidence-->Decision\n```', sourceIds: [`${this.canvasId}:${this.block.id}`] },
-        { id: 'next', type: 'task', title: `Next action ${this.answerCanvasRequests.length}`, content: '- [ ] Review the failing tests', sourceIds: [] },
-      ], edges: [{ from: 'summary', to: 'flow', label: 'explains' }, { from: 'flow', to: 'next', label: 'leads to' }] };
-      await route.fulfill({ status: 200, contentType: 'text/event-stream', body:
-        `${chatOnly ? '' : `event: answer_canvas\ndata: ${JSON.stringify(event)}\n\nevent: research_canvas_patch\ndata: ${JSON.stringify(patch)}\n\n`}data: ${JSON.stringify({ choices: [{ delta: { content: answer } }] })}\n\ndata: [DONE]\n\n` });
-    });
-  }
+  observeChatRequests(this);
+  const evidence = this.page.locator('.canvas-card').filter({ hasText: this.block.title }).first();
+  if (await evidence.isVisible()) await evidence.click();
   await this.page.getByRole('textbox', { name: 'Message Symbi' }).fill(question);
   await this.page.getByRole('button', { name: 'Submit' }).click();
   await this.page.getByRole('complementary', { name: 'Symbi assistant' })
     .getByRole('button', { name: /Open research canvas · 3 new blocks/ }).last().waitFor();
+  await assertNativeResearch(this, 3);
 });
 
 Then('the conversation canvas has {int} answers and one reusable source', async function (count) {
-  const board = this.page.getByRole('region', { name: 'Research canvas' });
+  const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
   await board.waitFor();
   await board.getByText(new RegExp(`${count * 3} documents · 1 cited source`, 'u')).waitFor();
   assert.ok(await board.locator('.canvas-card').count() >= 3);
+  if (await board.locator('.answer-canvas__outline').getAttribute('open') === null) {
+    await board.locator('.answer-canvas__outline summary').click();
+  }
+  await board.getByRole('button', { name: `Step 1: Finding ${count}` }).click();
   await board.getByText('Files · 100%').waitFor({ timeout: 6000 });
   await board.locator('.canvas-card__portals').first().waitFor({ timeout: 6000 });
   assert.ok(await board.locator('.canvas-card__portals').count() >= 2);
   assert.ok(await board.locator('.canvas-card').filter({ hasText: 'Launch flow' }).count() >= 1);
-  assert.equal(await board.getByRole('navigation', { name: 'Research questions' }).getByRole('button').count(), count);
+  assert.equal(await board.getByRole('navigation', { name: 'Research questions' }).getByRole('button').count(), count > 1 ? count : 0);
   await board.locator('.loader-mermaid svg').first().waitFor({ timeout: 10000 });
   assert.equal(await board.locator('.canvas-surface').count(), 1);
   if (count === 2) await this.page.screenshot({ path: '.quality/conversation-canvas.png' });
@@ -71,7 +98,7 @@ Then('the conversation canvas has {int} answers and one reusable source', async 
 
 When('I visit another canvas and continue the conversation', async function () {
   await this.page.getByRole('button', { name: 'Return to main canvas' }).click();
-  await this.page.getByRole('region', { name: 'Research canvas' }).waitFor({ state: 'hidden' });
+  await this.page.getByRole('region', { name: 'Research canvas', exact: true }).waitFor({ state: 'hidden' });
   await this.page.getByText('Product Roadmap', { exact: true }).click();
   await this.page.getByRole('heading', { name: 'Product Roadmap' }).first().waitFor();
 });
@@ -79,8 +106,9 @@ When('I visit another canvas and continue the conversation', async function () {
 Then('I can reopen the accumulated conversation canvas', async function () {
   await this.page.getByRole('button', { name: 'Open research canvas', exact: true }).getByText('Research canvas').waitFor();
   await this.page.getByRole('button', { name: 'Open research canvas', exact: true }).click();
-  const board = this.page.getByRole('region', { name: 'Research canvas' });
+  const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
   await board.waitFor();
+  await board.getByRole('button', { name: 'Question 2: Map which tests failed and how they block the launch' }).click();
   await waitForBlockInView(this.page, 'Finding 2');
   await board.getByRole('button', { name: 'Question 1: What blocks the launch?' }).click();
   await waitForBlockInView(this.page, 'Finding 1');
@@ -91,7 +119,7 @@ Then('I can reopen the accumulated conversation canvas', async function () {
 });
 
 Then('the research canvas uses dark surfaces and retains every block', async function () {
-  const board = this.page.getByRole('region', { name: 'Research canvas' });
+  const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
   const color = await board.locator('.answer-canvas__workspace .react-flow').evaluate(element => getComputedStyle(element).backgroundColor);
   const cardColor = await board.locator('.canvas-card').first().evaluate(element => getComputedStyle(element).backgroundColor);
   assert.equal(await this.page.locator('html').getAttribute('data-theme'), 'dark');
@@ -105,7 +133,10 @@ Then('the research canvas uses dark surfaces and retains every block', async fun
 });
 
 Then('the research canvas shows its answer structure with secondary controls tucked away', async function () {
-  const board = this.page.getByRole('region', { name: 'Research canvas' });
+  const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
+  if (await board.locator('.answer-canvas__outline').getAttribute('open') === null) {
+    await board.locator('.answer-canvas__outline summary').click();
+  }
   const story = board.getByLabel('Latest answer structure');
   await story.getByRole('button', { name: 'Step 1: Finding 2' }).waitFor();
   assert.match(await story.textContent(), /Finding 2.*Launch flow 2.*Next action 2/u);
@@ -123,7 +154,7 @@ When('I ask a direct factual question in chat', async function () {
 
 Then('the direct answer stays in chat and adds no research block', async function () {
   await this.page.getByText('The mobile release has two failing tests.', { exact: true }).waitFor();
-  const board = this.page.getByRole('region', { name: 'Research canvas' });
+  const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
   await board.getByText(/6 documents · 1 cited source/u).waitFor();
   assert.equal(await board.getByRole('navigation', { name: 'Research questions' }).getByRole('button').count(), 2);
   assert.deepEqual(this.pageErrors, []);
@@ -138,7 +169,7 @@ Then('the assistant shows its current scope and a way to turn the answer into a 
 });
 
 Then('I can add, read, search, undo, and save with the normal canvas controls', async function () {
-  const board = this.page.getByRole('region', { name: 'Research canvas' });
+  const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
   await board.locator('.canvas-surface').waitFor();
   assert.equal(await board.locator('.canvas-surface .react-flow__minimap').count(), 1);
   await this.page.getByRole('button', { name: 'Add block', exact: true }).click();
@@ -214,39 +245,30 @@ Then('I can add, read, search, undo, and save with the normal canvas controls', 
 });
 
 When('I ask for rich research blocks', async function () {
-  await this.page.route('**/api/chat/stream', async route => {
-    const source = { canvasId: this.canvasId, canvasName: 'Group automations', blockId: this.block.id,
-      title: this.block.title, excerpt: this.block.content, relevance: .95 };
-    const patch = { query: 'Show me every format on a temporary research canvas', layout: 'roadmap', blocks: [
-      { id: 'image', type: 'text', kind: 'markdown', title: 'Visual evidence',
-        content: '![Launch status](/symbiknow-favicon.svg)', sourceIds: [`${this.canvasId}:${this.block.id}`] },
-      { id: 'html', type: 'section', kind: 'html', title: 'HTML report',
-        content: '<!doctype html><html><body><h1>Rendered report</h1></body></html>', sourceIds: [`${this.canvasId}:${this.block.id}`] },
-      { id: 'diagram', type: 'diagram', kind: 'markdown', title: 'System flow',
-        content: '```mermaid\nflowchart LR\nEvidence-->Decision\n```', sourceIds: [] },
-      { id: 'slides', type: 'section', kind: 'slides', title: 'Briefing slides',
-        content: '---\nmarp: true\n---\n# Release briefing', sourceIds: [] },
-      { id: 'chart', type: 'diagram', kind: 'mdx', title: 'Health chart',
-        content: '<Chart title="Release health" values="2,4,6" />', sourceIds: [] },
-      { id: 'site', type: 'section', kind: 'website', title: 'Documentation site',
-        content: '---\ngenerator: mkdocs\nsource: sites/team-docs\n---\n# Team docs', sourceIds: [] },
-    ], edges: [] };
-    await route.fulfill({ status: 200, contentType: 'text/event-stream', body:
-      `event: answer_canvas\ndata: ${JSON.stringify({ canvasId: this.canvasId, query: patch.query, selection: 'jev', sources: [source] })}\n\n`
-      + `event: research_canvas_patch\ndata: ${JSON.stringify(patch)}\n\n`
-      + `data: ${JSON.stringify({ choices: [{ delta: { content: 'I mapped each format.' } }] })}\n\ndata: [DONE]\n\n` });
-  });
+  observeChatRequests(this);
   await this.page.getByRole('textbox', { name: 'Message Symbi' }).fill('Show me every format on a temporary research canvas');
   await this.page.getByRole('button', { name: 'Submit' }).click();
-  await this.page.getByRole('region', { name: 'Research canvas' }).getByText('6 documents · 1 cited source', { exact: false }).waitFor();
+  await this.page.getByRole('region', { name: 'Research canvas', exact: true }).getByText('6 documents · 1 cited source', { exact: false }).waitFor();
+  await assertNativeResearch(this, 6);
 });
 
 Then('I can view and save the rich blocks with their original formats', async function () {
-  const board = this.page.getByRole('region', { name: 'Research canvas' });
+  const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
+  await board.locator('.answer-canvas__outline summary').click();
   const focus = async (index, title) => {
     await board.getByRole('button', { name: `Step ${index}: ${title}` }).click();
     const card = board.locator('.canvas-card').filter({ hasText: title });
     await card.waitFor();
+    await waitForBlockInView(this.page, title);
+    try { await card.locator('.canvas-card__body').waitFor({ timeout: 6000 }); }
+    catch (failure) {
+      const view = await board.evaluate((element) => ({
+        label: element.querySelector('.canvas-zoom-label')?.textContent,
+        transform: element.querySelector('.react-flow__viewport')?.getAttribute('style'),
+      }));
+      await this.page.screenshot({ path: '/tmp/symbiknow-rich-focus-failure.png' });
+      throw new Error(`Research focus remained title-only for ${title}: ${JSON.stringify(view)}\n${String(failure)}`);
+    }
     return card;
   };
   await (await focus(1, 'Visual evidence')).locator('img[alt="Launch status"]').waitFor();
@@ -254,7 +276,13 @@ Then('I can view and save the rich blocks with their original formats', async fu
   await board.frameLocator('iframe[title="HTML report HTML preview"]').getByRole('heading', { name: 'Rendered report' }).waitFor();
   await (await focus(3, 'System flow')).locator('.loader-mermaid svg').waitFor();
   await (await focus(4, 'Briefing slides')).locator('.loader-slides iframe').waitFor();
-  await (await focus(5, 'Health chart')).getByRole('img', { name: 'Release health: 2, 4, 6' }).waitFor();
+  const chart = await focus(5, 'Health chart');
+  try { await chart.getByRole('img', { name: 'Release health: 2, 4, 6' }).waitFor(); }
+  catch (failure) {
+    await this.page.screenshot({ path: '/tmp/symbiknow-rich-chart-failure.png' });
+    throw new Error(`Research chart did not render: ${await chart.innerText()}\n${String(failure)}`);
+  }
+  assert.deepEqual(await chart.locator('.mdx-chart__bars span').allTextContents(), ['2', '4', '6']);
   await this.page.screenshot({ path: '.quality/research-rich-blocks.png' });
   await (await focus(6, 'Documentation site')).getByText('Save this research canvas to build and preview the website.').waitFor();
   await board.getByRole('button', { name: 'Save canvas' }).click();

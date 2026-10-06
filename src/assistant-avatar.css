@@ -1,0 +1,155 @@
+.assistant-character {
+  --avatar-sheet-image: url('/assistant/avatar-light.png?v=inner-companion-1');
+  --avatar-aura-opacity: .2;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  line-height: 0;
+  position: relative;
+  vertical-align: middle;
+  isolation: isolate;
+}
+[data-theme='dark'] .assistant-character { --avatar-sheet-image: url('/assistant/avatar-dark.png?v=inner-companion-1'); --avatar-aura-opacity: .3; }
+[data-theme='light'] .assistant-character { --avatar-sheet-image: url('/assistant/avatar-light.png?v=inner-companion-1'); --avatar-aura-opacity: .2; }
+.assistant-character::before {
+  content: '';
+  position: absolute;
+  inset: 17% 13% 12% 18%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 37% 63% 56% 44% / 62% 41% 59% 38%;
+  background: radial-gradient(ellipse at 30% 65%, #6ee7b7 0%, transparent 63%),
+    radial-gradient(ellipse at 70% 30%, #89dbe3 0%, transparent 67%),
+    radial-gradient(ellipse at 65% 75%, #b8a7eb 0%, transparent 59%);
+  opacity: var(--avatar-aura-opacity);
+  filter: blur(4px);
+  animation: assistant-flow 7.3s ease-in-out infinite;
+}
+.jev-avatar::before { animation-delay: -2.7s; }
+.assistant-character--small { width: 28px; height: 28px; }
+.assistant-character--medium { width: 36px; height: 36px; }
+.assistant-character--large { width: 56px; height: 56px; }
+.assistant-character > .assistant-character__art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background-image: var(--avatar-sheet-image);
+  background-size: 400% 400%;
+  background-repeat: no-repeat;
+  transform-origin: 48% 57%;
+}
+.assistant-character--resting .assistant-character__art { animation: assistant-breathe 4.8s ease-in-out infinite; }
+.assistant-character--moving .assistant-character__art { animation: assistant-drift 3.6s ease-in-out infinite; }
+.assistant-character--listening .assistant-character__art { animation: assistant-listen 3.2s ease-in-out infinite; }
+.assistant-character--talking .assistant-character__art { animation: assistant-talk 2.1s ease-in-out infinite; }
+.assistant-character--reading .assistant-character__art { animation: assistant-read 2.8s ease-in-out infinite; }
+.assistant-character--writing .assistant-character__art { animation: assistant-write 2.2s ease-in-out infinite; }
+.assistant-character--asking .assistant-character__art { animation: assistant-ask 3s ease-in-out infinite; }
+.assistant-character--thinking .assistant-character__art { animation: assistant-think 3.4s ease-in-out infinite; }
+.assistant-character--searching .assistant-character__art { animation: assistant-search 2.5s ease-in-out infinite; }
+.assistant-character--connecting .assistant-character__art { animation: assistant-connect 2.4s ease-in-out infinite; }
+.assistant-character--organizing .assistant-character__art { animation: assistant-organize 2s ease-in-out infinite; }
+.assistant-character--comparing .assistant-character__art { animation: assistant-compare 3s ease-in-out infinite; }
+.assistant-character--checking .assistant-character__art { animation: assistant-check 1.8s ease-in-out infinite; }
+.assistant-character--summarizing .assistant-character__art { animation: assistant-summarize 2.6s ease-in-out infinite; }
+.assistant-character--working .assistant-character__art { animation: assistant-work 2.4s ease-in-out infinite; }
+.assistant-character--done .assistant-character__art {
+  animation: assistant-celebrate .65s cubic-bezier(.22, 1, .36, 1) both,
+    assistant-breathe 4.8s ease-in-out .65s infinite;
+}
+.assistant-character--done::before {
+  animation: assistant-settle .65s ease-out both, assistant-flow 7.3s ease-in-out .65s infinite;
+}
+/* Interruptions stop activity gestures while the companion keeps breathing. */
+.assistant-character[data-avatar-state='paused'] .assistant-character__art,
+.assistant-character[data-avatar-state='cancelled'] .assistant-character__art,
+.assistant-character[data-avatar-state='error'] .assistant-character__art,
+.assistant-character[data-avatar-state='unavailable'] .assistant-character__art { animation: assistant-breathe 4.8s ease-in-out infinite; }
+
+@keyframes assistant-breathe {
+  28% { transform: translate(-2%, -3.5%) scale(1.035, .975); }
+  61% { transform: translate(1.8%, -.8%) scale(.975, 1.035); }
+  83% { transform: translate(.8%, 1.8%) scale(1.015, .99); }
+}
+@keyframes assistant-drift {
+  24% { transform: translate(2%, -1.5%) scale(1.035, .98); }
+  57% { transform: translate(.4%, -2%) scale(1.01, 1.015); }
+  82% { transform: translate(-1.2%, .5%) scale(.99, 1.02); }
+}
+@keyframes assistant-listen {
+  37% { transform: translate(1.5%, -.8%) scale(.99, 1.025); }
+  68% { transform: translate(.8%, -.3%) scale(1.015, .99); }
+}
+@keyframes assistant-talk {
+  23% { transform: translate(.5%, -.8%) scale(1.025, .99); }
+  49% { transform: translate(-.4%, .5%) scale(.995, 1.02); }
+  78% { transform: translate(.8%, -.5%) scale(1.012, .997); }
+}
+@keyframes assistant-read {
+  35% { transform: translate(-1.2%, .8%) scale(1.015, .992); }
+  73% { transform: translate(1%, .3%) scale(.992, 1.012); }
+}
+@keyframes assistant-write {
+  29% { transform: translate(1%, .8%) scale(1.02, .985); }
+  62% { transform: translate(-.8%, -.3%) scale(.99, 1.015); }
+  83% { transform: translate(.5%, .4%) scale(1.008, .997); }
+}
+@keyframes assistant-ask {
+  33% { transform: translate(1.5%, -1.2%) scale(.985, 1.025); }
+  69% { transform: translate(.4%, -.5%) scale(1.015, .995); }
+}
+@keyframes assistant-think {
+  39% { transform: translate(-.7%, -1.5%) scale(.985, 1.02); }
+  74% { transform: translate(.8%, -.3%) scale(1.025, .99); }
+}
+@keyframes assistant-search {
+  31% { transform: translate(-2%, -.3%) scale(1.025, .99); }
+  67% { transform: translate(2%, -.8%) scale(.99, 1.02); }
+}
+@keyframes assistant-connect {
+  37% { transform: translate(.5%, -1%) scale(1.025, .99); }
+  73% { transform: translate(-.5%, -.4%) scale(.99, 1.025); }
+}
+@keyframes assistant-organize {
+  31% { transform: translate(-.8%, .7%) scale(1.02, .99); }
+  67% { transform: translate(.7%, -.8%) scale(.99, 1.02); }
+}
+@keyframes assistant-compare {
+  29%, 39% { transform: translate(-1.5%, -.3%) scale(1.012, .99); }
+  68%, 77% { transform: translate(1.5%, -.6%) scale(.99, 1.015); }
+}
+@keyframes assistant-check {
+  34% { transform: translate(.5%, .8%) scale(1.015, .99); }
+  69% { transform: translate(-.3%, -.6%) scale(.995, 1.015); }
+}
+@keyframes assistant-summarize {
+  39% { transform: translate(.5%, .3%) scale(.985, 1.012); }
+  73% { transform: translate(-.3%, -.8%) scale(1.025, .99); }
+}
+@keyframes assistant-work {
+  28% { transform: translate(.7%, .5%) scale(1.025, .985); }
+  63% { transform: translate(-.8%, -.8%) scale(.985, 1.025); }
+  83% { transform: translate(.3%, -.2%) scale(1.01, .997); }
+}
+@keyframes assistant-celebrate {
+  35% { transform: translateY(-2%) scale(1.025, 1.012); filter: drop-shadow(0 0 3px #75cdbb55); }
+  65% { transform: translateY(-.8%) scale(1.008, 1.015); }
+  100% { transform: none; }
+}
+@keyframes assistant-flow {
+  27% { transform: translate(3%, -2%) scale(1.08, .94) skewX(3deg); opacity: calc(var(--avatar-aura-opacity) * .8); }
+  59% { transform: translate(-2%, 3%) scale(.96, 1.08) skewY(-2deg); opacity: var(--avatar-aura-opacity); }
+  83% { transform: translate(1%, -1%) scale(1.03, .98); opacity: calc(var(--avatar-aura-opacity) * .85); }
+}
+@keyframes assistant-settle {
+  35% { transform: scale(1.1, 1.05); opacity: calc(var(--avatar-aura-opacity) * 1.3); }
+  100% { transform: none; opacity: var(--avatar-aura-opacity); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-character, .assistant-character::before, .assistant-character::after, .assistant-character *,
+  .assistant-character *::before, .assistant-character *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

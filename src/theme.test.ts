@@ -31,11 +31,13 @@ describe('theme preference', () => {
   });
 
   it('still applies the theme when browser storage is unavailable', () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Storage blocked'); });
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage blocked'); });
     expect(preferredTheme()).toBe('dark');
     expect(() => applyTheme('dark')).not.toThrow();
     expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(warning).toHaveBeenCalledWith('Theme preferences cannot be saved in this browser.');
   });
 });

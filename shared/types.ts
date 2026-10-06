@@ -4,7 +4,6 @@ export type BlockKind = 'markdown' | 'slides' | 'website' | 'mdx';
 export type DocumentLane = 'overview' | 'work' | 'reference' | 'followup';
 export type DocumentGroup = string;
 export type GroupBy = 'work_area' | 'purpose' | 'lane';
-import type { JevPolicy } from './policy.js';
 
 export type LinkRelation = 'prerequisite' | 'implements' | 'decision_for' | 'supersedes'
   | 'contradicts' | 'example_of' | 'same_topic' | 'related';
@@ -22,6 +21,10 @@ export interface CanvasBlock {
   file: string;
   kind: BlockKind;
   content: string;
+  /** False in metadata-only responses; fetch this document before reading or editing its content. */
+  contentLoaded?: boolean;
+  /** Derived file version for refreshing a metadata-only card after an external source edit. */
+  contentVersion?: string;
   x: number;
   y: number;
   width: number;
@@ -37,12 +40,23 @@ export interface CanvasBlock {
   reviewer?: string;
   group?: DocumentGroup;
   workArea?: string;
+  /** Server-owned identity and revision counters; restored bytes get a new generation. */
+  incarnation?: string;
+  sourceGeneration?: number;
+  metadataRevision?: number;
+  jevMutationId?: string;
+  jevOwnership?: { pins: string[]; removedLabels: string[]; removedLinks: string[]; managed: string[] };
+  headline?: string;
+  freshness?: { reviewAt?: string; expiresAt?: string; effectiveAt?: string };
+  processingExcluded?: boolean;
   /** Short hash of `content`; pass it back as `expectedContentHash` to avoid overwriting another agent's edit. */
   contentHash?: string;
   lock?: DocumentLock;
 }
 
 export interface CanvasDocument {
+  /** Read-only display names for native group paths, hydrated from workspace vocabulary. */
+  groupLabels?: Record<string, string>;
   id: string;
   name: string;
   workspaceId: string;
@@ -59,6 +73,7 @@ export interface SearchHit {
   tags: string[];
   kind: BlockKind;
   matchIn: 'title' | 'body';
+  retrieval?: { kind: 'exact' | 'phrase' | 'terms' | 'fuzzy_title' | 'semantic'; matchedTerms: string[] };
   /** Provenance checked against the current saved document during this search. */
   evidence?: EvidenceReference;
 }
@@ -70,7 +85,7 @@ export interface WorkspaceSummary {
 }
 
 export type ModelProvider = 'openrouter' | 'openai' | 'anthropic' | 'custom';
-export type AgentPlugin = 'document_read' | 'document_write' | 'jev_insights' | 'tasks' | 'external_mcp';
+export type AgentPlugin = 'document_read' | 'document_write' | 'tasks' | 'external_mcp';
 
 export interface AgentProfile {
   id: string;
@@ -108,11 +123,6 @@ export interface ChatSettings {
   /** Whether the selected provider has a key. */
   hasApiKey: boolean;
   providerKeys?: Partial<Record<ModelProvider, boolean>>;
-  hasJevApiKey: boolean;
-  reviewers: string;
-  workAreas?: string;
-  tagVocabulary?: string;
-  jevPolicy?: Partial<JevPolicy>;
   agentProfile?: string;
   customProfiles?: AgentProfile[];
   agentPlugins?: AgentPlugin[];
@@ -130,6 +140,8 @@ export interface ChatMessage {
 export interface ChatReply {
   message: string;
   changed: boolean;
+  /** Document changes remain a proposal until the user reviews and applies it. */
+  proposalId?: string;
 }
 
 export type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done';
@@ -145,7 +157,17 @@ export interface CanvasTask {
   title: string;
   detail: string;
   status: TaskStatus;
+  /** Stable order within a status column on the Tasks canvas. */
+  boardOrder?: number;
   assignee?: string;
+  reviewer?: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  acceptanceCriteria?: Array<{ id: string; text: string }>;
+  jevMutationId?: string;
+  revision?: number;
+  /** ISO calendar date in UTC; a planning input. */
+  dueDate?: string;
+  dependsOnTaskIds?: string[];
   blockIds: string[];
   findingRef?: {
     id: string;

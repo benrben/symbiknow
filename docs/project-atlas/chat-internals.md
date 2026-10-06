@@ -13,7 +13,7 @@ How the Symbi chat is built, module by module: request checks, agent setup, the 
 | Preparation | `server/chat-stream.ts`, `chat-stream-context.ts`, `chat-stream-preparation.ts`, `chat-stream-session.ts`, `chat-stream-prompt.ts`, `chat-stream-types.ts` | Build the request, config, tools, and prompt |
 | Agent | `server/chat-agent.ts`, `chat-agent-configuration.ts`, `chat-agent-events.ts`, `chat-agent-output.ts`, `chat-agent-failure.ts`, `chat-agent-types.ts` | Run Deep Agents, turn its stream into events, map errors |
 | Session and SSE | `server/chat-session.ts`, `server/chat-sse.ts`, `server/chat-cancellation.ts` | Order events, write SSE, stop work on abort |
-| Tools | `server/chat-tools.ts`, `server/jev-chat-tools.ts`, `server/external-mcp.ts` | Canvas, task, Reflex, and outside tools |
+| Tools | `server/chat-tools.ts`, `server/jev-chat-tools.ts`, `server/external-mcp.ts` | Canvas, Reflex, and outside tools |
 | Proposals | `server/chat-proposals.ts`, `chat-proposal-journal.ts`, `chat-proposal-validation.ts`, `chat-proposal-values.ts`, `chat-proposal-types.ts` | Draft, store, apply, undo |
 | Investigations | `server/investigations*.ts` | Saved research sessions |
 | Browser | `src/chatStream.ts`, `src/chat-*.ts`, `src/app-chat-actions.ts`, `src/useNewChatConfirmation.ts`, `src/*SavedInvestigation*` | Run a turn, render it, save it |
@@ -41,7 +41,7 @@ Notes:
 - `requestedResearchCanvas` is true when the latest message matches `/\b(?:temporary|research)\s+canvas\b/i` (`server/chat-stream-context.ts`).
 - `answerSources` runs only when the `document_read` plugin is on, and only for a research-canvas request or when `asksForSources()` matches (a question mark at the end, or a start word like `what`, `why`, `compare`, `explain`, `find`). Requests that start with `open`, `go to`, `navigate to`, and similar never trigger retrieval (`server/chat-input.ts`). A local retrieval failure is logged and ignored, so chat still works with the document tools.
 - `sendChatStream` waits for the **first** event before it writes headers. If preparation or the first step fails, the error becomes a normal JSON error response. After headers are sent, an error becomes an `event: error` frame.
-- `POST /api/chat` is a JSON-only compatibility endpoint (`server/chat.ts`). It runs the same session, joins the text, keeps the last `proposalId`, and returns `{ message, proposalId?, changed }`. `changed` compares the canvas blocks and tasks before and after the run.
+- `POST /api/chat` is a JSON-only compatibility endpoint (`server/chat.ts`). It runs the same session, joins the text, keeps the last `proposalId`, and returns `{ message, proposalId?, changed }`. `changed` compares the canvas blocks before and after the run.
 
 ## Input rules and limits
 
@@ -118,7 +118,6 @@ The factory type `DeepAgentFactory` is injected through `context.agentFactory`, 
 | --- | --- |
 | `document_read` | `search_docs`, `read_doc`, `show_doc_on_canvas`, `show_group_on_canvas`, `jev_profile`, `find_by`, `related`, `memory_map`, `jev_activity`, `brain_inbox` |
 | `document_write` | `create_doc`, `edit_doc`, `move_block`, `link_blocks`, `jev_do` |
-| `tasks` | `list_tasks`, `create_task`, `update_task` (any name ending in `_task`) |
 | `external_mcp` | `<serverId>__<toolName>` from outside servers |
 | *(always)* | `draw_research_canvas`, but only kept when the research canvas is enabled for this turn |
 
@@ -128,7 +127,6 @@ Details worth knowing (`server/chat-tools.ts`):
 - `search_docs` calls `store.search(query)` across all workspaces. It does not use the hybrid index that `GET /api/search` uses.
 - `edit_doc` throws `409` when the user is editing that document with unsaved changes.
 - `draw_research_canvas`: 1–12 blocks, up to 24 edges, block content up to 20,000 characters, up to 12 `sourceIds` per block. Source IDs not chosen by retrieval are removed; edges to unknown blocks or self-edges are dropped; duplicate block IDs fail.
-- `create_task` / `update_task` write directly as actor `Symbi`. They do not go through proposals.
 - Reflex tools (`server/jev-chat-tools.ts`) run as principal `{ id: 'symbi', kind: 'automation', access: 'propose', allowedCanvasIds: [canvasId], canApprove: false }`. `jev_do` accepts up to 20 `blockIds` and a 4,000-character `query`. See [Symbi Reflex](symbi-reflex.md).
 - `delete_doc` appears in the plugin map, but no chat tool with that name exists.
 
@@ -176,7 +174,7 @@ data: [DONE]
 ### Cancellation
 
 - `sendChatStream` aborts its own controller when the response emits `close`, and combines it with the request signal (`combinedSignal` uses `AbortSignal.any`).
-- The session copies the combined signal into `toolContext.signal`, so task tools and outside MCP calls stop too.
+- The session copies the combined signal into `toolContext.signal`, so outside MCP calls stop too.
 - On abort, no `error` frame and no `[DONE]` are written.
 - Outside MCP clients are closed in a `finally` block and also on abort (`closeOnAbort` in `server/chat-stream-preparation.ts`).
 
@@ -293,7 +291,7 @@ All in `server/settings.ts`, saved with `PUT /api/settings`.
 | `systemPrompt` | Max 20,000 chars |
 | `agentProfile` | A built-in or custom profile ID |
 | `customProfiles` | Max 20; name 40 chars; instructions 4,000 chars; IDs `custom-<slug>` |
-| `agentPlugins` | Subset of `document_read`, `document_write`, `tasks`, `external_mcp`; default is all four |
+| `agentPlugins` | Subset of `document_read`, `document_write`, `external_mcp`; default is all three |
 | `secrets` | Max 50; names match `^[A-Z][A-Z0-9_]{0,63}$`; values max 8,192 chars; `null` deletes; only names are returned |
 | `mcpServers` | Max 20; name 40 chars; URL 500 chars; max 10 headers; ID `^[a-z0-9-]{1,48}$`; a server whose bearer secret is gone is dropped |
 

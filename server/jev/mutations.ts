@@ -6,6 +6,13 @@ import { validateVocabularyMutation } from './vocabulary.js';
 export const metadataFields = ['group', 'tags', 'purpose', 'reviewer', 'quality', 'stale', 'archived', 'links', 'linkTypes', 'crossLinks', 'headline', 'freshness', 'processingExcluded'];
 const taskFields = ['id', 'title', 'detail', 'status', 'assignee', 'dueDate', 'dependsOnTaskIds', 'blockIds', 'reviewer', 'priority', 'acceptanceCriteria', 'findingRef'];
 
+export function retiredTaskMutation(mutation: JevMutation): boolean {
+  return mutation.kind === 'task_create' || mutation.kind === 'task_update' || mutation.kind === 'task_delete';
+}
+export function requireCurrentMutation(mutation: JevMutation): void {
+  if (retiredTaskMutation(mutation)) throw new ApiError(410, 'Tasks are no longer available');
+}
+
 function record(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
 function keys(value: unknown, allowed: string[]): void {
   if (!record(value) || Object.keys(value).some(key => !allowed.includes(key))) throw new ApiError(400, 'Unsupported mutation fields');

@@ -41,7 +41,8 @@ describe('chat sessions with installed Deep Agents and native providers', () => 
       body: { model: 'native-session', stream: true } });
     expect(setup.model.requests[1].body.messages.filter(message => message.role === 'tool')).toHaveLength(3);
     const advertised = setup.model.requests[0].body.tools.map(tool => tool.function.name);
-    expect(advertised).toEqual(expect.arrayContaining(['create_doc', 'edit_doc', 'read_doc', 'create_task']));
+    expect(advertised).toEqual(expect.arrayContaining(['create_doc', 'edit_doc', 'read_doc']));
+    expect(advertised).not.toEqual(expect.arrayContaining(['list_tasks', 'create_task', 'update_task', 'delete_task']));
     for (const name of ['analyze_canvas', 'score_documents', 'merge_documents', 'organize_canvas']) expect(advertised).not.toContain(name);
     expect(JSON.stringify(setup.model.requests[0].body.messages)).not.toContain('Jev');
     const apply = await fetch(`${base}/api/chat/proposals/${proposal.id}/apply`, { method: 'POST',

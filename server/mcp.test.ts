@@ -84,6 +84,7 @@ describe('project MCP', () => {
         expect(names).toContain('read_doc');
         expect(names).not.toContain('edit_doc');
         expect(names).not.toContain('create_task');
+        expect(names).not.toContain('list_tasks');
         expect(names).not.toContain('run_workspace_automation');
         if (access === 'propose') {
           const denied = await client.callTool({ name: 'run_workspace_automation', arguments: {
@@ -119,7 +120,7 @@ describe('project MCP', () => {
     try {
       const tools = await client.listTools();
       expect(tools.tools.map(tool => tool.name)).toEqual(expect.arrayContaining([
-        'read_canvas', 'upload_file', 'download_file', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision', 'search_docs', 'create_doc', 'edit_doc', 'create_task', 'update_task', 'list_tasks',
+        'read_canvas', 'upload_file', 'download_file', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision', 'search_docs', 'create_doc', 'edit_doc',
       ]));
       const page = await call<{ id: string; kind: string; content: string }>('create_doc', { canvasId: 'product-roadmap', title: 'Page', kind: 'html', content: '<h1>Page</h1>' });
       expect(page).toMatchObject({ kind: 'html', content: '---\nformat: html\n---\n<h1>Page</h1>' });
@@ -143,7 +144,8 @@ describe('project MCP', () => {
       expect((await call<{ content: string }>('read_doc', { canvasId: 'product-roadmap', blockId: created.id })).content).toBe('# Whole replacement');
       await call('merge_branch', { canvasId: 'product-roadmap', blockId: created.id, name: 'agents/draft' });
       expect((await call<{ content: string }>('read_doc', { canvasId: 'product-roadmap', blockId: created.id })).content).toBe('# Branch edit');
-      expect(tools.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['ask_symbi', 'symbi_reflex', 'delete_task', 'delete_branch']));
+      expect(tools.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['ask_symbi', 'symbi_reflex', 'delete_branch']));
+      expect(tools.tools.map(tool => tool.name).filter(name => name.includes('task'))).toEqual([]);
       expect(tools.tools.map(tool => tool.name)).not.toContain('jev_do');
       expect(client.getInstructions()).not.toContain('Jev');
       for (const name of ['recall', 'analyze_canvas', 'regroup_canvas', 'find_duplicates', 'merge_documents', 'undo_merge',
@@ -151,10 +153,6 @@ describe('project MCP', () => {
         expect(tools.tools.some(tool => tool.name === name)).toBe(false);
         expect((await client.callTool({ name, arguments: {} })).isError).toBe(true);
       }
-      const task = await call<{ id: string }>('create_task', { canvasId: 'product-roadmap', title: 'Native review', blockIds: [page.id] });
-      await call('update_task', { canvasId: 'product-roadmap', taskId: task.id, status: 'done' });
-      expect(await call('list_tasks', { canvasId: 'product-roadmap' })).toEqual(await new CanvasStore(dataDir).listTasks('product-roadmap'));
-      expect((await new CanvasStore(dataDir).listTasks('product-roadmap'))[0]).toMatchObject({ id: task.id, status: 'done', blockIds: [page.id] });
     } finally { await client.close(); await server.close(); }
   });
 });

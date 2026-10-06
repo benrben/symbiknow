@@ -40,10 +40,10 @@ it('keeps every historical saved mutation readable with clear empty, cleared, fa
   expect(within(document).getByText('Clear this value')).toBeTruthy(); expect(within(document).getByText('No')).toBeTruthy();
   expect(within(document).getByText('None')).toBeTruthy(); expect(within(document).getByText('0.8')).toBeTruthy();
   expect(within(document).getByText('Score')).toBeTruthy(); expect(within(document).getByText('2026-10-04T12:00:00Z')).toBeTruthy();
-  expect(within(history).getByText('Create task: Verify release')).toBeTruthy();
-  expect(within(history).getByText('Read the saved deployment evidence.')).toBeTruthy();
-  expect(within(history).getByText('Reviewed release task')).toBeTruthy();
-  expect(within(history).getByText('Delete the selected task after checking its current revision.')).toBeTruthy();
+  for (const kind of ['task_create', 'task_update', 'task_delete']) {
+    expect(within(within(history).getByRole('article', { name: kind })).getByText('This saved action is no longer available.')).toBeTruthy();
+  }
+  expect(within(history).queryByText('Verify release')).toBeNull();
   expect(within(history).getByText(`Move the source document to canvas ${fixture.secondCanvas.id}.`)).toBeTruthy();
   expect(within(history).getByText('Release evidence')).toBeTruthy(); expect(within(history).getByText('1 proposed members · active')).toBeTruthy();
   const derived = within(history).getByRole('article', { name: 'derived' });

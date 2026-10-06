@@ -109,12 +109,15 @@ describe('agent configuration and capabilities', () => {
   it('gates generic tools by configured capabilities without exposing removed action tools', () => {
     expect(pluginAllows('draw_research_canvas', [])).toBe(true);
     for (const name of ['merge_documents', 'score_documents', 'analyze_canvas', 'organize_canvas']) {
-      expect(pluginAllows(name, ['document_read', 'document_write', 'tasks'])).toBe(false);
+      expect(pluginAllows(name, ['document_read', 'document_write'])).toBe(false);
     }
     for (const [name, plugin] of [['search_docs', 'document_read'], ['read_doc', 'document_read'],
-      ['show_doc_on_canvas', 'document_read'], ['create_doc', 'document_write'], ['list_tasks', 'tasks'], ['update_task', 'tasks']]) {
+      ['show_doc_on_canvas', 'document_read'], ['create_doc', 'document_write']]) {
       expect(pluginAllows(name, [plugin])).toBe(true);
       expect(pluginAllows(name, [])).toBe(false);
+    }
+    for (const name of ['list_tasks', 'create_task', 'update_task', 'delete_task']) {
+      expect(pluginAllows(name, ['document_read', 'document_write'])).toBe(false);
     }
   });
 

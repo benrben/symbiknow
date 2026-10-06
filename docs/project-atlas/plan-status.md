@@ -1,6 +1,6 @@
 # Plan status
 
-> Historical snapshot from an earlier integration pass. For the current implementation, task-ID evidence, corrected Tasks board behavior, and final test results, use [the implementation log](../../work/plan-implementation-log-20261006.md). The results and known issues below describe the earlier snapshot and have not been updated in place.
+> Historical snapshot from an earlier integration pass. The standalone Tasks board, API, chat tools, and MCP tools were subsequently retired on 2026-10-06. The task IDs, results, and known issues below describe the earlier snapshot and have not been updated in place.
 
 Where the `docs/plans/symbi-engine.md` work stands ("Symbi: lightweight knowledge, automatic organization, and useful MCP tools", updated 2026-10-06), checked against the code. This page also lists test results and known issues.
 

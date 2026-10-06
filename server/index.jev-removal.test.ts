@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
-import type { CanvasBlock, CanvasDocument, CanvasTask } from '../shared/types.js';
+import type { CanvasBlock, CanvasDocument } from '../shared/types.js';
 import { createApiServer } from './index.js';
 import { CanvasStore } from './storage.js';
 
@@ -71,7 +71,8 @@ it('returns 404 for every removed Jev action route without changing native docum
     ['POST', `${canvasRoute}/cross-connections`], ['POST', `${canvasRoute}/quality`],
     ['POST', `${canvasRoute}/automations`], ['POST', `${canvasRoute}/merge`],
     ['POST', '/api/merges/merge/undo'], ['GET', `${canvasRoute}/tasks/insights`],
-    ['POST', `${canvasRoute}/tasks/insights/apply`], ['POST', '/api/workspaces/acme-team/automations'],
+    ['POST', `${canvasRoute}/tasks/insights/apply`], ['GET', `${canvasRoute}/tasks`],
+    ['POST', `${canvasRoute}/tasks`], ['POST', '/api/workspaces/acme-team/automations'],
     ['GET', '/api/jev-runs/run'], ['POST', '/api/jev-runs/run/undo'],
     ['GET', '/api/jev/usage'], ['GET', '/api/jev/calibration'],
     ['GET', '/api/settings/jev-feedback'], ['GET', '/api/settings/jev-correctness'],
@@ -85,21 +86,17 @@ it('returns 404 for every removed Jev action route without changing native docum
   expect(await readdir(root)).toEqual(files);
 });
 
-it('retains actual manual document, layout, task, settings and Git history writes across a native server restart', async () => {
+it('retains actual manual document, layout, settings and Git history writes across a native server restart', async () => {
   const first = await listen();
   const changed = await request(first.base, `${canvasRoute}/blocks/roadmap-overview`, 'PUT', { content: '# Manual retained source' });
   expect(changed.status).toBe(200);
   const document = await changed.json() as CanvasBlock;
   expect(await readFile(path.join(first.root, document.file), 'utf8')).toBe('# Manual retained source');
   expect((await request(first.base, `${canvasRoute}/layout`, 'PUT', { positions: [{ blockId: document.id, x: -120, y: 450 }] })).status).toBe(200);
-  const created = await request(first.base, `${canvasRoute}/tasks`, 'POST', { title: 'Manual retained task' });
-  expect(created.status).toBe(201);
-  const task = await created.json() as CanvasTask;
   expect((await request(first.base, '/api/settings', 'PUT', { model: 'openai/gpt-4o-mini' })).status).toBe(200);
   const restarted = await listen(first.root);
   const canvas = await request(restarted.base, canvasRoute).then(response => response.json()) as CanvasDocument;
   expect(canvas.blocks.find(block => block.id === document.id)).toMatchObject({ content: '# Manual retained source', x: -120, y: 450 });
-  expect(await request(restarted.base, `${canvasRoute}/tasks`).then(response => response.json())).toContainEqual(expect.objectContaining({ id: task.id, title: 'Manual retained task' }));
   expect(await request(restarted.base, '/api/settings').then(response => response.json())).toMatchObject({ model: 'openai/gpt-4o-mini' });
   const history = await new CanvasStore(first.root).documentHistory('product-roadmap', document.id);
   expect(history.commits[0].author).toBe('Manual API writer');

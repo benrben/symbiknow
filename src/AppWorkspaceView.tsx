@@ -6,31 +6,29 @@ import { BrandMark, Icon } from './AppIcon';
 import { BrowseGroups } from './BrowseGroups';
 import { Canvas } from './Canvas';
 import { CanvasSearch } from './CanvasSearch';
-import { TasksCanvasBoard } from './TasksCanvasBoard';
 import { type Theme } from './theme';
 import { WorkspaceToolbar } from './AppWorkspaceToolbar';
 import { useWorkspaceCanvasEvents } from './useWorkspaceCanvasEvents';
 
 const MemoCanvas = memo(Canvas);
 
-export function Sidebar({ model, page = 'canvas', onOpenTasks, onOpenCanvas }: { model: AppModel; page?: 'canvas' | 'tasks'; onOpenTasks?: () => void; onOpenCanvas?: () => void }) {
+export function Sidebar({ model }: { model: AppModel }) {
   const { workspaces, canvasId, selectCanvas, requestDeleteCanvas, requestDeleteWorkspace, setDialog, openNamedDialog } = model;
   return <aside className="sidebar">
     <div className="brand"><BrandMark/><div><strong>symbiknow</strong><span>People + AI · infinite canvas</span></div></div>
     <div className="sidebar-section-label">WORKSPACES <button className="icon-button subtle" title="New workspace" aria-label="New workspace" onClick={() => openNamedDialog('workspace')}><Icon name="plus" size={16}/></button></div>
-    <div className="workspace-list">{workspaces.map(workspace => <div key={workspace.id} className="workspace-group"><div className="workspace-title"><span className="workspace-avatar">{workspace.name.slice(0, 1).toUpperCase()}</span><span className="workspace-name">{workspace.name}</span><button type="button" className="workspace-delete" title={`Delete workspace: ${workspace.name}`} aria-label={`Delete workspace: ${workspace.name}`} onClick={() => requestDeleteWorkspace(workspace)}><Icon name="trash" size={15}/></button></div><div className="canvas-links">{workspace.canvases.map(item => <div className={'canvas-link-row ' + (canvasId === item.id && page === 'canvas' ? 'active' : '')} key={item.id}><button className="canvas-link" title={`Open canvas: ${item.name}`} aria-label={`Open canvas: ${item.name}`} onClick={() => { selectCanvas(item.id); onOpenCanvas?.(); }}><Icon name="grid" size={15}/><span>{item.name}</span></button><button className="canvas-link-delete" title={`Delete canvas: ${item.name}`} aria-label={`Delete canvas: ${item.name}`} onClick={() => requestDeleteCanvas(item.id, item.name, workspace.id)}><Icon name="trash" size={15}/></button></div>)}</div></div>)}</div>
-    <button className={'sidebar-new' + (page === 'tasks' ? ' active' : '')} title="Open Tasks page" aria-label="Open Tasks page" disabled={!canvasId} onClick={onOpenTasks}><Icon name="grid" size={16}/> Tasks</button>
+    <div className="workspace-list">{workspaces.map(workspace => <div key={workspace.id} className="workspace-group"><div className="workspace-title"><span className="workspace-avatar">{workspace.name.slice(0, 1).toUpperCase()}</span><span className="workspace-name">{workspace.name}</span><button type="button" className="workspace-delete" title={`Delete workspace: ${workspace.name}`} aria-label={`Delete workspace: ${workspace.name}`} onClick={() => requestDeleteWorkspace(workspace)}><Icon name="trash" size={15}/></button></div><div className="canvas-links">{workspace.canvases.map(item => <div className={'canvas-link-row ' + (canvasId === item.id ? 'active' : '')} key={item.id}><button className="canvas-link" title={`Open canvas: ${item.name}`} aria-label={`Open canvas: ${item.name}`} onClick={() => selectCanvas(item.id)}><Icon name="grid" size={15}/><span>{item.name}</span></button><button className="canvas-link-delete" title={`Delete canvas: ${item.name}`} aria-label={`Delete canvas: ${item.name}`} onClick={() => requestDeleteCanvas(item.id, item.name, workspace.id)}><Icon name="trash" size={15}/></button></div>)}</div></div>)}</div>
     <button className="sidebar-new" title="New canvas" aria-label="New canvas" onClick={() => openNamedDialog('canvas')}><Icon name="plus" size={16}/> New canvas</button>
     <div className="sidebar-spacer"/>
     <div className="sidebar-bottom"><button title="Settings" aria-label="Settings" onClick={() => setDialog('settings')}><Icon name="settings" size={17}/><span>Settings</span></button><div className="sidebar-status" title={window.location.host}><span className="status-dot"/>{/^(localhost|127\.0\.0\.1)(:|$)/.test(window.location.host) ? 'Local workspace' : window.location.host}</div></div>
   </aside>;
 }
 
-export function MainColumn({ model, theme, onToggleTheme, page = 'canvas', onOpenCanvas }: { model: AppModel; theme: Theme; onToggleTheme: () => void; page?: 'canvas' | 'tasks'; onOpenCanvas?: () => void }) {
+export function MainColumn({ model, theme, onToggleTheme }: { model: AppModel; theme: Theme; onToggleTheme: () => void }) {
   return <div className="main-column">
-    <WorkspaceToolbar model={model} theme={theme} onToggleTheme={onToggleTheme} page={page}/>
+    <WorkspaceToolbar model={model} theme={theme} onToggleTheme={onToggleTheme}/>
     <GlobalErrorBanner model={model}/>
-    <WorkspaceContent model={model} theme={theme} page={page} onOpenCanvas={onOpenCanvas}/>
+    <CanvasArea model={model} theme={theme}/>
   </div>;
 }
 
@@ -39,14 +37,6 @@ function GlobalErrorBanner({ model }: { model: AppModel }) {
   return <div className="global-error" role="alert"><span>{model.error}</span>
     {model.error.includes('server is unavailable') && <button type="button" onClick={model.retryConnection}>Reconnect</button>}
     <button aria-label="Dismiss error" onClick={() => model.setError('')}><Icon name="close" size={15}/></button></div>;
-}
-
-function WorkspaceContent({ model, theme, page, onOpenCanvas }: { model: AppModel; theme: Theme;
-  page: 'canvas' | 'tasks'; onOpenCanvas?: () => void }) {
-  if (page === 'tasks' && model.canvasId) return <TasksCanvasBoard canvasId={model.canvasId} theme={theme}
-      documentTitles={Object.fromEntries(model.canvas?.blocks.map(block => [block.id, block.title]) ?? [])}
-      onOpenDocument={blockId => { model.openReader(blockId); onOpenCanvas?.(); }}/>;
-  return <CanvasArea model={model} theme={theme}/>;
 }
 
 function CanvasArea({ model, theme }: { model: AppModel; theme: Theme }) {

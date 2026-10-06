@@ -1,6 +1,6 @@
 # Data model
 
-What SymbiKnow stores, where it lives on disk, and what each field of a canvas card, task, and workspace means.
+What SymbiKnow stores, where it lives on disk, and what each field of a canvas card and workspace means.
 
 ## On-disk layout of `DATA_DIR`
 
@@ -12,8 +12,6 @@ DATA_DIR/
 ├── canvases/<canvasId>.json        one canvas: name, workspaceId, blocks (metadata only)
 ├── docs/<blockId>.md               the document source (source of truth)
 ├── .versions/<blockId>/            a separate Git repository per document
-├── tasks/<canvasId>.json           CanvasTask[] for that canvas
-├── tasks/<canvasId>.audit.json     deleted-task audit records (new)
 ├── settings.json                   providers, keys, secrets, MCP servers, MCP token hashes
 ├── mcp-activity.json               recent MCP calls by token
 ├── investigations/<id>.json        saved research sessions
@@ -29,7 +27,7 @@ DATA_DIR/
 └── model-cache/                    new: transformers.js cache for the MiniLM worker
 ```
 
-> `jev-feedback/`, `jev-inbox/`, and `jev-runs/` in older data folders belong to removed features. Their code was deleted in this refactor; the files are no longer written.
+> `tasks/`, `jev-feedback/`, `jev-inbox/`, and `jev-runs/` in older data folders belong to removed features. Their files are no longer written.
 
 ## Workspaces, canvases, blocks
 
@@ -91,30 +89,6 @@ A website block:
 generator: mkdocs
 source: sites/team-docs
 ---
-```
-
-## Tasks (`CanvasTask`)
-
-Tasks belong to a canvas (`tasks/<canvasId>.json`). Max 500 per canvas; dependencies cannot form a cycle.
-
-| Field | Meaning |
-| --- | --- |
-| `status` | `todo`, `in_progress`, `blocked`, `done`: the board column |
-| `boardOrder` (new) | Non-negative number ordering cards within a column |
-| `revision` | Increases on every change; send `expectedRevision` to update or delete safely |
-| `assignee`, `reviewer`, `priority`, `dueDate` | Planning fields; `claim_task` sets assignee and moves to in progress |
-| `blockIds` | Linked documents on the same canvas (max 20) |
-| `dependsOnTaskIds`, `acceptanceCriteria` | Dependencies and checklist items |
-| `comments` | `{ author, text, createdAt }[]` from `comment_task` |
-
-```json
-{
-  "id": "t-42", "title": "Write rollback runbook", "detail": "Cover database and CDN",
-  "status": "in_progress", "boardOrder": 2000, "assignee": "Codex - laptop",
-  "blockIds": ["rollback-runbook"], "revision": 5,
-  "comments": [{ "author": "Browser", "text": "Add the freeze step", "createdAt": "2026-10-05T21:14:03.000Z" }],
-  "createdAt": "2026-10-05T20:01:00.000Z", "updatedAt": "2026-10-05T21:14:03.000Z"
-}
 ```
 
 ## Settings and secrets

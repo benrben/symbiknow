@@ -46,6 +46,7 @@ async function isolatedWorkspace(world, key) {
   // the provider selects the existing first canvas for these sources.
   await request(world, `/workspaces/${workspace.id}/canvases`, 'POST', { name: 'Other knowledge' });
   world.reflexWorkspaceId = workspace.id; world.canvasId = canvas.id;
+  world.reflexHasProvider = Boolean(key);
   if (key) await request(world, '/settings', 'PUT', { secrets: { TYPESAFE_API_KEY: key } });
 }
 
@@ -54,13 +55,13 @@ Given('an isolated automatic Reflex workspace with a saved provider key', async 
 });
 Given('an isolated automatic Reflex workspace without a provider key', async function () { await isolatedWorkspace(this, ''); });
 
-async function saveRolloutSources(world, referenceContent = sourceContent) {
-  world.reflexTask = await request(world, `/canvases/${world.canvasId}/tasks`, 'POST', {
-    title: 'Staged rollout', detail: 'Use a staged rollout with a rollback checkpoint.', blockIds: [], assignee: 'Manual release owner' });
+async function saveRolloutSources(world, referenceContent = sourceContent + '\nThe reference records the rollback checkpoint.') {
+  if (world.reflexHasProvider) await request(world, `/workspaces/${world.reflexWorkspaceId}/jev/settings`, 'PUT', { paused: true });
   world.reflexSource = await request(world, `/canvases/${world.canvasId}/blocks`, 'POST', {
     title: 'Release decision', kind: 'markdown', content: sourceContent, tags: ['release'] });
   world.reflexReference = await request(world, `/canvases/${world.canvasId}/blocks`, 'POST', {
     title: 'Release reference', kind: 'markdown', content: referenceContent, tags: ['release'] });
+  if (world.reflexHasProvider) await request(world, `/workspaces/${world.reflexWorkspaceId}/jev/settings`, 'PUT', { paused: false });
 }
 
 When('related sources and existing rollout work are saved through the ordinary API', async function () {
@@ -99,8 +100,6 @@ Then('all six Reflex actions finish without a request or an open panel', async f
   assertCurrentProfile(profile);
   assert.ok(this.reflexSavedSource.group);
   assert.equal(this.reflexSavedSource.content, sourceContent);
-  const task = (await request(this, `/canvases/${this.canvasId}/tasks`)).find(item => item.id === this.reflexTask.id);
-  assert.deepEqual(task, this.reflexTask, 'Automatic organization changed a manual task');
 });
 
 function assertCurrentProfile(profile) {
@@ -235,7 +234,7 @@ Then('the individual confidence thresholds survive API readback and browser relo
   assert.deepEqual(this.pageErrors, []);
 });
 
-Then('automatic classification and unchanged manual tasks survive reload', async function () {
+Then('automatic classification and unchanged manual documents survive reload', async function () {
   const source = await request(this, sourceRoute(this));
   assert.equal(source.content, sourceContent);
   assert.equal(source.group, this.reflexSavedSource.group);
@@ -244,8 +243,6 @@ Then('automatic classification and unchanged manual tasks survive reload', async
   assertAutomaticPolicy(state);
   const profile = state.profiles[`${this.canvasId}:${this.reflexSource.id}`];
   assertCurrentProfile(profile);
-  const tasks = await request(this, `/canvases/${this.canvasId}/tasks`);
-  assert.deepEqual(tasks, [this.reflexTask], 'Reload changed a manual task');
   await noManualControls(this);
   assert.deepEqual(this.reflexWriteRequests, []);
   assert.deepEqual(this.pageErrors, []);
@@ -255,8 +252,6 @@ When('the saved source and existing work change through the ordinary API', async
   this.reflexPreviousJobs = new Set(this.reflexState.jobs.map(job => job.id));
   this.reflexSource = await request(this, sourceRoute(this), 'PUT', {
     content: sourceContent + '\nThe rollback checkpoint must preserve the updated release evidence.' });
-  this.reflexTask = await request(this, `/canvases/${this.canvasId}/tasks/${this.reflexTask.id}`, 'PUT', {
-    detail: 'Use the updated release evidence for the staged rollout with a rollback checkpoint.' });
 });
 
 Then('all six Reflex actions refresh for the current source automatically', async function () {
@@ -268,14 +263,12 @@ Then('all six Reflex actions refresh for the current source automatically', asyn
   assertCurrentProfile(profile);
 });
 
-Then('the refreshed results survive reload without additional tasks or approvals', async function () {
+Then('the refreshed results survive reload without approvals', async function () {
   const source = await request(this, sourceRoute(this));
   assert.equal(source.content, this.reflexSource.content);
   const state = await request(this, stateRoute(this));
   assertAutomaticPolicy(state);
   assert.equal(state.profiles[`${this.canvasId}:${source.id}`].source.sourceGeneration, source.sourceGeneration);
-  const tasks = await request(this, `/canvases/${this.canvasId}/tasks`);
-  assert.deepEqual(tasks, [this.reflexTask], 'Refreshed organization changed manually updated work');
   await noManualControls(this);
   assert.deepEqual(this.reflexWriteRequests, []);
   assert.deepEqual(this.pageErrors, []);
@@ -283,8 +276,7 @@ Then('the refreshed results survive reload without additional tasks or approvals
 
 async function completedKnowledge(world, state) {
   return { jobs: state.jobs, proposals: state.proposals, receipts: state.receipts, profiles: state.profiles,
-    vocabulary: state.vocabulary, sources: await workspaceSources(world),
-    tasks: await request(world, `/canvases/${world.canvasId}/tasks`) };
+    vocabulary: state.vocabulary, sources: await workspaceSources(world) };
 }
 
 Then('I record the completed automatic knowledge and its job history', async function () {
@@ -400,8 +392,6 @@ async function assertResetPersistence(world, state) {
     assert.ok(profile, `Reset did not rebuild profile ${block.id}`);
     assertCurrentProfile(profile);
   }
-  const tasks = await request(world, `/canvases/${world.canvasId}/tasks`);
-  assert.deepEqual(tasks, [world.reflexTask], 'Reset changed a manual task');
   const resetRequests = world.reflexWriteRequests.filter(url => new URL(url).pathname.endsWith('/jev/reset'));
   assert.equal(resetRequests.length, world.reflexResetCount);
   assert.equal(world.reflexWriteRequests.length, world.reflexResetCount);

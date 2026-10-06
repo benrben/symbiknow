@@ -17,7 +17,7 @@ describe('native chat stream preparation boundaries', () => {
 
   it('keeps document retrieval disabled over native HTTP and restores local sources after the plugin is enabled', async () => {
     const setup = await fixture();
-    await setup.store.updateSettings({ agentPlugins: ['tasks'] });
+    await setup.store.updateSettings({ agentPlugins: [] });
     const base = await setup.app();
     const body = { canvasId: setup.canvas.id, messages: [{ role: 'user', content: 'What blocks the launch?' }] };
     const post = () => fetch(`${base}/api/chat/stream`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -28,9 +28,9 @@ describe('native chat stream preparation boundaries', () => {
     expect(text).not.toContain('event: answer_canvas');
     expect(text).not.toContain('event: research_canvas_patch');
     const names = setup.model.requests[0].body.tools.map(tool => tool.function.name);
-    expect(names).toContain('create_task');
+    expect(names).not.toContain('create_task');
     for (const name of ['read_doc', 'search_docs', 'draw_research_canvas']) expect(names).not.toContain(name);
-    expect((await new CanvasStore(setup.root).getSettings()).agentPlugins).toEqual(['tasks']);
+    expect((await new CanvasStore(setup.root).getSettings()).agentPlugins).toEqual([]);
     expect((await fetch(`${base}/api/settings`, { method: 'PUT', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ agentPlugins: ['document_read'] }) })).status).toBe(200);
     const recovered = await post();

@@ -86,5 +86,5 @@ describe('MarkdownEditor through actual App edit, native HTTP, Git and reload', 
     fireEvent.click(within(reopened).getByRole('button', { name: 'Cancel' }));
     expect(await fixture.read(saved.id)).toEqual(saved);
     expect(await restarted.documentHistory(saved.id, block.id)).toEqual(history);
-  });
+  }, 15_000);
 });

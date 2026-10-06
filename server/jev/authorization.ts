@@ -3,6 +3,7 @@ import type { CanvasStore } from '../storage.js';
 import { ApiError } from '../errors.js';
 import { createHash } from 'node:crypto';
 import type { DocumentJob } from './runtime-document.js';
+import { requireCurrentMutation, retiredTaskMutation } from './mutations.js';
 
 export const automationPrincipal: JevPrincipal = { id: 'jev-workspace-automation', kind: 'automation', access: 'write' };
 
@@ -56,6 +57,16 @@ export function requireWrite(principal: JevPrincipal): void {
 export function requireApprove(principal: JevPrincipal): void {
   requireWrite(principal);
   if (!principal.canApprove || principal.kind !== 'user') throw new ApiError(403, 'An authorized reviewer must approve the proposal');
+}
+
+export async function rejectRetiredTaskMutation(store: CanvasStore, supplied: JevPrincipal,
+  mutation: JevMutation, tools: string[]): Promise<void> {
+  if (!retiredTaskMutation(mutation)) return;
+  const principal = await currentPrincipal(store, supplied);
+  requireApprove(principal);
+  requireTool(principal, tools);
+  for (const id of mutationCanvases(mutation)) requireCanvas(principal, id);
+  requireCurrentMutation(mutation);
 }
 
 export function principalFingerprint(principal: JevPrincipal): string {

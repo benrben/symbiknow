@@ -69,7 +69,7 @@ function DeleteCanvasForm({ model }: { model: AppDialogModel }) {
   const target = model.canvasToDelete;
   if (!target) return null;
   return <div className="modal-form">
-    <p>Delete <strong>{target.name}</strong> and all its documents, tasks, and file histories? This cannot be undone.</p>
+    <p>Delete <strong>{target.name}</strong> and all its documents and file histories? This cannot be undone.</p>
     {model.error && <p className="delete-canvas-error" role="alert">{model.error}</p>}
     <div className="modal-actions"><button type="button" className="secondary-button" onClick={() => model.setDialog(null)} disabled={model.busy} autoFocus>Cancel</button><button type="button" className="danger-button delete-canvas-confirm" onClick={() => void model.deleteCanvas()} disabled={model.busy}><Icon name="trash" size={16}/>{model.busy ? 'Deleting…' : 'Delete canvas'}</button></div>
   </div>;
@@ -79,7 +79,7 @@ function DeleteWorkspaceForm({ model }: { model: AppDialogModel }) {
   const target = model.workspaceToDelete;
   if (!target) return null;
   return <div className="modal-form">
-    <p>Delete <strong>{target.name}</strong> and its {target.canvases.length} {target.canvases.length === 1 ? 'canvas' : 'canvases'}, including all documents, tasks, and file histories? This cannot be undone.</p>
+    <p>Delete <strong>{target.name}</strong> and its {target.canvases.length} {target.canvases.length === 1 ? 'canvas' : 'canvases'}, including all documents and file histories? This cannot be undone.</p>
     {model.error && <p className="delete-canvas-error" role="alert">{model.error}</p>}
     <div className="modal-actions"><button type="button" className="secondary-button" onClick={() => model.setDialog(null)} disabled={model.busy} autoFocus>Cancel</button><button type="button" className="danger-button delete-workspace-confirm" onClick={() => void model.deleteWorkspace()} disabled={model.busy}><Icon name="trash" size={16}/>{model.busy ? 'Deleting…' : 'Delete workspace'}</button></div>
   </div>;

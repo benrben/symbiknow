@@ -214,6 +214,17 @@ afterEach(() => {
 });
 
 describe('App composition', () => {
+  it('opens an old Tasks link on the canvas without a Tasks page or plugin', async () => {
+    window.history.replaceState(null, '', '/?canvas=planning&view=tasks');
+    vi.stubGlobal('fetch', vi.fn(fixture().fetchResponse));
+    render(<App/>);
+    expect(await screen.findByRole('region', { name: 'Planning infinite canvas' })).toBeTruthy();
+    expect(window.location.search).toBe('?canvas=planning');
+    expect(screen.queryByRole('button', { name: 'Open Tasks page' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(within(screen.getByRole('dialog', { name: 'Settings' })).queryByText('Shared tasks')).toBeNull();
+  });
+
   it('confirms workspace deletion and moves to a surviving workspace, then the empty state', async () => {
     const server = fixture();
     server.workspaces.push({ id: 'design', name: 'Design team', canvases: [{ id: 'design-notes', name: 'Design notes' }] });
@@ -406,7 +417,7 @@ describe('App composition', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save settings' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Settings' })).toBeNull());
     expect(server.requests.find(request => request.path === '/api/settings' && request.method === 'PUT')?.body)
-      .toMatchObject({ agentProfile: 'planner', agentPlugins: ['document_read', 'tasks', 'external_mcp'] });
+      .toMatchObject({ agentProfile: 'planner', agentPlugins: ['document_read', 'external_mcp'] });
   });
 
   it('opens a full-page reader with its own URL, pages through documents, and returns with Back', async () => {

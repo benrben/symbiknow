@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 import { createApiServer } from '../server/index';
 import type { CanvasStore } from '../server/storage';
-import type { CanvasBlock, CanvasDocument, CanvasTask } from '../shared/types';
+import type { CanvasBlock, CanvasDocument } from '../shared/types';
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }> };
 type DocumentHistory = Awaited<ReturnType<CanvasStore['documentHistory']>>;
@@ -105,6 +105,11 @@ it('restores the preceding live registration when the newest consumer disposes',
   expect(inactive).not.toHaveBeenCalled();
 });
 
+it('does not expose task tools through browser WebMCP', async () => {
+  const app = await fixture();
+  expect([...app.widget.availableTools.keys()].filter(name => name.includes('task'))).toEqual([]);
+});
+
 it('drops the disposed active-canvas fallback and callback while keeping explicit-canvas tools available', async () => {
   const app = await fixture();
   app.dispose();
@@ -161,7 +166,7 @@ it('runs the complete version lifecycle through native registered tools and read
   expect(app.onChanged).toHaveBeenCalledTimes(6);
 });
 
-it('moves a document through the native registered tool and retains source, history, references and tasks after restart', async () => {
+it('moves a document through the native registered tool and retains source, history, and references after restart', async () => {
   const app = await fixture();
   const sourceId = 'product-roadmap';
   const source = await app.read(`/canvases/${sourceId}`);
@@ -178,9 +183,6 @@ it('moves a document through the native registered tool and retains source, hist
   const portal = await app.request<CanvasBlock>(`/canvases/${remote.id}/blocks`, 'POST', { title: 'Remote reader' });
   await app.request(`/canvases/${remote.id}/blocks/${portal.id}`, 'PUT', {
     crossLinks: [{ canvasId: sourceId, blockId: moving.id, relation: 'same_topic', confidence: 0.9 }] });
-  const sourceTask = await app.request<CanvasTask>(`/canvases/${sourceId}/tasks`, 'POST', { title: 'Review moved source', detail: 'Retain the work context',
-    status: 'in_progress', assignee: 'Reviewer', dueDate: '2026-12-01', blockIds: [moving.id, neighbor.id] });
-  const targetTask = await app.request<CanvasTask>(`/canvases/${target.id}/tasks`, 'POST', { title: 'Keep destination work', blockIds: [destinationContext.id] });
   const history = await app.run<DocumentHistory>('list_versions', { blockId: moving.id });
   expect(history.commits.length).toBeGreaterThanOrEqual(2);
   const before = await app.read(`/canvases/${sourceId}`);
@@ -204,14 +206,6 @@ it('moves a document through the native registered tool and retains source, hist
   const remoteAfter = await app.read(`/canvases/${remote.id}`);
   expect(remoteAfter.blocks.find(block => block.id === portal.id)?.crossLinks)
     .toEqual([{ canvasId: target.id, blockId: moving.id, relation: 'same_topic', confidence: 0.9 }]);
-  const sourceTasks = await app.request<CanvasTask[]>(`/canvases/${sourceId}/tasks`);
-  expect(sourceTasks.find(task => task.id === sourceTask.id)).toMatchObject({ blockIds: [neighbor.id],
-    comments: [{ text: expect.stringContaining('related work continues there') }] });
-  const targetTasks = await app.request<CanvasTask[]>(`/canvases/${target.id}/tasks`);
-  expect(targetTasks[0]).toEqual(targetTask);
-  expect(targetTasks[1]).toMatchObject({ title: sourceTask.title, detail: sourceTask.detail, status: sourceTask.status,
-    assignee: sourceTask.assignee, dueDate: sourceTask.dueDate, blockIds: [moving.id],
-    comments: [{ text: expect.stringContaining(sourceTask.id) }] });
   expect(await readFile(path.join(app.directory, moving.file), 'utf8')).toBe(edited.content);
   expect(await app.run('list_versions', { canvasId: target.id, blockId: moving.id })).toEqual(history);
 
@@ -220,8 +214,6 @@ it('moves a document through the native registered tool and retains source, hist
   expect(await app.read(`/canvases/${sourceId}`)).toEqual(sourceAfter);
   expect(await app.read(`/canvases/${remote.id}`)).toEqual(remoteAfter);
   expect(await app.run('list_versions', { canvasId: target.id, blockId: moving.id })).toEqual(history);
-  expect(await app.request(`/canvases/${sourceId}/tasks`)).toEqual(sourceTasks);
-  expect(await app.request(`/canvases/${target.id}/tasks`)).toEqual(targetTasks);
   expect(await app.run('search_docs', { query: 'Preserve this entire file' }))
     .toEqual(expect.arrayContaining([expect.objectContaining({ canvasId: target.id, blockId: moving.id })]));
 });

@@ -70,15 +70,7 @@ describe('Assistant restored history through the real App and persisted canvas',
   });
 
   it('opens research from the header and the saved research turn, and keeps assistant panes across navigation', async () => {
-    const taskRequests: string[] = [];
-    let linkedId = '';
-    const fixture = await assistantFixture(async (route, _init, forward) => { if (/\/tasks(?:\/|$)/.test(route)) taskRequests.push(route); return forward(); }, true,
-      async request => {
-        history({ researchPatch: turn.patch });
-        const canvas = await request('/api/canvases/product-roadmap').then(response => response.json()) as CanvasDocument;
-        linkedId = canvas.blocks[0].id;
-        expect((await request('/api/canvases/product-roadmap/tasks', jsonBody({ title: 'Existing release work', blockIds: [linkedId] }))).status).toBe(201);
-      });
+    await assistantFixture(undefined, true, async () => history({ researchPatch: turn.patch }));
     fireEvent.click(screen.getByRole('button', { name: 'Open research canvas' }));
     const research = await screen.findByRole('region', { name: 'Research canvas' });
     expect(within(research).getByRole('heading', { name: 'Release evidence' })).toBeTruthy();
@@ -103,9 +95,5 @@ describe('Assistant restored history through the real App and persisted canvas',
     fireEvent.click(screen.getByRole('button', { name: 'Symbi settings' }));
     await screen.findByRole('dialog');
     expect(screen.getByRole('button', { name: 'Save settings' })).toBeTruthy();
-    expect(taskRequests).toEqual([]);
-    expect(await fixture.request('/api/canvases/product-roadmap/tasks').then(response => response.json())).toEqual([
-      expect.objectContaining({ title: 'Existing release work', blockIds: [linkedId] }),
-    ]);
   });
 });

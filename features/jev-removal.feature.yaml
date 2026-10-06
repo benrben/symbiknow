@@ -1,5 +1,10 @@
 feature: Ordinary workflows remain available with Symbi Reflex off
 scenarios:
+  - name: Tasks are absent from the app and API
+    steps:
+      - given: a fresh workspace
+      - when: I open the current canvas in a browser
+      - then: the retired Tasks view and API are unavailable
   - name: Canvas chat and settings remain available without a Tasks tab
     steps:
       - given: a fresh workspace

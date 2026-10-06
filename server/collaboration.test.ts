@@ -6,7 +6,7 @@ import path from 'node:path';
 import type { Server } from 'node:http';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { CanvasBlock, CanvasTask, ChatSettings } from '../shared/types.js';
+import type { CanvasBlock, ChatSettings } from '../shared/types.js';
 import { createApiServer } from './index.js';
 
 const opened: Array<{ server: Server; dataDir: string }> = [];
@@ -48,44 +48,6 @@ afterEach(async () => {
 });
 
 describe('agent collaboration', () => {
-  it('shares a task board where agents claim, comment, and finish work', async () => {
-    const base = await app();
-    const route = '/api/canvases/product-roadmap/tasks';
-    const created = await call<CanvasTask>(base, route, { method: 'POST', actor: 'Claude Code', body: { title: 'Write launch FAQ', blockIds: ['launch-checklist'] } });
-    expect(created.status).toBe(201);
-    expect(created.data).toMatchObject({ title: 'Write launch FAQ', status: 'todo', createdBy: 'Claude Code', blockIds: ['launch-checklist'] });
-    const claimed = await call<CanvasTask>(base, `${route}/${created.data.id}/claim`, { method: 'POST', actor: 'Codex', body: {} });
-    expect(claimed.data).toMatchObject({ assignee: 'Codex', status: 'in_progress' });
-    expect((await call(base, `${route}/${created.data.id}/claim`, { method: 'POST', actor: 'Claude Code', body: {} })).status).toBe(409);
-    await call(base, `${route}/${created.data.id}/comments`, { method: 'POST', actor: 'Codex', body: { text: 'Draft is ready for review' } });
-    const done = await call<CanvasTask>(base, `${route}/${created.data.id}`, { method: 'PUT', actor: 'Codex', body: { status: 'done' } });
-    expect(done.data).toMatchObject({ status: 'done', updatedBy: 'Codex', comments: [{ author: 'Codex', text: 'Draft is ready for review' }] });
-    expect((await call(base, route, { method: 'POST', body: { title: 'Bad', blockIds: ['missing'] } })).status).toBe(400);
-    expect((await call<CanvasTask[]>(base, route)).data).toHaveLength(1);
-    await call(base, `${route}/${created.data.id}`, { method: 'DELETE' });
-    expect((await call<CanvasTask[]>(base, route)).data).toEqual([]);
-  });
-
-  it('validates and persists a finding evidence trail on a task', async () => {
-    const base = await app();
-    const route = '/api/canvases/product-roadmap/tasks';
-    const findingRef = { id: 'finding-1', title: 'Clarify launch policy', canvasId: 'product-roadmap', blockIds: ['launch-checklist'],
-      detail: 'The checklist omits the launch exception.',
-      evidence: [{ questionId: 'q-1', answer: 'No exception listed', excerpt: 'Exceptions are not described.', sourceIds: ['launch-checklist'],
-        sourceHashes: { 'launch-checklist': 'ab12' } }],
-      suggestedOwner: 'Morgan', investigationId: 'investigation-7' };
-    const created = await call<CanvasTask>(base, route, { method: 'POST', actor: 'Codex', body: {
-      title: 'Clarify launch policy', detail: findingRef.detail, assignee: findingRef.suggestedOwner, blockIds: findingRef.blockIds, findingRef,
-    } });
-    expect(created.status).toBe(201);
-    expect(created.data).toMatchObject({ assignee: 'Morgan', blockIds: ['launch-checklist'], findingRef });
-    expect((await call<CanvasTask[]>(base, route)).data[0].findingRef).toMatchObject(findingRef);
-    const invalid = await call(base, route, { method: 'POST', body: { title: 'Bad evidence', findingRef: {
-      ...findingRef, evidence: [{ questionId: 'q-2', answer: '', excerpt: 'Unknown source', sourceIds: ['missing-document'] }],
-    } } });
-    expect(invalid.status).toBe(400);
-  });
-
   it('locks document content for its owner and rejects stale writes', async () => {
     const base = await app();
     const doc = '/api/canvases/product-roadmap/blocks/launch-checklist';
@@ -138,8 +100,7 @@ describe('agent collaboration', () => {
     const transport = new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { authorization: `Bearer ${created.data.token}` } } });
     const retainedTools = ['ask_symbi', 'symbi_reflex', 'list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'create_doc',
       'edit_doc', 'delete_doc', 'move_block', 'link_blocks', 'unlink_blocks', 'upload_file', 'download_file',
-      'claim_doc', 'release_doc', 'list_tasks', 'create_task', 'update_task', 'delete_task', 'task_history', 'undo_task',
-      'claim_task', 'comment_task', 'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'delete_branch',
+      'claim_doc', 'release_doc', 'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'delete_branch',
       'restore_revision', 'import_documents'];
     const removedTools = ['analyze_canvas', 'find_duplicates', 'merge_documents', 'undo_merge', 'connect_across_canvases', 'score_documents',
       'run_workspace_automation', 'regroup_canvas', 'organize_canvas', 'connect_documents', 'label_purposes', 'classify_work_areas', 'assign_reviewers'];

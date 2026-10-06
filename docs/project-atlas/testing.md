@@ -139,7 +139,7 @@ sequenceDiagram
 
 **Playwright.** Steps use `chromium.launch({ headless: true })`, usually at viewport 1440x900, and collect `pageerror` messages. Selectors are mostly roles and labels (`getByRole`, `getByLabel`). The `@avatar-preview` feature does not use the app; it starts a Vite dev server on port 0 for `brand/symbi-avatar-demo.html`. `@engine` features use no browser and no server. They call the built SDK (`dist/sdk/sdk.js`) or run `CanvasStore` and `JevRuntime` in process with their own temp folder.
 
-**Features** (69 scenarios):
+**Features** (68 scenarios):
 
 | Feature file | Scenarios | Tags | What it verifies |
 | --- | --- | --- | --- |
@@ -152,10 +152,9 @@ sequenceDiagram
 | `engine.feature` | 7 | `@engine` | Built SDK: typed decisions, invalid answers fail then recover, retry on transient error, cancel and empty batch do no network work, oversized state refused, no credential leak |
 | `jev-document-operation.feature` | 2 | `@engine @document-operation` | Six action outcomes share one durable document completion; removed actions cannot restart or change a document |
 | `jev-indexed-grouping.feature` | 3 | `@engine @indexed-grouping` | Grouping uses the durable Jev index; a link or random words cannot force a group; retrieval cannot lower the confidence threshold |
-| `jev-removal.feature` | 3 | — | With Reflex off, chat and settings work without a Tasks tab; retired analysis endpoints stay unavailable; a plain upload saves without Jev |
+| `jev-removal.feature` | 4 | — | The Tasks view and API are unavailable; with Reflex off, chat and settings work; retired analysis endpoints stay unavailable; a plain upload saves without Jev |
 | `review-fixes.feature` | 2 | — | Escape closes only the topmost surface; entering a scattered group shows every document |
 | `symbi-reflex.feature` | 8 | `@automatic-reflex` | Reflex runs the six actions automatically: shared provider requests, source isolation, results survive reload, refresh on source change, one threshold per action, reset, unavailable provider reported |
-| `tasks-canvas.feature` | 2 | — | Task columns on the canvas board; drag saves status without moving documents; column order survives reload |
 
 Step definitions live in `features/step_definitions/` (14 files, 3,304 lines with the support files). Steps are global, so a step in `canvas.js` (for example "a fresh workspace" or "I open SymbiKnow in a browser") is reused by many features.
 

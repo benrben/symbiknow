@@ -53,7 +53,11 @@ async function enterFiles(group: string) {
     return element!;
   });
   fireEvent.click(within(frame as HTMLElement).getAllByRole('button')[0]);
-  await waitFor(() => expect(flow.instance?.getZoom()).toBeGreaterThan(.28));
+  const label = group === '__ungrouped' ? 'Ungrouped' : group.split(':').at(-1)!.replace(/^./, first => first.toUpperCase());
+  await waitFor(() => expect(document.querySelector('.canvas-breadcrumb')?.textContent).toContain(label));
+  // The native focus request waits 80 ms, then animates for 300 ms. Let that request finish
+  // before forcing the test's readable zoom, or its late frame can restore overview zoom.
+  await act(async () => { await new Promise(resolve => window.setTimeout(resolve, 450)); });
   await moveZoom(1);
 }
 async function moveZoom(zoom: number) {

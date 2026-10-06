@@ -139,10 +139,6 @@ The request was understood but a value is wrong. The message names the field. Fi
 | `Invalid branch name` / `Invalid revision ID` | `server/version-reference.ts` | Bad version reference. |
 | `Choose another branch to merge` | `server/version-control.ts` | Merging the current branch into itself. |
 | `ttlSeconds must be between 30 and 3600` | `server/coordination.ts` | Lock lease length out of range. |
-| `status must be todo, in_progress, blocked, or done` / `Invalid task status` | `server/coordination-values.ts`, `server/api-tasks.ts` | Bad task status. |
-| `dueDate must be a valid YYYY-MM-DD date` | `server/coordination-values.ts` | Bad due date. |
-| `A canvas can hold at most 500 tasks` / `Task dependencies cannot form a cycle` | `server/storage-tasks.ts` | Task board limits. |
-| `Undo requires eventId and expectedRevision` / `Invalid expectedRevision` | `server/api-tasks.ts` | Task undo or delete input. |
 | `Search query is too long` | `server/storage.ts` | Query over 200 characters. |
 | `Chat message is too long` / `messages must contain 1 to 100 messages` / `The last chat message must be from the user` | `server/chat-input.ts` | Bad chat request (message limit is 20,000 characters). |
 | `Select at least one proposed change` / `Unknown or duplicate change ID` / `This proposal has no changes that can be safely applied` | `server/chat-proposals.ts` | Applying a Chat proposal. |
@@ -194,7 +190,6 @@ Note: when a scoped token asks for a canvas outside its scope, several routes an
 | `A linked document no longer exists` / `A merge document no longer exists` | `server/storage-documents.ts`, `server/storage-merges.ts` | Review again with current documents. |
 | `Layout includes an unknown block` | `server/storage-documents.ts` | Reload the canvas before saving layout. |
 | `Branch not found` / `Revision not found` | `server/version-control.ts` | Call `list_versions` for valid names. |
-| `Task not found` / `Task history event not found` | `server/storage-tasks.ts`, `server/storage-jev-tasks.ts` | Reload tasks. |
 | `Merge not found` | `server/storage-merges.ts` | The merge journal is gone; nothing to undo. |
 | `Token not found` | `server/storage-settings.ts` | The MCP token was already removed. |
 | `Investigation not found` | `server/investigations.ts`, `server/investigations-files.ts` | Start a new investigation. |
@@ -301,15 +296,6 @@ Group approval is special. If one change in a group fails, the error says how ma
 | `The source changed since Symbi Reflex reviewed it` / `The document changed during automatic processing` / `The reviewed draft needs rebase` | `server/jev/stamps.ts`, `server/jev/runtime-document.ts`, `server/storage-jev-executor.ts` | Reflex will need a fresh review. |
 | `Save or discard your unsaved editor changes before Symbi edits this document.` | `server/chat-tools.ts` | Save or discard in the editor first. |
 
-### Task revision
-
-| Message | Source | Next step |
-| --- | --- | --- |
-| `The task changed since this suggestion was reviewed` | `server/storage-tasks.ts` (`expectedRevision`, `expectedUpdatedAt`) | Reload the task and apply again. |
-| `A source document changed since this suggestion was reviewed` | `server/storage-tasks.ts` (`expectedSourceStateHashes`) | Review the task suggestion again. |
-| `The task changed since this history event was reviewed` / `A task changed after this history event` | `server/storage-tasks.ts` (task undo) | Reload history. |
-| `The task changed since Symbi Reflex reviewed it` / `Task identity already exists` / `Other work now depends on this task` | `server/storage-jev-tasks.ts` | Review the Reflex suggestion again. |
-
 ### Review token (document state)
 
 | Message | Source |
@@ -348,7 +334,6 @@ Next step: for document merges, preview again. For a Git merge conflict, edit on
 
 | Message | Source |
 | --- | --- |
-| `The destination canvas cannot hold the tasks attached to this document.` | `server/document-moves.ts` (500-task limit) |
 | `No free position is available near the requested coordinates` | `server/storage-validation.ts` |
 
 ### Idempotency keys
@@ -374,7 +359,6 @@ Next step: for document merges, preview again. For a Git merge conflict, edit on
 | --- | --- | --- |
 | `<owner> is editing this document until <time>. Pass force to take it over.` | `server/coordination.ts` (claim) | Wait, or claim with `force: true`. |
 | `<owner> holds this document. Pass force to release it.` | `server/coordination.ts` (release) | Only the owner should release (`DELETE …/lock?force=1` forces it). |
-| `<assignee> already claimed this task. Pass force to take it over.` | `server/coordination.ts` (task claim) | Talk to the assignee or use force. |
 
 ### Symbi Reflex state
 
@@ -384,7 +368,7 @@ Next step: for document merges, preview again. For a Git merge conflict, edit on
 | `Symbi Reflex is paused` / `Symbi Reflex action is paused or disabled` | `server/jev/proposals.ts`, `server/jev/group-approval.ts`, `server/jev/runtime-queue.ts` |
 | `The processing policy changed` / `The action was cancelled or its policy changed` | `server/jev/runtime.ts`, `server/jev/runtime-guards.ts` |
 | `Another reviewed draft is active for this document` / `An applied draft must use checked Undo` / `The current draft requires complete review and approval` | `server/jev/drafts.ts`, `server/jev/runtime-controls.ts`, `server/storage-jev-executor.ts` |
-| `A later correction prevents this Undo` / `A later pin prevents this Undo` / `Work changed after this action; Undo is unavailable` | `server/jev/proposal-inverse.ts`, `server/jev/move-task-inverse.ts` |
+| `A later correction prevents this Undo` / `A later pin prevents this Undo` / `Work changed after this action; Undo is unavailable` | `server/jev/proposal-inverse.ts` |
 | `Vocabulary changed since the preview` / `Vocabulary name or group path collision` / `Approve an active parent group first` | `server/jev/vocabulary.ts` |
 | `This group contains competing changes to the same document. Review them individually.` / `An earlier approval was undone. Review a fresh suggestion.` | `server/jev/group-approval.ts` |
 | `Recover pending Reflex changes before resetting` | `server/jev/reset.ts` |

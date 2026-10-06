@@ -69,14 +69,9 @@ const toolPlugins = new Map<string, string>([
   ['jev_do', 'document_write'],
 ]);
 
-function pluginForTool(name: string): string | undefined {
-  if (name.endsWith('_task') || name === 'list_tasks') return 'tasks';
-  return toolPlugins.get(name);
-}
-
 export function pluginAllows(name: string, enabled: string[]): boolean {
   if (name === 'draw_research_canvas') return true;
-  const plugin = pluginForTool(name);
+  const plugin = toolPlugins.get(name);
   return plugin !== undefined && enabled.includes(plugin);
 }
 

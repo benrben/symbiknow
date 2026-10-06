@@ -11,7 +11,7 @@ import { jevRoutes } from './api-jev.js';
 import { hasJevApiAccess } from './jev-api-principal.js';
 import { getJevRuntime } from './jev/runtime.js';
 import { requireReviewedAgentWrite } from './jev-agent-write-guard.js';
-import { taskRoutes, lockRoutes } from './api-tasks.js';
+import { lockRoutes } from './api-locks.js';
 import { workspaceAndSettings, workspaceCanvas } from './api-workspaces.js';
 import { canvasDocument, canvasLink, canvasImports, versionRoutes, canvasBlockMove, canvasLayout, canvasBlocks, blockDocument, blockDownload, websiteAsset } from './api-documents.js';
 import type { DeepAgentFactory } from './chat-stream.js';
@@ -30,7 +30,7 @@ async function appRoute(context: RouteContext): Promise<boolean> {
 }
 
 const routeHandlers = [jevRoutes, symbiRoutes, workspaceAndSettings, connectionRoutes, searchAndChat, streamingChat, investigationRoutes, workspaceCanvas, canvasDocument, versionRoutes,
-  canvasBlockMove, canvasLayout, taskRoutes,
+  canvasBlockMove, canvasLayout,
   lockRoutes, canvasBlocks, canvasImports, canvasLink, blockDocument, blockDownload, websiteAsset];
 
 

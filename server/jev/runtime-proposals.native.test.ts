@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import type { JevEvaluation, JevJob, JevPrincipal } from '../../shared/jev-types.js';
+import type { JevEvaluation, JevJob, JevMutation, JevPrincipal, JevProposal, JevReceipt } from '../../shared/jev-types.js';
 import { CanvasStore } from '../storage.js';
 import { JevRuntime } from './runtime.js';
 import { JevWorkspaceFiles } from './workspace.js';
@@ -70,6 +70,42 @@ it('keeps a suppressed semantic label suppressed across repeated decisions witho
   const repeated = await record();
   expect(repeated.proposals).toHaveLength(1); expect(repeated.proposals[0].state).toBe('suppressed');
   expect((await store.getCanvasBlock(canvasId, blockId)).tags ?? []).toEqual([]);
+});
+
+it('refuses saved task proposals, revisions, and receipt Undo after Tasks removal', async () => {
+  runtime = new JevRuntime(store, { startTimer: false });
+  await runtime.idle();
+  await expect(runtime.apply(workspaceId, 'missing-proposal', owner)).rejects.toMatchObject({ status: 404 });
+  const state = await files.read(workspaceId);
+  const mutations: JevMutation[] = [
+    { kind: 'task_create', canvasId, task: { title: 'Old work', detail: 'Retired proposal' } },
+    { kind: 'task_update', canvasId, taskId: 'old-task', expectedUpdatedAt: '2026-10-01', patch: { status: 'done' } },
+    { kind: 'task_delete', canvasId, taskId: 'old-task', expectedUpdatedAt: '2026-10-01' },
+  ];
+  for (const [index, mutation] of mutations.entries()) {
+    state.proposals.push({ id: `old-task-proposal-${index}`, jobId: 'historical-job', action: 'label',
+      title: 'Old task change', explanation: 'Saved before Tasks removal', evidence: [], sources: [],
+      mutation, state: 'pending', createdAt: '2026-10-01T00:00:00Z' } as JevProposal);
+  }
+  state.proposals.push({ id: 'retired-action-proposal', jobId: 'historical-job', action: 'assign_owner',
+    title: 'Old task assignment', explanation: 'Saved before Tasks removal', evidence: [], sources: [],
+    mutation: mutations[1], state: 'pending', createdAt: '2026-10-01T00:00:00Z' } as JevProposal);
+  state.receipts.push({ id: 'old-task-receipt', proposalId: 'old-task-applied', action: 'label', actor: 'owner',
+    createdAt: '2026-10-01T00:00:00Z', before: mutations[0], after: mutations[0], sourcesAfter: [], state: 'applied' } as JevReceipt);
+  await files.write(workspaceId, state);
+  const recovered = await files.read(workspaceId);
+  expect(recovered.proposals.filter(proposal => proposal.state === 'pending')).toHaveLength(3);
+  expect(recovered.proposals.find(proposal => proposal.id === 'retired-action-proposal')?.state).toBe('dismissed');
+  for (const [index, mutation] of mutations.entries()) {
+    await expect(runtime.revise(workspaceId, `old-task-proposal-${index}`, mutation, owner))
+      .rejects.toMatchObject({ status: 410, message: 'Tasks are no longer available' });
+    await expect(runtime.apply(workspaceId, `old-task-proposal-${index}`, owner))
+      .rejects.toMatchObject({ status: 410, message: 'Tasks are no longer available' });
+  }
+  await expect(runtime.undo(workspaceId, 'old-task-receipt', owner))
+    .rejects.toMatchObject({ status: 410, message: 'Tasks are no longer available' });
+  expect(await store.listTasks(canvasId)).toEqual([]);
+  expect((await files.read(workspaceId)).proposals.filter(proposal => proposal.state === 'pending')).toHaveLength(3);
 });
 it('returns the completed idempotent label job after restart without a second inference or duplicate writes', async () => {
   const request = { action: 'label' as const, canvasId, blockIds: [blockId], idempotencyKey: 'label-atlas-once' };

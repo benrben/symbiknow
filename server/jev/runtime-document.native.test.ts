@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { JevEvaluation } from '../../shared/jev-types.js';
+import type { JevEvaluation, JevProposal } from '../../shared/jev-types.js';
+import { randomUUID } from 'node:crypto';
 import { derived, type JevEvaluationContext } from './actions/context.js';
 import { ApiError } from '../errors.js';
 import { automationPrincipal } from './authorization.js';
 import { evaluationContext } from './context.js';
 import { automaticHoldReason } from './eligibility.js';
+import { JevRuntime } from './runtime.js';
+import type { PreparedJevMutation } from './proposals.js';
 import { queueBoundaryFixture, type QueueBoundaryFixture } from './queue-boundary.test.fixture.js';
 import { automaticDocumentEligible, checkDocumentSources, documentActions, executeAutomaticDocument,
   initializeDocumentPlan, type DocumentExecution, type DocumentJob } from './runtime-document.js';
@@ -47,6 +50,40 @@ it('admits only the exact automatic single-document all-action scope', async () 
   expect(automaticDocumentEligible({ ...job, request: { ...job.request, blockIds: [] } }, state)).toBe(false);
   expect(automaticDocumentEligible({ ...job, request: { ...job.request, query: 'manual scope' } }, state)).toBe(false);
   expect(automaticDocumentEligible(job, { settings: { ...state.settings, modes: { ...state.settings.modes, label: 'off' } } })).toBe(false);
+});
+
+it('recovers a prepared canonical record before claiming a resumed document job', async () => {
+  const runtime = new JevRuntime(native.store, { startTimer: false, documentExecution: false });
+  try {
+    await runtime.idle();
+    const state = await native.files.read(native.workspaceId);
+    const saved = state.jobs.find(item => item.id === job.id) as DocumentJob;
+    saved.state = 'queued'; saved.attempts = 0; initializeDocumentPlan(saved);
+    const proposal: JevProposal = { id: randomUUID(), jobId: job.id, action: 'profile', title: 'Prepared profile',
+      explanation: 'Durable workspace result', evidence: [], sources: [], mutation: { kind: 'derived', values: {} },
+      state: 'pending', createdAt: new Date().toISOString() };
+    state.proposals.push(proposal);
+    state.prepared.push({ id: randomUUID(), proposal, before: proposal.mutation, after: proposal.mutation, artifacts: [] } as PreparedJevMutation);
+    await native.files.write(native.workspaceId, state);
+    const admission = runtime as unknown as {
+      takeJob(workspaceId: string, jobId: string, controller: AbortController): Promise<StoredJevJob | undefined>;
+    };
+    const claimed = await admission.takeJob(native.workspaceId, job.id, new AbortController());
+    expect(claimed).toMatchObject({ id: job.id, state: 'running', attempts: 1 });
+    const recovered = await native.files.read(native.workspaceId);
+    expect(recovered.prepared).toEqual([]);
+    expect(recovered.receipts.some(receipt => receipt.proposalId === proposal.id)).toBe(true);
+  } finally { await runtime.shutdown(); }
+});
+
+it('rejects a document recheck outside the workspace canvas before admission', async () => {
+  const runtime = new JevRuntime(native.store, { startTimer: false, documentExecution: false });
+  try {
+    await runtime.idle();
+    await expect(runtime.recheckDocument(native.workspaceId, 'missing-canvas', native.primary.id,
+      native.primary.contentHash!, { id: 'owner', kind: 'user', access: 'write', canConfigure: true, canApprove: true }))
+      .rejects.toMatchObject({ status: 404, message: 'Canvas not found' });
+  } finally { await runtime.shutdown(); }
 });
 
 it('refuses provider-paused execution before loading or mutating a durable document plan', async () => {

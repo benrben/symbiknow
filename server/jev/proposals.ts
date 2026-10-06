@@ -31,6 +31,11 @@ export function proposalKey(proposal: Pick<JevProposal, 'action' | 'mutation'>):
   return createHash('sha256').update(JSON.stringify(canonicalValue([proposal.action, semanticMutation(proposal.mutation)]))).digest('hex');
 }
 
+export function suppressProposal(state: JevWorkspaceState, proposal: JevProposal): void {
+  const key = proposalKey(proposal);
+  if (!state.suppressions.includes(key)) state.suppressions.push(key);
+}
+
 function findProposal(state: JevWorkspaceState, id: string): JevProposal {
   const proposal = state.proposals.find(item => item.id === id);
   if (!proposal) throw new ApiError(404, 'Proposal not found');

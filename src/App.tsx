@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useLayoutEffect, useState, type CSSProperties } from 'react';
 import { useAppModel } from './app-model';
 import { AssistantPanel } from './AppAssistantPanel';
 import { AppOverlays } from './AppOverlays';
 import { BrandMark, ThemeToggle } from './AppIcon';
 import { MainColumn, Sidebar } from './AppWorkspaceView';
-import { locationFor, urlParam } from './app-model-helpers';
+import { clearLegacyTasksView } from './app-model-helpers';
 import { applyTheme, preferredTheme, type Theme } from './theme';
 
 export type { AppModel } from './app-model';
@@ -31,36 +31,20 @@ function LoginScreen({ onSignIn, theme, onToggleTheme }: { onSignIn: (token: str
 
 export function App() {
   const model = useAppModel();
-  const [page, setPage] = useState<'canvas' | 'tasks'>(() => urlParam('view') === 'tasks' ? 'tasks' : 'canvas');
-  const [tasksAssistantOpen, setTasksAssistantOpen] = useState(false);
-  const previousCanvasId = useRef(model.canvasId);
-  useEffect(() => {
-    if (previousCanvasId.current !== model.canvasId) setPage(urlParam('view') === 'tasks' ? 'tasks' : 'canvas');
-    previousCanvasId.current = model.canvasId;
-  }, [model.canvasId]);
-  useEffect(() => {
-    const restorePage = () => setPage(urlParam('view') === 'tasks' ? 'tasks' : 'canvas');
-    window.addEventListener('popstate', restorePage);
-    return () => window.removeEventListener('popstate', restorePage);
+  useLayoutEffect(() => {
+    clearLegacyTasksView();
+    window.addEventListener('popstate', clearLegacyTasksView);
+    return () => window.removeEventListener('popstate', clearLegacyTasksView);
   }, []);
-  const openTasks = () => {
-    if (urlParam('view') !== 'tasks') window.history.pushState({ tasksView: true }, '', locationFor(model.canvasId, '', 'tasks'));
-    setPage('tasks');
-  };
-  const openCanvas = () => {
-    if (urlParam('view') === 'tasks') window.history.pushState({ canvasView: true }, '', locationFor(model.canvasId));
-    setPage('canvas');
-  };
   const [theme, setTheme] = useState<Theme>(preferredTheme);
   useLayoutEffect(() => { applyTheme(theme); }, [theme]);
   const toggleTheme = () => setTheme(current => current === 'dark' ? 'light' : 'dark');
-  const workspaceModel = page === 'tasks' ? { ...model, showChat: tasksAssistantOpen, setShowChat: setTasksAssistantOpen } : model;
   if (model.authRequired) return <LoginScreen onSignIn={model.signIn} theme={theme} onToggleTheme={toggleTheme}/>;
-  return <div className={appShellClass(workspaceModel)}
+  return <div className={appShellClass(model)}
     style={{ '--document-chat-width': `${model.documentAssistantWidth}px` } as CSSProperties}>
-    <Sidebar model={model} page={page} onOpenTasks={openTasks} onOpenCanvas={openCanvas}/>
-    <MainColumn model={workspaceModel} theme={theme} onToggleTheme={toggleTheme} page={page} onOpenCanvas={openCanvas}/>
-    <AssistantPanel model={workspaceModel}/>
+    <Sidebar model={model}/>
+    <MainColumn model={model} theme={theme} onToggleTheme={toggleTheme}/>
+    <AssistantPanel model={model}/>
     <AppOverlays model={model}/>
 
   </div>;

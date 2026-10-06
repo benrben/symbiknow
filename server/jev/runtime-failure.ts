@@ -11,6 +11,17 @@ export function providerUnavailable(error: unknown): boolean {
   return error instanceof ApiError && [401, 402, 403, 429, 502, 503, 504].includes(error.status);
 }
 
+export async function finishFailedJob(error: unknown, failed: StoredJevJob | undefined,
+  failFollowup: (job: StoredJevJob) => Promise<void>, continueJob: (job: StoredJevJob) => Promise<void>): Promise<void> {
+  if (failed?.state !== 'failed') return;
+  if ((failed as DocumentJob).documentPlan) return;
+  if (providerUnavailable(error)) {
+    if (failed.followupKey) await failFollowup(failed);
+    return;
+  }
+  await continueJob(failed);
+}
+
 function publicError(error: unknown): string {
   return error instanceof ApiError ? error.message : 'Symbi Reflex could not complete the operation; Retry is available';
 }

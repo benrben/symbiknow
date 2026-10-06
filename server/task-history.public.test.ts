@@ -6,16 +6,9 @@ import { afterEach, expect, it } from 'vitest';
 import { CanvasStore } from './storage.js';
 import { DocumentLocks } from './coordination.js';
 import { atomicJson, StorageFiles } from './storage-files.js';
-import { createApiServer } from './index.js';
-import type { Server } from 'node:http';
 
 const roots: string[] = [];
-const servers: Server[] = [];
 afterEach(async () => {
-  for (const server of servers.splice(0)) {
-    server.closeAllConnections();
-    await new Promise<void>(resolve => server.close(() => resolve()));
-  }
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
@@ -56,33 +49,6 @@ it('records create, board update, comment, and delete; guarded Undo restores ref
   expect((await new CanvasStore(f.root).listTaskHistory(f.canvas.id, parent.id)).items[0]).toMatchObject({
     undoOf: history.items[0].eventId, actor: 'Undo agent' });
   expect(moved.boardOrder).toBe(-1.5);
-});
-
-it('serves bounded task history and Undo through the same API records used by MCP and the board', async () => {
-  const f = await fixture();
-  const server = await createApiServer({ dataDir: f.root });
-  servers.push(server);
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Missing fixture port');
-  const base = `http://127.0.0.1:${address.port}/api/canvases/${f.canvas.id}/tasks`;
-  const call = async (route: string, method = 'GET', body?: unknown) => {
-    const response = await fetch(base + route, { method, headers: { 'content-type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body) });
-    return { status: response.status, data: await response.json() as Record<string, unknown> };
-  };
-  const created = await call('', 'POST', { title: 'Board card', status: 'todo' });
-  const id = String(created.data.id);
-  const changed = await call(`/${id}`, 'PUT', { status: 'done', expectedRevision: created.data.revision });
-  expect(changed.data.status).toBe('done');
-  const history = await call(`/${id}/history?limit=1`);
-  expect(history.data).toMatchObject({ items: [expect.objectContaining({ kind: 'updated' })], nextCursor: '1' });
-  const eventId = (history.data.items as Array<{ eventId: string }>)[0].eventId;
-  const stale = await call(`/${id}/undo`, 'POST', { eventId, expectedRevision: 99 });
-  expect(stale.status).toBe(409);
-  const undone = await call(`/${id}/undo`, 'POST', { eventId, expectedRevision: changed.data.revision });
-  expect(undone.data).toMatchObject({ task: { id, status: 'todo' } });
-  expect((await call('')).data).toEqual(expect.arrayContaining([expect.objectContaining({ id, status: 'todo' })]));
 });
 
 it('repairs a committed task record whose audit append was interrupted', async () => {

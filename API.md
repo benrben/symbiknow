@@ -2,7 +2,7 @@
 
 All JSON endpoints use `/api` and return `{ error: string }` on failure. Request bodies must be sent as `application/json` (other types get `415`), and writes from a sandboxed document (`Origin: null`) get `403`. When `SYMBIKNOW_ACCESS_TOKEN` or the legacy `ALLTEAM_ACCESS_TOKEN` is set, every route except `/session` needs the session cookie or `Authorization: Bearer <access token>` (`401` otherwise). If both variables are set, either token is accepted and existing cookies stay valid while their token remains configured.
 
-Send `x-symbiknow-actor: <name>` to name the author of document revisions, locks, and tasks. The browser sends `Browser`; MCP agents send their client name plus token name. The legacy `x-allteam-actor` header, `allteam_session` cookie, and `ALLTEAM_*` environment aliases remain supported for existing integrations. New browser sessions use `symbiknow_session`.
+Send `x-symbiknow-actor: <name>` to name the author of document revisions and locks. The browser sends `Browser`; MCP agents send their client name plus token name. The legacy `x-allteam-actor` header, `allteam_session` cookie, and `ALLTEAM_*` environment aliases remain supported for existing integrations. New browser sessions use `symbiknow_session`.
 
 | Method | Path | Input | Output |
 | --- | --- | --- | --- |
@@ -11,20 +11,14 @@ Send `x-symbiknow-actor: <name>` to name the author of document revisions, locks
 | GET | `/canvases/:canvasId` | — | `CanvasDocument` |
 | GET | `/canvases/:canvasId?summary=1` | — | Fresh canvas metadata; blocks have `content: ""` and `contentLoaded: false`. No document bodies, hashes, or ETags are read. |
 | GET | `/canvases/:canvasId/blocks/:blockId` | — | One current `CanvasBlock`, including full content and its hash; reads only the selected document. |
-| DELETE | `/canvases/:canvasId` | — | `{ ok: true }`; permanently removes the canvas, its documents, tasks, cache, and document histories |
+| DELETE | `/canvases/:canvasId` | — | `{ ok: true }`; permanently removes the canvas, its documents, cache, and document histories |
 | PUT | `/canvases/:canvasId/layout` | `{ positions: { blockId, x, y, group?: string \| null }[] }` | `CanvasDocument` |
 | POST | `/workspaces/:workspaceId/canvases` | `{ name }` | `CanvasDocument` |
 | POST | `/canvases/:canvasId/blocks` | `{ title, kind?, content?, x?, y? }` | `CanvasBlock` |
 | PUT | `/canvases/:canvasId/blocks/:blockId` | Partial `CanvasBlock`, plus optional `expectedContentHash` (`409` if the file changed), `expectedDocumentState` (review token), `expectedSavedCrossLinks` (saved-reference review), and `message` (revision message) | `CanvasBlock`; `423` if another actor holds the lock and the change touches content, title, or loader |
-| POST | `/canvases/:canvasId/blocks/:blockId/move` | `{ targetCanvasId }` | Moves within the workspace, preserves typed references and creates destination tasks for attached work; source tasks retain a move comment |
+| POST | `/canvases/:canvasId/blocks/:blockId/move` | `{ targetCanvasId }` | Moves within the workspace and preserves typed references |
 | POST | `/canvases/:canvasId/blocks/:blockId/lock` | `{ ttlSeconds?: 30–3600, note?, force? }` | `{ owner, expiresAt, note? }`; `409` if held by another actor |
 | DELETE | `/canvases/:canvasId/blocks/:blockId/lock[?force=1]` | — | `{ ok: true }` |
-| GET | `/canvases/:canvasId/tasks` | — | `CanvasTask[]` |
-| POST | `/canvases/:canvasId/tasks` | `{ title, detail?, status?, assignee?, blockIds? }` | `CanvasTask` |
-| PUT | `/canvases/:canvasId/tasks/:taskId` | Partial `{ title, detail, status, assignee (null clears), blockIds }` | `CanvasTask` |
-| DELETE | `/canvases/:canvasId/tasks/:taskId` | — | `{ ok: true }` |
-| POST | `/canvases/:canvasId/tasks/:taskId/claim` | `{ force? }` | `CanvasTask`; `409` if another actor claimed it |
-| POST | `/canvases/:canvasId/tasks/:taskId/comments` | `{ text }` | `CanvasTask` |
 | DELETE | `/canvases/:canvasId/blocks/:blockId` | Optional JSON `{ expectedDocumentState?: string, expectedSavedCrossLinks?: string, requireUnreferenced?: boolean }` | `{ ok: true }`; `409` when reviewed state or saved outgoing links changed, or a required reference check finds a saved incoming reference |
 | GET | `/canvases/:canvasId/blocks/:blockId/download` | — | Raw `.md` attachment |
 | GET | `/canvases/:canvasId/blocks/:blockId/versions` | — | `{ current, branches, commits }` for one file |

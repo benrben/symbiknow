@@ -3,7 +3,7 @@ import type { JevEvaluationContext } from './actions/context.js';
 import { ApiError } from '../errors.js';
 import { mutationCanvases, principalFingerprint, requireCanvas } from './authorization.js';
 import { sameJevSource } from './stamps.js';
-import { validateMutation } from './mutations.js';
+import { requireCurrentMutation, validateMutation } from './mutations.js';
 
 export function processingPolicyKey(state: JevWorkspaceState): string { return JSON.stringify(state.settings); }
 type ProcessingJob = { settingsKey: string; authorizationFingerprint: string };
@@ -37,6 +37,7 @@ function checkedEvidence(evidence: JevPassage, proposal: JevProposal, context: J
 }
 function checkedProposal(proposal: JevProposal, context: JevEvaluationContext, request: JevActionRequest, principal: JevPrincipal): void {
   if (proposal.action !== request.action) throw new ApiError(502, 'Unexpected decision action');
+  requireCurrentMutation(proposal.mutation);
   validateMutation(proposal.mutation);
   for (const id of mutationCanvases(proposal.mutation)) requireCanvas(principal, id);
   for (const source of proposal.sources) {

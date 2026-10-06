@@ -54,7 +54,6 @@ Unscoped tokens also come from `SYMBIKNOW_MCP_TOKEN` or the access token. Old `A
 | Write | `create_doc`, `edit_doc`, `delete_doc`, `upload_file`, `download_file` | Hash required for edit, replace, and delete (new). HTML documents report `kind: "html"` (new) |
 | Arrange | `move_block`, `link_blocks`, `unlink_blocks` | Links change in one atomic `POST /canvases/:id/links` (new) |
 | Coordinate | `claim_doc`, `release_doc` | Locks of 30–3600 s |
-| Tasks | `list_tasks`, `create_task`, `update_task`, `delete_task`, `claim_task`, `comment_task` | `list_tasks` filters by `status`/`assignee` with pages (new); `boardOrder`; `delete_task` with `expectedRevision` and an audit record (new) |
 | History | `list_versions`, `create_branch`, `delete_branch`, `switch_branch`, `merge_branch`, `restore_revision` | `delete_branch` new; `list_versions` pages (new); `switch_branch` is a legacy shared switch |
 | Brain | `ask_symbi`, `symbi_reflex` | New default brain tools, see [Search and brain tools](search-and-brain-tools.md) |
 
@@ -66,7 +65,7 @@ Unscoped tokens also come from `SYMBIKNOW_MCP_TOKEN` or the access token. Old `A
 2. `read_doc` to get the full source and `contentHash`.
 3. `claim_doc` before a long edit.
 4. `edit_doc` or `upload_file` with `expectedContentHash`. On `409`, reread and merge.
-5. `release_doc`; coordinate with `list_tasks`, `claim_task`, `comment_task`, `update_task`.
+5. `release_doc` when the edit is complete.
 
 ## HTTP API
 
@@ -80,7 +79,7 @@ All JSON routes live under `/api` and return `{ "error": "…" }` on failure. Bo
 | POST | `/workspaces` · `DELETE /workspaces/:id` | Create or permanently delete |
 | POST | `/workspaces/:id/canvases` | Create a canvas |
 | GET | `/canvases/:id` | Full canvas (ETag); `?summary=1` without bodies; `?includeContent=false&limit=&cursor=` pages metadata |
-| DELETE | `/canvases/:id` | Deletes documents, tasks, histories, inbound links |
+| DELETE | `/canvases/:id` | Deletes documents, histories, inbound links |
 | PUT | `/canvases/:id/layout` | Positions and groups in one write |
 
 ### Documents
@@ -98,13 +97,10 @@ All JSON routes live under `/api` and return `{ "error": "…" }` on failure. Bo
 | GET | `/canvases/:id/blocks/:blockId/download` | Raw `.md` |
 | GET/POST/DELETE | `/canvases/:id/blocks/:blockId/versions…` | `versions`, `/preview`, `/branches`, `/branches/:name`, `/switch`, `/merge`, `/restore` |
 
-### Tasks, search, chat, settings, brain
+### Search, chat, settings, brain
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET/POST | `/canvases/:id/tasks` | Filters: `status`, `assignee`, `limit`, `cursor` |
-| PUT/DELETE | `/canvases/:id/tasks/:taskId` | `expectedRevision` guard |
-| POST | `/canvases/:id/tasks/:taskId/claim` · `/comments` | Claim or comment |
 | GET | `/search?q=&canvasId=&limit=&cursor=` | Local search, no provider calls |
 | POST | `/chat/stream` | SSE chat stream (see [Assistant](assistant-and-research.md)) |
 | GET/POST | `/chat/proposals/:id` · `/apply` · `/undo` | Review chat proposals |

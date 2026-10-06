@@ -85,7 +85,7 @@ export interface WorkspaceSummary {
 }
 
 export type ModelProvider = 'openrouter' | 'openai' | 'anthropic' | 'custom';
-export type AgentPlugin = 'document_read' | 'document_write' | 'tasks' | 'external_mcp';
+export type AgentPlugin = 'document_read' | 'document_write' | 'external_mcp';
 
 export interface AgentProfile {
   id: string;

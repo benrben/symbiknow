@@ -99,14 +99,20 @@ describe('New chat confirmation through the real App and canvas API', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save research and start' }));
     await waitFor(() => expect(pending.count).toBe(2));
     await pending.release(0);
-    await completedResearchSave(fixture);
+    await waitFor(async () => {
+      const saved = (await fixture.documents()).flatMap(workspace => workspace.canvases)
+        .find(canvas => canvas.name === 'Research — Release evidence');
+      expect(saved).toBeDefined();
+      expect((await fixture.read(saved!.id)).blocks[0]).toMatchObject({ title: 'Release review', kind: 'markdown' });
+    }, { timeout: 5000 });
+    await screen.findByRole('button', { name: 'Open canvas: Research — Release evidence', hidden: true }, { timeout: 5000 });
     expect(screen.getByRole('alertdialog')).toBe(newer);
     expect((within(newer).getByRole('button', { name: 'Saving…' }) as HTMLButtonElement).disabled).toBe(true);
     expect(storedResearch().turns).toEqual([turn]);
     await pending.release(1, Response.json({ error: 'Current save failed' }, { status: 503 }));
     await screen.findByText('Current save failed');
     expect((within(newer).getByRole('button', { name: 'Save research and start' }) as HTMLButtonElement).disabled).toBe(false);
-  });
+  }, 15000);
 
   it('does not reset the newer chat after an earlier authorized save finishes', async () => {
     const pending = heldSave();

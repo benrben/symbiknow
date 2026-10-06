@@ -24,14 +24,23 @@ export function renamedBlockDraft(current: BlockDraft, title: string): BlockDraf
   return { ...current, title, content };
 }
 
-/** Keep canvas, Tasks, and reader addresses linkable and compatible with browser Back. */
-export function locationFor(canvasId: string, docId = '', view: 'canvas' | 'tasks' = 'canvas'): string {
+/** Keep canvas and reader addresses linkable and compatible with browser Back. */
+export function locationFor(canvasId: string, docId = ''): string {
   const params = new URLSearchParams(window.location.search);
   setLocationParam(params, 'canvas', canvasId);
   setLocationParam(params, 'doc', docId);
-  setLocationParam(params, 'view', view === 'tasks' && canvasId && !docId ? 'tasks' : '');
+  params.delete('view');
   const query = params.toString();
   return `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+}
+
+export function clearLegacyTasksView(): void {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('view') !== 'tasks') return;
+  params.delete('view');
+  const query = params.toString();
+  window.history.replaceState(window.history.state, '',
+    `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
 }
 
 function setLocationParam(params: URLSearchParams, name: string, value: string) {
@@ -39,7 +48,7 @@ function setLocationParam(params: URLSearchParams, name: string, value: string) 
   else params.delete(name);
 }
 
-export function urlParam(name: 'canvas' | 'doc' | 'view'): string {
+export function urlParam(name: 'canvas' | 'doc'): string {
   return new URLSearchParams(window.location.search).get(name) ?? '';
 }
 

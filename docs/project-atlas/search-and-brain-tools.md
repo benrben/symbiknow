@@ -33,7 +33,7 @@ passage_fts USING fts5(title, excerpt, metadata)   -- keyword search, bm25
 - **Pending first:** `markPending` runs before embedding, so searches report unindexed documents instead of pretending coverage is complete.
 - **Embeddings:** `Xenova/all-MiniLM-L6-v2` INT8, pinned revision `57cbdab…`. The worker refuses to download; it loads `<SYMBI_MODEL_ROOT>/Xenova/all-MiniLM-L6-v2/model_int8.onnx`. Limits: 32 texts × 1,600 chars per call, 64 pending calls. If the model is missing, documents are indexed for keywords and marked `degraded`.
 - **Cache:** ranked results are cached per query and scope, 4 MB by default (max 64 MB). Any write increments a generation number and clears the cache; old cursors then fail as stale.
-- **Lifecycle:** at startup `rebuild()` compares every document's hash and metadata revision. Save events upsert changed documents, delete events remove them, moves trigger a rebuild, and task events are ignored.
+- **Lifecycle:** at startup `rebuild()` compares every document's hash and metadata revision. Save events upsert changed documents, delete events remove them, and moves trigger a rebuild.
 
 ## Ranking
 

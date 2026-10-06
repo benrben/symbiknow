@@ -67,6 +67,19 @@ it('rejects mismatched actions, unknown revisions, and document targets absent f
   ] satisfies JevMutation[]) expectRejected(changed(proposal => { proposal.mutation = mutation; }), 'Mutation target is not a reviewed source');
 });
 
+it('rejects retired task mutations returned by an evaluator before they become proposals', () => {
+  const mutations: JevMutation[] = [
+    { kind: 'task_create', canvasId: request.canvasId, task: { title: 'Old work', detail: 'Retired' } },
+    { kind: 'task_update', canvasId: request.canvasId, taskId: 'old-task', expectedUpdatedAt: '2026-10-01', patch: { status: 'done' } },
+    { kind: 'task_delete', canvasId: request.canvasId, taskId: 'old-task', expectedUpdatedAt: '2026-10-01' },
+  ];
+  for (const mutation of mutations) {
+    const proposal = changed(value => { value.mutation = mutation; });
+    expect(() => validateJevEvaluation(evaluation(proposal), context, request, owner))
+      .toThrowError(expect.objectContaining({ status: 410, message: 'Tasks are no longer available' }));
+  }
+});
+
 it('requires every vocabulary member and every evidence source to be separately reviewed', () => {
   const source = context.documents.find(document => document.snapshot.blockId !== baseline.sources[0].blockId)!;
   const mutation: JevMutation = { kind: 'vocabulary', operation: 'define', term: { id: 'release-term', kind: 'label', name: 'Release',

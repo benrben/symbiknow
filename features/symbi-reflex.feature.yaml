@@ -12,7 +12,7 @@ scenarios:
   - when: I open the current canvas in a browser
   - and: I open Reflex only to observe automatic results
   - and: I reload the automatic Reflex canvas
-  - then: automatic classification and unchanged manual tasks survive reload
+  - then: automatic classification and unchanged manual documents survive reload
   - and: independent typed action questions share real provider requests without mixing their saved sources
 - name: Saved sources are organized before the Reflex panel opens and results survive reload
   steps:
@@ -24,8 +24,8 @@ scenarios:
   - and: I open Reflex only to observe automatic results
   - then: the Reflex panel contains findings without action approval or mode controls
   - when: I reload the automatic Reflex canvas
-  - then: automatic classification and unchanged manual tasks survive reload
-- name: Source changes refresh automatic checks while manually updated tasks remain intact
+  - then: automatic classification and unchanged manual documents survive reload
+- name: Source changes refresh automatic checks while manual documents remain intact
   steps:
   - given: a fresh workspace
   - and: an isolated automatic Reflex workspace with a saved provider key
@@ -36,7 +36,7 @@ scenarios:
   - when: I open the current canvas in a browser
   - and: I open Reflex only to observe automatic results
   - and: I reload the automatic Reflex canvas
-  - then: the refreshed results survive reload without additional tasks or approvals
+  - then: the refreshed results survive reload without approvals
 - name: Repeated reconciliation and browser reload keep unchanged completed sources stable
   steps:
   - given: a fresh workspace

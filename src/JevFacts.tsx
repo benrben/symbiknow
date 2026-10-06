@@ -23,13 +23,13 @@ function FactArray({ values }: { values: JevJson[] }) {
 export function JevMutationSummary({ mutation }: { mutation: JevMutation }) {
   if (mutation.kind === 'content') return <><p>Replace saved content with this reviewed draft:</p><blockquote>{mutation.content}</blockquote></>;
   if (mutation.kind === 'document') return <JevFacts values={mutation.patch as JevValues}/>;
-  if (mutation.kind === 'task_create') return <><p>Create task: {mutation.task.title}</p><p>{mutation.task.detail}</p></>;
-  if (mutation.kind === 'task_update') return <JevFacts values={mutation.patch as unknown as JevValues}/>;
+  if (mutation.kind === 'task_create' || mutation.kind === 'task_update' || mutation.kind === 'task_delete') {
+    return <p>This saved action is no longer available.</p>;
+  }
   return <OtherMutationSummary mutation={mutation}/>;
 }
 
-function OtherMutationSummary({ mutation }: { mutation: Extract<JevMutation, { kind: 'task_delete' | 'move' | 'vocabulary' | 'derived' }> }) {
-  if (mutation.kind === 'task_delete') return <p>Delete the selected task after checking its current revision.</p>;
+function OtherMutationSummary({ mutation }: { mutation: Extract<JevMutation, { kind: 'move' | 'vocabulary' | 'derived' }> }) {
   if (mutation.kind === 'move') return <p>Move the source document to canvas {mutation.targetCanvasId}.</p>;
   if (mutation.kind === 'vocabulary') return <><p>{fieldLabel(mutation.operation)} {mutation.term.kind}: <strong>{mutation.term.name}</strong></p><p>{mutation.term.definition}</p>
     <p>{mutation.term.members.length} proposed members · {mutation.term.state}</p></>;

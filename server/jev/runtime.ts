@@ -13,7 +13,7 @@ import { readJevWorkspace } from './runtime-read.js';
 import {
 automationPrincipal,currentPrincipal,mutationCanvases,principalFingerprint,
 publicJevJob,publicJevReceipt,
-requireApprove,requireCanvas,requireResetOwner,requireTool,runToolNames,scopedState
+rejectRetiredTaskMutation,requireApprove,requireCanvas,requireResetOwner,requireTool,runToolNames,scopedState
 } from './authorization.js';
 import { updatedJevSettings,validateRequest } from './configuration.js';
 import { evaluationContext } from './context.js';
@@ -22,15 +22,15 @@ import { editQuietWindow } from './runtime-edit-window.js';
 import { subscribeJevStore,type JevStoreEvent } from './events.js';
 import { JevFollowupQueue } from './followups.js';
 import { purgeJevOrphans } from './lifecycle.js';
-import { mutationIdentity,validateMutation } from './mutations.js';
+import { mutationIdentity,requireCurrentMutation,validateMutation } from './mutations.js';
 import { undoBrowserParent } from './parent-browser.js';
 import type { JevParentUndo } from './parent-undo.js';
-import { JevProposalExecutor,proposalKey } from './proposals.js';
+import { JevProposalExecutor,suppressProposal } from './proposals.js';
 import { cancelDraftWork,cancelJevJob,checkDraftCancellation,checkJobCancellation,metadataOwnership,pendingJob,stopJobDraft,validateMetadataOverride } from './runtime-controls.js';
 import { checkFinishingPolicy,processingPolicyKey as settingsKey } from './runtime-guards.js';
 import { JevRuntimeMaintenance } from './runtime-maintenance.js';
-import { transportDecider } from './runtime-transport.js';
-import { providerUnavailable, recordJevFailure } from './runtime-failure.js';
+import { currentDocumentTransport,transportDecider } from './runtime-transport.js';
+import { finishFailedJob,recordJevFailure } from './runtime-failure.js';
 import { attachIndexedNeighbors } from './runtime-neighbors.js';
 import { admitDocumentRecheck } from './runtime-review.js';
 import { resetJevWorkspaceInside,withoutJevResetJournal } from './reset.js';
@@ -60,10 +60,6 @@ function sharedRunners(root: string): Map<string, AbortController> {
   let runners = activeRunners.get(root);
   if (!runners) { runners = new Map(); activeRunners.set(root, runners); }
   return runners;
-}
-function suppressProposal(state: JevWorkspaceState, proposal: JevProposal): void {
-  const key = proposalKey(proposal);
-  if (!state.suppressions.includes(key)) state.suppressions.push(key);
 }
 export class JevRuntime {
   private readonly files: JevWorkspaceFiles;
@@ -335,13 +331,8 @@ export class JevRuntime {
     if (delay) { await new Promise(resolve => setTimeout(resolve, delay)); return; }
     if (signal.aborted) return;
     const failed = (await this.files.read(workspaceId)).jobs.find(job => job.id === jobId) as StoredJob | undefined;
-    if (failed?.state !== 'failed') return;
-    if ((failed as DocumentJob).documentPlan) return;
-    if (providerUnavailable(error)) {
-      if (failed.followupKey) await this.followupQueue.fail(workspaceId, failed.request, failed.followupKey);
-      return;
-    }
-    await this.continueJob(workspaceId, failed);
+    await finishFailedJob(error, failed,
+      job => this.followupQueue.fail(workspaceId, job.request, job.followupKey!), job => this.continueJob(workspaceId, job));
   }
 
   private async executeJob(workspaceId: string, jobId: string): Promise<void> {
@@ -369,13 +360,9 @@ export class JevRuntime {
     const transportVersion = this.questionContexts.get(context)!;
     await executeAutomaticDocument({ workspaceId, job, context, state: this.contextStates.get(context), store: this.store, files: this.files, executor: this.executor,
       evaluate: async (current, actionJob) => {
-        if (!this.questionContexts.has(current)) this.questionContexts.set(current, transportVersion);
-        if (this.questionContexts.get(current) !== this.questionTransportVersion) {
-          current = { ...current, apiKey: this.options.apiKey ?? (await this.store.secretSettings()).secrets?.TYPESAFE_API_KEY ?? process.env.TYPESAFE_API_KEY,
-            decider: transportDecider(this.options) };
-          this.questionContexts.set(current, this.questionTransportVersion);
-        }
-        return this.evaluateJob(current, actionJob);
+        const refreshed = await currentDocumentTransport(current, this.questionContexts, transportVersion,
+          this.questionTransportVersion, this.options, this.store);
+        return this.evaluateJob(refreshed, actionJob);
       },
       reason: (state, proposal, current) => automaticReason(state, proposal, current, true),
       refresh: async (state, actionJob) => {
@@ -414,6 +401,8 @@ export class JevRuntime {
   async apply(workspaceId: string, proposalId: string, principal: JevPrincipal): Promise<JevReceipt> {
     await this.ready;
     return this.files.serial(workspaceId, async () => {
+      const proposal = (await this.files.read(workspaceId)).proposals.find(item => item.id === proposalId);
+      if (proposal) await rejectRetiredTaskMutation(this.store, principal, proposal.mutation, ['jev_resolve', 'undo_jev', 'set_metadata']);
       await this.executor.recoverInside(workspaceId);
       return publicJevReceipt(await this.executor.applyInside(workspaceId, proposalId, principal));
     });
@@ -422,6 +411,8 @@ export class JevRuntime {
   async undo(workspaceId: string, receiptId: string, principal: JevPrincipal): Promise<JevReceipt> {
     await this.ready;
     return this.files.serial(workspaceId, async () => {
+      const receipt = (await this.files.read(workspaceId)).receipts.find(item => item.id === receiptId);
+      if (receipt) await rejectRetiredTaskMutation(this.store, principal, receipt.after, ['jev_resolve', 'undo_jev']);
       await this.executor.recoverInside(workspaceId);
       return publicJevReceipt(await this.executor.undoInside(workspaceId, receiptId, principal));
     });
@@ -465,6 +456,8 @@ export class JevRuntime {
       const state = await this.files.read(workspaceId);
       const proposal = state.proposals.find(item => item.id === proposalId);
       if (!proposal || proposal.state !== 'pending') throw new ApiError(404, 'Pending proposal not found');
+      requireCurrentMutation(proposal.mutation);
+      requireCurrentMutation(mutation);
       for (const id of mutationCanvases(mutation)) requireCanvas(principal, id);
       validateMutation(mutation);
       if (mutationIdentity(mutation) !== mutationIdentity(proposal.mutation)) throw new ApiError(409, 'A revised proposal cannot change targets');

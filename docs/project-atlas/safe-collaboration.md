@@ -9,7 +9,6 @@ Every write that replaces existing content names the version it was based on. Th
 | Guard | Where it applies | On mismatch |
 | --- | --- | --- |
 | `expectedContentHash` | Edits, uploads replacing a document, deletions, branch edits | `409`; the body carries `currentContentHash` (branch edits put it in the message) |
-| `expectedRevision` | Task update and delete | `409` |
 | `expectedDocumentState` | Review token from `shared/document-state.ts` (content versions + metadata, not locks) | `409` |
 | `expectedSavedCrossLinks` | JSON of reviewed outgoing cross-canvas links, on update and delete | `409`; references stay for review |
 | Lock | Content, title, or loader change while another actor holds the lock | `423` |

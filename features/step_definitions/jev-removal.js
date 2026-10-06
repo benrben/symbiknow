@@ -1,6 +1,21 @@
 import { strict as assert } from 'node:assert';
 import { Then, When } from '@cucumber/cucumber';
 
+Then('the retired Tasks view and API are unavailable', async function () {
+  assert.equal(await this.page.getByRole('button', { name: 'Open Tasks page' }).count(), 0);
+  await this.page.goto(`${this.baseUrl}/?canvas=${this.canvasId}&view=tasks`);
+  await this.page.locator('.canvas-surface').waitFor();
+  await this.page.waitForURL(url => !url.searchParams.has('view'));
+  assert.equal(new URL(this.page.url()).searchParams.has('view'), false);
+  assert.equal(await this.page.getByRole('button', { name: 'Open Tasks page' }).count(), 0);
+  for (const [method, suffix] of [['GET', ''], ['POST', ''], ['PUT', '/removed'], ['DELETE', '/removed']]) {
+    const result = await fetch(`${this.baseUrl}/api/canvases/${this.canvasId}/tasks${suffix}`, { method,
+      ...(method === 'GET' ? {} : { headers: { 'content-type': 'application/json' }, body: '{}' }) });
+    assert.equal(result.status, 404, `${method} ${suffix}`);
+  }
+  assert.deepEqual(this.pageErrors, []);
+});
+
 Then('the ordinary app is visible without Jev action controls', async function () {
   assert.equal(await this.page.locator('.canvas-surface').count(), 1);
   await this.page.locator('.canvas-card', { hasText: 'Ordinary Note' }).waitFor();

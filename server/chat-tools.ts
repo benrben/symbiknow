@@ -7,10 +7,7 @@ import { groupLabel, groupPath, normalizedGroup } from '../shared/groups.js';
 import type { BlockKind, CanvasDocument } from '../shared/types.js';
 import { ChatProposalDraft } from './chat-proposals.js';
 import { findBlock } from './chat-input.js';
-import { combinedSignal } from './chat-cancellation.js';
 import { jevChatTools } from './jev-chat-tools.js';
-
-const assistantActor = 'Symbi';
 
 function canvasGroups(canvas: CanvasDocument): string[] {
   return [...new Set(canvas.blocks.flatMap(block => groupPath(normalizedGroup(block.group) ?? '__ungrouped')))];
@@ -143,33 +140,6 @@ export function canvasTools(store: CanvasStore, canvasId: string, options: Canva
       schema: z.object({ fromBlockId: z.string().min(1), toBlockId: z.string().min(1),
         relation: z.enum(['prerequisite', 'implements', 'decision_for', 'supersedes', 'contradicts', 'example_of', 'same_topic', 'related']).optional() }),
     }),
-    ...taskTools(store, canvasId, options),
     ...jevChatTools(store, canvasId),
-  ];
-}
-
-const taskStatus = z.enum(['todo', 'in_progress', 'blocked', 'done']);
-
-function taskTools(store: CanvasStore, canvasId: string, options: Pick<CanvasToolsOptions, 'signal'>): StructuredToolInterface[] {
-  return [
-    tool(async () => JSON.stringify(await store.listTasks(canvasId)), {
-      name: 'list_tasks', description: 'List the shared task board for this canvas, including assignees and status.', schema: z.object({}),
-    }),
-    tool(async (args, config) => {
-      combinedSignal(options.signal, config.signal)?.throwIfAborted();
-      return JSON.stringify(await store.createTask(canvasId, args, assistantActor));
-    }, {
-      name: 'create_task', description: 'Add a task to the shared board when the user asks to track work.',
-      schema: z.object({ title: z.string().min(1).max(160), detail: z.string().max(4000).optional(), assignee: z.string().max(48).optional(),
-        status: taskStatus.optional(), blockIds: z.array(z.string()).max(20).optional() }),
-    }),
-    tool(async ({ taskId, ...patch }, config) => {
-      combinedSignal(options.signal, config.signal)?.throwIfAborted();
-      return JSON.stringify(await store.updateTask(canvasId, taskId, patch, assistantActor));
-    }, {
-      name: 'update_task', description: 'Update a task title, detail, status, assignee, or related documents.',
-      schema: z.object({ taskId: z.string().min(1), title: z.string().min(1).max(160).optional(), detail: z.string().max(4000).optional(),
-        status: taskStatus.optional(), assignee: z.string().max(48).optional(), blockIds: z.array(z.string()).max(20).optional() }),
-    }),
   ];
 }

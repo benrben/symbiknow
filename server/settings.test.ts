@@ -70,14 +70,20 @@ describe('private and public settings', () => {
     ['systemPrompt', 'x'.repeat(20_001)], ['baseUrl', 'not a URL'], ['baseUrl', 'ftp://host'],
     ['apiKey', 2], ['apiKey', 'x'.repeat(4097)], ['providerKeys', null], ['providerKeys', false],
     ['providerKeys', { missing: 'key' }], ['providerKeys', { openai: 2 }], ['groupBy', 'missing'],
-    ['agentPlugins', null], ['agentPlugins', ['missing']], ['agentProfile', 2], ['agentProfile', 'missing'],
+    ['agentPlugins', null], ['agentPlugins', ['missing']], ['agentPlugins', ['tasks']], ['agentProfile', 2], ['agentProfile', 'missing'],
   ])('rejects invalid %s values before saving', (field, value) => {
     expect(() => update({ [field]: value })).toThrow();
   });
 
   it('updates editable text, grouping, plugins, and agent profiles', () => {
-    expect(update({ model: ' model ', systemPrompt: ' prompt ', groupBy: 'purpose', agentPlugins: ['tasks', 'tasks'],
-      agentProfile: 'planner' })).toMatchObject({ model: 'model', systemPrompt: 'prompt', groupBy: 'purpose', agentPlugins: ['tasks'], agentProfile: 'planner' });
+    expect(update({ model: ' model ', systemPrompt: ' prompt ', groupBy: 'purpose', agentPlugins: ['document_read', 'document_read'],
+      agentProfile: 'planner' })).toMatchObject({ model: 'model', systemPrompt: 'prompt', groupBy: 'purpose', agentPlugins: ['document_read'], agentProfile: 'planner' });
+  });
+
+  it('filters retired task plugins from previously saved settings', () => {
+    const legacy = settings({ agentPlugins: ['document_read', 'tasks'] as PrivateSettings['agentPlugins'] });
+    expect(publicSettings(legacy).agentPlugins).toEqual(['document_read']);
+    expect(update({}, legacy).agentPlugins).toEqual(['document_read']);
   });
 });
 
@@ -140,8 +146,8 @@ describe('scoped MCP tokens', () => {
     expect(result.token).toMatch(/^atm_[A-Za-z0-9_-]{32}$/);
     expect(result.stored).toMatchObject({ name: 'Name', access: 'read', preview: `…${result.token.slice(-4)}` });
     expect(result.stored.hash).not.toContain(result.token);
-    expect(newMcpToken('Scoped', 'propose', { allowedCanvasIds: ['canvas-one'], tools: ['list_tasks', 'read_doc'] }).stored)
-      .toMatchObject({ allowedCanvasIds: ['canvas-one'], tools: ['list_tasks', 'read_doc'] });
+    expect(newMcpToken('Scoped', 'propose', { allowedCanvasIds: ['canvas-one'], tools: ['list_versions', 'read_doc'] }).stored)
+      .toMatchObject({ allowedCanvasIds: ['canvas-one'], tools: ['list_versions', 'read_doc'] });
     expect(newMcpToken('Writer', 'write', { tools: ['edit_doc'] }).stored.tools).toEqual(['edit_doc']);
   });
 
@@ -149,6 +155,9 @@ describe('scoped MCP tokens', () => {
     ('rejects invalid canvas scopes', value => expect(() => newMcpToken('Token', 'read', { allowedCanvasIds: value })).toThrow());
   it.each([[], 'read_doc', [2], ['missing'], ['read_doc', 'read_doc'], [...mcpToolNames, 'read_doc']])
     ('rejects invalid tool scopes', value => expect(() => newMcpToken('Token', 'write', { tools: value })).toThrow());
+  it('rejects removed task tools in new token scopes', () => {
+    expect(() => newMcpToken('Old task scope', 'write', { tools: ['list_tasks'] })).toThrow();
+  });
   it.each(['read', 'propose'])('rejects write tools for %s tokens', access => {
     expect(() => newMcpToken('Token', access, { tools: ['edit_doc'] })).toThrow('exceed this token access level');
   });

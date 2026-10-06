@@ -1,9 +1,9 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import type { JevWorkspaceState } from '../../shared/jev-types.js';
 import { ApiError } from '../errors.js';
 import { jevRemoteError } from '../jev-provider-error.js';
 import type { CanvasStore } from '../storage.js';
-import { providerUnavailable, recordJevFailure } from './runtime-failure.js';
+import { finishFailedJob, providerUnavailable, recordJevFailure } from './runtime-failure.js';
 import type { DocumentJob } from './runtime-document.js';
 import type { StoredJevJob } from './runtime-queue.js';
 import { emptyJevWorkspace, type JevWorkspaceFiles } from './workspace.js';
@@ -71,4 +71,20 @@ it('defers an exhausted transient document failure and preserves completed or ca
   const cancelled = fixture(); cancelled.job().state = 'cancelled';
   expect(await cancelled.run(new ApiError(503, 'Offline unavailable'))).toBe(0);
   expect(cancelled.job().state).toBe('cancelled');
+});
+
+it('continues only failed ordinary work and fails keyed followups when the provider is unavailable', async () => {
+  const failed = fixture().job(); failed.state = 'failed';
+  const failFollowup = vi.fn(async () => undefined); const continueJob = vi.fn(async () => undefined);
+  await finishFailedJob(new Error('offline'), undefined, failFollowup, continueJob);
+  await finishFailedJob(new Error('offline'), { ...failed, state: 'completed' }, failFollowup, continueJob);
+  await finishFailedJob(new Error('offline'), { ...failed, documentPlan: { version: 2, originalSources: [],
+    completedActions: [], claimPreparedAt: '2026-10-06T00:00:00Z', queueWaitMs: 0 } } as DocumentJob, failFollowup, continueJob);
+  expect(failFollowup).not.toHaveBeenCalled(); expect(continueJob).not.toHaveBeenCalled();
+  await finishFailedJob(new ApiError(503, 'offline'), failed, failFollowup, continueJob);
+  expect(failFollowup).not.toHaveBeenCalled();
+  await finishFailedJob(new ApiError(503, 'offline'), { ...failed, followupKey: 'next' }, failFollowup, continueJob);
+  expect(failFollowup).toHaveBeenCalledTimes(1);
+  await finishFailedJob(new Error('review failed'), failed, failFollowup, continueJob);
+  expect(continueJob).toHaveBeenCalledExactlyOnceWith(failed);
 });

@@ -10,5 +10,5 @@ export function ConnectionTokenAccess({ model }: { model: ConnectionTokenModel }
           setSelectedTools(tools => tools.filter(tool => allowed.includes(tool)));
         }}>
           <option value="read">Read only</option><option value="propose">Read and propose changes</option><option value="write">Read and make changes</option>
-        </select><small>{access === 'read' ? 'Can read workspace documents and tasks.' : access === 'propose' ? 'Can read and propose edits for a person to approve.' : 'Can read and make workspace changes.'}</small></label>;
+        </select><small>{access === 'read' ? 'Can read workspace documents.' : access === 'propose' ? 'Can read and propose edits for a person to approve.' : 'Can read and make workspace changes.'}</small></label>;
 }

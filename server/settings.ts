@@ -24,18 +24,17 @@ export type PrivateSettings = {
 
 export const providers: ModelProvider[] = ['openrouter', 'openai', 'anthropic', 'custom'];
 export const builtInProfiles = ['general', 'research', 'planner', 'builder'] as const;
-export const allPlugins: AgentPlugin[] = ['document_read', 'document_write', 'tasks', 'external_mcp'];
+export const allPlugins: AgentPlugin[] = ['document_read', 'document_write', 'external_mcp'];
 export const mcpToolNames = [
   'ask_symbi', 'symbi_reflex',
   'list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'create_doc', 'import_documents', 'edit_doc', 'delete_doc', 'move_block',
-  'link_blocks', 'unlink_blocks', 'upload_file', 'download_file', 'claim_doc', 'release_doc', 'list_tasks',
-  'create_task', 'update_task', 'delete_task', 'task_history', 'undo_task', 'claim_task', 'comment_task',
+  'link_blocks', 'unlink_blocks', 'upload_file', 'download_file', 'claim_doc', 'release_doc',
   'list_versions', 'create_branch', 'delete_branch', 'switch_branch', 'merge_branch', 'restore_revision',
   'jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox', 'jev_do', 'jev_job', 'jev_propose',
 ] as const;
 export const readableMcpTools = new Set<string>(['ask_symbi', 'symbi_reflex', 'list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'download_file',
-  'list_tasks', 'task_history', 'list_versions', 'jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox', 'jev_job',]);
-export const defaultPlugins: AgentPlugin[] = ['document_read', 'document_write', 'tasks', 'external_mcp'];
+  'list_versions', 'jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox', 'jev_job',]);
+export const defaultPlugins: AgentPlugin[] = ['document_read', 'document_write', 'external_mcp'];
 const retiredSettings = new Set(['jevApiKey', 'reviewers', 'workAreas', 'tagVocabulary', 'jevPolicy']);
 const groupings: GroupBy[] = ['work_area', 'purpose', 'lane'];
 const secretName = /^[A-Z][A-Z0-9_]{0,63}$/;

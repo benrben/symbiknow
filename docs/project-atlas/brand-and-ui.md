@@ -173,9 +173,9 @@ While a tool is active, `activeToolState` in `src/chat-turn-state.ts` maps the t
 | Tools | State |
 | --- | --- |
 | `search_docs`, `search_canvas` | `searching` |
-| `read_doc`, `read_block`, `read_file`, `list_tasks` | `reading` |
+| `read_doc`, `read_block`, `read_file` | `reading` |
 | `show_doc_on_canvas`, `show_group_on_canvas`, `move_block` | `moving` |
-| `create_doc`, `edit_doc`, `delete_doc`, `create_task`, `update_task` | `writing` |
+| `create_doc`, `edit_doc`, `delete_doc` | `writing` |
 | `link_blocks` | `connecting` |
 | `draw_research_canvas` | `organizing` |
 | any other tool | `tooling` (pose `working`) |
@@ -249,7 +249,6 @@ Priority order in `avatarForState`: `error` first, then `checking` (connection c
 | `src/settings.css` | `src/SettingsPage.tsx` | Settings page, model picker, servers, providers, tokens, secrets, activity health. |
 | `src/editor.css` | `src/MarkdownEditor.tsx` | Code editor, view toggle, block modal, edit lock, external-change notice. |
 | `src/answer-canvas.css` | `src/AnswerCanvas.tsx` | Session research ("answer") canvas. |
-| `src/tasks-canvas.css` | `src/TasksCanvasBoard.tsx` | Tasks board: header, columns, cards, details, history, comments. Uses `var(--sk-background, #f7faf9)`; `--sk-background` is not defined, so the fallback applies. |
 | `src/canvas-search.css`, `src/browse-groups.css`, `src/saved-investigations.css` | `CanvasSearch.tsx`, `BrowseGroups.tsx`, `SavedInvestigations.tsx` | In-canvas search box, browse-groups panel, saved investigations list. |
 
 `src/Canvas.tsx` also imports `@xyflow/react/dist/style.css`.

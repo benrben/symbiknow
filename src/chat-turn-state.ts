@@ -15,9 +15,9 @@ export function restoredTurns(): DisplayTurn[] {
 }
 
 const searchTools = new Set(['search_docs', 'search_canvas']);
-const readingTools = new Set(['read_doc', 'read_block', 'read_file', 'list_tasks']);
+const readingTools = new Set(['read_doc', 'read_block', 'read_file']);
 const navigationTools = new Set(['show_doc_on_canvas', 'show_group_on_canvas', 'move_block']);
-const writingTools = new Set(['create_doc', 'edit_doc', 'delete_doc', 'create_task', 'update_task']);
+const writingTools = new Set(['create_doc', 'edit_doc', 'delete_doc']);
 const connectingTools = new Set(['link_blocks']);
 const organizingTools = new Set(['draw_research_canvas']);
 const toolStates: Array<[ReadonlySet<string>, SymbiState]> = [

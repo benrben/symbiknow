@@ -232,7 +232,7 @@ Resource: `active_canvas` at `canvas://active` returns the full active canvas JS
 Notes:
 - `kind` accepts `markdown`, `html`, `slides`, `website`, `mdx`; anything else becomes `markdown`. `storedDocument` (`shared/file-transfer.ts`) stores `html` as a Markdown file that wraps the HTML document.
 - `upload_file` accepts only `.md`, `.mdx`, `.html` file names (`uploadedSource`).
-- Names differ from the HTTP MCP server: `open_doc` (not `read_doc`), `remove_doc` (not `delete_doc`). WebMCP has no task, claim, link, brain, or Reflex tools.
+- Names differ from the HTTP MCP server: `open_doc` (not `read_doc`), `remove_doc` (not `delete_doc`). WebMCP exposes document tools; it has no claim, link, brain, or Reflex tools.
 - The bridge prefixes each tool with the page host, with `.` and `:` replaced by `_`. With the default `PORT=8787` the agent sees `localhost_8787-search_docs`.
 
 ### How the loader and widget work

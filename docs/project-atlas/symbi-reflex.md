@@ -93,7 +93,7 @@ Key pieces in `server/jev/`:
 | `runtime-document*.ts` | The document plan (`JevDocumentPlan` v2): original sources, completed actions, active job, timings |
 | `runtime-question-prefetch.ts`, `actions/question-*.ts` | Batches independent questions, shares source text, caches validated answers |
 | `proposals.ts`, `runtime-proposals.ts`, `proposal-inverse.ts` | Proposed changes, automatic apply, inverse proofs |
-| `parent-undo.ts`, `move-task-inverse.ts`, `proposal-inverse.ts` | Causal Undo for a change and its automatic descendants, including moves and their tasks |
+| `parent-undo.ts`, `proposal-inverse.ts` | Causal Undo for a change and its automatic descendants, including moves |
 | `reset.ts` | "Reset and rerun Jev": journaled cleanup of generated metadata, then a fresh chain |
 | `runtime-progress.ts` (new) | Compact six-action progress and on-demand decision inspection |
 | `workspace*.ts` | Compact encoded state in `jev/workspaces/<ws>/state.json` |

@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { expect, it } from 'vitest';
-import type { CanvasBlock, CanvasTask } from '../shared/types.js';
+import type { CanvasBlock } from '../shared/types.js';
 import { mcpActivityRefs, mcpResultIds, safeMcpError, type McpActivityInput } from './mcp-activity.js';
 import { CanvasApi } from './mcp-api.js';
 import { recordCall } from './mcp-http-activity.js';
@@ -14,39 +14,6 @@ import { CanvasStore } from './storage.js';
 const date = '2026-10-01T12:00:00.000Z';
 const activity: McpActivityInput = { tokenId: 'token-1', tokenName: 'Native caller', access: 'read', tool: 'read_doc',
   startedAt: date, endedAt: date, outcome: 'success', canvasIds: ['product-roadmap'], documentIds: ['launch-checklist'] };
-
-it('records the related document IDs of a native task creation without misidentifying the task as a document', async () => {
-  const { base, root, store } = await remoteMcpFixture();
-  const { token } = await store.createMcpToken('Task auditor', 'write');
-  const { client } = await sdkClient(base, token);
-  const result = await client.callTool({ name: 'create_task', arguments: {
-    canvasId: 'product-roadmap', title: 'Review launch document', blockIds: ['launch-checklist'],
-  } });
-  expect(result.isError).not.toBe(true);
-  const task = toolJson<CanvasTask>(result);
-  expect((await new CanvasStore(root).listTasks('product-roadmap')).find(item => item.id === task.id)).toMatchObject({ title: 'Review launch document' });
-  const tasks = await fetch(base + '/api/canvases/product-roadmap/tasks').then(response => response.json()) as CanvasTask[];
-  expect(tasks.find(item => item.id === task.id)?.blockIds).toEqual(['launch-checklist']);
-  const entry = (await new CanvasStore(root).mcpActivity()).entries[0];
-  expect(entry).toMatchObject({ tool: 'create_task', outcome: 'success', canvasIds: ['product-roadmap'] });
-  expect(entry.documentIds).toEqual(['launch-checklist']);
-  const updates: Array<[string, Record<string, unknown>]> = [
-    ['update_task', { blockIds: ['launch-checklist'], detail: 'Native task update' }],
-    ['claim_task', {}], ['comment_task', { text: 'Native progress note' }],
-  ];
-  for (const [name, input] of updates) {
-    expect((await client.callTool({ name, arguments: { canvasId: 'product-roadmap', taskId: task.id, ...input } })).isError).not.toBe(true);
-  }
-  const saved = (await new CanvasStore(root).listTasks('product-roadmap')).find(item => item.id === task.id)!;
-  expect(saved).toMatchObject({ detail: 'Native task update', status: 'in_progress', assignee: 'Codex - Task auditor' });
-  expect(saved.comments[0].text).toBe('Native progress note');
-  const entries = (await new CanvasStore(root).mcpActivity()).entries;
-  expect(entries.map(item => [item.tool, item.documentIds])).toEqual([
-    ['comment_task', []], ['claim_task', []], ['update_task', ['launch-checklist']], ['create_task', ['launch-checklist']],
-  ]);
-  expect(JSON.stringify(entries)).not.toContain(task.id);
-  expect(JSON.stringify(entries)).not.toContain('Native progress note');
-});
 
 it('extracts real SDK document IDs and Git revisions and persists their call order after restart', async () => {
   const { base, root, store } = await remoteMcpFixture();

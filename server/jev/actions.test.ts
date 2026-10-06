@@ -1,7 +1,7 @@
 import { validateActionOptions } from './actions/options.js';
 import { automaticRecall, automaticVocabulary } from './actions/automatic.js';
 import { recheckLinks } from './actions/graph.js';
-import { scoreQuality, assignOwner, attachDocToTask } from './actions/work.js';
+import { scoreQuality } from './actions/work.js';
 import { mkdtemp,rm } from 'node:fs/promises';
 import { createServer,type Server } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -554,18 +554,6 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     expect((await evaluateJevAction(context(), request('suggest_home_canvas'))).proposals[0].mutation).toMatchObject({ targetCanvasId: 'other' });
     expect(requests.find(body => body.questions.evidence)!.state.selectedCanvas).toMatchObject({ id: 'other', name: 'Atlas Delivery', description: expect.stringContaining('Atlas Delivery') });
     requests = [];
-    expect((await assignOwner(context(), request('assign_owner'))).proposals[0].mutation).toMatchObject({ patch: { assignee: 'maya' } });
-    expect(questionStates('evidence_0').map(state => (state.people as Array<unknown>)[0])).toEqual([
-      expect.objectContaining({ id: 'maya', name: 'Maya', role: 'Rollout owner' }),
-      expect.objectContaining({ id: 'maya', name: 'Maya', role: 'Rollout owner' }),
-    ]);
-    requests = [];
-    expect((await assignOwner(context(), request('assign_owner', { subaction: 'assign_reviewer' }))).proposals[0].mutation).toMatchObject({ patch: { reviewer: 'ben' } });
-    expect(questionStates('evidence_1').map(state => (state.people as Array<unknown>)[1])).toEqual([
-      expect.objectContaining({ id: 'ben', name: 'Ben', role: 'Reviewer' }),
-      expect.objectContaining({ id: 'ben', name: 'Ben', role: 'Reviewer' }),
-    ]);
-    requests = [];
     const quality = await scoreQuality(context(), request('score_quality'));
     expect(quality.proposals[0].mutation).toMatchObject({ values: { qualityRubric: { specificity: { score: 2.5 } } } });
     expect(requests.find(body => body.questions.specificityEvidence)!.state.assessments).toMatchObject({ specificity: {
@@ -573,14 +561,11 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     expect(requests.find(body => body.questions.specificity)!.questions).not.toHaveProperty('specificityEvidence');
   });
 
-  it('keeps a selected home or responsible person unchanged when no exact supporting passage is selected', async () => {
+  it('keeps a selected home unchanged when no exact supporting passage is selected', async () => {
     transform = (id, answer, body) => /^evidence(?:_\d+)?$/.test(id) ? choiceAnswer(body.questions[id], 'none') : answer;
     expect((await evaluateJevAction(context(), request('suggest_home_canvas'))).proposals).toEqual([]);
-    expect((await assignOwner(context(), request('assign_owner'))).proposals).toEqual([]);
     expect(questionStates('evidence')).toHaveLength(1);
     expect(questionStates('evidence').every(state => state.selectedCanvas)).toBe(true);
-    expect(questionStates('evidence_0')).toHaveLength(2);
-    expect(questionStates('evidence_1').every(state => state.people && state.assignment && state.task)).toBe(true);
   });
 
   it('automatically creates a checked shared taxonomy for six new sources beyond an unrelated active group', async () => {
@@ -763,15 +748,6 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     expect(JSON.stringify(requests)).not.toContain('PRIVATE_TITLE');
     await expect(evaluateJevAction(input, { ...request('profile'), blockIds: ['restricted'] })).rejects.toMatchObject({ status: 404 });
     await expect(evaluateJevAction(input, { ...request('profile'), canvasId: 'restricted' })).rejects.toMatchObject({ status: 404 });
-  });
-
-  it('supports reviewer selection and refuses unknown task/person identities', async () => {
-    const result = await assignOwner(context(), request('assign_owner', { subaction: 'assign_reviewer', taskId: 'pilot' }));
-    expect(result.proposals[0].mutation).toMatchObject({ patch: { reviewer: 'maya' } });
-    const input = context();
-    input.settings.people = [];
-    expect((await assignOwner(input, request('assign_owner'))).result.status).toBe('no_known_people');
-    await expect(attachDocToTask(context(), request('attach_doc_to_task', { taskId: 'missing' }))).rejects.toMatchObject({ status: 404 });
   });
 
   it('abstains when source quotes or decisions are unsupported and reports missing candidates', async () => {

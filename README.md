@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/5ee3e2dc-f1d4-4a9a-8868-2f70ed5c20d2
 
 This is the source repository for [SymbiKnow](https://github.com/benrben/symbiknow). It is public for viewing; the original source and brand assets are [all rights reserved](LICENSE). Third-party packages and fonts keep their own licenses.
 
-Each card keeps its source in a separate `.md` file. The canvas stores positions, sizes, groups, and links, while each document has reviewable Git history. Shared tasks help people and agents coordinate. The browser renders Markdown, Mermaid, code, slides, media, MDX, and websites. Both light and dark mode are supported.
+Each card keeps its source in a separate `.md` file. The canvas stores positions, sizes, groups, and links, while each document has reviewable Git history. The browser renders Markdown, Mermaid, code, slides, media, MDX, and websites. Both light and dark mode are supported.
 
 The [brand guide](brand/symbiknow-brand-guide.md) explains the identity, voice, and product promise. [Light](brand/symbiknow-identity-board.png) and [dark](brand/symbiknow-identity-board-dark.png) identity boards show the visual direction.
 
@@ -79,9 +79,9 @@ The older `ALLTEAM_ACCESS_TOKEN`, `ALLTEAM_MCP_TOKEN`, and `ALLTEAM_AGENT_NAME` 
 
 Each document has its own local Git history under `DATA_DIR/.versions/<block-id>`. Saving that document's source creates a revision whose author is whoever made the change: `Browser`, the chat assistant `Symbi`, or an MCP agent such as `Claude Code - <token name>` or `Codex - <token name>`. Existing revision authors keep their original names, including older `Jev` and `SymbiKnow assistant` entries. Open **File history** on a canvas card or in its full-page reader to see authors and commits, create or switch branches, merge another branch, and restore an older revision as a new commit. These actions change only that document file; canvas positions, links, and other documents stay in place. A conflicting merge is aborted and leaves the file unchanged. Deleting a document records who deleted it as a final commit, and the last content stays in that history for recovery. Settings and API credentials are never added to the document repositories.
 
-To remove an entire canvas, use the trash button beside its name in the workspace sidebar and confirm. This permanently deletes that canvas's documents, tasks, and file histories, removes links to it from other canvases, and opens another canvas in the workspace. If it was the last canvas, create a new one from the empty state.
+To remove an entire canvas, use the trash button beside its name in the workspace sidebar and confirm. This permanently deletes that canvas's documents and file histories, removes links to it from other canvases, and opens another canvas in the workspace. If it was the last canvas, create a new one from the empty state.
 
-To remove a workspace, use the trash button beside its name and confirm. This permanently deletes every canvas in that workspace with their documents, tasks, and file histories. The app opens a surviving workspace, or offers to create one if none remain.
+To remove a workspace, use the trash button beside its name and confirm. This permanently deletes every canvas in that workspace with their documents and file histories. The app opens a surviving workspace, or offers to create one if none remain.
 
 ## Symbi, the assistant
 
@@ -95,7 +95,7 @@ Open **Settings** (one page with a section list): **Models**, **Agents**, **Secr
 - **Agents:** pick a built-in profile (General, Researcher, Planner, Builder) or add your own profiles with custom instructions.
 - **Secrets:** named values such as `GITHUB_TOKEN`. They stay on the server and are never returned to the browser.
 - **MCP servers:** connect outside Streamable HTTP or SSE MCP servers so the chat agent can use their tools. Authenticate with a saved secret (`Bearer <secret>`) or `${secret:NAME}` in a header, and use **Test** to list a server's tools.
-- **Plugins:** turn tool packs on or off for the chat agent: reading, editing, shared tasks, and outside MCP tools.
+- **Plugins:** turn tool packs on or off for the chat agent: reading, editing, and outside MCP tools.
 
 The assistant uses [Deep Agents](https://docs.langchain.com/oss/javascript/deepagents/overview) for tools and [AI Elements](https://docs.langchain.com/oss/python/langchain/frontend/integrations/ai-elements) for the chat interface. Answers stream token by token. Text the model writes before calling a tool moves into the collapsible activity list, so the final answer stays clean. **Copy** copies the Markdown answer. **New chat** clears the conversation. Drag the left edge of the chat panel to resize it; the width is saved locally. A run can make up to 9,999 tool calls; cancellation and provider errors still stop it.
 
@@ -169,9 +169,8 @@ For working alongside people and other agents:
 
 - `read_doc` returns a `contentHash`. Pass it as `expectedContentHash` to `edit_doc` or `upload_file`, and the write fails instead of overwriting a newer change. `message` sets the revision message.
 - `claim_doc` locks a document's content for up to an hour (default 10 minutes); `release_doc` frees it. Others get a clear refusal while it is held, and the canvas card shows who is editing. People can take over a lock from the editor.
-- `list_tasks`, `create_task`, `update_task`, `claim_task`, and `comment_task` share existing canvas task records through the connected tools and API.
 
-The browser refreshes the canvas every few seconds, so agent edits, locks, and task changes appear without reloading.
+The browser refreshes the canvas every few seconds, so agent edits and locks appear without reloading.
 
 ### Local development only
 

@@ -56,21 +56,14 @@ it('resets native preliminary text, ignores progress/navigation events, and retu
   expectRestoredCanvas(await new CanvasStore(setup.root).getCanvas(body.canvasId), setup.canvas);
 });
 
-it('reports changed when an actual native task tool saves shared work, including persisted task identity and source attachment', async () => {
+it('does not offer task tools to the native assistant', async () => {
   const setup = await fixture();
-  setup.model.handle = (request, response) => {
-    if (request.messages.some(message => message.role === 'tool')) { answer(response, ['Tracked the review task.']); return; }
-    toolCalls(response, [{ name: 'create_task', args: { title: 'Review release QA', assignee: 'Reviewer', blockIds: ['launch-checklist'] } }]);
-  };
+  setup.model.handle = (_request, response) => answer(response, ['I can help with documents.']);
   const base = await setup.app();
-  expect(await post(base, '/api/chat', { ...body, messages: [{ role: 'user', content: 'Create a release QA review task.' }] }))
-    .toEqual({ status: 200, body: { message: 'Tracked the review task.', changed: true } });
-  const tasks = await new CanvasStore(setup.root).listTasks(body.canvasId);
-  expect(tasks).toHaveLength(1);
-  expect(tasks[0]).toMatchObject({ id: expect.any(String), title: 'Review release QA', assignee: 'Reviewer',
-    status: 'todo', blockIds: ['launch-checklist'], createdBy: 'Symbi' });
-  expect(await setup.store.getCanvas(body.canvasId)).toEqual(setup.canvas);
-  expect(setup.model.requests[0].body.tools.map(tool => tool.function.name)).toContain('create_task');
+  expect(await post(base, '/api/chat', { ...body, messages: [{ role: 'user', content: 'Hello' }] }))
+    .toEqual({ status: 200, body: { message: 'I can help with documents.', changed: false } });
+  expect(setup.model.requests[0].body.tools.map(tool => tool.function.name))
+    .not.toEqual(expect.arrayContaining(['list_tasks', 'create_task', 'update_task', 'delete_task']));
 });
 
 it('maps a real model rejection safely through JSON HTTP and recovers on the same provider without source writes', async () => {

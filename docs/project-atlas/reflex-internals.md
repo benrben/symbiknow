@@ -107,7 +107,7 @@ interface JevDocumentPlan {            // server/jev/runtime-document.ts
 How `DocumentRunner` works:
 
 1. Each later action runs as a child job with id `<rootId>:<action>` and key `document:<rootId>:<action>`.
-2. The `contextProof` holds hashes of all source snapshots, tasks per canvas, canvases, and vocabulary (`runtime-document-context.ts`). Before each step the runner checks that nothing changed except what this operation's own receipts explain. Otherwise: `409 The document context changed during automatic processing`.
+2. The `contextProof` holds hashes of all source snapshots, canvases, and vocabulary (`runtime-document-context.ts`). Before each step the runner checks that nothing changed except what this operation's own receipts explain. Otherwise: `409 The document context changed during automatic processing`.
 3. If all of a step's proposals are workspace-only (`derived`, `vocabulary`, or held), the step is only *staged* in memory. No disk write yet.
 4. If a step has a canonical change (document metadata, move), the runner saves `activeJob` first, then applies each proposal through `JevProposalExecutor.applyInside`. A `400`/`409` from a write marks that proposal `stale` or `dismissed` and fails the step.
 5. `complete()` writes the organization checkpoint, sets the root `completed`, and sets `completionPreparedAt`, all in one flush.
@@ -139,7 +139,7 @@ After 6 organization picks in a row, the next slot goes to background work. With
 
 **Followups** (`followups.ts`). Outside the document plan, a finished automatic `profile` starts a chain: `label → link → flag_duplicate → file → suggest_home_canvas`. Each step is enqueued only after the previous one completes, so it sees a fresh canonical snapshot. Admission metadata `{ key, remaining }` is private: only the automation principal may supply it, and the step key must be `<key>:<action>` (`runtime-followup-admission.ts`). A pending chain for the same source identity blocks a second chain (`hasPendingSourceFollowup`).
 
-When a chain ends, the profile gets an organization checkpoint: `organizationKey` and `organizationContextKey` (sha256 of `automatic-knowledge-13`, settings, vocabulary, and every canvas's block and task inputs). A failed chain stores `organizationFailedContextKey` and `organizationRetryAt` = now + 60 s instead.
+When a chain ends, the profile gets an organization checkpoint: `organizationKey` and `organizationContextKey` (sha256 of `automatic-knowledge-13`, settings, vocabulary, and every canvas's block inputs). A failed chain stores `organizationFailedContextKey` and `organizationRetryAt` = now + 60 s instead.
 
 **Maintenance tick.** Every 60,000 ms (`setInterval`, `unref`). Each tick runs, per workspace: reset recovery, pruning, parent-Undo recovery, prepared-mutation recovery, approved-ownership reconciliation, document-plan resume, requeue of interrupted `running` jobs, then backfill.
 
@@ -259,7 +259,7 @@ stateDiagram-v2
 
 - `proposalKey` = sha256 of canonical `[action, mutation]`. A new candidate with the same key and different sources makes the old pending one `stale`.
 - **Workspace mutations** (`derived`, `vocabulary`) change `profiles` or `vocabulary` and are saved with the job completion in one state write.
-- **Canonical mutations** (`document`, `move`, `content`, tasks) use two phases in `storage-jev-executor.ts`: check sources → plan artifacts → save a `prepared` entry in workspace state → write artifacts → save the receipt. `recoverInside` finishes any `prepared` entry after a crash, but only if each file equals its `before` or `after` copy.
+- **Canonical mutations** (`document`, `move`, `content`) use two phases in `storage-jev-executor.ts`: check sources → plan artifacts → save a `prepared` entry in workspace state → write artifacts → save the receipt. `recoverInside` finishes any `prepared` entry after a crash, but only if each file equals its `before` or `after` copy.
 - **Undo** (`proposals.ts`, `proposal-inverse.ts`): creates a proposal with `jobId: "undo:<receiptId>"` whose mutation is the receipt's `before`. It fails with `409` if a field changed since, a pin was added, vocabulary changed, or the source generation moved. Ownership is restored only for the fields the receipt touched (`inverseOwnership`).
 - **Parent (causal) Undo** (`parent-undo.ts`, `parent-browser.ts`): undoes a person's create or edit plus every automatic document receipt caused by that exact source generation. A journal in `jev/parent-undo/<uuid>.json` (`prepared → compensated → completed`) makes it crash-safe. A new reference to a created document blocks the Undo.
 - **Drafts** (`drafts.ts`): `jev/drafts/<canvasId>/<blockId>.json`, states `staged, ready, held, review_unavailable, needs_rebase, applied, cancelled`, expire after 24 h. Another actor's active draft returns `409` unless the caller is a reviewer.
@@ -329,13 +329,13 @@ sequenceDiagram
   R->>R: clear answer cache, cancel all jobs, recover prepared
   R->>X: prepareJevReset (artifacts + vocabularyAfter + checksum)
   R->>R: save resetJournal, paused = true
-  R->>X: write artifacts (canvases, tasks)
+  R->>X: write canvas artifacts
   R->>R: delete jev-cache/<canvas>.json, clear similarity index
   R->>R: save cleared state (jobs [], profiles {}, paused false)
   R->>R: reconcile → fresh profile backfill
 ```
 
-The journal reverts only fields that are managed, not pinned, and still equal what a trusted receipt (automatic, or approved without edits) wrote. Task `blockIds`, `assignee`, and `reviewer` are reverted the same way. If the server stops mid-reset, the next maintenance pass runs `recoverJevResetInside` first and finishes it.
+The journal reverts only fields that are managed, not pinned, and still equal what a trusted receipt (automatic, or approved without edits) wrote. If the server stops mid-reset, the next maintenance pass runs `recoverJevResetInside` first and finishes it.
 
 ## Settings
 

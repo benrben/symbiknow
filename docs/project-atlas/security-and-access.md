@@ -36,7 +36,7 @@ flowchart TD
 
 - Created in **Settings → MCP connections** (`POST /api/mcp/tokens`). The token is shown once; only its SHA-256 hash and a short preview are stored.
 - A token can be limited by `access` (`read`, `propose`, `write`), `allowedCanvasIds`, and `tools`. A tool list that exceeds the access level is rejected (`400`).
-- Read tokens only see tools in `readableMcpTools` (`server/settings.ts`): `ask_symbi`, `symbi_reflex`, `list_canvases`, `read_canvas`, `search_docs`, `read_doc`, `download_file`, `list_tasks`, `list_versions`, plus the read-only legacy Jev views.
+- Read tokens only see tools in `readableMcpTools` (`server/settings.ts`): `ask_symbi`, `symbi_reflex`, `list_canvases`, `read_canvas`, `search_docs`, `read_doc`, `download_file`, `list_versions`, plus the read-only legacy Jev views.
 - `scopedRegistration` (`server/mcp-scope.ts`) registers only the allowed tools and filters every result to allowed canvases. If a result cannot be filtered safely, the call fails instead of leaking data.
 - Revoking a token takes effect on the next call; the Jev routes recheck current grants each time.
 

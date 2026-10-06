@@ -29,7 +29,7 @@ flowchart LR
   end
   subgraph Server["Node server (server/index.ts)"]
     R[Router + access checks]
-    API[Canvas API<br/>docs, tasks, history]
+    API[Canvas API<br/>docs, history]
     MCP[/mcp endpoint/]
     CA[Chat agent<br/>Deep Agents]
     ST[CanvasStore<br/>serialized writes]
@@ -94,7 +94,6 @@ MCP tools never touch files directly. Each tool calls the same HTTP API the brow
 | [Canvas UI](canvas-ui.md) | understand zoom bands, groups and supergroups, reading order, navigation, refresh |
 | [Document operations](document-operations.md) | create, upload, move, merge, or build website documents; Git history internals |
 | [Safe collaboration](safe-collaboration.md) | change documents without conflicts: hashes, locks, branches, deletion checks |
-| [Tasks board](tasks-board.md) | work on the canvas-style task board |
 
 **AI: Symbi, Reflex, and search**
 

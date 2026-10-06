@@ -34,7 +34,7 @@ sequenceDiagram
 
 - **Providers:** OpenRouter, OpenAI, Anthropic (through its OpenAI-compatible endpoint), or any OpenAI-compatible server such as Ollama or vLLM. Each keeps its own key. `ChatOpenAI` runs in streaming mode.
 - **Profiles:** built-in `general`, `research`, `planner`, `builder`, plus custom profiles with their own instructions.
-- **Plugins (tool packs):** `document_read`, `document_write`, `tasks`, `external_mcp`.
+- **Plugins (tool packs):** `document_read`, `document_write`, `external_mcp`.
 - **Cancellation:** the stream aborts when the request closes. Provider errors end the run with an `error` event.
 
 ## Agent tools (`server/chat-tools.ts`)
@@ -45,7 +45,6 @@ sequenceDiagram
 | `show_doc_on_canvas`, `show_group_on_canvas` | Move the user's view to a document or group; no edits |
 | `draw_research_canvas` | Add blocks and edges to the session research canvas |
 | `create_doc`, `edit_doc`, `move_block`, `link_blocks` | Prepare **proposals** (`proposed: true, saved: false`) |
-| `list_tasks`, `create_task`, `update_task` | Shared task board |
 | External MCP tools | From servers configured in Settings, authenticated with saved secrets |
 
 There is no chat delete tool.

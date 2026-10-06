@@ -57,6 +57,6 @@ export function fallbackSuggestions({ canvas }: SuggestionContext): ChatSuggesti
     { title: `What matters most in ${shortSuggestionTitle(canvas.name)}?`, detail: 'See the most useful documents' },
     { title: 'Which documents disagree?', detail: 'Find conflicting claims' },
     { title: 'What is missing or outdated?', detail: 'Spot gaps in this canvas' },
-    { title: 'What should the team do next?', detail: 'Use documents and tasks' },
+    { title: 'What should the team do next?', detail: 'Use the available documents' },
   ];
 }

@@ -11,7 +11,7 @@ Feature: Symbi Reflex runs the six retained actions automatically
     When I open the current canvas in a browser
     And I open Reflex only to observe automatic results
     And I reload the automatic Reflex canvas
-    Then automatic classification and unchanged manual tasks survive reload
+    Then automatic classification and unchanged manual documents survive reload
     And independent typed action questions share real provider requests without mixing their saved sources
 
   Scenario: Saved sources are organized before the Reflex panel opens and results survive reload
@@ -23,9 +23,9 @@ Feature: Symbi Reflex runs the six retained actions automatically
     And I open Reflex only to observe automatic results
     Then the Reflex panel contains findings without action approval or mode controls
     When I reload the automatic Reflex canvas
-    Then automatic classification and unchanged manual tasks survive reload
+    Then automatic classification and unchanged manual documents survive reload
 
-  Scenario: Source changes refresh automatic checks while manually updated tasks remain intact
+  Scenario: Source changes refresh automatic checks while manual documents remain intact
     Given a fresh workspace
     And an isolated automatic Reflex workspace with a saved provider key
     When related sources and existing rollout work are saved through the ordinary API
@@ -35,7 +35,7 @@ Feature: Symbi Reflex runs the six retained actions automatically
     When I open the current canvas in a browser
     And I open Reflex only to observe automatic results
     And I reload the automatic Reflex canvas
-    Then the refreshed results survive reload without additional tasks or approvals
+    Then the refreshed results survive reload without approvals
 
   Scenario: Repeated reconciliation and browser reload keep unchanged completed sources stable
     Given a fresh workspace

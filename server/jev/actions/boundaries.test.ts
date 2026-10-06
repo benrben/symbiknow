@@ -1,8 +1,6 @@
-import { attachDocToTask } from './work.js';
 import { automaticRecall, automaticVocabulary } from './automatic.js';
 import { recheckLinks } from './graph.js';
 import { describe, expect, it } from 'vitest';
-import type { CanvasTask } from '../../../shared/types.js';
 import { jevActions, type JevActionRequest, type JevVocabularyTerm } from '../../../shared/jev-types.js';
 import { ApiError } from '../../errors.js';
 import type { JevAnswer, JevQuestion } from '../../jev.js';
@@ -15,10 +13,6 @@ function document(canvasId: string, id: string, content = 'Atlas requirements.\n
   return { canvasId, snapshot: { workspaceId: 'workspace', canvasId, blockId: id, incarnation: `inc_${id}`,
     sourceGeneration: 1, metadataRevision: 1, contentHash: `hash_${id}` },
   block: { id, title: 'Atlas', file: `${id}.md`, content, kind: 'markdown', x: 0, y: 0, width: 1, height: 1, links: [] } };
-}
-function task(id: string): CanvasTask {
-  return { id, title: `Atlas ${id}`, detail: '- [ ] Enable pilot.', status: 'todo', blockIds: [], comments: [],
-    createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z', createdBy: 'user', updatedBy: 'user' };
 }
 function answer(id: string, question: JevQuestion, state: Record<string, unknown>, rule: DecisionRule): JevAnswer {
   const batch = /^(\d+)__(.*)$/.exec(id);
@@ -33,7 +27,7 @@ function answer(id: string, question: JevQuestion, state: Record<string, unknown
 }
 function context(rule: DecisionRule = () => undefined): JevEvaluationContext {
   return { workspaceId: 'workspace', documents: [document('canvas', 'one'), document('canvas', 'two'), document('other', 'three')],
-    canvases: [{ id: 'canvas', name: 'Atlas' }, { id: 'other', name: 'Delivery' }], tasks: [{ canvasId: 'canvas', task: task('pilot') }],
+    canvases: [{ id: 'canvas', name: 'Atlas' }, { id: 'other', name: 'Delivery' }], tasks: [],
     vocabulary: [], apiKey: 'fixture', now: new Date('2026-10-03T12:00:00Z'),
     settings: { paused: false, externalProcessing: true, people: [{ id: 'maya', name: 'Maya', role: 'Owner' }], schedules: [],
       modes: Object.fromEntries(jevActions.map(action => [action, 'suggest'])) as JevEvaluationContext['settings']['modes'] },
@@ -201,15 +195,6 @@ describe('Symbi Reflex uncertainty, idempotency, and incomplete evidence boundar
     expect(() => mergeAssessedTerms(input, mergeRequest, { type: 'noul', noul: 1 }))
       .toThrowError(expect.objectContaining({ status: 400, message: 'Merge requires two distinct terms of the same kind' }));
     expect({ documents: input.documents, vocabulary: input.vocabulary }).toEqual(before);
-  });
-
-  it('keeps existing task attachments idempotent and rejects unsupported attachments', async () => {
-    const input = context();
-    input.tasks[0].task.blockIds = ['one'];
-    expect((await attachDocToTask(input, request('attach_doc_to_task'))).proposals).toEqual([]);
-    input.tasks[0].task.blockIds = [];
-    input.decider = context(id => id === 'matches' ? 0.1 : undefined).decider;
-    expect((await attachDocToTask(input, request('attach_doc_to_task'))).proposals).toEqual([]);
   });
 
   it('retains supported existing connections', async () => {

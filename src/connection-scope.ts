@@ -1,9 +1,9 @@
 import type { McpTokenInfo, WorkspaceSummary } from '../shared/types';
 
-const readMcpTools = ['list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'download_file', 'list_tasks', 'list_versions'];
+const readMcpTools = ['list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'download_file', 'list_versions'];
 const writeMcpTools = ['list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'create_doc', 'edit_doc', 'delete_doc', 'move_block',
-  'link_blocks', 'unlink_blocks', 'upload_file', 'download_file', 'claim_doc', 'release_doc', 'list_tasks', 'create_task', 'update_task',
-  'claim_task', 'comment_task', 'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision'];
+  'link_blocks', 'unlink_blocks', 'upload_file', 'download_file', 'claim_doc', 'release_doc',
+  'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision'];
 const readJevTools = ['jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox', 'jev_job'];
 export function toolsForAccess(access: 'read' | 'propose' | 'write'): string[] {
   if (access === 'write') return [...writeMcpTools, ...readJevTools, 'jev_do', 'jev_propose'];

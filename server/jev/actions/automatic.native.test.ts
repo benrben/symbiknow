@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { jevActions, type JevActionRequest, type JevVocabularyTerm } from '../../../shared/jev-types.js';
 import type { JevAnswer, JevQuestion } from '../../jev.js';
-import { CanvasStore } from '../../storage.js';
-import type { StoredCanvas } from '../../storage-shapes.js';
-import { evaluationContext } from '../context.js';
-import { emptyJevWorkspace } from '../workspace.js';
 import { automaticPeople, automaticRecall, automaticVocabulary } from './automatic.js';
-import { assignOwner } from './work.js';
 import type { JevEvaluationContext, JevInputDocument } from './context.js';
 
 type Rule = (id: string, question: JevQuestion, state: Record<string, unknown>) => string | number | undefined;
@@ -385,40 +377,5 @@ describe('automatic source-grounded vocabulary and supporting knowledge', () => 
     expect(new Set(people.map(person => person.id)).size).toBe(people.length);
   });
 
-  it('finds explicit responsibility in a selected source after 32 other native sources while preserving configured people', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'jev-selected-responsibility-'));
-    try {
-      const store = new CanvasStore(root); await store.init(); await store.deleteWorkspace('acme-team');
-      const workspace = await store.createWorkspace({ name: 'Selected responsibility' });
-      const canvas = await store.createCanvas(workspace.id, { name: 'Sources' });
-      const reference = await store.createBlock(canvas.id, { title: 'Reference 0', content: 'General release reference.' });
-      const source = await store.createBlock(canvas.id, { title: 'Atlas release', content: 'Owner: Alice\nAlice owns the Atlas release.' });
-      const canvasFile = path.join(root, 'canvases', `${canvas.id}.json`);
-      const saved = JSON.parse(await readFile(canvasFile, 'utf8')) as StoredCanvas;
-      // Restore a valid source collection directly to disk without 31 fixture-only Git commits.
-      const references = Array.from({ length: 32 }, (_, index) => index === 0 ? saved.blocks[0] : {
-        ...saved.blocks[0], id: `reference-${index}`, file: `docs/reference-${index}.md`, incarnation: `reference-${index}`,
-      });
-      await Promise.all(references.slice(1).map(block => writeFile(path.join(root, block.file), reference.content)));
-      await writeFile(canvasFile, JSON.stringify({ ...saved, blocks: [...references, saved.blocks[1]] }));
-      const task = await store.createTask(canvas.id, { title: 'Atlas release', detail: 'Deliver Atlas.' }, 'Browser');
-      const state = emptyJevWorkspace();
-      const known = { id: 'configured-reviewer', name: 'Bob', role: 'Configured reviewer' };
-      state.settings.people = [known];
-      const request: JevActionRequest = { action: 'assign_owner', canvasId: canvas.id, blockIds: [source.id], options: { taskId: task.id } };
-      const input = await evaluationContext(store, workspace.id, state, request,
-        { id: 'owner', kind: 'user', access: 'write', canApprove: true }, new AbortController().signal);
-      expect(input.documents[32].block.id).toBe(source.id);
-      expect(input.settings.people).toContainEqual(known);
-      const alice = input.settings.people.find(person => person.name === 'Alice')!;
-      expect(alice.id).toMatch(/^source-person-/);
-      input.apiKey = 'native-responsibility-decider';
-      input.decider = context((id, question) => id === 'person' && question.type === 'choice'
-        ? Object.keys(question.criteria).find(key => question.criteria[key].startsWith('Alice:')) : undefined).decider;
-      const result = await assignOwner(input, request);
-      expect(result.proposals[0].mutation).toMatchObject({ kind: 'task_update', taskId: task.id, patch: { assignee: alice.id } });
-      expect(result.proposals[0].evidence[0].source.blockId).toBe(source.id);
-      expect(state.settings.people).toEqual([known]);
-    } finally { await rm(root, { recursive: true, force: true }); }
-  });
+
 });

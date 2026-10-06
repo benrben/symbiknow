@@ -43,7 +43,7 @@ Then('the compact navigation creations survive reload', async function () {
   await this.page.screenshot({ path: '.quality/compact-navigation.png' });
 });
 
-When('I move a document referenced by a third canvas and a task', async function () {
+When('I move a document referenced by a third canvas', async function () {
   const source = await api(this, '/canvases/' + this.canvasId);
   const target = await api(this, '/workspaces/' + source.workspaceId + '/canvases', 'POST', { name: 'Move destination' });
   const third = await api(this, '/workspaces/' + source.workspaceId + '/canvases', 'POST', { name: 'Move references' });
@@ -52,12 +52,11 @@ When('I move a document referenced by a third canvas and a task', async function
   await api(this, '/canvases/' + third.id + '/blocks/' + reference.id, 'PUT', {
     crossLinks: [{ canvasId: source.id, blockId: block.id, relation: 'related' }],
   });
-  const task = await api(this, '/canvases/' + source.id + '/tasks', 'POST', { title: 'Review moving document', blockIds: [block.id] });
   await api(this, '/canvases/' + source.id + '/blocks/' + block.id + '/move', 'POST', { targetCanvasId: target.id });
-  this.documentMove = { source: source.id, target: target.id, third: third.id, block: block.id, reference: reference.id, task: task.id };
+  this.documentMove = { source: source.id, target: target.id, third: third.id, block: block.id, reference: reference.id };
 });
 
-Then('reloading all affected canvases preserves the moved reference and tasks', async function () {
+Then('reloading all affected canvases preserves the moved reference', async function () {
   const move = this.documentMove;
   const source = await api(this, '/canvases/' + move.source);
   const target = await api(this, '/canvases/' + move.target);
@@ -66,10 +65,6 @@ Then('reloading all affected canvases preserves the moved reference and tasks', 
   assert.equal(target.blocks.some(block => block.id === move.block), true);
   assert.deepEqual(third.blocks.find(block => block.id === move.reference).crossLinks,
     [{ canvasId: move.target, blockId: move.block, relation: 'related' }]);
-  const sourceTask = (await api(this, '/canvases/' + move.source + '/tasks')).find(task => task.id === move.task);
-  assert.deepEqual(sourceTask.blockIds, []);
-  assert.ok(sourceTask.comments.at(-1).text.includes('Move destination'));
-  assert.ok((await api(this, '/canvases/' + move.target + '/tasks')).some(task => task.title === sourceTask.title && task.blockIds.includes(move.block)));
 });
 
 async function reviewedWrite(world, document, body, method = 'DELETE') {

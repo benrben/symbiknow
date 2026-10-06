@@ -42,22 +42,6 @@ const body = { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 
 
 describe('Deep Agent chat stream', () => {
 
-  it('refuses task writes from a stopped session even without an invocation signal', async () => {
-    const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
-    let taskTool: Parameters<DeepAgentFactory>[1][number] | undefined;
-    const factory: DeepAgentFactory = (_settings, tools) => {
-      taskTool = tools.find(tool => tool.name === 'create_task');
-      return async function* (messages) { yield { messages: [...messages, new AIMessage('Stopped.')] }; };
-    };
-    const session = await createChatStream(store, body, factory);
-    const controller = new AbortController();
-    controller.abort();
-    for await (const event of session.events!(controller.signal)) { void event; }
-    await expect(taskTool!.invoke({ title: 'Late detached task' })).rejects.toMatchObject({ name: 'AbortError' });
-    expect((await store.listTasks('product-roadmap')).some(task => task.title === 'Late detached task')).toBe(false);
-  });
-
   it('emits typed navigation when the agent opens a document or group in the native canvas', async () => {
     const store = await storeFixture();
     await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });

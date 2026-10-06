@@ -37,7 +37,6 @@ flowchart TD
 | Links from the moved card | Links to cards left behind become `crossLinks` (relation kept); cross-links that now point into the same canvas become ordinary typed links |
 | Links into the moved card | Cards on the source canvas swap their link for a cross-link to the new canvas; portals from third canvases are retargeted |
 | Limit | At most 20 cross-links per document after the move (`409` asks you to review links first) |
-| Tasks | Tasks that reference the card are continued on the destination as new tasks (comment "Continued from task …"); source tasks drop the reference and get a comment. Destination may not exceed 500 tasks (`409`) |
 | Locks | The document's lock moves with it |
 | Review token | Optional `expectedStateHash` is checked inside the serialized write |
 | Reflex | The move is stamped (`jev/move-stamps.ts`) so Reflex and Undo know it happened; the search index rebuilds on a move event |
@@ -49,8 +48,8 @@ flowchart TD
 How a merge stays safe (`server/merge-transaction.ts`):
 
 1. Check every document's lock and content hash (`409` if anything changed).
-2. Write a journal to `DATA_DIR/jev-merges/<mergeId>.json` (mode 0600) with before/after canvases, tasks, keeper content, and inbound links from other canvases.
-3. Apply the canvas, Git commit, and task changes.
+2. Write a journal to `DATA_DIR/jev-merges/<mergeId>.json` (mode 0600) with before/after canvases, keeper content, and inbound links from other canvases.
+3. Apply the canvas and Git commit changes.
 4. On failure, restore the "before" state. If restoration also fails, the error names the journal file that still holds the original snapshots.
 5. On startup, `StorageFiles` scans `jev-merges/` and `jev-runs/` and finishes or rolls back interrupted journals.
 

@@ -75,7 +75,7 @@ CI (`.github/workflows/ci.yml`) runs the same checks on pushes and pull requests
 | Native | `*.native.test.ts(x)` | Real files, real SDK, loopback HTTP providers, isolated temp folders |
 | Native persistence | listed in `vitest.config.ts` | Run alone (no file parallelism) to measure canonical writes |
 | Fixtures | `*.test.fixture.ts`, `*.test.helpers.tsx` | Shared setup |
-| Acceptance | `features/*.feature` + `.feature.yaml` + `step_definitions/*.js` | 13 features: app-safety, assistant-avatar, canvas, canvas-discovery, canvas-loading, chat-avatar, engine, jev-document-operation, jev-indexed-grouping, jev-removal, review-fixes, symbi-reflex, tasks-canvas |
+| Acceptance | `features/*.feature` + `.feature.yaml` + `step_definitions/*.js` | 12 features: app-safety, assistant-avatar, canvas, canvas-discovery, canvas-loading, chat-avatar, engine, jev-document-operation, jev-indexed-grouping, jev-removal, review-fixes, symbi-reflex |
 
 Tests never touch the live `data/` folder; they create temporary data directories. Provider tests use local fixture providers, so they make no paid calls.
 

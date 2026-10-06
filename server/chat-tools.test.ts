@@ -31,7 +31,7 @@ describe('native Chat tool boundaries', () => {
     const { call, store, canvas, draft, tools } = await fixture();
     expect(tools.map(tool => tool.name)).toEqual(['search_docs', 'read_doc', 'show_doc_on_canvas',
       'show_group_on_canvas', 'draw_research_canvas', 'create_doc', 'edit_doc', 'move_block',
-      'link_blocks', 'list_tasks', 'create_task', 'update_task',
+      'link_blocks',
       'jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox', 'jev_do']);
     expect((await call<unknown[]>('search_docs', { query: 'launch' })).length).toBeGreaterThan(0);
     const block = canvas.blocks[0]; draft.patch(block.id, { title: 'Staged title' }, 'edit');
@@ -101,19 +101,4 @@ describe('native Chat tool boundaries', () => {
     expect(await call('edit_doc', { blockId: 'launch-checklist', title: 'Safe draft' })).toMatchObject({ proposed: true, title: 'Safe draft' });
   });
 
-  it('writes tasks through native tool schemas and reads the saved board', async () => {
-    const { call, store, canvas } = await fixture();
-    const task = await call<{ id: string }>('create_task', { title: 'Reviewed work', blockIds: [canvas.blocks[0].id] });
-    await call('update_task', { taskId: task.id, status: 'done', detail: 'Completed' });
-    expect(await call('list_tasks')).toEqual(await store.listTasks(canvas.id));
-    expect((await store.listTasks(canvas.id)).find(item => item.id === task.id)).toMatchObject({ title: 'Reviewed work', status: 'done', detail: 'Completed' });
-  });
-
-  it('does not mutate when the shared run or invocation has already been stopped', async () => {
-    const controller = new AbortController(); controller.abort();
-    const { call, store, canvas } = await fixture({ signal: controller.signal });
-    await expect(call('create_task', { title: 'Stopped task' })).rejects.toMatchObject({ name: 'AbortError' });
-    await expect(call('update_task', { taskId: 'missing', title: 'Stopped update' })).rejects.toMatchObject({ name: 'AbortError' });
-    expect(await store.getCanvas(canvas.id)).toEqual(canvas); expect(await store.listTasks(canvas.id)).toEqual([]);
-  });
 });

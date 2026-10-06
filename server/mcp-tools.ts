@@ -108,47 +108,6 @@ export function registerCoordinationTools(server: McpServer, api: CanvasApi): vo
   } }, async ({ canvasId: id, blockId: docId, ...input }) => result(await api.request(canvasPath(id, docId) + '/lock', 'POST', input)));
   server.registerTool('release_doc', { description: 'Release your document lock.', inputSchema: { canvasId, blockId, force: z.boolean().optional() } },
     async ({ canvasId: id, blockId: docId, force }) => result(await api.request(canvasPath(id, docId) + '/lock' + (force ? '?force=1' : ''), 'DELETE')));
-  const taskId = z.string().min(1).describe('Task ID from list_tasks');
-  const status = z.enum(['todo', 'in_progress', 'blocked', 'done']);
-  server.registerTool('list_tasks', { description: 'List tasks. Optional filters and limit/cursor return a bounded page.', inputSchema: {
-    canvasId, status: status.optional(), assignee: z.string().optional(), limit: z.number().int().min(1).max(100).optional(), cursor: z.string().optional(),
-  } }, async ({ canvasId: id, status: state, assignee, limit, cursor }) => {
-    const params = new URLSearchParams();
-    if (state) params.set('status', state);
-    if (assignee) params.set('assignee', assignee);
-    if (limit !== undefined) params.set('limit', String(limit));
-    if (cursor) params.set('cursor', cursor);
-    return result(await api.request(canvasPath(id) + '/tasks' + (params.size ? `?${params}` : '')));
-  });
-  server.registerTool('create_task', { description: 'Add a task to the canvas board so people and agents can coordinate.', inputSchema: {
-    canvasId, title: z.string().min(1).max(160), detail: z.string().max(4000).optional(), status: status.optional(),
-    assignee: z.string().max(48).optional(), blockIds: z.array(z.string()).max(20).optional().describe('Related documents'),
-    boardOrder: z.number().finite().optional(),
-  } }, async ({ canvasId: id, ...input }) => result(await api.request(canvasPath(id) + '/tasks', 'POST', input)));
-  server.registerTool('update_task', { description: 'Change a task’s title, detail, status, assignee, or related documents.', inputSchema: {
-    canvasId, taskId, title: z.string().min(1).max(160).optional(), detail: z.string().max(4000).optional(), status: status.optional(),
-    assignee: z.string().max(48).nullable().optional(), blockIds: z.array(z.string()).max(20).optional(),
-    boardOrder: z.number().finite().optional(), expectedRevision: z.number().int().nonnegative().optional(),
-  } }, async ({ canvasId: id, taskId: task, ...input }) => result(await api.request(`${canvasPath(id)}/tasks/${encodeURIComponent(task)}`, 'PUT', input)));
-  server.registerTool('delete_task', { description: 'Delete a task after reviewing its revision. Comments and document references remain in durable task audit history.', inputSchema: {
-    canvasId, taskId, expectedRevision: z.number().int().nonnegative(),
-  } }, async ({ canvasId: id, taskId: task, expectedRevision }) => result(await api.request(`${canvasPath(id)}/tasks/${encodeURIComponent(task)}`, 'DELETE', { expectedRevision })));
-  server.registerTool('task_history', { description: 'Read bounded, durable task changes and Undo event IDs.', inputSchema: {
-    canvasId, taskId, limit: z.number().int().min(1).max(100).optional(), cursor: z.string().optional(),
-  } }, async ({ canvasId: id, taskId: task, limit, cursor }) => {
-    const params = new URLSearchParams();
-    if (limit !== undefined) params.set('limit', String(limit));
-    if (cursor) params.set('cursor', cursor);
-    return result(await api.request(`${canvasPath(id)}/tasks/${encodeURIComponent(task)}/history` + (params.size ? `?${params}` : '')));
-  });
-  server.registerTool('undo_task', { description: 'Undo the latest task change when every affected task still matches the reviewed event.', inputSchema: {
-    canvasId, taskId, eventId: z.string().min(1), expectedRevision: z.number().int().nonnegative(),
-  } }, async ({ canvasId: id, taskId: task, eventId, expectedRevision }) => result(await api.request(
-    `${canvasPath(id)}/tasks/${encodeURIComponent(task)}/undo`, 'POST', { eventId, expectedRevision })));
-  server.registerTool('claim_task', { description: 'Assign a task to yourself and mark it in progress.', inputSchema: { canvasId, taskId, force: z.boolean().optional() } },
-    async ({ canvasId: id, taskId: task, force }) => result(await api.request(`${canvasPath(id)}/tasks/${encodeURIComponent(task)}/claim`, 'POST', { force: force ?? false })));
-  server.registerTool('comment_task', { description: 'Add a progress note to a task.', inputSchema: { canvasId, taskId, text: z.string().min(1).max(2000) } },
-    async ({ canvasId: id, taskId: task, text }) => result(await api.request(`${canvasPath(id)}/tasks/${encodeURIComponent(task)}/comments`, 'POST', { text })));
 }
 
 export function registerVersionTools(server: McpServer, api: CanvasApi): void {

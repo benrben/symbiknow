@@ -11,11 +11,11 @@ scenarios:
   - when: I open the current canvas in a browser
   - and: I use the compact navigation to create a workspace and canvas
   - then: the compact navigation creations survive reload
-- name: Moving a document preserves references and related task context
+- name: Moving a document preserves cross-canvas references
   steps:
   - given: a fresh workspace
-  - when: I move a document referenced by a third canvas and a task
-  - then: reloading all affected canvases preserves the moved reference and tasks
+  - when: I move a document referenced by a third canvas
+  - then: reloading all affected canvases preserves the moved reference
 - name: Reviewed creation Undo preserves later edits and cross-canvas citations
   steps:
   - given: a fresh workspace

@@ -18,7 +18,6 @@ Workflow for editing safely:
 1. Use ask_symbi to find knowledge by semantic, logic, or combined evidence, and symbi_reflex to check a claim. read_canvas with includeContent=false gives a bounded metadata view; read_doc returns full source and contentHash.
 2. claim_doc before a longer edit so other agents see you are working on it; release_doc when done.
 3. edit_doc or upload_file with expectedContentHash to avoid overwriting someone else's change. Every content change is a Git revision attributed to you.
-4. Coordinate work with list_tasks, create_task, claim_task, update_task, and comment_task.
 Each document has its own Git history: list_versions, create_branch, branch-targeted read_doc/edit_doc, merge_branch, restore_revision. switch_branch changes the shared visible document for everyone.
 `;
 

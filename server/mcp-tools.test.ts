@@ -79,36 +79,25 @@ describe('public MCP tool request contracts', () => {
     expect(requests[5].body).not.toHaveProperty('branch');
   });
 
-  it('forwards bounded task and revision pages with filters and opaque cursors', async () => {
+  it('forwards bounded revision pages with opaque cursors', async () => {
     const { call, requests } = await connect(() => Response.json({ items: [], nextCursor: 'opaque-next' }));
     for (const [name, args] of [
-      ['list_tasks', { canvasId: 'canvas', status: 'blocked', assignee: 'Ada Lovelace', limit: 7, cursor: 'page/2' }],
-      ['task_history', { canvasId: 'canvas', taskId: 'task/one', limit: 7, cursor: 'page/2' }],
       ['list_versions', { canvasId: 'canvas', blockId: 'doc/one', limit: 7, cursor: 'page/2' }],
-      ['task_history', { canvasId: 'canvas', taskId: 'task/one' }],
       ['list_versions', { canvasId: 'canvas', blockId: 'doc/one' }],
     ] as const) expect((await call(name, args)).value).toMatchObject({ items: [], nextCursor: 'opaque-next' });
     expect(requests.map(request => request.path)).toEqual([
-      '/api/canvases/canvas/tasks?status=blocked&assignee=Ada+Lovelace&limit=7&cursor=page%2F2',
-      '/api/canvases/canvas/tasks/task%2Fone/history?limit=7&cursor=page%2F2',
       '/api/canvases/canvas/blocks/doc%2Fone/versions?limit=7&cursor=page%2F2',
-      '/api/canvases/canvas/tasks/task%2Fone/history',
       '/api/canvases/canvas/blocks/doc%2Fone/versions',
     ]);
   });
 
-  it('maps document, task, lock, and version actions with safe defaults', async () => {
+  it('maps document, lock, and version actions with safe defaults', async () => {
     const { call, requests } = await connect(request => Response.json(request.method === 'GET' && request.path === '/api/canvases/canvas' ? { blocks: [block, { ...block, id: 'target' }] } : { ok: true }));
     const operations: Array<[string, Record<string, unknown>]> = [
       ['list_canvases', {}], ['read_canvas', { canvasId: 'canvas' }], ['search_docs', { query: 'release plan' }],
       ['move_block', { canvasId: 'canvas', blockId: 'doc', x: 10, y: -20 }], ['delete_doc', { canvasId: 'canvas', blockId: 'doc', expectedContentHash: 'hash' }],
       ['claim_doc', { canvasId: 'canvas', blockId: 'doc', ttlSeconds: 60, note: 'Review' }], ['release_doc', { canvasId: 'canvas', blockId: 'doc' }],
-      ['release_doc', { canvasId: 'canvas', blockId: 'doc', force: true }], ['list_tasks', { canvasId: 'canvas' }],
-      ['create_task', { canvasId: 'canvas', title: 'Review' }], ['update_task', { canvasId: 'canvas', taskId: 'task', assignee: null, status: 'done' }],
-      ['task_history', { canvasId: 'canvas', taskId: 'task', limit: 5 }],
-      ['undo_task', { canvasId: 'canvas', taskId: 'task', eventId: 'event', expectedRevision: 2 }],
-      ['claim_task', { canvasId: 'canvas', taskId: 'task' }], ['claim_task', { canvasId: 'canvas', taskId: 'task', force: true }],
-      ['comment_task', { canvasId: 'canvas', taskId: 'task', text: 'Ready' }],
+      ['release_doc', { canvasId: 'canvas', blockId: 'doc', force: true }],
       ['restore_revision', { canvasId: 'canvas', blockId: 'doc', revision: 'abcdef0' }],
     ];
     for (const [name, args] of operations) expect((await call(name, args)).output.isError).not.toBe(true);
@@ -116,12 +105,7 @@ describe('public MCP tool request contracts', () => {
       ['GET', '/api/workspaces?stats=1', undefined], ['GET', '/api/canvases/canvas', undefined], ['GET', '/api/search?q=release%20plan', undefined],
       ['PUT', '/api/canvases/canvas/blocks/doc', { x: 10, y: -20 }], ['DELETE', '/api/canvases/canvas/blocks/doc', { expectedContentHash: 'hash' }],
       ['POST', '/api/canvases/canvas/blocks/doc/lock', { ttlSeconds: 60, note: 'Review' }], ['DELETE', '/api/canvases/canvas/blocks/doc/lock', undefined],
-      ['DELETE', '/api/canvases/canvas/blocks/doc/lock?force=1', undefined], ['GET', '/api/canvases/canvas/tasks', undefined],
-      ['POST', '/api/canvases/canvas/tasks', { title: 'Review' }], ['PUT', '/api/canvases/canvas/tasks/task', { status: 'done', assignee: null }],
-      ['GET', '/api/canvases/canvas/tasks/task/history?limit=5', undefined],
-      ['POST', '/api/canvases/canvas/tasks/task/undo', { eventId: 'event', expectedRevision: 2 }],
-      ['POST', '/api/canvases/canvas/tasks/task/claim', { force: false }], ['POST', '/api/canvases/canvas/tasks/task/claim', { force: true }],
-      ['POST', '/api/canvases/canvas/tasks/task/comments', { text: 'Ready' }],
+      ['DELETE', '/api/canvases/canvas/blocks/doc/lock?force=1', undefined],
       ['POST', '/api/canvases/canvas/blocks/doc/versions/restore', { revision: 'abcdef0' }],
     ]);
   });

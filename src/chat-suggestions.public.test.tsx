@@ -25,7 +25,7 @@ function focus(extra: Partial<NonNullable<ChatViewContext['answerFocus']>> = {})
 const exact = (pairs: [string, string][]) => pairs.map(([title, detail]) => ({ title, detail }));
 const defaultPrompts = exact([
   ['What matters most in Launch planning?', 'See the most useful documents'], ['Which documents disagree?', 'Find conflicting claims'],
-  ['What is missing or outdated?', 'Spot gaps in this canvas'], ['What should the team do next?', 'Use documents and tasks'],
+  ['What is missing or outdated?', 'Spot gaps in this canvas'], ['What should the team do next?', 'Use the available documents'],
 ]);
 const sourceCases: { name: string; result?: AnswerCanvasResult | null; current: CanvasDocument | null; id: string; title: string }[] = [
   { name: 'saved source', result: answer, current: canvas, id: 'qa', title: 'Saved QA evidence' },

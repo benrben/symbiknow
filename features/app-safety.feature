@@ -12,10 +12,10 @@ Feature: Reviewed app safety
     And I use the compact navigation to create a workspace and canvas
     Then the compact navigation creations survive reload
 
-  Scenario: Moving a document preserves references and related task context
+  Scenario: Moving a document preserves cross-canvas references
     Given a fresh workspace
-    When I move a document referenced by a third canvas and a task
-    Then reloading all affected canvases preserves the moved reference and tasks
+    When I move a document referenced by a third canvas
+    Then reloading all affected canvases preserves the moved reference
 
   Scenario: Reviewed creation Undo preserves later edits and cross-canvas citations
     Given a fresh workspace

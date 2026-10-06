@@ -88,11 +88,11 @@ describe('chat history recovery through public storage and the actual chat view'
 describe('public turn transitions and presentation', () => {
   const categories: Array<[string, SymbiState]> = [
     ['search_docs', 'searching'], ['search_canvas', 'searching'],
-    ['read_doc', 'reading'], ['read_block', 'reading'], ['read_file', 'reading'], ['list_tasks', 'reading'],
+    ['read_doc', 'reading'], ['read_block', 'reading'], ['read_file', 'reading'],
     ['show_doc_on_canvas', 'moving'], ['show_group_on_canvas', 'moving'],
     ['move_block', 'moving'], ['create_doc', 'writing'], ['edit_doc', 'writing'],
-    ['delete_doc', 'writing'], ['create_task', 'writing'], ['link_blocks', 'connecting'],
-    ['draw_research_canvas', 'organizing'], ['update_task', 'writing'], ['remote_tool', 'tooling'],
+    ['delete_doc', 'writing'], ['link_blocks', 'connecting'],
+    ['draw_research_canvas', 'organizing'], ['remote_tool', 'tooling'],
   ];
   it.each(categories)('maps active %s to %s without mutating saved activities', (name, expected) => {
     const activities = [thinking, { ...tool, name }];

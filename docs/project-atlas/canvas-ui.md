@@ -93,7 +93,6 @@ Deleting a canvas removes it from the journey (`forgetCanvas`).
 | **Add block** | New document dialog (title, loader, content) |
 | **Upload files** | Uploads `.md`, `.mdx`, `.html` one by one (`app-intake.ts`), reloads the canvas, then shows the last uploaded card |
 | **Browse groups** | Group list with counts and quick navigation (`BrowseGroups.tsx`) |
-| **Tasks** (sidebar) | Opens the [Tasks board](tasks-board.md) for this canvas |
 
 ## Loading and refresh
 
@@ -105,5 +104,5 @@ Deleting a canvas removes it from the journey (`forgetCanvas`).
 ## Dialogs and accessibility
 
 - Dialogs share one contract (`app-dialog-contract.ts`) and trap focus (`useModalFocus`), returning focus to the element that opened them.
-- Every control has an `aria-label`; the Tasks board has a status select as a keyboard alternative to dragging.
+- Every control has an `aria-label`.
 - Motion respects `prefers-reduced-motion`.

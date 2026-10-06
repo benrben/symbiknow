@@ -7,8 +7,8 @@ import { requiredString } from './chat-input.js';
 export type ChatOptions = ChatStreamOptions & { agentFactory?: DeepAgentFactory };
 
 async function canvasState(store: CanvasStore, canvasId: string): Promise<string> {
-  const [canvas, tasks] = await Promise.all([store.getCanvas(canvasId), store.listTasks(canvasId)]);
-  return JSON.stringify({ blocks: canvas.blocks.map(block => ({ ...block, lock: undefined })), tasks });
+  const canvas = await store.getCanvas(canvasId);
+  return JSON.stringify({ blocks: canvas.blocks.map(block => ({ ...block, lock: undefined })) });
 }
 
 function accumulate(reply: { message: string; proposalId?: string }, event: ChatStreamEvent): void {

@@ -71,6 +71,16 @@ it('rejects non-owner and canvas-limited callers and unavailable processing befo
   expect((await store.getCanvasBlock(canvasId, blockId)).content).toBe('# Atlas\nOwner: Alice\nAtlas release requirements.');
 });
 
+it('pauses explicit checks and reset for the session without changing saved state', async () => {
+  const before = await files.read(workspaceId);
+  vi.stubEnv('SYMBI_NO_PROVIDER_CALLS', '1');
+  await expect(runtime.run(workspaceId, { action: 'profile', canvasId, blockIds: [blockId] }, owner))
+    .rejects.toMatchObject({ status: 503, message: 'Jev checks are paused for this app session; saved decisions remain available' });
+  await expect(runtime.reset(workspaceId, owner))
+    .rejects.toMatchObject({ status: 503, message: 'Jev checks are paused for this app session; saved decisions remain available' });
+  expect(await files.read(workspaceId)).toEqual(before);
+});
+
 it('cancels an older provider result before clearing results and executes a fresh complete automatic chain', async () => {
   runtime.useTransport({ apiKey: 'native-reset-provider' });
   let release!: () => void; let started!: () => void;

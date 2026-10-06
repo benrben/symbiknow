@@ -2,7 +2,7 @@
 
 How SymbiKnow got from its first public commit to today's large uncommitted working tree: the commits, what the refactor removed and added, the plans and measurements behind it, and the old names that still work.
 
-> Snapshot of 2026-10-06. The working tree was still changing while this was written, because another session was editing code. Counts below are approximate. Check `git status` before you rely on an exact number.
+> Historical snapshot from before the Tasks feature was retired on 2026-10-06. References below to the Tasks board, its API, or its files describe an earlier implementation. Counts are approximate; check `git status` before relying on an exact number.
 
 ## 1. Commit timeline on `main`
 

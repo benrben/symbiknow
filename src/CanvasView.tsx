@@ -16,8 +16,8 @@ const initialFitOptions = { padding: canvasFitPadding, maxZoom: 1 };
 export function CanvasView({ model }: { model: CanvasModel }) {
   const { surface, zoomLevel, selectedIds, zoom, canvas } = model;
   return (
-    <section ref={surface} className={`canvas-surface canvas-surface--${zoomLevel}${selectedIds.length ? ' canvas-surface--inspecting' : ''}`} style={{ '--canvas-label-scale': String(1 / Math.max(zoom, .28)), '--canvas-map-summary-opacity': String(Math.max(0, Math.min(1, (zoom - .1) / .12))) } as CSSProperties} aria-label={`${canvas.name} infinite canvas`}>
-      <CanvasToolbar model={model}/>
+    <section ref={surface} className={`canvas-surface${model.groupsEnabled ? '' : ' canvas-surface--flat'} canvas-surface--${zoomLevel}${selectedIds.length ? ' canvas-surface--inspecting' : ''}`} style={{ '--canvas-label-scale': String(1 / Math.max(zoom, .28)), '--canvas-map-summary-opacity': String(Math.max(0, Math.min(1, (zoom - .1) / .12))) } as CSSProperties} aria-label={`${canvas.name} infinite canvas`}>
+      {model.groupsEnabled && <CanvasToolbar model={model}/>}
       <CanvasFlowStage model={model}/>      <CanvasDetails model={model}/>      <CanvasStatus model={model}/>
     </section>
   );
@@ -130,9 +130,9 @@ function CanvasDetails({ model }: { model: CanvasModel }) {
   } = model;
   return <>
 
-      <CanvasOverview groups={groupFrames} blocks={viewBlocks} searchIds={searchIds} matchCount={searchMatchIds.length} overview={zoomLevel === 'overview'} drill={Boolean(drillGroup && !selectedIds.length)} onFocus={openHierarchyGroup}/>
+      {model.groupsEnabled && <CanvasOverview groups={groupFrames} blocks={viewBlocks} searchIds={searchIds} matchCount={searchMatchIds.length} overview={zoomLevel === 'overview'} drill={Boolean(drillGroup && !selectedIds.length)} onFocus={openHierarchyGroup}/>}
       <CanvasFileBoard model={model}/>      <CanvasFocusTools model={model}/>
-      <CanvasInspector key={selectedIds.join('|')} blocks={blocks} selected={selectedBlocks} canvasId={canvasId} onUpdateBlock={saveBlock} onReadBlock={readBlock} onFocusBlock={selectBlock} onSummarizeSelection={onSummarizeSelection} onError={reportError} onClose={() => { changeNodes(selectedIds.map(id => ({ type: 'select', id, selected: false }))); lastSelection.current = ''; setSelectedIds([]); selectionCallback.current?.([]); }} onResize={(axis, size) => surface.current?.style.setProperty(axis === 'width' ? '--canvas-inspector-width' : '--canvas-inspector-height', `${size}px`)}/>
+      <CanvasInspector groupsEnabled={model.groupsEnabled} key={selectedIds.join('|')} blocks={blocks} selected={selectedBlocks} canvasId={canvasId} onUpdateBlock={saveBlock} onReadBlock={readBlock} onFocusBlock={selectBlock} onSummarizeSelection={onSummarizeSelection} onError={reportError} onClose={() => { changeNodes(selectedIds.map(id => ({ type: 'select', id, selected: false }))); lastSelection.current = ''; setSelectedIds([]); selectionCallback.current?.([]); }} onResize={(axis, size) => surface.current?.style.setProperty(axis === 'width' ? '--canvas-inspector-width' : '--canvas-inspector-height', `${size}px`)}/>
   </>;
 }
 

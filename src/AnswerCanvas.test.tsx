@@ -122,6 +122,22 @@ describe('research canvas asynchronous ownership', () => {
 });
 
 describe('research canvas public editing and navigation', () => {
+  it('keeps research documents visible without groups when zooming out', () => {
+    render(<AnswerCanvas {...props()} />);
+    expect(flow.current!.nodes.every(node => node.type === 'document')).toBe(true);
+    act(() => {
+      flow.current!.onMove(null, { x: 0, y: 0, zoom: .1 });
+      flow.current!.onMoveEnd(null, { x: 0, y: 0, zoom: .1 });
+    });
+    expect(flow.current!.nodes).toHaveLength(2);
+    expect(flow.current!.nodes.every(node => node.type === 'document')).toBe(true);
+    expect(screen.queryByLabelText('Return to canvas group overview')).toBeNull();
+    expect(screen.queryByText('Ungrouped')).toBeNull();
+    act(() => flow.current!.onSelectionChange({ nodes: flow.current!.nodes }));
+    expect(screen.queryByLabelText('Group selected documents')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Connect selected together' })).toBeTruthy();
+  });
+
   it('renders an empty session, disables saving, and describes empty history before returning to the main canvas', () => {
     const current = props({ turns: [] }); render(<AnswerCanvas {...current} />); expect(screen.getByRole('heading', { name: 'Research' })).toBeTruthy(); expect(screen.getByText(/0 documents · 0 cited sources/)).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Save canvas' }) as HTMLButtonElement).disabled).toBe(true); expect(screen.queryByRole('navigation', { name: 'Latest answer structure' })).toBeNull();
@@ -237,9 +253,13 @@ describe('research canvas composed interaction boundaries', () => {
     const nodes = flow.current!.nodes.filter(node => node.type === 'document'); act(() => flow.current!.onSelectionChange({ nodes: [nodes[0]] })); expect(onViewFocusChange).toHaveBeenLastCalledWith(expect.objectContaining({ selectedBlockId: '1:risk', selectedAnswerId: 1 })); act(() => flow.current!.onSelectionChange({ nodes: [] })); expect(onViewFocusChange).toHaveBeenLastCalledWith(expect.objectContaining({ selectedBlockId: undefined, selectedAnswerId: undefined }));
   });
 
-  it('moves a rendered group through React Flow and accumulates all member positions in one edit', async () => {
-    const current = props(); render(<Harness current={current} />); const group = flow.current!.nodes.find(node => node.type === 'groupFrame')!; act(() => flow.current!.onNodesChange([{ type: 'position', id: group.id, position: { x: group.position.x + 200, y: group.position.y + 100 } }]));
-    act(() => flow.current!.onNodeDragStop({}, flow.current!.nodes.find(node => node.id === group.id)!)); await waitFor(() => expect(current.onEditsChange).toHaveBeenCalled()); expect(Object.keys(vi.mocked(current.onEditsChange).mock.calls.at(-1)![0].changed)).toEqual(['1:risk', '1:next']);
+  it('moves research documents independently without assigning groups', async () => {
+    const current = props(); render(<Harness current={current} />);
+    const node = flow.current!.nodes.find(node => node.id === '1:risk')!;
+    act(() => flow.current!.onNodesChange([{ type: 'position', id: node.id, position: { x: 500, y: 300 } }]));
+    act(() => flow.current!.onNodeDragStop({}, flow.current!.nodes.find(item => item.id === node.id)!));
+    await waitFor(() => expect(current.onEditsChange).toHaveBeenCalled());
+    expect(vi.mocked(current.onEditsChange).mock.calls.at(-1)![0].changed).toEqual({ '1:risk': { x: 500, y: 300 } });
   });
 
   it('retains focus across a StrictMode effect restart and lets a new draft preview update task content', async () => {

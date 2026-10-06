@@ -1,12 +1,12 @@
 # Project history and the refactor
 
-How SymbiKnow got from its first public commit to today's large uncommitted working tree: the commits, what the refactor removed and added, the plans and measurements behind it, and the old names that still work.
+How SymbiKnow moved from its first public commit through the Reflex refactor, desktop gallery, and retirement of the standalone Tasks feature.
 
-> Historical snapshot from before the Tasks feature was retired on 2026-10-06. References below to the Tasks board, its API, or its files describe an earlier implementation. Counts are approximate; check `git status` before relying on an exact number.
+> The refactor counts, plans, and benchmark figures in sections 2–5 describe earlier stages of development. The Tasks board, API, chat tools, and MCP tools were retired in local commit `6db55d4` on 2026-10-06; their old files and behavior are historical. The current full gate passed 4,251 Vitest tests and 68 acceptance scenarios (427 steps).
 
-## 1. Commit timeline on `main`
+## 1. Commit timeline on local `main`
 
-`main` has 11 commits. All of them are from 2026-09-27 and 2026-09-28 (times are +03:00). Everything after that is uncommitted.
+Local `main` has 15 commits through `6db55d4`. The first 11 were made on 2026-09-27 and 2026-09-28 (times are +03:00). Four later feature commits complete this historical snapshot.
 
 ```mermaid
 timeline
@@ -14,9 +14,9 @@ timeline
   2026-09-27 morning : Initial public release (217 files) : CI and test fixes : Research canvas docs
   2026-09-27 afternoon : Canvas deletion : Launch video in README
   2026-09-27 evening : Symbi avatar and cross-canvas work : Document editing with Symbi
-  2026-09-28 : Desktop Jev, chat, and workspace UX : tasks/ux-overhaul briefs
-  2026-10-05 (uncommitted) : Jev rebuilt in server/jev : 13 actions cut to 6 : performance plan and benchmarks
-  2026-10-06 (uncommitted) : plan.md work - SQLite index, brain tools, Tasks board : large file split
+  2026-09-28 : Desktop Jev, chat, and workspace UX : historical UX briefs in 70ffba2
+  2026-10-05 : Jev rebuilt in server/jev : 13 actions cut to 6 : performance plan and benchmarks
+  2026-10-06 : Source organization and desktop gallery : Tasks feature retired in 6db55d4
 ```
 
 | Commit | Date | Size | What changed |
@@ -31,11 +31,17 @@ timeline
 | `2f8c2b1` | 16:49 | 1 file | Launch video link in the README (author `benrben`, made on GitHub). |
 | `5f55227` | 19:19 | 51 files | Polish Symbi UI and cross-canvas work: Symbi avatar art (`src/SymbiAvatarArt.tsx`, `src/symbi-avatar.css`), icon options in `brand/`, more `server/cross-canvas.ts` logic. |
 | `5b3540a` | 19:56 | 15 files | Better document editing with the Symbi assistant (`server/chat-stream.ts`, `src/MarkdownEditor.tsx`, `src/chat-context.ts`). |
-| `70ffba2` | 2026-09-28 10:12 | 100 files, +7,583 / −1,514 | **Desktop Jev, chat, and workspace UX.** Chat proposals (`server/chat-proposals.ts`), saved investigations (`server/investigations.ts`, `src/SavedInvestigations.tsx`), MCP activity log (`server/mcp-activity.ts`), Jev inbox and intake (`jev-inbox.ts`, `jev-intake.ts`), version preview, Settings connections, and the `tasks/ux-overhaul/` briefs. |
+| `70ffba2` | 2026-09-28 10:12 | 100 files, +7,583 / −1,514 | **Desktop Jev, chat, and workspace UX.** Chat proposals, saved investigations, MCP activity, Jev inbox and intake, version preview, Settings connections, and UX briefs (archived in this commit). |
+| `73a1c83` | 2026-10-06 | — | Organized the repository and committed the large Reflex and index refactor. |
+| `60c06cb` | 2026-10-06 | — | Implemented the desktop design gallery. |
+| `257f4c3` | 2026-10-06 | — | Completed the warm gallery styling and flows. |
+| `6db55d4` | 2026-10-06 | — | Removed the standalone Tasks UI, public API, chat tools, and MCP tools. |
 
-## 2. Size of the uncommitted refactor
+## 2. Historical refactor snapshot
 
-| Measure | At `HEAD` | Now (working tree) |
+The following measurements were taken while the refactor was still uncommitted. Its source was later included in `73a1c83`, and the Tasks feature was removed in `6db55d4`. These numbers are development history, not the current repository size.
+
+| Measure | At `70ffba2` | Earlier integration snapshot |
 | --- | --- | --- |
 | `server/` files (code / tests) | 39 / 36 | ~233 / ~267 |
 | `src/` files (code / tests) | 67 / 26 | ~262 / ~131 |
@@ -45,7 +51,7 @@ timeline
 | `src/App.tsx` lines | 1,578 | 61 |
 | `server/chat-stream.ts` / `src/AIElementsChat.tsx` lines | 990 / 828 | 20 / 8 |
 
-In tracked files the diff is 112 modified files (+5,146 / −14,244 lines) and 58 deleted files (−9,194 lines). New files in `server/`, `src/`, and `shared/` add about 78,000 lines. Big files became thin entry points that import many small modules (see [Architecture](architecture.md)).
+At that snapshot, tracked files showed 112 modified files (+5,146 / −14,244 lines) and 58 deleted files (−9,194 lines). New files in `server/`, `src/`, and `shared/` added about 78,000 lines. Big files became thin entry points that import many small modules (see [Architecture](architecture.md)).
 
 ## 3. What the refactor removed
 

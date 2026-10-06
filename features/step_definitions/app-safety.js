@@ -163,10 +163,24 @@ When('I reopen research with valid answers and damaged saved entries', async fun
 
 Then('the recovered research retains its answer and manual note', async function () {
   const board = this.page.getByRole('region', { name: 'Research canvas' });
-  await board.getByText('2 documents · 1 cited source', { exact: false }).waitFor();
+  await board.getByText('2 documents · 1 cited source', { exact: false }).waitFor({ state: 'attached' });
   const saved = await this.page.evaluate(() => JSON.parse(localStorage.getItem('symbiknow:research-session')));
   assert.deepEqual(saved.turns, [{ ...this.recoveredResearch.turn, status: 'stopped' }]);
   assert.deepEqual(saved.edits.added, [this.recoveredResearch.manual]);
+  assert.deepEqual(this.pageErrors, []);
+});
+
+Then('the temporary research canvas has two compact rows and no groups', async function () {
+  const board = this.page.getByRole('region', { name: 'Research canvas' });
+  const dimensions = await board.evaluate(element => ({
+    heading: element.querySelector('.answer-canvas__bar').getBoundingClientRect().height,
+    controls: element.querySelector('.answer-canvas__controls').getBoundingClientRect().height,
+  }));
+  assert.ok(dimensions.heading <= 48);
+  assert.ok(dimensions.controls <= 40);
+  assert.equal(await board.locator('.react-flow__node-groupFrame').count(), 0);
+  assert.equal(await board.getByLabel('Return to canvas group overview').count(), 0);
+  assert.equal(await this.page.getByRole('button', { name: 'Browse groups', exact: true }).count(), 0);
   assert.deepEqual(this.pageErrors, []);
 });
 

@@ -2,6 +2,7 @@ import type { CanvasBlock } from '../shared/types';
 
 export interface CanvasInspectorProps {
   blocks: CanvasBlock[];
+  groupsEnabled?: boolean;
   selected: CanvasBlock[];
   canvasId: string;
   onUpdateBlock: (blockId: string, patch: Partial<CanvasBlock>) => Promise<void>;

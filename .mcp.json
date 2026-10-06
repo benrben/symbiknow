@@ -2,7 +2,10 @@
   "mcpServers": {
     "symbiknow": {
       "command": "npm",
-      "args": ["run", "mcp"],
+      "args": [
+        "run",
+        "mcp"
+      ],
       "env": {
         "CANVAS_API_URL": "http://127.0.0.1:8787/api",
         "SYMBIKNOW_AGENT_NAME": "Claude Code"

@@ -28,7 +28,7 @@ export function useCanvasViewport(state: CanvasState, graph: CanvasGraph, props:
     surface.current?.style.setProperty('--canvas-label-scale', String(scale));
     surface.current?.style.setProperty('--canvas-map-summary-opacity', String(Math.max(0, Math.min(1, (viewport.zoom - .1) / .12))));
     if (viewport.zoom >= .75) enteringFiles.current = false;
-    if (enteringOverview(viewport.zoom, overviewIntentBlocked(state), mapPinned)) {
+    if (props.groupsEnabled !== false && enteringOverview(viewport.zoom, overviewIntentBlocked(state), mapPinned)) {
       zoomIntent.current = null;
       zoomTarget.current = null;
       setMapPinned(true);
@@ -41,7 +41,7 @@ export function useCanvasViewport(state: CanvasState, graph: CanvasGraph, props:
       setZoom(viewport.zoom);
     }
     publishViewport(viewport);
-  }, [mapPinned, publishViewport, state.fittedGroup]);
+  }, [mapPinned, publishViewport, state.fittedGroup, props.groupsEnabled]);
   const moveEnded = useCallback((event: unknown, viewport: Viewport) => {
     releaseFittedGroup(state, event, viewport, true);
     const intent = zoomIntent.current;
@@ -49,20 +49,12 @@ export function useCanvasViewport(state: CanvasState, graph: CanvasGraph, props:
     zoomIntent.current = null;
     zoomTarget.current = null;
     if (viewport.zoom >= .75) enteringFiles.current = false;
-    if (enteringOverview(viewport.zoom, overviewIntentBlocked(state), mapPinned)) {
-      setMapPinned(true);
-      setDrillGroup('');
-      setShowDrillBoard(false);
-    } else if (enteringMapGroup(viewport.zoom, intent, mapPinned, mapFrames.length)) {
-      const bounds = flowStageBounds(surface);
-      const nearest = nearestMapGroup(flowNodes, viewport, bounds, intendedGroup, state.hoveredGroup);
-      if (nearest) openHierarchyGroup(nearest.data.group);
-    } else if (leavingMapGroup(viewport.zoom, intent, mapPinned)) stepOutOfMap(state);
+    if (props.groupsEnabled !== false) finishGroupZoom(state, graph, flowNodes, openHierarchyGroup, viewport, intent, intendedGroup);
     zoomBand.current = zoomBandFor(viewport.zoom);
     rememberViewport(rememberedViewports.current, props.canvas.id, viewport);
     setZoom(viewport.zoom);
     publishViewport(viewport);
-  }, [props.canvas.id, mapPinned, mapFrames.length, flowNodes, state.hoveredGroup, openHierarchyGroup,
+  }, [props.canvas.id, props.groupsEnabled, mapPinned, mapFrames.length, flowNodes, state.hoveredGroup, openHierarchyGroup,
   state.mapParent, state.activeSupergroup, graph.supergroups, graph.viewFocus, state.fittedGroup]);
   return { moved, moveEnded };
 }
@@ -95,4 +87,17 @@ function releaseFittedGroup(state: CanvasState, event: unknown, viewport: Viewpo
   if (!owner) return;
   if (Math.abs(owner.zoom - viewport.zoom) < .001) { settleFittedGroup(state, owner, ended); return; }
   if (laterGroupZoom(event, state.zoomIntent.current, state.fittedGroupSettled.current === owner.sequence)) state.setFittedGroup(undefined);
+}
+
+function finishGroupZoom(state: CanvasState, graph: CanvasGraph, flowNodes: FlowNode[], openGroup: (group: string) => void,
+  viewport: Viewport, intent: 'in' | 'out' | null, intendedGroup: string | null): void {
+  if (enteringOverview(viewport.zoom, overviewIntentBlocked(state), state.mapPinned)) {
+    state.setMapPinned(true);
+    state.setDrillGroup('');
+    state.setShowDrillBoard(false);
+  } else if (enteringMapGroup(viewport.zoom, intent, state.mapPinned, graph.mapFrames.length)) {
+    const bounds = flowStageBounds(state.surface);
+    const nearest = nearestMapGroup(flowNodes, viewport, bounds, intendedGroup, state.hoveredGroup);
+    if (nearest) openGroup(nearest.data.group);
+  } else if (leavingMapGroup(viewport.zoom, intent, state.mapPinned)) stepOutOfMap(state);
 }

@@ -1,8 +1,8 @@
 # Testing and CI
 
-How SymbiKnow is tested: about 400 Vitest files, 13 Cucumber features with 69 scenarios, and one GitHub Actions job that runs lint, types, tests, and acceptance.
+How SymbiKnow is tested: 424 Vitest files, 12 Cucumber features with 68 scenarios, and one GitHub Actions job that runs lint, types, tests, and acceptance.
 
-> Snapshot of the working tree on 2026-10-06. Another session was changing code at the same time, so counts can move a little. Commands and environment variables are in [operations.md](operations.md). The latest pass/fail numbers are in [plan-status.md](plan-status.md#test-results).
+> Current through local commit `6db55d4` on 2026-10-06. The last full local quality gate passed: 4,251 Vitest tests, 68 Cucumber scenarios, and 427 steps (`QUALITY_LOOP=PASS`). Commands and environment variables are in [operations.md](operations.md). [Plan status](plan-status.md#test-results) keeps the earlier integration results for historical context.
 
 ## Commands at a glance
 
@@ -24,21 +24,19 @@ Most tests sit next to the code they test. The name tells you the kind:
 - `*.native.test.ts(x)`: real files, real server, real SDK, local HTTP providers, temporary data folder.
 - `*.test.fixture.ts`, `*.test.helpers.ts(x)`, `*.fixture.ts`: shared setup, not tests.
 
-Counts of test files (from `find`, on 2026-10-06):
+Counts of test files (from the repository tree on 2026-10-06):
 
 | Folder | Test files | Native | Public | Other unit | Fixture / helper files |
 | --- | --- | --- | --- | --- | --- |
-| `server/` (top level) | 107 | 21 | 27 | 59 | 6 (`api-chat`, `api-connections`, `chat-session`, `chat-stream`, `mcp-http` `.test.fixture.ts`, `symbi-index.fixture.ts`) + `server/tests/restoration.ts` |
-| `server/jev/` (incl. `actions/`) | 153 | 104 | 0 | 49 | 2 (`queue-boundary.test.fixture.ts`, `actions/question-state-pool.test.helpers.ts`) |
-| `src/` | 125 (103 are `.tsx`) | 28 | 29 | 68 | 6 (`native-workspace.test.fixture.ts`, 5 `*.test.helpers.ts(x)`) |
+| `server/` (outside `jev/`) | 121 | 22 | 33 | 66 | Shared setup lives beside the tests and in `server/tests/restoration.ts` |
+| `server/jev/` (incl. `actions/`) | 160 | 106 | 0 | 54 | `queue-boundary.test.fixture.ts` and `actions/question-state-pool.test.helpers.ts` |
+| `src/` | 128 | 28 | 28 | 72 | `native-workspace.test.fixture.ts` and `*.test.helpers.ts(x)` |
 | `shared/` | 12 | 0 | 2 | 10 | 0 |
 | `features/` | 1 | 1 | 0 | 0 | 5 provider/server files (see below) |
 | `tests/` | 2 | 0 | 0 | 2 | 0 |
-| **Total** | **400** | **154** | **58** | **188** | |
+| **Total** | **424** | **157** | **63** | **204** | |
 
-Above Vitest sit the 69 Cucumber scenarios (13 features). The last full Vitest run had 4,048 tests; see [plan-status.md](plan-status.md#test-results).
-
-Note: on this date most of these test files (367 of them) were still untracked in Git. They exist in the working tree only.
+Above Vitest sit the 68 Cucumber scenarios (12 features). The last full gate passed all 4,251 Vitest tests and all 427 acceptance steps.
 
 ## Vitest setup
 
@@ -65,9 +63,9 @@ Note: on this date most of these test files (367 of them) were still untracked i
 | File | Checks |
 | --- | --- |
 | `tests/quality-runner.test.ts` | `run-tests.mjs` with a fake `node_modules/.bin/vitest` in a temp folder: totals on success, `FAIL ...` lines and exit code 2 on failure, the "no report" message, and a malformed report |
-| `tests/metrics-adapter.test.ts` | `isProductionSource` (test and fixture files are not production code) and `promiseCatchPath` from `.quality/metrics-boundaries.mjs` |
+| `tests/metrics-adapter.test.ts` | `isProductionSource` (test and fixture files are not production code) and `promiseCatchPath` from tracked `tests/metrics-boundaries.mjs` |
 
-Both pass (7 tests, run on 2026-10-06).
+Both are included in the full 4,251-test pass on 2026-10-06.
 
 ## Native tests
 
@@ -156,7 +154,7 @@ sequenceDiagram
 | `review-fixes.feature` | 2 | — | Escape closes only the topmost surface; entering a scattered group shows every document |
 | `symbi-reflex.feature` | 8 | `@automatic-reflex` | Reflex runs the six actions automatically: shared provider requests, source isolation, results survive reload, refresh on source change, one threshold per action, reset, unavailable provider reported |
 
-Step definitions live in `features/step_definitions/` (14 files, 3,304 lines with the support files). Steps are global, so a step in `canvas.js` (for example "a fresh workspace" or "I open SymbiKnow in a browser") is reused by many features.
+Step definitions live in `features/step_definitions/`. Steps are global, so a step in `canvas.js` (for example "a fresh workspace" or "I open SymbiKnow in a browser") is reused by many features.
 
 ## CI
 
@@ -246,7 +244,7 @@ For a UI test, copy the shape of `src/CanvasOverview.native.test.tsx` (jsdom com
 
 ## Known traps
 
-- `tests/metrics-adapter.test.ts` imports `.quality/metrics-boundaries.mjs`. That file is git-ignored, so this test will fail on a clean checkout (for example in CI) until the file is committed or the test moves.
+- `tests/metrics-adapter.test.ts` imports tracked `tests/metrics-boundaries.mjs`, so a clean checkout has its dependency.
 - Step files `jev-document-operation.js`, `jev-indexed-grouping.js`, and `symbi-reflex.js` import `.ts` files directly (for example `../../server/storage.ts`). This needs Node's built-in TypeScript stripping. CI uses Node 24, but `package.json` `engines` also allows `^20.19.0`. `app-safety.js` avoids this by using `tsImport` from `tsx`.
 - Because Cucumber loads every `features/**/*.js`, a new helper `.js` file in `features/` will run at Cucumber start. Keep it free of side effects, like `engine-provider.js`.
 - Native tests start many servers. Always pass port `0` and `127.0.0.1`, never a fixed port.

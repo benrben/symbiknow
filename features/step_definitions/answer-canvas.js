@@ -79,14 +79,14 @@ When('I ask {string} with selected evidence', async function (question) {
 Then('the conversation canvas has {int} answers and one reusable source', async function (count) {
   const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
   await board.waitFor();
-  await board.getByText(new RegExp(`${count * 3} documents · 1 cited source`, 'u')).waitFor();
+  await board.getByText(new RegExp(`${count * 3} documents · 1 cited source`, 'u')).waitFor({ state: 'attached' });
   await board.locator('.canvas-card').nth(2).waitFor();
   assert.ok(await board.locator('.canvas-card').count() >= 3);
   if (await board.locator('.answer-canvas__outline').getAttribute('open') === null) {
     await board.locator('.answer-canvas__outline summary').click();
   }
   await board.getByRole('button', { name: `Step 1: Finding ${count}` }).click();
-  await board.getByText('Files · 100%').waitFor({ timeout: 6000 });
+  await board.locator('.canvas-surface--full').waitFor({ timeout: 6000 });
   const relatedCards = board.locator('.canvas-card:has(.canvas-card__relationships)');
   await relatedCards.first().waitFor({ timeout: 6000 });
   assert.ok(await relatedCards.count() >= 2);
@@ -129,7 +129,7 @@ Then('the research canvas uses dark surfaces and retains every block', async fun
   assert.equal(await this.page.locator('html').getAttribute('data-theme'), 'dark');
   assert.equal(color, 'rgb(32, 37, 36)');
   assert.notEqual(cardColor, 'rgb(255, 255, 255)');
-  await board.getByText(/6 documents · 1 cited source/u).waitFor();
+  await board.getByText(/6 documents · 1 cited source/u).waitFor({ state: 'attached' });
   assert.ok(await board.locator('.canvas-card').count() >= 1);
   await board.locator('.loader-mermaid svg').first().waitFor();
   await this.page.screenshot({ path: '.quality/conversation-canvas-dark.png' });
@@ -159,7 +159,7 @@ When('I ask a direct factual question in chat', async function () {
 Then('the direct answer stays in chat and adds no research block', async function () {
   await this.page.getByText('The mobile release has two failing tests.', { exact: true }).waitFor();
   const board = this.page.getByRole('region', { name: 'Research canvas', exact: true });
-  await board.getByText(/6 documents · 1 cited source/u).waitFor();
+  await board.getByText(/6 documents · 1 cited source/u).waitFor({ state: 'attached' });
   assert.equal(await board.getByRole('navigation', { name: 'Research questions' }).getByRole('button').count(), 2);
   assert.deepEqual(this.pageErrors, []);
 });
@@ -181,7 +181,7 @@ Then('I can add, read, search, undo, and save with the normal canvas controls', 
   await editor.waitFor();
   await editor.getByLabel('Title').fill('My field note');
   await editor.getByRole('button', { name: 'Save document' }).click();
-  await board.getByText(/4 documents · 1 cited source/u).waitFor();
+  await board.getByText(/4 documents · 1 cited source/u).waitFor({ state: 'attached' });
   await board.getByRole('button', { name: 'Read My field note full page' }).waitFor();
   const original = await fetch(`${this.baseUrl}/api/canvases/${this.canvasId}`).then(response => response.json());
   assert.equal(original.blocks.length, 1);
@@ -206,17 +206,17 @@ Then('I can add, read, search, undo, and save with the normal canvas controls', 
   await board.getByRole('button', { name: 'Undo', exact: true }).click();
   await board.getByRole('button', { name: 'Read My field note full page' }).waitFor();
   await board.getByRole('button', { name: 'Undo', exact: true }).click();
-  await board.getByText(/3 documents · 1 cited source/u).waitFor();
+  await board.getByText(/3 documents · 1 cited source/u).waitFor({ state: 'attached' });
   await this.page.locator('.topbar input[type="file"]').setInputFiles({
     name: 'Research attachment.md', mimeType: 'text/markdown', buffer: Buffer.from('# Attachment\n\nA local finding.'),
   });
-  await board.getByText(/4 documents · 1 cited source/u).waitFor();
+  await board.getByText(/4 documents · 1 cited source/u).waitFor({ state: 'attached' });
   await board.getByRole('button', { name: 'Undo', exact: true }).click();
-  await board.getByText(/3 documents · 1 cited source/u).waitFor();
+  await board.getByText(/3 documents · 1 cited source/u).waitFor({ state: 'attached' });
   await this.page.getByRole('button', { name: 'Create note', exact: true }).click();
   await editor.getByLabel('Title').fill('Saved research note');
   await editor.getByRole('button', { name: 'Save document' }).click();
-  await board.getByText(/4 documents · 1 cited source/u).waitFor();
+  await board.getByText(/4 documents · 1 cited source/u).waitFor({ state: 'attached' });
   await board.locator('.canvas-card').filter({ hasText: 'Saved research note' }).click();
   const inspector = board.getByRole('complementary', { name: 'Selection inspector' });
   await inspector.getByRole('tab', { name: 'Details' }).click();
@@ -232,17 +232,11 @@ Then('I can add, read, search, undo, and save with the normal canvas controls', 
   assert.ok(saved.blocks.some(block => block.title === 'Saved research note'));
   assert.ok(saved.blocks.find(block => block.title === 'Saved research note').links
     .includes(saved.blocks.find(block => block.title === 'Finding 1').id));
-  const viewport = board.locator('.react-flow__viewport');
-  const previousViewport = await viewport.getAttribute('style');
-  await this.page.getByRole('button', { name: 'Browse groups', exact: true }).click();
-  await this.page.waitForFunction(previous => {
-    const style = document.querySelector('[aria-label="Research canvas"] .react-flow__viewport')?.getAttribute('style');
-    return style !== previous && /scale\(0\.28\)/u.test(style ?? '');
-  }, previousViewport);
-  assert.match(await viewport.getAttribute('style') ?? '', /scale\(0\.28\)/u);
+  assert.equal(await this.page.getByRole('button', { name: 'Browse groups', exact: true }).count(), 0);
+  assert.equal(await board.locator('.react-flow__node-groupFrame').count(), 0);
   await this.page.setViewportSize({ width: 1120, height: 688 });
   await board.getByRole('button', { name: 'Step 1: Finding 1' }).click();
-  await board.getByText(/Files · (?:[7-9]\d|100)%/u).waitFor({ timeout: 6000 });
+  await board.locator('.canvas-surface--full').waitFor({ timeout: 6000 });
   await waitForBlockInView(this.page, 'Finding 1');
   await this.page.screenshot({ path: '.quality/research-canvas-small.png' });
   assert.deepEqual(this.pageErrors, []);
@@ -252,7 +246,7 @@ When('I ask for rich research blocks', async function () {
   observeChatRequests(this);
   await this.page.getByRole('textbox', { name: 'Message Symbi' }).fill('Show me every format on a temporary research canvas');
   await this.page.getByRole('button', { name: 'Submit' }).click();
-  await this.page.getByRole('region', { name: 'Research canvas', exact: true }).getByText('6 documents · 1 cited source', { exact: false }).waitFor();
+  await this.page.getByRole('region', { name: 'Research canvas', exact: true }).getByText('6 documents · 1 cited source', { exact: false }).waitFor({ state: 'attached' });
   await assertNativeResearch(this, 6);
 });
 

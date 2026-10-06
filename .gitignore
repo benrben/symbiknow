@@ -12,6 +12,11 @@ coverage/
 .env.*
 !.env.example
 .npmrc
+/.envrc
+/.direnv/
+/.mcp.local.json
+/.codex/config.local.toml
+/.claude/settings.local.json
 
 # Test reports and temporary diagnostics
 *.log
@@ -26,6 +31,12 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+*.swo
+*~
+
+# Python caches from local tooling
+__pycache__/
+*.py[cod]
 
 # Local design and media drafts
 /design/

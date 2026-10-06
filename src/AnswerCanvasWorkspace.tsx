@@ -8,7 +8,7 @@ export function AnswerCanvasWorkspace({ model }: { model: AnswerCanvasModel }) {
     selectionChanged, viewChanged,
   } = model;
   return <>
-    <div className="answer-canvas__workspace"><Canvas canvas={canvas} theme={theme} focusZoom={1} focusSelect={false} fitRequest={fitRequest} crossLinkLabels={sourceLabels}
+    <div className="answer-canvas__workspace"><Canvas canvas={canvas} theme={theme} groupsEnabled={false} focusZoom={1} focusSelect={false} fitRequest={fitRequest} crossLinkLabels={sourceLabels}
       onUpdateBlock={updateBlock} onDeleteBlock={deleteBlock} onMoveBlocks={moveBlocks} onSelectBlock={editBlock}
       onReadBlock={block => setReaderId(block.id)} onHistoryBlock={() => setHistoryOpen(true)}
       onOpenCrossLink={openSourceLink} onFindSimilar={setDuplicateId} onSummarizeSelection={onAskSelection}

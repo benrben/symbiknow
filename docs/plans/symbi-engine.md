@@ -1,8 +1,8 @@
 # Symbi: lightweight knowledge, automatic organization, and useful MCP tools
 
-Updated: 2026-10-06. Status: implementation plan; unchecked tasks are planned work, not completed features.
+Updated: 2026-10-06. **Historical implementation proposal, not the current feature list or an active checklist.** Some proposed tools and the Tasks board were subsequently removed. See [current Jev behavior](../jev/README.md) and the [current MCP and API reference](../project-atlas/mcp-and-api.md) for supported behavior.
 
-This replaces the previous 13-action plan. Documents remain ordinary files. The app keeps six automatic actions and exposes two focused Symbi brain tools through MCP. Existing document, canvas, task, lock, and version tools remain available and receive the improvements below.
+This proposal replaced the previous 13-action plan at the time it was written. It proposed six automatic actions and two focused Symbi brain tools through MCP. The document, canvas, lock, and version tool improvements below describe intended work at that time.
 
 ## 1. Goals and boundaries
 
@@ -172,6 +172,8 @@ The supplied review tested only 3–4 documents and includes predicted large-can
 
 ### Tasks
 
+**Retired proposal:** The Tasks board and task MCP tools were removed after this plan was written. The following section is kept only to show the original design intent; it is not an active checklist or supported feature.
+
 The **Tasks page is a board built from the regular canvas UI**. Show tasks as canvas cards, grouped and positioned by their status. Reuse the canvas's pan, zoom, card selection, and group presentation, with a board layout controlled by task status.
 
 Display four status groups as columns, always in this left-to-right order:
@@ -272,7 +274,7 @@ The new two-tool design supersedes expanding the old brain-tool catalog. Preserv
 
 ## 11. Acceptance and measurement
 
-The previous five-document probe reported execution around 0.83–1.31 seconds and 2–4 provider requests per document. It used small synthetic documents and does not prove the retained full workspace meets the target. Its 277 questions included 168 link/duplicate questions, identifying a concrete optimization area. Baseline artifact: [prior results](work/jev-logical-grouping-scope-20261006/results.json).
+The previous five-document probe reported execution around 0.83–1.31 seconds and 2–4 provider requests per document. It used small synthetic documents and does not prove the retained full workspace meets the target. Its 277 questions included 168 link/duplicate questions, identifying a concrete optimization area. The original baseline artifact was a local `work/jev-logical-grouping-scope-20261006/results.json` file, excluded from the published repository.
 
 Required proof:
 
@@ -285,7 +287,6 @@ Required proof:
 - Larger candidate sets improve measured retrieval coverage without unacceptable losses in grouping/link precision; test distractors and option ordering as well as happy paths.
 - Long documents, paraphrases, ambiguous purposes, multi-topic documents, updates, and missing evidence are covered.
 - MCP metadata reads and mutation acknowledgments remain bounded as document bodies and history grow.
-- The Tasks page renders a regular-canvas-style board with all four status groups in the specified order. Each task appears once in its current status column; ordering survives reloads, and changes from either MCP or the UI update the same durable task record.
 - Branch edits by one agent cannot silently switch another agent's working document.
 - Repeated imports, polls, retries, edits, and reconnects do not duplicate documents or paid work.
 - Report p50, p95, and maximum per-document execution; list every miss of the 2,000 ms target. Also report queue wait, full upload-to-durable time, total batch time, cold startup, CPU, peak RAM, disk growth, and provider requests/questions/tokens.
@@ -295,9 +296,9 @@ Keep the app usable while indexing or Jev is unavailable. Explain degraded or pe
 
 ## 12. Review-note provenance
 
-MCP tasks above incorporate every tool discussed in the supplied 33-tool review, including tools marked “no change needed” as regression checks. The source also supplied the edit-triggered job observation. Its suggested execution semantics for `jev_do` have been reconciled with the newer two-tool plan and existing proposal permissions.
+The historical MCP checklist incorporated every tool discussed in the supplied 33-tool review, including tools marked “no change needed” as regression checks. The source also supplied the edit-triggered job observation. Its suggested execution semantics for `jev_do` were reconciled with the then-newer two-tool proposal and existing proposal permissions. Later product changes removed the Tasks tools described above.
 
-Source: [user-supplied MCP review](</Users/benreich/.codex/attachments/d2909977-75f8-444a-ba16-ad8505bd9691/Pasted text.txt>).
+Source: a user-supplied MCP review attachment available during the original planning session; the private attachment is not part of this repository.
 
 ## 13. Future canvas presentation improvements — plan only
 

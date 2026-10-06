@@ -18,9 +18,11 @@ export function AnswerCanvas(props: AnswerCanvasProps) {
   const model = useAnswerCanvas(props);
   return <section className="answer-canvas" aria-label="Research canvas">
     <AnswerCanvasHeader model={model} />
-    <AnswerQuestions model={model} /><AnswerOutline model={model} />
-    <AnswerCanvasSearch model={model} /><AnswerCanvasStaging model={model} />
-    <AnswerCanvasEvidence model={model} /><AnswerCanvasNotices model={model} />
+    <div className="answer-canvas__controls">
+      <AnswerCanvasSearch model={model} /><AnswerQuestions model={model} />
+      <AnswerOutline model={model} /><AnswerCanvasEvidence model={model} />
+    </div>
+    <AnswerCanvasStaging model={model} /><AnswerCanvasNotices model={model} />
     <AnswerCanvasWorkspace model={model} /><AnswerCanvasEditor model={model} />
     <AnswerCanvasReader model={model} />
     <AnswerSessionHistory model={model} /><AnswerDuplicates model={model} />

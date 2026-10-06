@@ -88,8 +88,8 @@ describe('workspace public controls backed by native persistence', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Search documents' }));
     expect(document.activeElement).toBe(within(research).getByRole('textbox', { name: 'Find in research canvas' }));
     expect(screen.queryByRole('dialog', { name: 'Search documents' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Browse groups' }));
-    await waitFor(() => expect(research.querySelector('.react-flow__viewport')?.getAttribute('style')).toContain('scale(0.28)'));
+    expect(screen.queryByRole('button', { name: 'Browse groups' })).toBeNull();
+    expect(research.querySelector('.react-flow__node-groupFrame')).toBeNull();
     expect(screen.queryByRole('complementary', { name: 'Browse groups' })).toBeNull();
     const input = uploadInput();
     fireEvent.change(input, { target: { files: null } });

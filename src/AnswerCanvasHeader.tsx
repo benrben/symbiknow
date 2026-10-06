@@ -12,9 +12,9 @@ export function AnswerCanvasHeader({ model }: { model: AnswerCanvasModel }) {
 function CanvasHeading({ model }: { model: AnswerCanvasModel }) {
   const { turns, graph, sources } = model;
   return <>
-    <div className="answer-canvas__heading"><span className="answer-canvas__eyebrow">SESSION RESEARCH CANVAS</span>
-      <h2>{turns[0]?.query ?? 'Research'}</h2>
-      <p>{graph.blocks.length} document{graph.blocks.length === 1 ? '' : 's'} · {sources.length} cited source{sources.length === 1 ? '' : 's'} · Changes stay in this session until you save</p></div>
+    <div className="answer-canvas__heading">
+      <h2 title={turns[0]?.query ?? 'Research'}>{turns[0]?.query ?? 'Research'}</h2>
+      <p>{graph.blocks.length} document{graph.blocks.length === 1 ? '' : 's'} · {sources.length} cited source{sources.length === 1 ? '' : 's'} · Unsaved session</p></div>
 
   </>;
 }

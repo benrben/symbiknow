@@ -1,6 +1,6 @@
 # Simpler document execution: implementation and offline results
 
-5 October 2026. Implemented and tested locally. **The simpler path is 9.56× faster on the retained-fixture test, but total completion still exceeds 2,000 ms.** The app stayed stopped and paid provider calls stayed disabled.
+5 October 2026. **Historical local result, not a current performance claim.** The simpler path was 9.56× faster on the retained-fixture test, but total completion still exceeded 2,000 ms. The app stayed stopped and paid provider calls stayed disabled.
 
 ## Final paired measurement
 
@@ -22,7 +22,7 @@ The final simpler run spent approximately 495 ms in admission, 176 ms waiting be
 
 The strict total target is **failing by 285 ms**, even with an instant provider. Measuring only execution after claiming would conceal admission and waiting. This harness starts at runtime admission, not file upload, so it also does not certify upload-to-completion latency. A single representative document is not a distribution or proof that every document meets the target.
 
-Evidence: [legacy run](../../work/jev-simple-20261005/legacy.json), [simpler run](../../work/jev-simple-20261005/simple.json), [harness](../../work/jev-simple-20261005/benchmark.mts), [frozen source hashes](../../work/jev-simple-20261005/source-hashes-final.json). The harness uses local absolute paths and is a diagnostic tool. Its strict unsupported answers measure application overhead with real persistence; they do not establish real-provider latency or useful grouping.
+The original legacy and simpler run JSON, harness, and frozen source hashes are local `work/jev-simple-20261005/` diagnostic artifacts, excluded from the published repository. The harness used local absolute paths. Its strict unsupported answers measured application overhead with real persistence; they did not establish real-provider latency or useful grouping. The aggregate measurements are retained above.
 
 Both runs verified all 13 completed jobs, an exact recomputation of the current completion checkpoint, unchanged policy/source/content/position, unchanged historical receipts and their proposals, and an unchanged retained ledger.
 
@@ -54,7 +54,7 @@ The original 68 reads and 40 writes came from repeatedly entering admission, cla
 - Native tests cover durable separate receipts, Undo, canonical crash recovery, stale supporting evidence, manual edits, task/vocabulary changes, revoked permissions, aborted lock waits, provider changes and partial failure/retry.
 - Source hashes were checked after the final measurements. No application listeners remained on ports 8787 or 5173.
 
-[Test summary](../../work/jev-simple-20261005/test-summary.json), [full regression report](../../work/jev-simple-20261005/regression-tests.json), [acceptance report](../../work/jev-simple-20261005/acceptance.json), [selected quality report](../../work/jev-simple-20261005/quality/quality-gate-report.html).
+The original test summary, full regression report, acceptance report, and selected quality report are local `work/jev-simple-20261005/` artifacts and are not shipped with the repository.
 
 This is not full ship certification. The configured full gate starts the application, conflicting with the instruction to keep it stopped; browser smoke and full browser acceptance were not run. No fresh full coverage/complexity certification is claimed.
 

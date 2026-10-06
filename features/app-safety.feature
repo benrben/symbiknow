@@ -38,6 +38,7 @@ Feature: Reviewed app safety
     When I open the current canvas in a browser
     And I reopen research with valid answers and damaged saved entries
     Then the recovered research retains its answer and manual note
+    And the temporary research canvas has two compact rows and no groups
     When I save the recovered research as files
     Then recovered answers and their citations survive reload
 

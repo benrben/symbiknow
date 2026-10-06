@@ -57,7 +57,9 @@ npm start
 
 The server listens on `PORT` (default `8787`) and stores content under `DATA_DIR` (default `./data`). The app creates an example workspace on first run.
 
-The repository includes [example environment settings](.env.example). Supply them through your shell or deployment platform; the app does not load `.env` automatically. Keep real keys and `DATA_DIR` out of Git. Run `npm run lint`, `npm run typecheck`, `npm test`, and `npx cucumber-js` before a change; `npm test` builds the app before testing, and [CI](.github/workflows/ci.yml) runs the same checks on pushes and pull requests.
+The React client is in `src/`, the API and storage code in `server/`, shared types in `shared/`, and browser acceptance scenarios in `features/`. Start with the [documentation index](docs/README.md) for architecture and operations. `data/`, `dist/`, `node_modules/`, `work/`, and generated quality reports are local artifacts excluded from Git. The old implementation plans in `docs/plans/` describe historical work; use this README and [API.md](API.md) for the current feature set.
+
+The repository includes [example environment settings](.env.example). Supply them through your shell or deployment platform; the app does not load `.env` automatically. Keep real keys and `DATA_DIR` out of Git. Run `npm run lint`, `npm run typecheck`, `npm test`, and `npx cucumber-js` before committing a change; `npm test` builds the app before testing, and [CI](.github/workflows/ci.yml) runs the same checks on pushes and pull requests.
 
 ## Self-hosting
 
@@ -105,7 +107,7 @@ The assistant knows the canvas, group, document, selection, or research block cu
 
 Ask directly to create a temporary research canvas or answer briefly in chat. Source context and layout are selected locally; the configured chat model writes and draws the answer.
 
-The research canvas keeps growing across follow-up questions in the same chat. The agent can add connected Markdown, diagrams, tasks, slides, HTML, or supported MDX blocks, and cite selected source documents inside the blocks. Sources are links to the original documents, rather than extra evidence cards. Pick **Roadmap**, **Kanban**, **Architecture**, or **Mind map** under **View & export**. You can pan, zoom, search, read, edit, add, move, connect, upload, and undo in the same canvas UI; its focus and suggested follow-ups change as you zoom or select a block. **Save canvas** creates a regular workspace canvas with its blocks and links; **Export Markdown** downloads a readable copy. Unsaved research is retained in this browser across reloads and is cleared by **New chat**. See the [research canvas guide](docs/research-canvas.md) for the full workflow.
+The research canvas keeps growing across follow-up questions in the same chat. Its compact two-row header keeps outline and sources in popovers, and the temporary canvas shows documents and connections without group frames or grouping controls. The agent can add connected Markdown, diagrams, tasks, slides, HTML, or supported MDX blocks, and cite selected source documents inside the blocks. Sources are links to the original documents, rather than extra evidence cards. Pick **Roadmap**, **Kanban**, **Architecture**, or **Mind map** under **View & export**. You can pan, zoom, search, read, edit, add, move, connect, upload, and undo in the same canvas UI; its focus and suggested follow-ups change as you zoom or select a block. **Save canvas** creates a regular workspace canvas with its blocks and links; **Export Markdown** downloads a readable copy. Unsaved research is retained in this browser across reloads and is cleared by **New chat**. See the [research canvas guide](docs/research-canvas.md) for the full workflow.
 
 ## Symbi Reflex, the automatic organizer
 

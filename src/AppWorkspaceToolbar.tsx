@@ -22,10 +22,9 @@ export function WorkspaceToolbar({ model, theme, onToggleTheme }: { model: AppMo
         event.target.value = '';
       }}/>
       <button className="primary-button" aria-label="Create note" title="Create note" onClick={() => model.answerCanvasOpen ? model.requestResearchAction('add') : openNewBlock()} disabled={!canvasId}><Icon name="plus" size={17}/><span className="toolbar-label">Create note</span></button>
-      <button className="toolbar-button" aria-label="Browse groups" title="Browse groups" onClick={() => {
-        if (model.answerCanvasOpen) model.requestResearchAction('groups');
-        else { setSearchOpen(false); setBrowseGroupsOpen(true); }
-      }} disabled={!canvasId}><Icon name="layers" size={17}/><span className="toolbar-label">Browse groups</span></button>
+      {!model.answerCanvasOpen && <button className="toolbar-button" aria-label="Browse groups" title="Browse groups" onClick={() => {
+        setSearchOpen(false); setBrowseGroupsOpen(true);
+      }} disabled={!canvasId}><Icon name="layers" size={17}/><span className="toolbar-label">Browse groups</span></button>}
       <button className={'chat-toggle ' + (showChat ? 'selected' : '')} aria-label="Toggle Symbi" title="Toggle Symbi" onClick={() => setShowChat(value => !value)}><Icon name="spark" size={18}/></button>
     </div>
   </header>;

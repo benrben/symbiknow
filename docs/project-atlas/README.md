@@ -2,7 +2,7 @@
 
 How SymbiKnow is built: an infinite canvas where people and AI agents keep knowledge as ordinary files, connect it, and change it safely. Start here, then open the page for the part you are working on.
 
-> Snapshot of the `main` working tree on 2026-10-06, uncommitted changes included. `docs/plans/symbi-engine.md` was still being implemented when this was written, so check the code before relying on exact details.
+> Current through local commit `6db55d4` on 2026-10-06. The standalone Tasks feature has been retired. The last full quality gate passed: 4,251 Vitest tests and 68 acceptance scenarios (427 steps).
 
 ## What SymbiKnow is
 
@@ -84,8 +84,8 @@ MCP tools never touch files directly. Each tool calls the same HTTP API the brow
 | [Architecture](architecture.md) | find your way around the repository, the server request flow, and the React app |
 | [System map (HTML)](system-map.html) | see the architecture as one drawn diagram |
 | [Data model](data-model.md) | know what is stored where in `DATA_DIR` and what each field means |
-| [Project history](history.md) | understand the 11 commits, what the big refactor removed and added, and old names |
-| [Plan status](plan-status.md) | see which `docs/plans/symbi-engine.md` tasks are done, partial, or open, plus test results and known issues |
+| [Project history](history.md) | follow the committed timeline, earlier refactor, and retired names |
+| [Plan status](plan-status.md) | read the earlier `docs/plans/symbi-engine.md` assessment and its later retirement notes |
 
 **Documents and the canvas**
 
@@ -117,12 +117,10 @@ MCP tools never touch files directly. Each tool calls the same HTTP API the brow
 | [Testing and CI](testing.md) | test layout, fixtures, acceptance features, CI pipeline, how to write a test |
 | [Brand, theme, and UI system](brand-and-ui.md) | colors, fonts, Symbi avatar, CSS files, UI conventions |
 
-## Size of the project
+## Verified repository state (2026-10-06)
 
 | Measure | Value | Note |
 | --- | --- | --- |
-| Commits on `main` | 11 | Public release 2026-09-27; last commit 2026-09-28 |
-| Uncommitted changes | ~730 paths | 564 new, 110 modified, 58 deleted: a large refactor plus the `docs/plans/symbi-engine.md` work |
-| Source lines (TS/TSX, no tests) | ~33,000 | `src/`, `server/`, `shared/` |
-| Unit and integration tests | 4,048 in 395 files | Vitest; 57 failing in the latest run while work was in progress (see [Plan status](plan-status.md)) |
-| Acceptance features | 13 | Cucumber + Playwright in `features/` |
+| Commits on local `main` | 15 | Feature snapshot through `6db55d4` |
+| Unit and integration tests | 4,251 passing in 424 test files | Last full quality gate: `QUALITY_LOOP=PASS` |
+| Acceptance | 68 scenarios, 427 steps passing | 12 Cucumber features in `features/` |

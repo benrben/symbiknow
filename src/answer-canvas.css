@@ -13,21 +13,21 @@
 .answer-canvas__bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 74px;
-  padding: 11px 18px;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--sk-border, #dce3ed);
   background: var(--sk-surface, #fff);
 }
-.answer-canvas__heading { flex: 1 1 220px; min-width: 190px; }
+.answer-canvas__heading { display: flex; flex: 1; align-items: baseline; gap: 10px; min-width: 0; }
 .answer-canvas__eyebrow { color: var(--sk-link, #5369d8); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
-.answer-canvas__heading h2 { overflow: hidden; max-width: 440px; margin: 3px 0; font: 750 17px/1.25 'Space Grotesk', sans-serif; text-overflow: ellipsis; white-space: nowrap; }
-.answer-canvas__heading p { margin: 0; color: var(--sk-muted, #73829b); font-size: 11px; }
-.answer-canvas__bar-actions { display: flex; flex: 0 1 auto; align-items: center; flex-wrap: wrap; gap: 7px; }
+.answer-canvas__heading h2 { overflow: hidden; max-width: 440px; min-width: 0; margin: 0; font: 750 14px/1.3 'Space Grotesk', sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.answer-canvas__heading p { margin: 0; color: var(--sk-muted, #73829b); font-size: 11px; white-space: nowrap; }
+.answer-canvas__bar-actions { display: flex; flex: none; align-items: center; flex-wrap: nowrap; gap: 7px; }
 .answer-canvas__bar-actions > button, .answer-canvas__more summary, .answer-canvas__more > div > button {
-  padding: 8px 10px;
+  padding: 6px 9px;
   border: 1px solid var(--sk-border, #dce3ed);
   border-radius: 8px;
   background: var(--sk-surface, #fff);
@@ -120,7 +120,7 @@
 .answer-canvas__matches span { color: var(--sk-muted, #73829b); font-size: 11px; }
 .answer-canvas__workspace { flex: 1; min-height: 0; overflow: hidden; }
 .answer-canvas__workspace .canvas-surface { min-height: 0; }
-.answer-canvas__workspace .canvas-flow-stage { top: 54px; }
+.answer-canvas__workspace .canvas-surface--flat .canvas-flow-stage { top: 0; }
 .answer-canvas__workspace .canvas-card { box-shadow: 0 16px 32px var(--sk-shadow, #1c315020); }
 .app-shell.is-researching .chat-panel { width: min(var(--assistant-width, 500px), max(280px, calc(100vw - 244px - 520px))); }
 .answer-canvas__staging, .answer-canvas__saved, .answer-canvas__freshness { display: flex; flex: none; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--sk-border, #dce3ed); background: var(--sk-surface-soft, #f2f5fb); color: var(--sk-text, #17233b); font-size: 11px; }
@@ -135,16 +135,31 @@ html[data-theme='dark'] .answer-canvas__story button b { background: var(--sk-su
 html[data-theme='dark'] .answer-canvas__bar-actions > .answer-canvas__add { border-color: var(--sk-mint); background: var(--sk-mint); color: #172b31; }
 html[data-theme='dark'] .answer-canvas__freshness { background: var(--sk-pending-bg); color: var(--sk-pending); }
 .answer-canvas :is(button, select, input, summary):focus-visible { outline: 2px solid var(--sk-focus); outline-offset: 2px; }
-@media (max-width: 900px) { .answer-canvas__bar { align-items: flex-start; flex-wrap: wrap; } .answer-canvas__bar-actions { flex-wrap: wrap; } .answer-canvas__tools-tip { display: none; } }
+/* Research keeps its controls in two rows; detail panels float over the canvas. */
+.answer-canvas__controls { position: relative; z-index: 12; display: flex; flex: none; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--sk-border); background: var(--sk-surface); }
+.answer-canvas__controls .answer-canvas__tools { min-height: 0; padding: 0; border: 0; }
+.answer-canvas__controls .answer-canvas__tools input { width: 165px; padding: 5px 8px; }
+.answer-canvas__controls .answer-canvas__turn-nav { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; gap: 5px; }
+.answer-canvas__controls .answer-canvas__turn-nav > span,
+.answer-canvas__controls .answer-canvas__turn-nav small { display: none; }
+.answer-canvas__controls .answer-canvas__turn-nav button { max-width: 180px; padding: 5px 7px; }
+.answer-canvas__controls :is(.answer-canvas__outline, .answer-canvas__evidence) { position: static; border: 0; background: transparent; white-space: nowrap; }
+.answer-canvas__controls .answer-canvas__outline { margin-left: auto; }
+.answer-canvas__controls :is(.answer-canvas__outline, .answer-canvas__evidence) > summary { padding: 5px 7px; border-radius: 6px; }
+.answer-canvas__controls summary:hover { background: var(--sk-surface-soft); }
+.answer-canvas__controls .answer-canvas__evidence-content { right: 12px; left: auto; white-space: normal; }
+.answer-canvas__controls .answer-canvas__matches { position: absolute; top: 100%; right: 0; left: 0; box-shadow: 0 8px 20px var(--sk-shadow); }
+@container research (max-width: 1000px) { .answer-canvas__heading p { display: none; } }
 @container research (max-width: 650px) {
-  .answer-canvas__bar { gap: 8px; min-height: 0; padding: 8px 12px; }
-  .answer-canvas__heading { flex-basis: 100%; }
-  .answer-canvas__heading h2 { max-width: 100%; font-size: 15px; }
-  .answer-canvas__heading p { display: none; }
-  .answer-canvas__bar-actions { width: 100%; }
-  .answer-canvas__tools-tip { display: none; }
+  .answer-canvas__bar { gap: 6px; padding: 6px 8px; }
+  .answer-canvas__bar-actions { gap: 4px; }
+  .answer-canvas__bar-actions > button, .answer-canvas__more summary { padding: 5px 6px; font-size: 10px; }
+  .answer-canvas__controls { padding: 0 8px; gap: 4px; }
+  .answer-canvas__controls .answer-canvas__tools input { width: 120px; }
+  .answer-canvas__controls .answer-canvas__turn-nav button { max-width: 90px; }
+  .answer-canvas__controls .answer-canvas__turn-nav button span { display: none; }
+  .answer-canvas__controls summary { font-size: 10px; }
   .answer-canvas__workspace .react-flow__minimap,
-  .answer-canvas__workspace .canvas-map-index,
   .answer-canvas__workspace .canvas-hint { display: none; }
 }
 @media (max-width: 1100px) { .app-shell.is-researching .chat-panel { min-width: 240px; width: min(var(--assistant-width, 500px), max(240px, calc(100vw - 205px - 500px))); } }
@@ -153,4 +168,3 @@ html[data-theme='dark'] .answer-canvas__freshness { background: var(--sk-pending
 }
 @media (max-width: 780px) { .app-shell.is-researching .chat-panel { width: min(var(--assistant-width, 500px), max(240px, calc(100vw - 66px - 430px))); } }
 @media (max-width: 620px) { .app-shell.is-researching .chat-panel { width: min(360px, calc(100vw - 66px)); min-width: 0; } }
-@media (max-width: 620px) { .answer-canvas__heading p { display: none; } .answer-canvas__bar { padding: 9px; } .answer-canvas__turn-nav, .answer-canvas__story, .answer-canvas__tools { padding-right: 9px; padding-left: 9px; } }

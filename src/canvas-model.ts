@@ -21,7 +21,7 @@ export function useCanvasModel(props: CanvasProps) {
     canvas, theme = 'light', onUpdateBlock, onDeleteBlock, onSelectBlock, onReadBlock = onSelectBlock,
     onHistoryBlock = onSelectBlock, onOpenCrossLink, onMoveBlocks, focusRequest: requestedFocus,
     fitRequest, groupFocusRequest, searchQuery = '', searchMatchIds = [], onSummarizeSelection, onSelectionChange,
-    viewportRequest, focusZoom, focusSelect = true,
+    viewportRequest, focusZoom, focusSelect = true, groupsEnabled = true,
   } = props;
   const { id: canvasId, blocks } = canvas;
   const canvasScope = useCanvasOperationScope(canvasId);
@@ -284,9 +284,9 @@ export function useCanvasModel(props: CanvasProps) {
 
   /** A card dropped inside another group's frame joins it; a card dropped well outside its own frame leaves it. */
   const dropBlock = useCallback((node: CanvasNode) => {
-    const patch = droppedBlockPatch(node, blocks, livePositions);
+    const patch = groupsEnabled ? droppedBlockPatch(node, blocks, livePositions) : { x: node.position.x, y: node.position.y };
     void saveBlock(node.id, patch).catch(() => undefined);
-  }, [blocks, livePositions, saveBlock]);
+  }, [blocks, livePositions, saveBlock, groupsEnabled]);
   const connect = useCallback((connection: Connection) => {
     const documentConnection = canvasConnection(connection, blocks);
     if (!documentConnection) return;
@@ -337,7 +337,7 @@ export function useCanvasModel(props: CanvasProps) {
     }
   }
   return {
-    canvas, theme, onUpdateBlock, onReadBlock, focusRequest, searchQuery, searchMatchIds, onSummarizeSelection,
+    canvas, theme, groupsEnabled, onUpdateBlock, onReadBlock, focusRequest, searchQuery, searchMatchIds, onSummarizeSelection,
     onSelectionChange, viewportRequest, focusZoom, focusSelect, canvasId, blocks, message, setMessage,
     zoom, mapPinned, selectedIds, setSelectedIds, focusHops, setFocusHops, drillGroup, setDrillGroup, mapParent,
     setMapParent, showDrillBoard, setShowDrillBoard, pointRequest, pullActive, flowInstance, surface,

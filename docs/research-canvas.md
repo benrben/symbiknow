@@ -13,9 +13,10 @@ Quick facts and status questions usually get a direct chat answer. If the reques
 ## Work with the map
 
 - Ask another question to extend the same session graph. Earlier answer blocks remain in place. The **Research path** and **Read this answer** controls help you revisit a question or step.
-- Use **View & export → Layout** to switch between **Roadmap**, **Kanban**, **Architecture**, and **Mind map**. Pan, zoom, search, select, open, move, group, connect, edit, add, upload, and delete blocks with the same canvas controls used elsewhere in SymbiKnow. Manual changes can be undone from **Undo** or **Session history**.
+- The temporary canvas has a compact two-row header, with outline and sources available as popovers. It shows documents and connections without group frames, group navigation, or grouping controls.
+- Use **View & export → Layout** to switch between **Roadmap**, **Kanban**, **Architecture**, and **Mind map**. Pan, zoom, search, select, open, move, connect, edit, add, upload, and delete blocks with the same canvas controls used elsewhere in SymbiKnow. Manual changes can be undone from **Undo** or **Session history**.
 - Use Markdown, images, Mermaid diagrams, tables, task lists, HTML pages, Marp slides, or supported MDX components inside blocks. Source citations appear inside the answer blocks and link back to the original documents.
-- The assistant receives the visible group or blocks, selected document, search, and zoom focus with each request. The **Using** control in chat lets you switch to **Whole canvas**, **Selected documents**, or **Research canvas**. Suggested follow-up questions change with your view and selection.
+- The assistant receives the visible blocks, selected document, search, and zoom focus with each request. The **Using** control in chat lets you switch to **Whole canvas**, **Selected documents**, or **Research canvas**. Suggested follow-up questions change with your view and selection.
 - If the agent opens a source or group, use the chat return action to go back. **Research canvas** in the assistant header opens the session map after navigating to another canvas. A changed cited document prompts you to recheck the research.
 
 ## Keep the work

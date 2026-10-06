@@ -69,6 +69,7 @@ export type Frame = {
 export interface CanvasProps {
   canvas: CanvasDocument;
   theme?: Theme;
+  groupsEnabled?: boolean;
   onUpdateBlock: (blockId: string, patch: Partial<CanvasBlock>) => Promise<void>;
   onDeleteBlock: (blockId: string) => Promise<void>;
   onSelectBlock: (block: CanvasBlock) => void;

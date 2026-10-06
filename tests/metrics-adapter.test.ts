@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error The quality adapter is a JavaScript command-line module.
-import { isProductionSource, promiseCatchPath } from '../.quality/metrics-boundaries.mjs';
+import { isProductionSource, promiseCatchPath } from './metrics-boundaries.mjs';
 
 function callbacks(text: string) {
   const source = ts.createSourceFile('fixture.ts', text, ts.ScriptTarget.Latest, true);

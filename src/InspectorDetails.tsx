@@ -4,19 +4,19 @@ import type { CanvasInspectorProps } from './canvas-inspector-types';
 import { InspectorActions } from './InspectorActions';
 import type { InspectorActions as Actions } from './useInspectorActions';
 
-type DetailProps = Pick<CanvasInspectorProps, 'blocks' | 'selected' | 'onReadBlock' | 'onFocusBlock' | 'onSummarizeSelection'> & { actions: Actions };
+type DetailProps = Pick<CanvasInspectorProps, 'blocks' | 'selected' | 'onReadBlock' | 'onFocusBlock' | 'onSummarizeSelection' | 'groupsEnabled'> & { actions: Actions };
 function excerpt(block: CanvasBlock): string {
   return block.content.replace(/[#>*_`\[\]]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140) || 'No text preview';
 }
 function DocumentLinks({ heading, blocks, onFocusBlock }: { heading: string; blocks: CanvasBlock[]; onFocusBlock: CanvasInspectorProps['onFocusBlock'] }) {
   return <><h3>{heading}</h3>{blocks.length ? blocks.map(block => <button type="button" key={block.id} onClick={() => onFocusBlock(block.id)}>{block.title}</button>) : <p>None</p>}</>;
 }
-function SingleDetails({ blocks, selected, onReadBlock, onFocusBlock }: DetailProps) {
+function SingleDetails({ blocks, selected, onReadBlock, onFocusBlock, groupsEnabled = true }: DetailProps) {
   const first = selected[0];
   const inbound = blocks.filter(block => block.links.includes(first.id));
   const outbound = first.links.map(id => blocks.find(block => block.id === id)).filter((block): block is CanvasBlock => Boolean(block));
   return <>
-    <p className="canvas-inspector__meta">{first.file} · {first.kind} · {first.group ? groupLabel(first.group) : 'Ungrouped'}</p>
+    <p className="canvas-inspector__meta">{first.file} · {first.kind}{groupsEnabled && <> · {first.group ? groupLabel(first.group) : 'Ungrouped'}</>}</p>
     <button type="button" onClick={() => onReadBlock(first)}>Open full document</button>
     <DocumentLinks heading="Links out" blocks={outbound} onFocusBlock={onFocusBlock}/>
     <DocumentLinks heading="Links in" blocks={inbound} onFocusBlock={onFocusBlock}/>
@@ -38,6 +38,6 @@ export function InspectorDetails(props: DetailProps) {
   return <section className="canvas-inspector__details" role={single ? 'tabpanel' : undefined} id={single ? 'canvas-inspector-details' : undefined}
     aria-labelledby={single ? 'canvas-inspector-details-tab' : undefined}>
     {single ? <SingleDetails {...props}/> : <SelectionDetails {...props}/>}
-    <InspectorActions blocks={props.blocks} selected={props.selected} actions={props.actions}/>
+    <InspectorActions groupsEnabled={props.groupsEnabled} blocks={props.blocks} selected={props.selected} actions={props.actions}/>
   </section>;
 }

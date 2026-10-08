@@ -11,7 +11,8 @@ import { captureApiMutationAuthority } from './api-mutation-authority.js';
 
 const contentCacheLimit = 16 * 1024 * 1024;
 const writerQueues = new Map<string, Promise<unknown>>();
-const activeWriter = new AsyncLocalStorage<string>();
+type WriterLease = { root: string; active: boolean };
+const activeWriter = new AsyncLocalStorage<WriterLease>();
 
 export async function atomicJson(file: string, value: unknown, mode = 0o644, spacing = 2,
   onSerialized?: (content: string) => void): Promise<void> {
@@ -67,11 +68,21 @@ export class StorageFiles {
 
   constructor(readonly root: string, private readonly locks: DocumentLocks) {}
 
+  /** Background subscribers must queue their writes instead of inheriting the publishing transaction. */
+  outsideWriter<T>(action: () => T): T { return activeWriter.exit(action); }
+
   serialize<T>(action: () => Promise<T>): Promise<T> {
     const root = path.resolve(this.root);
-    if (activeWriter.getStore() === root) return action();
+    const lease = activeWriter.getStore();
+    if (lease?.root === root && lease.active) return action();
     const authorize = captureApiMutationAuthority();
-    const invoke = () => activeWriter.run(root, async () => { await authorize?.(); return action(); });
+    const invoke = () => {
+      const current = { root, active: true };
+      return activeWriter.run(current, async () => {
+        try { await authorize?.(); return await action(); }
+        finally { current.active = false; }
+      });
+    };
     const next = (writerQueues.get(root) ?? Promise.resolve()).then(invoke, invoke);
     writerQueues.set(root, next.then(() => undefined, () => undefined));
     return next;

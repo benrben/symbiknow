@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { readFile } from 'node:fs/promises';
 import { type JevWorkspaceState } from '../../shared/jev-types.js';
 import { ApiError } from '../errors.js';
@@ -71,6 +72,10 @@ function decodePacket(content: string): JevReadPacket {
   return checkedPacket(encoded);
 }
 const workspaceQueues = new Map<string, Promise<unknown>>();
+const activeWorkspace = new AsyncLocalStorage<{ key: string; active: boolean }>();
+
+/** Saved-source subscribers must not inherit the publishing workspace transaction. */
+export function outsideJevWorkspace<T>(operation: () => T): T { return activeWorkspace.exit(operation); }
 const readPackets = new WorkspacePacketCache<JevReadPacket>();
 const workspaceDecoders = new WorkspaceDecodeCache();
 
@@ -135,27 +140,35 @@ export class JevWorkspaceFiles {
     const checkpoint = !this.options.journalWrites ? encodeJevWorkspace(state) : undefined;
     const { file, content, journal } = await this.contents(workspaceId);
     if (this.options.journalWrites && content) {
-      const recovered = this.recovered(file, content, journal);
-      if (state.revision !== recovered.state.revision + 1)
-        throw new ApiError(409, 'The workspace checkpoint changed during completion');
-      const entry = journalRecord(recovered.baseHash, recovered.lastHash, recovered.state, state);
-      await appendJournal(this.journalFile(workspaceId), entry, recovered.validBytes, journal.length);
-      this.options.onStorageWrite?.('journal', Buffer.byteLength(JSON.stringify(entry)) + 1);
-      const compactBytes = this.options.journalCompactBytes ?? 96 * 1024;
-      const compactRecords = this.options.journalCompactRecords ?? 32;
-      if (recovered.validBytes + Buffer.byteLength(JSON.stringify(entry)) + 1 >= compactBytes
-        || recovered.records + 1 >= compactRecords) {
-        await atomicJson(file, encodeJevWorkspace(state), 0o600, 0,
-          content => this.options.onStorageWrite?.('checkpoint', Buffer.byteLength(content)));
-        await removeJournal(this.journalFile(workspaceId));
-      }
+      await this.writeJournal(workspaceId, state, { file, content, journal });
     } else {
-      await atomicJson(file, checkpoint ?? encodeJevWorkspace(state), 0o600, 0,
-        content => this.options.onStorageWrite?.('checkpoint', Buffer.byteLength(content)));
+      await this.writeCheckpoint(file, state, checkpoint);
       if (journal.length) await removeJournal(this.journalFile(workspaceId));
     }
     // Build the independent checked projection only when a reader requests this durable revision.
     readPackets.forget(file);
+  }
+
+  private async writeCheckpoint(file: string, state: JevWorkspaceState, checkpoint?: ReturnType<typeof encodeJevWorkspace>): Promise<void> {
+    await atomicJson(file, checkpoint ?? encodeJevWorkspace(state), 0o600, 0,
+      content => this.options.onStorageWrite?.('checkpoint', Buffer.byteLength(content)));
+  }
+
+  private async writeJournal(workspaceId: string, state: JevWorkspaceState,
+    stored: { file: string; content: Buffer; journal: Buffer }): Promise<void> {
+    const recovered = this.recovered(stored.file, stored.content, stored.journal);
+    if (state.revision !== recovered.state.revision + 1)
+      throw new ApiError(409, 'The workspace checkpoint changed during completion');
+    const entry = journalRecord(recovered.baseHash, recovered.lastHash, recovered.state, state);
+    await appendJournal(this.journalFile(workspaceId), entry, recovered.validBytes, stored.journal.length);
+    this.options.onStorageWrite?.('journal', Buffer.byteLength(JSON.stringify(entry)) + 1);
+    const compactBytes = this.options.journalCompactBytes ?? 96 * 1024;
+    const compactRecords = this.options.journalCompactRecords ?? 32;
+    if (recovered.validBytes + Buffer.byteLength(JSON.stringify(entry)) + 1 >= compactBytes
+      || recovered.records + 1 >= compactRecords) {
+      await this.writeCheckpoint(stored.file, state);
+      await removeJournal(this.journalFile(workspaceId));
+    }
   }
 
   private async readPacket(workspaceId: string): Promise<JevReadPacket> {
@@ -173,8 +186,22 @@ export class JevWorkspaceFiles {
   async readProgress(workspaceId: string): Promise<JevWorkspaceState | undefined> { return (await this.readPacket(workspaceId)).progress; }
   async readQueued(workspaceId: string): Promise<StoredJevJob[]> { return (await this.readPacket(workspaceId)).queuedJobs; }
 
+  /** Explicit compound writes may safely join their already-held workspace queue. */
+  transaction<T>(workspaceId: string, operation: () => Promise<T>): Promise<T> {
+    const key = path.resolve(this.root) + ':' + workspaceId;
+    return this.serial(workspaceId, () => {
+      const current = { key, active: true };
+      return activeWorkspace.run(current, async () => {
+        try { return await operation(); }
+        finally { current.active = false; }
+      });
+    });
+  }
+
   serial<T>(workspaceId: string, operation: () => Promise<T>): Promise<T> {
     const key = path.resolve(this.root) + ':' + workspaceId;
+    const lease = activeWorkspace.getStore();
+    if (lease?.key === key && lease.active) return operation();
     const previous = workspaceQueues.get(key) ?? Promise.resolve();
     const next = previous.then(operation, operation);
     workspaceQueues.set(key, next.then(() => undefined, () => undefined));

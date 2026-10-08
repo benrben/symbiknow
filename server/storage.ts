@@ -22,6 +22,7 @@ import { initializeJevStamp } from './jev/stamps.js';
 import { storedBlock } from './storage-shapes.js';
 import { StorageJevExecutor } from './storage-jev-executor.js';
 import { groupLabels } from './jev/group-labels.js';
+import { outsideJevWorkspace } from './jev/workspace.js';
 
 export { ApiError, contentHash, validId };
 
@@ -60,10 +61,12 @@ export class CanvasStore {
   }
 
   private publishSaved(event: JevStoreEvent): void {
-    publishJevStore(this, event);
-    for (const listener of this.savedListeners) {
-      void listener(event).catch(error => console.error('Search index update failed; reconciliation will retry.', error));
-    }
+    this.files.outsideWriter(() => outsideJevWorkspace(() => {
+      publishJevStore(this, event);
+      for (const listener of this.savedListeners) {
+        void listener(event).catch(error => console.error('Search index update failed; reconciliation will retry.', error));
+      }
+    }));
   }
 
   async ensureJevStamps(canvasId: string): Promise<void> {
@@ -127,7 +130,8 @@ export class CanvasStore {
         await Promise.all([this.files.tasksFile(canvas.id), this.files.jevCacheFile(canvas.id), ...journals]
           .map(file => rm(file, { force: true })));
         this.files.forgetCanvasMemory(canvas);
-        publishJevStore(this, { workspaceId, canvasId: canvas.id, blockIds: canvas.blocks.map(block => block.id), kind: 'delete', actor: 'api' });
+        this.files.outsideWriter(() => outsideJevWorkspace(() => publishJevStore(this, { workspaceId, canvasId: canvas.id,
+          blockIds: canvas.blocks.map(block => block.id), kind: 'delete', actor: 'api' })));
       }
     });
   }
@@ -249,7 +253,8 @@ export class CanvasStore {
       await Promise.all([this.files.tasksFile(canvasId), this.files.jevCacheFile(canvasId), ...journals]
         .map(file => rm(file, { force: true })));
       this.files.forgetCanvasMemory(canvas);
-      publishJevStore(this, { workspaceId: workspace.id, canvasId, blockIds: canvas.blocks.map(block => block.id), kind: 'delete', actor: 'api' });
+      this.files.outsideWriter(() => outsideJevWorkspace(() => publishJevStore(this, { workspaceId: workspace.id, canvasId,
+        blockIds: canvas.blocks.map(block => block.id), kind: 'delete', actor: 'api' })));
     });
   }
 

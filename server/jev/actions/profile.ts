@@ -114,9 +114,13 @@ function hasSourceBackedAlternative(groups: ReturnType<typeof sharedGroupRefinem
 async function preferredGroupRefinement(context: JevEvaluationContext, request: JevActionRequest,
   document: JevInputDocument, selected: FilingGroup): Promise<JevEvaluation | undefined> {
   const currentGroup = normalizedGroup(document.block.group);
-  if (currentGroup && currentGroup !== selected.key) return undefined;
   const refined = await refineSelectedGroup(context, request, document, selected);
-  return currentGroup || refined.proposals.length ? refined : undefined;
+  if (!refined.proposals.length) return currentGroup === selected.key ? refined : undefined;
+  // A verified return to the current subject must also prevent the broad initial winner from applying.
+  refined.proposals = refined.proposals.filter(candidate => candidate.mutation.kind !== 'document'
+    || candidate.mutation.patch.group !== currentGroup);
+  if (!refined.proposals.length) refined.result.status = 'no_change';
+  return refined;
 }
 async function placeSelectedGroup(context: JevEvaluationContext, request: JevActionRequest,
   document: JevInputDocument, selected: { group: FilingGroup; confidence: number }, groups: FilingGroup[]): Promise<JevEvaluation> {

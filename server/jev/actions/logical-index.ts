@@ -115,7 +115,8 @@ function checkedProfileTopic(value: JevJson, document: JevInputDocument): FreshP
     ...(typeof value.definition === 'string' ? { definition: value.definition } : {}) };
 }
 function activeLabelDefinitionMatches(context: JevEvaluationContext, name: string, definition: JevJson | undefined): boolean {
-  const term = context.vocabulary.find(term => term.kind === 'label' && term.state === 'active' && term.name === name);
+  const term = context.vocabulary.find(term => term.kind === 'label' && term.state === 'active'
+    && term.name.toLocaleLowerCase() === name.toLocaleLowerCase());
   return !term || term.definition === definition;
 }
 function currentCalibratedIndex(index: JevValues | undefined, document: JevInputDocument): boolean {

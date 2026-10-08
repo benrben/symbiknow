@@ -58,6 +58,8 @@ flowchart LR
 | `file` | Organize into groups | Group membership, possibly a new group | Group meaning, exact membership passage, coherence for new groups; up to three rejected selections can add rounds |
 | `suggest_home_canvas` | Find a home canvas | Whether the document belongs on another canvas | Skips Jev when only one canvas is eligible; existing move and reference checks apply |
 
+Organization version 22 checks source-backed refinement even when an initial group winner differs from current managed membership. A fully checked decision to retain the current subject avoids another membership write. Failed refinement still requires the initial winner’s exact-passage purpose checks; manual assignments and group pins remain protected. Cached label definitions are checked without case sensitivity before reuse.
+
 **Roles:** overview, specification, decision, report, instructions, runbook, checklist, meeting_notes, reference, proposal, plan, policy, research, incident_report, postmortem, tutorial, faq, changelog (`server/jev/actions/role-catalog.ts`).
 
 **Removed actions** stay readable in history and can still be undone, but cannot be requested: vocab_lifecycle, score_quality, flag_conflict, recheck_links, attach_doc_to_task, assign_owner, recall, and older ones such as set_headline, digest, prioritize. Requests for them return `400`.

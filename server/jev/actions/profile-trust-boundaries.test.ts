@@ -109,6 +109,38 @@ it('rejudges a changed active definition and preserves its current scope in cand
   expect(result.result.documents).toMatchObject({ source: { options: [{ origin: 'validated_definition', definition: existing.definition }] } });
 });
 
+it('rejudges a changed label definition when its active vocabulary name differs only in case', async () => {
+  const f = fixture(new Set());
+  cachedTopic(f.index).definition = 'Readable sizes and spacing for screen interfaces';
+  f.context.vocabulary = [term('TYPOGRAPHY', 'Only typography used in printed catalogues')];
+  expect(freshProfileTopics(f.context, f.document)).toBeUndefined();
+  const result = await label(f.context, f.request);
+  expect(f.decider).toHaveBeenCalledOnce();
+  expect(f.decider.mock.calls[0][1]).toMatchObject({ labelCandidates: [{ name: 'TYPOGRAPHY', definition: f.context.vocabulary[0].definition }] });
+  expect(result.proposals).toEqual([]);
+});
+
+it('reuses an unchanged label definition when its active vocabulary name differs only in case', async () => {
+  const f = fixture(); const definition = 'Readable sizes and spacing for screen interfaces';
+  cachedTopic(f.index).definition = definition;
+  f.context.vocabulary = [term('TYPOGRAPHY', definition)];
+  const result = await label(f.context, f.request);
+  expect(f.decider).not.toHaveBeenCalled();
+  expect(result.proposals[0]).toMatchObject({ mutation: { kind: 'document', patch: { tags: ['Typography'] } }, evidence: [f.evidence] });
+});
+
+it.each([false, true])('checks the current definition before reusing a case-variant negative label decision (changed=%s)', async changed => {
+  const f = fixture(); const oldDefinition = 'Readable sizes and spacing for screen interfaces';
+  f.document.block.tags = ['Typography', 'Owner tag']; f.index.topics = [];
+  f.index.decisions = [{ name: 'Typography', confidence: .1, definition: oldDefinition }];
+  f.context.vocabulary = [term('TYPOGRAPHY', changed ? 'Only typography used in printed catalogues' : oldDefinition)];
+  expect(freshProfileLabelRejections(f.context, f.document)).toEqual(changed ? [] : [{ name: 'Typography', confidence: .9 }]);
+  const result = await label(f.context, f.request);
+  expect(f.decider).not.toHaveBeenCalled();
+  if (changed) expect(result.proposals).toEqual([]);
+  else expect(result.proposals[0].mutation).toMatchObject({ kind: 'document', patch: { tags: ['Owner tag'] } });
+});
+
 it('removes duplicate cached negatives once while preserving owner tags without querying a provider', async () => {
   const f = fixture(); f.document.block.tags = ['Old subject', 'Owner tag']; f.index.topics = [];
   f.index.decisions = [{ name: 'Old subject', confidence: .1 }, { name: 'Old subject', confidence: .2 }];

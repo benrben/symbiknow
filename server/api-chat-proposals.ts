@@ -1,6 +1,6 @@
 import { jevApiPrincipal } from './jev-api-principal.js';
 import { requireApprove, requireCanvas, requireTool } from './jev/authorization.js';
-import { applyFileProposal, fileProposalCanvas, getFileProposal, undoFileProposal } from './file-branch-proposals.js';
+import { applyFileProposal, fileProposalCanvas, getFileProposal, undoFileProposal, withFileProposalWrite } from './file-branch-proposals.js';
 import { ApiError } from './errors.js';
 import { ChatProposalConflict } from './chat-proposals.js';
 import type { RouteContext } from './api-context.js';
@@ -38,13 +38,15 @@ export const chatProposalEndpoints: Endpoint[] = [
   { method: 'POST', path: /^\/api\/chat\/proposals\/([^/]+)\/apply$/, handle: async (context, match) => {
     const body = await readBody(context.request);
     const ids = selectedChanges(body.changeIds);
-    await proposalResponse(context, () => context.store.jevExecutor.serialized(async () => {
+    await chatProposalAccess(context, match[1], 'apply');
+    await proposalResponse(context, () => withFileProposalWrite(context.store, match[1], async () => {
       const actor = await chatProposalAccess(context, match[1], 'apply');
       return applyFileProposal(context.store, match[1], ids, actor);
     }));
   } },
   { method: 'POST', path: /^\/api\/chat\/proposals\/([^/]+)\/undo$/, handle: async (context, match) => {
-    await proposalResponse(context, () => context.store.jevExecutor.serialized(async () => {
+    await chatProposalAccess(context, match[1], 'undo');
+    await proposalResponse(context, () => withFileProposalWrite(context.store, match[1], async () => {
       const actor = await chatProposalAccess(context, match[1], 'undo');
       return undoFileProposal(context.store, match[1], actor);
     }));

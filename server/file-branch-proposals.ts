@@ -11,6 +11,7 @@ import { applyChatProposal, getChatProposal, undoChatProposal } from './chat-pro
 import { ApiError } from './errors.js';
 import { atomicJson } from './storage-files.js';
 import { CanvasStore, contentHash } from './storage.js';
+import { JevWorkspaceFiles } from './jev/workspace.js';
 import { recordWebsiteReceipt, websiteRevision } from './website-package-history.js';
 import { exportWebsite, packageHash, replaceWebsite, type WebsitePackage } from './website-working-copy.js';
 
@@ -88,6 +89,12 @@ export async function fileProposalCanvas(store: CanvasStore, id: string): Promis
   if (proposal) return proposal.canvasId;
   const state = readState(store, id);
   return state.kind === 'pending' ? state.proposal.canvasId : state.canvasId;
+}
+/** Proposal guards and writes share the workspace-first order used by causal Undo and reconciliation. */
+export async function withFileProposalWrite<T>(store: CanvasStore, id: string, work: () => Promise<T>): Promise<T> {
+  const canvasId = await fileProposalCanvas(store, id);
+  const canvas = await store.getCanvasSummary(canvasId);
+  return new JevWorkspaceFiles(store.root).transaction(canvas.workspaceId, () => store.jevExecutor.serialized(work));
 }
 function guardProposalCurrent(proposal: BranchProposal, current: BranchSource, action: 'apply' | 'undo'): void {
   const expected = action === 'apply' ? proposal.checkout.baseRevision : proposal.receipt!.revision;
@@ -168,7 +175,7 @@ async function finalizeBranchProposal(store: CanvasStore, proposal: BranchPropos
 }
 
 export async function applyFileProposal(store: CanvasStore, id: string, changeIds?: string[], actor = 'file-reviewer'): Promise<unknown> {
-  return store.jevExecutor.serialized(async () => {
+  return withFileProposalWrite(store, id, async () => {
     const proposal = await branchProposal(store, id);
     if (!proposal) return applyChatProposal(store, id, changeIds, actor);
     if (changeIds && (changeIds.length !== 1 || changeIds[0] !== proposal.before.id)) throw new ApiError(400, 'Select the file proposal document');
@@ -177,7 +184,7 @@ export async function applyFileProposal(store: CanvasStore, id: string, changeId
   });
 }
 export async function undoFileProposal(store: CanvasStore, id: string, actor = 'file-reviewer'): Promise<unknown> {
-  return store.jevExecutor.serialized(async () => {
+  return withFileProposalWrite(store, id, async () => {
     const proposal = await branchProposal(store, id);
     if (!proposal) return undoChatProposal(store, id, actor);
     if (proposal.status === 'reverted') return publicProposal(proposal);

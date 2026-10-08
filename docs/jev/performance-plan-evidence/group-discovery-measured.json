@@ -2086,6 +2086,13 @@
       "certification": "Final coupled hierarchy/scope code: native writes and reloads succeed with no failed jobs. Both runs retain eight documents in Engineering, with different UI/Canvas placements. Group discovery remains uncertified."
     }
   ],
-  "latestOrganizationVersion": "automatic-knowledge-21",
-  "heldoutScope": "The approved filing heldout repeats measure supplied-group placement (12/12 twice) and off-topic existing-group rejection (zero errors in four cases twice). They do not measure sequential discovery; the final Atlas discovery runs still retain 8/20 documents in Engineering and remain uncertified."
+  "latestOrganizationVersion": "automatic-knowledge-22",
+  "heldoutScope": "The approved filing heldout repeats measure supplied-group placement (12/12 twice) and off-topic existing-group rejection (zero errors in four cases twice). They do not measure sequential discovery; the final Atlas discovery runs still retain 8/20 documents in Engineering and remain uncertified.",
+  "latestMeasuredOrganizationVersion": "automatic-knowledge-21",
+  "currentChange": {
+    "date": "2026-10-08",
+    "scope": "A managed document now considers source-backed refinement even when the initial winning group differs from current membership. Successful checked retention avoids repeated membership writes; failed refinement preserves the selected-group exact-evidence fallback. Manual and pinned ownership remains protected.",
+    "evidence": "server/jev/actions/managed-filing-retention.native.test.ts",
+    "limit": "Nine independent native regressions pass; this does not establish a new sequential discovery score or explain the historical eight Engineering retentions."
+  }
 }

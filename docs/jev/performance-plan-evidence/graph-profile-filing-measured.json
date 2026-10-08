@@ -590,7 +590,7 @@
       "certification": "Latest frozen Atlas repeat: 16/19 with zero wrong moves; accuracy target remains unmet."
     }
   ],
-  "latestOrganizationVersion": "automatic-knowledge-21",
+  "latestOrganizationVersion": "automatic-knowledge-22",
   "heldoutAttempts": [
     {
       "action": "home-production",
@@ -746,5 +746,96 @@
       },
       "scope": "Supplied-group placement and off-topic existing-group rejection; not sequential group discovery"
     }
-  ]
+  ],
+  "experiments": [
+    {
+      "date": "2026-10-08",
+      "strategy": "Select the supplied group, then batch its exact evidence choice and every local purpose/containment judgment in one proof request; preserve selected-passage decisions and budget fallback.",
+      "adopted": false,
+      "reason": "The synthetic repeats remained 12/12 with zero off-topic existing-group errors, but the completed frozen Atlas run regressed from the historical 19/19 to 18/19. Retain the original separate evidence and selected-passage semantic rounds; no cutoffs or question wording were tuned.",
+      "runs": [
+        {
+          "report": "scripts/jev-bench/out/file-proof-batch-20261008-r2.json",
+          "sha256": "b42b03c5d799af27f40860fc6462e580fdc230e1d480fe8da784960aa4cffbee",
+          "summary": {
+            "action": "file",
+            "run": "proof-batch-20261008-r2",
+            "right": "18/19",
+            "failed": [
+              {
+                "variant": "shipped-production",
+                "doc": "mcp-and-api",
+                "ok": [
+                  "custom:security",
+                  "custom:search"
+                ],
+                "filed": "custom:mcp_and_api",
+                "good": false,
+                "proposals": 2
+              }
+            ],
+            "usage": {
+              "calls": 44,
+              "input": 192989
+            }
+          }
+        },
+        {
+          "report": "scripts/jev-bench/out/filing-heldout-proof-batch-20261008-r1.json",
+          "sha256": "991c5b6e024262d33914c609bf2b3fc46e1727042eeb19949218b27e6f8577c7",
+          "summary": {
+            "variant": "shipped file()",
+            "model": "jev-1.13.0",
+            "run": "proof-batch-20261008-r1",
+            "fixtureSha256": "f86ec62a4c345468414a1d60ed101c4e5cfcb7d66786768ed399e86d110f53ef",
+            "placements": "12/12",
+            "offTopicExistingGroupErrors": "0/4",
+            "bootstrapCases": [
+              "unrelated-train-trip",
+              "unrelated-film-club",
+              "unrelated-word-puzzles",
+              "unrelated-family-album"
+            ],
+            "documentMutationsDuringEvaluation": [],
+            "failed": [],
+            "usage": {
+              "calls": 32,
+              "input": 53548
+            }
+          }
+        },
+        {
+          "report": "scripts/jev-bench/out/filing-heldout-proof-batch-20261008-r2.json",
+          "sha256": "9118b7bacce286b5167becca1c003b30a76629a34a8a75b6f396172b894e4f74",
+          "summary": {
+            "variant": "shipped file()",
+            "model": "jev-1.13.0",
+            "run": "proof-batch-20261008-r2",
+            "fixtureSha256": "f86ec62a4c345468414a1d60ed101c4e5cfcb7d66786768ed399e86d110f53ef",
+            "placements": "12/12",
+            "offTopicExistingGroupErrors": "0/4",
+            "bootstrapCases": [
+              "unrelated-train-trip",
+              "unrelated-film-club",
+              "unrelated-word-puzzles",
+              "unrelated-family-album"
+            ],
+            "documentMutationsDuringEvaluation": [],
+            "failed": [],
+            "usage": {
+              "calls": 32,
+              "input": 53548
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "latestMeasuredOrganizationVersion": "automatic-knowledge-21",
+  "currentChanges": {
+    "date": "2026-10-08",
+    "organizationVersion": "automatic-knowledge-22",
+    "scope": "Independent local regressions fix case-insensitive label-definition cache validation and refinement of managed membership when the initial winning group differs; fully checked retention suppresses repeated same-membership writes.",
+    "benchmarkLimit": "No new production score is established for these two fixes. The reduced-call experiment was rejected and is not shipped."
+  }
 }

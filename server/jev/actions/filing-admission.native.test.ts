@@ -58,7 +58,8 @@ it.each([
   expect(member).toMatchObject({ mutation: { patch: { group: f.key } }, sources: [f.member.snapshot],
     evidence: [filingPassages(f.member)[1]] });
   const comparison = f.calls.find(call => call.state.baselineGroup)!;
-  expect(comparison.state).toMatchObject({ baselineGroup: 'custom:engineering', currentGroup: 'custom:engineering' });
+  expect(comparison.state).toMatchObject({ baselineGroup: trigger === 'rejected root' ? 'custom:transport' : 'custom:engineering',
+    currentGroup: 'custom:engineering' });
   expect((comparison.state.groups as Array<{ key: string }>).some(group => group.key === f.key)).toBe(true);
   const definition = result.proposals.find(proposal => proposal.mutation.kind === 'vocabulary')!;
   expect(new Set(definition.evidence.map(passage => passage.source.blockId))).toEqual(new Set(['implementation', 'reference']));

@@ -2,7 +2,7 @@
 
 All JSON endpoints use `/api` and return `{ error: string }` on failure. Request bodies must be sent as `application/json` (other types get `415`), and writes from a sandboxed document (`Origin: null`) get `403`. When `SYMBIKNOW_ACCESS_TOKEN` or the legacy `ALLTEAM_ACCESS_TOKEN` is set, every route except `/session` needs the session cookie or `Authorization: Bearer <access token>` (`401` otherwise). If both variables are set, either token is accepted and existing cookies stay valid while their token remains configured.
 
-Send `x-symbiknow-actor: <name>` to name the author of document revisions and locks. The browser sends `Browser`; MCP agents send their client name plus token name. The legacy `x-allteam-actor` header, `allteam_session` cookie, and `ALLTEAM_*` environment aliases remain supported for existing integrations. New browser sessions use `symbiknow_session`.
+Send `x-symbiknow-actor: <name>` to name the author of document revisions and locks. The browser sends `Browser`; MCP agents use their authenticated caller ID for shared writes and locks; client display names remain separate. The legacy `x-allteam-actor` header, `allteam_session` cookie, and `ALLTEAM_*` environment aliases remain supported for existing integrations. New browser sessions use `symbiknow_session`.
 
 | Method | Path | Input | Output |
 | --- | --- | --- | --- |
@@ -14,6 +14,9 @@ Send `x-symbiknow-actor: <name>` to name the author of document revisions and lo
 | DELETE | `/canvases/:canvasId` | — | `{ ok: true }`; permanently removes the canvas, its documents, cache, and document histories |
 | PUT | `/canvases/:canvasId/layout` | `{ positions: { blockId, x, y, group?: string \| null }[] }` | `CanvasDocument` |
 | POST | `/workspaces/:workspaceId/canvases` | `{ name }` | `CanvasDocument` |
+| GET | `/canvases/:canvasId/todos` | — | `CanvasTask[]`, including archived (`done`) tasks |
+| POST | `/canvases/:canvasId/todos` | `{ title, detail?, priority?, size?, dueDate?, assignee?, status? }` | Saved `CanvasTask` (201) |
+| PUT | `/canvases/:canvasId/todos/:taskId` | Partial task fields plus required `expectedRevision` | Saved `CanvasTask`; 409 if another writer changed it |
 | POST | `/canvases/:canvasId/blocks` | `{ title, kind?, content?, x?, y? }` | `CanvasBlock` |
 | PUT | `/canvases/:canvasId/blocks/:blockId` | Partial `CanvasBlock`, plus optional `expectedContentHash` (`409` if the file changed), `expectedDocumentState` (review token), `expectedSavedCrossLinks` (saved-reference review), and `message` (revision message) | `CanvasBlock`; `423` if another actor holds the lock and the change touches content, title, or loader |
 | POST | `/canvases/:canvasId/blocks/:blockId/move` | `{ targetCanvasId }` | Moves within the workspace and preserves typed references |
@@ -40,6 +43,8 @@ Send `x-symbiknow-actor: <name>` to name the author of document revisions and lo
 | POST | `/chat/proposals/:proposalId/apply` | `{ changeIds?: string[] }` | Applies selected changes, or `409` with conflicts if sources changed |
 | POST | `/chat/proposals/:proposalId/undo` | `{}` | Undoes applied changes, or `409` when later edits prevent a safe undo |
 | POST | `/chat/stream` | `{ canvasId, messages: OpenAI chat messages[], viewContext?: ChatViewContext, previewMerge? }` | OpenAI Chat Completions SSE stream of live tokens, plus `agent_step`, `answer_reset`, `answer_canvas`, `research_canvas_patch`, `canvas_navigation`, and `error` events; validation errors are JSON |
+
+Task status `done` automatically moves work to Archive; `todo` reopens it. Priorities, effort sizes, revision rules, and MCP tools are documented in the [canvas task guide](docs/todos.md).
 
 ## Session research canvas events
 
@@ -76,7 +81,7 @@ Actions use the six names in [`shared/jev-types.ts`](shared/jev-types.ts). All r
 
 Automatic saves check exact source evidence, current revisions, ownership, and permissions. Manual classifications and assignments are preserved, unsupported changes are skipped with a recorded reason, and missing credentials leave ordinary work available. Duplicate assessments are persisted findings; they never rewrite or merge source content. Label candidates come from existing tags or active definitions, with bounded source headings and shared categories as a fallback; label evaluation does not maintain vocabulary. Historical conflict, quality, task, responsibility, and recall results remain readable and undoable.
 
-Scoped MCP bearer tokens can access these endpoints within their canvas and tool grants. The `/agent` variant is used by MCP adapters and always retains agent approval restrictions. Read tokens receive only the requested tool projection through `?view=jev_activity|jev_job|jev_profile|find_by|related|memory_map|brain_inbox`; `jobId`, `blockId`, and `query` select within that projection. Actor headers name contributions and never grant reviewer authority. Internal MCP calls carry a signed principal proof and recheck current grants. Agents cannot approve their own proposals.
+Scoped MCP bearer tokens can access these endpoints within their canvas and tool grants. The `/agent` variant is used by MCP adapters and checks current explicit approval and configuration grants. Read tokens receive only the requested tool projection through `?view=jev_activity|jev_job|jev_profile|find_by|related|memory_map|brain_inbox`; `jobId`, `blockId`, and `query` select within that projection. Actor headers name contributions and never grant reviewer authority. Internal MCP calls carry a signed principal proof and recheck current grants. Approval requires an explicit `canApprove` grant; Symbi has this grant as the full-access application assistant.
 
 ## Document storage and the independent Jev SDK
 
@@ -90,8 +95,41 @@ Agent Undo uses the opaque token returned by `shared/document-state.ts`'s `docum
 
 `expectedSavedCrossLinks` is the JSON string of the reviewed document's original outgoing cross-canvas links (`JSON.stringify(snapshot.crossLinks ?? [])`). Both writes compare it with the saved links before changing files or history, including links hidden from the current view because their targets are archived or temporarily missing. A mismatch returns `409` and preserves those references for review.
 
-`CanvasBlock` retains saved groups, purpose/work-area/reviewer labels, tags, typed links, `contentHash`, and active locks, together with server-owned incarnation, generation, metadata revision, and metadata ownership. Manual metadata and layout updates continue through the ordinary document and layout routes. Chat uses the provider and enabled tool packs selected in Settings. Document edits, moves, and links prepare proposals for explicit review and Apply; no normal chat delete tool is exposed. Symbi Reflex decisions are advisory unless the checked execution policy permits the requested change.
+`CanvasBlock` retains saved groups, purpose/work-area/reviewer labels, tags, typed links, `contentHash`, and active locks, together with server-owned incarnation, generation, metadata revision, and metadata ownership. Manual metadata and layout updates continue through the ordinary document and layout routes. Chat uses the selected model provider and the canonical MCP catalog under Symbi’s full-access identity. Symbi edits downloaded working files and commits them through `upload_file`; proposal mode is available for callers with proposal access. Document deletion, layout, and link operations use their canonical permissioned MCP tools. Symbi Reflex decisions are advisory unless the checked execution policy permits the requested change.
 
 ## MCP over HTTP
 
-`/mcp` (outside `/api`) is a Streamable HTTP MCP endpoint with sessions. Authenticate with `Authorization: Bearer <MCP token>` or use `/mcp/t/<token>` for clients that cannot send headers. Tokens come from `POST /api/mcp/tokens`, `SYMBIKNOW_MCP_TOKEN`, or either configured access token. The older `ALLTEAM_MCP_TOKEN` remains accepted. The tools match the stdio server except that `upload_file` and `download_file` take and return complete content only, never server file paths.
+`/mcp` (outside `/api`) is a Streamable HTTP MCP endpoint with sessions. Authenticate with `Authorization: Bearer <MCP token>` or use `/mcp/t/<token>` for clients that cannot send headers. Tokens come from `POST /api/mcp/tokens`, `SYMBIKNOW_MCP_TOKEN`, or either configured access token. The older `ALLTEAM_MCP_TOKEN` remains accepted. HTTP and stdio share one canonical catalog and execution contract. HTTP file transfers carry bytes and manifests; each client materializes files in its own environment. Stdio additionally accepts paths in the environment hosting the MCP process. Discovery and execution recheck current token grants.
+
+
+## MCP working-copy file contract
+
+MCP is the shared-document access and commit boundary for Symbi and external agents. Search/read tools remain available. Content changes use **download → local edit → upload → verify**. Settings exposes `mcpToolCatalog` from the canonical registrations rather than a separate tool list.
+
+| Operation | Input | Result |
+| --- | --- | --- |
+| `download_file` | `canvasId`, `blockId`, optional `branch`; stdio also accepts `destinationPath`, `overwrite` | Exact source, format-aware filename, authoritative working-copy manifest |
+| `upload_file` create | `mode: "create"`, `canvasId`, `filename`, complete `content`, `idempotencyKey`; optional `kind`, title, and placement | New document and durable revision receipt |
+| `upload_file` replace | `mode: "replace"`, `canvasId`, `checkoutId`, `filename`, edited `content`, `idempotencyKey` | Commit to the checked-out document and branch after version/lock validation |
+| `upload_file` propose | Same checkout inputs with `mode: "propose"` | Durable file proposal while saved source remains unchanged |
+| File review | `read_file_proposal`, `apply_file_proposal`, `undo_file_proposal` with `canvasId` and `proposalId` | Checked proposal lifecycle; apply/undo require explicit approval authority |
+
+Stdio upload can use `sourcePath` instead of content. Symbi accepts an edited `sourcePath` in its conversation workspace; its client adapter reads the file and uses the adjacent `.symbi.json` manifest. External HTTP clients perform the same local-file conversion in their own environment.
+
+The manifest contains `checkoutId`, `callerId`, `workspaceId`, `canvasId`, `documentId`, `incarnation`, `branch`, `filename`, `title`, `kind`, `storageKind`, `baseContentHash`, `baseRevision`, and creation time. Website checkouts also bind the package hash. The server keeps the authoritative checkout record; editing a sidecar does not grant access or change the base version.
+
+Uploads return `operationId`, `mode`, `canvasId`, `blockId`, `branch`, `contentHash`, `revision`, `kind`, `filename`, `title`, `savedAt`, and optional `proposalId`. Identical retries return the original receipt. Changed payloads under the same key fail. Stale document or website asset versions fail with `409`; preserve the local edits and merge against a new download before retrying.
+
+| API endpoint | Purpose |
+| --- | --- |
+| `GET /api/mcp/caller` | Resolve the caller's authenticated identity and current permissions for a stdio host |
+| `POST /api/mcp/calls` | Record sanitized tool outcome, source IDs, and revision under the authenticated caller |
+| `POST /api/file-checkouts` | Authorize and issue a versioned working copy |
+| `POST /api/file-uploads` | Commit or propose uploaded file bytes |
+| `GET /api/file-proposals/:id?canvasId=` | Read an uploaded proposal or receipt |
+| `POST /api/file-proposals/:id/apply` | Apply a proposal after checked version validation |
+| `POST /api/file-proposals/:id/undo` | Undo an applied proposal when the saved result remains current |
+
+Symbi has unrestricted write, approval, and configuration permissions. External tokens use `access`, optional `allowedCanvasIds` and `tools`, and explicit write-level `canApprove`/`canConfigure` grants. Full permissions retain concurrency protection. Jev search and evidence tools (`ask_symbi`, `symbi_reflex`, `find_by`, `related`) and Reflex action/job tools belong to the canonical catalog.
+
+Agent API requests must match the canonical tool's registered method, route, and argument contract. Scope checks apply to source and target canvases. Raw document create/edit/import API routes remain available to the workspace owner; agents commit source through the file upload contract. Storage operations recheck token authority and cancellation after waiting for serialization.

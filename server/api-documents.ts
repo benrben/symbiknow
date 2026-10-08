@@ -1,3 +1,5 @@
+import { jevApiPrincipal } from './jev-api-principal.js';
+import { requireCanvas, requireTool, requireWrite } from './jev/authorization.js';
 import path from 'node:path';
 import { ApiError } from './errors.js';
 import { siteResponse } from './website.js';
@@ -6,6 +8,8 @@ import { sendJson, readBody } from './api-http.js';
 import { runEndpoints, type Endpoint } from './api-router.js';
 import { readDeletionPreconditions } from './api-document-preconditions.js';
 import { canvasLabelRevision, canvasReadScope, projectCanvasLabels } from './jev-canvas-projection.js';
+import { canvasJevStatusRevision, withCanvasJevStatus } from './jev-canvas-status.js';
+import { changeWebsiteVersion } from './website-package-history.js';
 
 type Page = { limit: number; offset: number };
 
@@ -63,9 +67,9 @@ export async function canvasDocument(context: RouteContext): Promise<boolean> {
   const allowedCanvasIds = await canvasReadScope(context, match[1]);
   const summary = await projectCanvasLabels(context, await context.store.getCanvasSummary(match[1]), allowedCanvasIds);
   if (sendCanvasSummary(context, summary, page)) return true;
-  const etag = canvasLabelRevision(await context.store.getCanvasRevision(match[1]), summary.groupLabels);
+  const etag = canvasJevStatusRevision(canvasLabelRevision(await context.store.getCanvasRevision(match[1]), summary.groupLabels), summary);
   if (notModified(context, etag, page)) return true;
-  const canvas = pageCanvas({ ...await context.store.getCanvas(match[1], false, false), groupLabels: summary.groupLabels }, page);
+  const canvas = pageCanvas(withCanvasJevStatus(await context.store.getCanvas(match[1], false, false), summary), page);
   context.response.writeHead(200, { 'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store', etag });
   context.response.end(JSON.stringify(canvas));
@@ -159,6 +163,7 @@ export async function blockDocument(context: RouteContext): Promise<boolean> {
 }
 
 async function readBlockDocument(context: RouteContext, canvasId: string, blockId: string): Promise<void> {
+  await canvasReadScope(context, canvasId);
   const branch = context.url.searchParams.get('branch');
   sendJson(context.response, 200, branch
     ? await context.store.readDocumentBranch(canvasId, blockId, branch)
@@ -231,6 +236,24 @@ function requiredString(body: Record<string, unknown>, field: string, message: s
   return value;
 }
 
+async function changeFileVersion(context: RouteContext, canvasId: string, blockId: string,
+  kind: 'switch' | 'merge' | 'restore', target: string) {
+  return context.store.jevExecutor.serialized(async () => {
+    const principal = await jevApiPrincipal(context.store, context.request, true);
+    requireCanvas(principal, canvasId);
+    requireWrite(principal);
+    requireTool(principal, [kind === 'restore' ? 'restore_revision' : kind + '_branch']);
+    const change = () => versionChange(context, canvasId, blockId, kind, target);
+    return changeWebsiteVersion(context.store, canvasId, blockId, kind, target, context.actor, change);
+  });
+}
+function versionChange(context: RouteContext, canvasId: string, blockId: string,
+  kind: 'switch' | 'merge' | 'restore', target: string) {
+  if (kind === 'switch') return context.store.switchDocumentBranch(canvasId, blockId, target, context.actor);
+  if (kind === 'merge') return context.store.mergeDocumentBranch(canvasId, blockId, target, context.actor);
+  return context.store.restoreDocumentRevision(canvasId, blockId, target, context.actor);
+}
+
 const versionEndpoints: Endpoint[] = [
   { method: 'GET', path: /^\/api\/canvases\/([^/]+)\/blocks\/([^/]+)\/versions$/, handle: async (context, match) => {
     const page = queryPage(context, 25, 'Invalid version pagination');
@@ -254,15 +277,18 @@ const versionEndpoints: Endpoint[] = [
   } },
   { method: 'POST', path: /^\/api\/canvases\/([^/]+)\/blocks\/([^/]+)\/versions\/switch$/, handle: async (context, match) => {
     const name = requiredString(await readBody(context.request), 'name', 'Branch name is required');
-    sendJson(context.response, 200, await context.store.switchDocumentBranch(match[1], match[2], name, context.actor));
+    const result = await changeFileVersion(context, match[1], match[2], 'switch', name);
+    sendJson(context.response, 200, result);
   } },
   { method: 'POST', path: /^\/api\/canvases\/([^/]+)\/blocks\/([^/]+)\/versions\/merge$/, handle: async (context, match) => {
     const name = requiredString(await readBody(context.request), 'name', 'Branch name is required');
-    sendJson(context.response, 200, await context.store.mergeDocumentBranch(match[1], match[2], name, context.actor));
+    const result = await changeFileVersion(context, match[1], match[2], 'merge', name);
+    sendJson(context.response, 200, result);
   } },
   { method: 'POST', path: /^\/api\/canvases\/([^/]+)\/blocks\/([^/]+)\/versions\/restore$/, handle: async (context, match) => {
     const revision = requiredString(await readBody(context.request), 'revision', 'Revision ID is required');
-    sendJson(context.response, 200, await context.store.restoreDocumentRevision(match[1], match[2], revision, context.actor));
+    const result = await changeFileVersion(context, match[1], match[2], 'restore', revision);
+    sendJson(context.response, 200, result);
   } },
 ];
 

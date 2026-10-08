@@ -215,13 +215,13 @@ describe('settings page request ownership and persisted forms', () => {
     fireEvent.change(screen.getByLabelText('Model'), { target: { value: ' custom-model ' } });
     fireEvent.change(screen.getByLabelText('System prompt'), { target: { value: 'Explain checked evidence.' } });
     const plugins = screen.getByRole('region', { name: 'Plugins & loaders' });
-    const read = within(plugins).getByRole('checkbox', { name: /Read documents/ }); fireEvent.click(read); fireEvent.click(read);
-    fireEvent.click(within(plugins).getByRole('checkbox', { name: /Edit documents/ }));
+    const read = within(plugins).getByRole('checkbox', { name: /Outside MCP servers/ }); fireEvent.click(read); fireEvent.click(read);
+    fireEvent.click(within(plugins).getByRole('checkbox', { name: /Outside MCP servers/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
     await waitFor(() => expect(current.onSave).toHaveBeenCalledOnce()); await current.onSave.mock.results[0].value;
     expect(await current.readback()).toMatchObject({ provider: 'custom', baseUrl: 'https://models.example.com/v1', model: 'custom-model',
       providerKeys: { custom: 'private-custom' }, systemPrompt: 'Explain checked evidence.' });
-    expect((await current.readback()).agentPlugins).not.toContain('document_write');
+    expect((await current.readback()).agentPlugins).toEqual([]);
   });
 
   it('keeps saved servers independently enabled, removes a server, and renders tool descriptions', async () => {

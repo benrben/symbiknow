@@ -87,7 +87,7 @@ describe('Deep Agent chat stream', () => {
     expect(patch?.edges).toHaveLength(2);
   });
 
-  it('answers a direct question in chat without offering the research drawing tool', async () => {
+  it('answers a direct question in chat while all canonical tools remain available', async () => {
     const store = await storeFixture();
     await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
     let offered: string[] = [];
@@ -98,7 +98,7 @@ describe('Deep Agent chat stream', () => {
     const session = await createChatStream(store, { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Which tests failed?' }] }, factory);
     const events = [];
     for await (const event of session.events!(new AbortController().signal)) events.push(event);
-    expect(offered).not.toContain('draw_research_canvas');
+    expect(offered).toContain('draw_research_canvas');
     expect(events.some(event => event.kind === 'answer_canvas' || event.kind === 'research_patch')).toBe(false);
     expect(events.some(event => event.kind === 'text' && event.content.includes('two mobile tests'))).toBe(true);
   });
@@ -113,7 +113,7 @@ describe('Deep Agent chat stream', () => {
     };
     const session = await createChatStream(store, { ...body, messages: [{ role: 'user', content: 'Create the approved draft and link it as a prerequisite.' }] }, factory);
     for await (const piece of session.tokens(new AbortController().signal)) { void piece; }
-    expect(offered).toContain('create_doc');
+    expect(offered).toContain('upload_file');
     expect(offered).toContain('link_blocks');
   });
 
@@ -124,9 +124,9 @@ describe('Deep Agent chat stream', () => {
     const factory: DeepAgentFactory = (_settings, tools, prompt) => async function* (messages) {
       expect(prompt).toContain('My unfinished checklist');
       expect(prompt).toContain('Propose changes in chat');
-      await expect(tools.find(item => item.name === 'edit_doc')!.invoke({
-        blockId: 'launch-checklist', content: '# Replaced',
-      })).rejects.toMatchObject({ status: 409 });
+      const downloaded = JSON.parse(String(await tools.find(item => item.name === 'download_file')!.invoke({ blockId: 'launch-checklist' })));
+      await expect(tools.find(item => item.name === 'upload_file')!.invoke({ sourcePath: downloaded.savedTo, mode: 'replace' }))
+        .rejects.toMatchObject({ status: 409 });
       yield { messages: [...messages, new AIMessage('Your draft needs a clearer first step.')] };
     };
     const session = await createChatStream(store, { ...body,
@@ -138,9 +138,9 @@ describe('Deep Agent chat stream', () => {
     expect((await store.getCanvas('product-roadmap')).blocks.find(block => block.id === 'launch-checklist')!.content).toBe(original);
   });
 
-  it('uses the selected agent profile and only the enabled plugin tools', async () => {
+  it('uses the selected agent profile with the full canonical Symbi tool catalog', async () => {
     const store = await storeFixture();
-    await store.updateSettings({ apiKey: 'private-key', model: 'vendor/model', agentProfile: 'research', agentPlugins: ['document_read'] });
+    await store.updateSettings({ apiKey: 'private-key', model: 'vendor/model', agentProfile: 'research', agentPlugins: ['external_mcp'] });
     let names: string[] = [];
     let prompt = '';
     const factory: DeepAgentFactory = (_settings, tools, systemPrompt) => {
@@ -152,8 +152,8 @@ describe('Deep Agent chat stream', () => {
     const chunks: string[] = [];
     for await (const chunk of session.tokens(new AbortController().signal)) chunks.push(chunk);
     expect(chunks.join('')).toBe('I found the document.');
-    expect(names).toEqual(['search_docs', 'read_doc', 'show_doc_on_canvas', 'show_group_on_canvas',
-      'jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox']);
+    expect(names).toEqual(expect.arrayContaining(['search_docs', 'read_doc', 'download_file', 'upload_file', 'ask_symbi', 'jev_do', 'jev_resolve']));
+    expect(names).not.toContain('edit_doc');
     expect(prompt).toContain('Investigate relevant documents');
   });
 

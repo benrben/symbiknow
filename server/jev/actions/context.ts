@@ -4,7 +4,7 @@ import type { JevActionRequest, JevEvaluation, JevJson, JevMutation, JevPassage,
 import { ApiError } from '../../errors.js';
 import { decideWithJev, type ChoiceAnswer, type ChoiceQuestion, type JevAnswer, type JevDecider, type JevQuestion,
   type NoulAnswer, type ScoreAnswer, type ScoreQuestion } from '../../jev.js';
-import { boundedPassages, passageCoverage, readablePassage, sourcePassages } from './source-passages.js';
+import { boundedPassages, readablePassage, sourcePassages } from './source-passages.js';
 import { questionRequestFits } from './question-request-budget.js';
 
 export interface JevInputDocument { canvasId: string; block: CanvasBlock; snapshot: JevSourceSnapshot }
@@ -39,7 +39,7 @@ export interface JevEvaluationContext {
 }
 export type JevEvaluator = (context: JevEvaluationContext, request: JevActionRequest) => Promise<JevEvaluation>;
 export type Candidate = { id: string; description: string };
-export const JEV_QUESTION_VERSION = 'symbi-reflex-10';
+export const JEV_QUESTION_VERSION = 'symbi-reflex-13';
 
 export function textOption(request: JevActionRequest, key: string): string {
   const value = request.options?.[key];
@@ -61,13 +61,7 @@ export function passages(document: JevInputDocument, limit = 8): JevPassage[] {
   return boundedPassages(sourcePassages(document.block.content), limit)
     .map(({ start, end, quote }) => ({ source: document.snapshot, start, end, quote }));
 }
-export function sourceState(document: JevInputDocument): JevValues {
-  const available = sourcePassages(document.block.content);
-  const windows = boundedPassages(available);
-  return { id: document.block.id, title: document.block.title, passages: windows.map((passage, index) => ({
-    id: `p${index}`, text: passage.text,
-  })), coverage: passageCoverage(available, windows) };
-}
+export { sourceState, outlineState } from './source-passages.js';
 export function candidates(options: Candidate[]): Record<string, string> {
   return Object.fromEntries([...options.slice(0, 24).map(option => [option.id, option.description]),
     ['none', 'No supplied option is sufficiently supported by the source evidence'],

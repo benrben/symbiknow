@@ -12,6 +12,9 @@ import { hasJevApiAccess } from './jev-api-principal.js';
 import { getJevRuntime } from './jev/runtime.js';
 import { requireReviewedAgentWrite } from './jev-agent-write-guard.js';
 import { lockRoutes } from './api-locks.js';
+import { todoRoutes } from './api-todos.js';
+import { fileCheckoutRoutes } from './api-file-checkouts.js';
+import { fileProposalRoutes } from './api-file-proposals.js';
 import { workspaceAndSettings, workspaceCanvas } from './api-workspaces.js';
 import { canvasDocument, canvasLink, canvasImports, versionRoutes, canvasBlockMove, canvasLayout, canvasBlocks, blockDocument, blockDownload, websiteAsset } from './api-documents.js';
 import type { DeepAgentFactory } from './chat-stream.js';
@@ -21,6 +24,9 @@ import { handleMcpHttp } from './mcp-http.js';
 import { ApiLifecycle } from './api-lifecycle.js';
 import { SymbiIndexLifecycle } from './symbi-index-lifecycle.js';
 import { symbiRoutes } from './api-symbi.js';
+import { mcpCallerRoute } from './api-mcp-caller.js';
+import { mcpBrowserRoute } from './api-mcp-browser.js';
+import { authorizeMcpApi, withinMcpApiAuthority } from './mcp-api-authorization.js';
 import { SymbiJudgmentCache } from './symbi-judgment-cache.js';
 
 async function appRoute(context: RouteContext): Promise<boolean> {
@@ -29,9 +35,9 @@ async function appRoute(context: RouteContext): Promise<boolean> {
   return true;
 }
 
-const routeHandlers = [jevRoutes, symbiRoutes, workspaceAndSettings, connectionRoutes, searchAndChat, streamingChat, investigationRoutes, workspaceCanvas, canvasDocument, versionRoutes,
+const routeHandlers = [mcpCallerRoute, mcpBrowserRoute, jevRoutes, symbiRoutes, workspaceAndSettings, connectionRoutes, searchAndChat, streamingChat, investigationRoutes, workspaceCanvas, canvasDocument, versionRoutes,
   canvasBlockMove, canvasLayout,
-  lockRoutes, canvasBlocks, canvasImports, canvasLink, blockDocument, blockDownload, websiteAsset];
+  lockRoutes, todoRoutes, fileCheckoutRoutes, fileProposalRoutes, canvasBlocks, canvasImports, canvasLink, blockDocument, blockDownload, websiteAsset];
 
 
 async function mcpRoute(context: RouteContext): Promise<boolean> {
@@ -58,11 +64,12 @@ async function protectedApiRoutes(context: RouteContext): Promise<boolean> {
 async function apiRoute(context: RouteContext): Promise<boolean> {
   requireSafeOrigin(context);
   if (await sessionRoutes(context)) return true;
+  const agentAuthorized = await authorizeMcpApi(context);
   const jevNamespace = /^\/api\/(?:workspaces|canvases)\/[^/]+\/jev(?:\/|$)/.test(context.route);
-  const authorized = jevNamespace ? await hasJevApiAccess(context.store, context.request) : hasApiAccess(context.request);
+  const authorized = agentAuthorized || (jevNamespace ? await hasJevApiAccess(context.store, context.request) : hasApiAccess(context.request));
   if (!authorized) throw new ApiError(401, 'Sign in with the workspace access token');
   await requireReviewedAgentWrite(context);
-  return protectedApiRoutes(context);
+  return withinMcpApiAuthority(context, () => protectedApiRoutes(context));
 }
 
 async function dispatch(context: RouteContext): Promise<void> {
@@ -82,7 +89,7 @@ function respondError(response: ServerResponse, error: unknown): void {
 export async function createApiServer(options: { dataDir: string; fetcher?: typeof fetch; agentFactory?: DeepAgentFactory }): Promise<Server> {
   const store = new CanvasStore(path.resolve(options.dataDir));
   await store.init();
-  const symbiIndex = await SymbiIndexLifecycle.open(store, process.env.SYMBI_MODEL_ROOT);
+  const symbiIndex = await SymbiIndexLifecycle.open(store, process.env.SYMBI_MODEL_ROOT ?? path.join(store.root, 'models'));
   const symbiJudgments = await SymbiJudgmentCache.open(store.root);
   const reflex = getJevRuntime(store, { fetcher: options.fetcher,
     retrieveNeighbors: (context, source) => symbiIndex.neighbors(context, source) });

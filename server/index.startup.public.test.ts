@@ -219,7 +219,7 @@ it('dispatches bearer and path-token MCP sessions over native IPv6 SDK connectio
   const root = await directory();
   const api = await listen(root, '::1');
   const store = new CanvasStore(root);
-  const { token } = await store.createMcpToken('Native IPv6 agent', 'write');
+  const { token, settings } = await store.createMcpToken('Native IPv6 agent', 'write');
   for (const pathToken of [false, true]) {
     const client = new Client({ name: 'Native startup SDK', version: '1.0.0' });
     const endpoint = api.base + (pathToken ? '/mcp/t/' + encodeURIComponent(token) : '/mcp');
@@ -228,18 +228,19 @@ it('dispatches bearer and path-token MCP sessions over native IPv6 SDK connectio
     });
     connections.push({ client, transport });
     await client.connect(transport);
-    expect((await client.listTools()).tools.map(tool => tool.name)).toContain('create_doc');
-    const created = await client.callTool({ name: 'create_doc', arguments: {
-      canvasId: 'product-roadmap', title: pathToken ? 'Path-token source' : 'Bearer-token source', content: '# Native startup SDK source',
+    expect((await client.listTools()).tools.map(tool => tool.name)).toContain('upload_file');
+    const created = await client.callTool({ name: 'upload_file', arguments: {
+      mode: 'create', canvasId: 'product-roadmap', filename: pathToken ? 'path-token.md' : 'bearer-token.md', idempotencyKey: pathToken ? 'path-source' : 'bearer-source', title: pathToken ? 'Path-token source' : 'Bearer-token source', content: '# Native startup SDK source',
     } });
     expect(created.isError).not.toBe(true);
     const content = created.content as Array<{ type: string; text?: string }>;
     if (typeof content[0]?.text !== 'string') throw new Error('Missing native MCP document result');
-    const document = JSON.parse(content[0].text) as CanvasBlock;
+    const receipt = JSON.parse(content[0].text) as { blockId: string };
+    const document = await store.getCanvasBlock('product-roadmap', receipt.blockId);
     expect(await readFile(path.join(root, document.file), 'utf8')).toBe('# Native startup SDK source');
     const fresh = new CanvasStore(root);
     expect((await fresh.getCanvas('product-roadmap')).blocks.find(block => block.id === document.id)?.content).toBe('# Native startup SDK source');
-    expect((await fresh.documentHistory('product-roadmap', document.id)).commits[0].author).toBe('Native startup SDK - Native IPv6 agent');
+    expect((await fresh.documentHistory('product-roadmap', document.id)).commits[0].author).toBe(settings.mcpTokens![0].id);
     const finished = new Promise<boolean>(resolve => api.server.once('request', (_incoming, response) => {
       response.once('close', () => resolve(response.writableFinished));
     }));
@@ -247,7 +248,7 @@ it('dispatches bearer and path-token MCP sessions over native IPv6 SDK connectio
     expect(rejected.isError).toBe(true);
     expect(await finished).toBe(true);
     await expect.poll(async () => (await new CanvasStore(root).mcpActivity()).entries.some(entry =>
-      entry.tool === 'unknown_startup_tool' && entry.outcome === 'error')).toBe(true);
+      entry.tool === 'unknown_startup_tool' && entry.outcome === 'denied')).toBe(true);
   }
 });
 

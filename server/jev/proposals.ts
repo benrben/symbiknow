@@ -49,11 +49,11 @@ function checkProposal(state: JevWorkspaceState, proposal: JevProposal, principa
 }
 function checkApprover(principal: JevPrincipal, automatic: boolean): void {
   if (automatic) return;
-  requireApprove(principal); requireTool(principal, ['jev_resolve', 'undo_jev', 'set_metadata']);
+  requireApprove(principal); requireTool(principal, ['jev_resolve', 'jev_undo', 'set_metadata']);
 }
 function checkSelfApproval(state: JevWorkspaceState, proposal: JevProposal, principal: JevPrincipal): void {
   const job = state.jobs.find(item => item.id === proposal.jobId) as { principal?: JevPrincipal } | undefined;
-  if (principal.kind === 'token' && job?.principal?.id === principal.id) throw new ApiError(403, 'An agent cannot approve its own proposal');
+  if (principal.kind === 'token' && job?.principal?.id === principal.id && !principal.canApprove) throw new ApiError(403, 'Approval permission is required');
 }
 function checkPlannedVocabulary(state: JevWorkspaceState, proposal: JevProposal, vocabulary?: JevVocabularyTerm[]): void {
   if (proposal.mutation.kind === 'vocabulary') checkVocabularyMutation(vocabulary ?? state.vocabulary, proposal.mutation);
@@ -165,7 +165,7 @@ export class JevProposalExecutor {
 
   async undoInside(workspaceId: string, receiptId: string, principal: JevPrincipal): Promise<JevReceipt> {
     principal = await currentPrincipal(this.store, principal);
-    requireApprove(principal); requireTool(principal, ['jev_resolve', 'undo_jev']);
+    requireApprove(principal); requireTool(principal, ['jev_resolve', 'jev_undo']);
     const state = await this.files.read(workspaceId);
     const receipt = state.receipts.find(item => item.id === receiptId) as StoredJevReceipt | undefined;
     if (!receipt) throw new ApiError(404, 'Receipt not found');

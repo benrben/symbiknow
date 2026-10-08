@@ -7,6 +7,7 @@ import { DocumentVersions } from './version-control.js';
 import { getSimilarityIndex, type SimilarityIndex } from './similarity.js';
 import { DocumentLocks } from './coordination.js';
 import { canvasData, contentHash, fileSignature, storedBlock, type StoredCanvas } from './storage-shapes.js';
+import { captureApiMutationAuthority } from './api-mutation-authority.js';
 
 const contentCacheLimit = 16 * 1024 * 1024;
 const writerQueues = new Map<string, Promise<unknown>>();
@@ -69,7 +70,8 @@ export class StorageFiles {
   serialize<T>(action: () => Promise<T>): Promise<T> {
     const root = path.resolve(this.root);
     if (activeWriter.getStore() === root) return action();
-    const invoke = () => activeWriter.run(root, action);
+    const authorize = captureApiMutationAuthority();
+    const invoke = () => activeWriter.run(root, async () => { await authorize?.(); return action(); });
     const next = (writerQueues.get(root) ?? Promise.resolve()).then(invoke, invoke);
     writerQueues.set(root, next.then(() => undefined, () => undefined));
     return next;

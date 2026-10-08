@@ -9,9 +9,11 @@ How agents connect, which tools they get, how tokens are scoped, and the HTTP AP
 | Streamable HTTP | `<PUBLIC_URL>/mcp` with `Authorization: Bearer <token>` | Recommended for Claude Code, Codex, Cursor, remote agents |
 | Token-in-path | `<PUBLIC_URL>/mcp/t/<token>` | For Claude.ai / Claude Desktop custom connectors that cannot send headers; treat the URL as a secret |
 | stdio | `npm run mcp` (`server/mcp.ts`) | Same machine only; reads `CANVAS_API_URL`; `upload_file`/`download_file` can use local paths |
-| WebMCP | Browser tab + `./node_modules/.bin/webmcp --mcp` | Drives the open page; token pasted into the canvas widget |
+| WebMCP | Browser tab + `./node_modules/.bin/webmcp --mcp` | Uses the browser owner's authenticated session through the canonical MCP bridge |
 
-Every MCP tool is a thin wrapper that calls the HTTP API (`server/mcp-api.ts` → `CanvasApi`). The actor header is the client name plus the token name, such as `Claude Code - laptop`, so revisions stay attributable.
+`server/mcp-registry.ts` supplies one canonical tool catalog, including schemas, handlers, required permissions, and audit metadata. Symbi uses the SDK in-memory transport with full permissions; HTTP and stdio clients execute the same contracts. Shared writes and locks use a stable authenticated caller ID. Display names remain available separately for activity presentation.
+
+WebMCP discovers and invokes those registrations through `/api/mcp/browser`. The bridge authenticates the current workspace-owner browser session and issues an internal owner identity for canonical execution.
 
 ### Configuration examples
 
@@ -32,40 +34,69 @@ bearer_token_env_var = "SYMBIKNOW_MCP_TOKEN"
 claude mcp add --transport http symbiknow https://symbiknow.example.com/mcp --header "Authorization: Bearer <token>"
 ```
 
-Existing configs named `allteam-canvas` keep working.
-
 ## Tokens and scopes
 
-Create tokens in **Settings → MCP connections**. They are stored hashed, show last use, and can be revoked. Each token can be limited:
+Create tokens in **Settings → MCP connections**. They are stored hashed, show last use, and can be revoked. Discovery and every execution recheck current grants, including changes within an existing session.
 
-| Scope | Values | Effect |
-| --- | --- | --- |
-| `access` | `read`, `propose`, `write` | `read` sees only readable tools; `propose` adds `jev_propose`; `write` gets everything |
-| `allowedCanvasIds` | list of canvas ids | Results are filtered to these canvases; calls outside them fail |
-| `tools` | list of tool names | Only these tools are registered for the session |
+The stdio host resolves its authenticated identity through `GET /api/mcp/caller` for discovery and execution. The API checks each agent request against the method, path, argument schema, and permissions declared with the canonical tool registration. A tool header cannot authorize a different operation. Queued storage operations recheck authority and cancellation before changing state. `POST /api/mcp/calls` records sanitized tool outcomes with the server-resolved caller identity; document source and raw arguments stay out of the audit payload.
 
-Unscoped tokens also come from `SYMBIKNOW_MCP_TOKEN` or the access token. Old `ALLTEAM_*` variables still work.
+| Grant | Effect |
+| --- | --- |
+| `access: read` | Read sources, download working copies, and use retrieval tools |
+| `access: propose` | Read plus `jev_do` and reviewable file uploads; committed create/replace uploads remain denied |
+| `access: write` | Authorized content commits and typed document, task, layout, and version operations |
+| `allowedCanvasIds` | Limits discovery results and operations to selected canvases; omitted means every canvas |
+| `tools` | Limits the canonical tool names available to the caller |
+| `canApprove` | Explicit write-level grant for file proposal and Reflex approval/undo tools |
+| `canConfigure` | Explicit write-level grant for Reflex configuration |
 
-## Default tool catalog
+Symbi has write, approval, and configuration authority across all canvases. Full permissions retain version checks and editing locks.
 
-| Group | Tools | Notes (new behavior marked) |
-| --- | --- | --- |
-| Find | `list_canvases`, `read_canvas`, `search_docs`, `read_doc` | `list_canvases` includes counts and update time. `read_canvas` supports `includeContent: false` and `limit`/`cursor` (new). `search_docs` supports `canvasId`, `limit`, `cursor` (new). `read_doc` supports `branch` (new) |
-| Write | `create_doc`, `edit_doc`, `delete_doc`, `upload_file`, `download_file` | Hash required for edit, replace, and delete (new). HTML documents report `kind: "html"` (new) |
-| Arrange | `move_block`, `link_blocks`, `unlink_blocks` | Links change in one atomic `POST /canvases/:id/links` (new) |
-| Coordinate | `claim_doc`, `release_doc` | Locks of 30–3600 s |
-| History | `list_versions`, `create_branch`, `delete_branch`, `switch_branch`, `merge_branch`, `restore_revision` | `delete_branch` new; `list_versions` pages (new); `switch_branch` is a legacy shared switch |
-| Brain | `ask_symbi`, `symbi_reflex` | New default brain tools, see [Search and brain tools](search-and-brain-tools.md) |
+## Canonical tool catalog
 
-**Legacy Jev tools**: `jev_profile`, `find_by`, `related`, `memory_map`, `jev_activity`, `brain_inbox`, `jev_do`, `jev_propose`, `jev_job`. These are no longer registered by default. They appear when `SYMBIKNOW_LEGACY_BRAIN_TOOLS=1` is set, when the server option `legacyBrainTools` is on, or when a token's tool list names one. Their filter fixes (LEG-01 to LEG-09) are still open.
+Settings returns `mcpToolCatalog` derived from the same registrations used by MCP discovery; there is no separately maintained browser list. The current application catalog contains 42 tools. Every tool in the following table comes from the application MCP server; Symbi, HTTP, stdio, and WebMCP use those same registrations.
 
-### The recommended agent workflow
+| Group | Tools |
+| --- | --- |
+| Find | `list_canvases`, `read_canvas`, `search_docs`, `read_doc`, `ask_symbi`, `symbi_reflex`, `find_by`, `related` |
+| Files | `download_file`, `upload_file` |
+| File review | `read_file_proposal`, `apply_file_proposal`, `undo_file_proposal` |
+| Documents and layout | `delete_doc`, `move_block`, `move_document`, `link_blocks`, `unlink_blocks` |
+| Coordinate | `claim_doc`, `release_doc` |
+| Todos | `list_todos`, `create_todo`, `update_todo`, `set_todo_status` |
+| History | `list_versions`, `create_branch`, `delete_branch`, `switch_branch`, `merge_branch`, `restore_revision` |
+| Reflex | `jev_profile`, `memory_map`, `jev_activity`, `brain_inbox`, `jev_do`, `jev_job`, `jev_resolve`, `jev_undo`, `jev_configure` |
+| Presentation | `show_doc_on_canvas`, `show_group_on_canvas`, `draw_research_canvas` |
 
-1. `list_canvases`, then `read_canvas` with `includeContent: false`, or `ask_symbi` / `search_docs` to find documents.
-2. `read_doc` to get the full source and `contentHash`.
-3. `claim_doc` before a long edit.
-4. `edit_doc` or `upload_file` with `expectedContentHash`. On `409`, reread and merge.
-5. `release_doc` when the edit is complete.
+`jev_job` returns a job and its durable document progress. Its optional typed `action` selects on-demand inspection of one current decision and its source evidence. Job inspection follows the same canvas and tool grants; workspace progress aggregates remain available to the owner API.
+
+Symbi also receives tools from two other sources:
+
+| Source | Count | Tools | Authority |
+| --- | --- | --- | --- |
+| Deep Agents runtime | 8 with current Symbi wiring | `task`, `ls`, `read_file`, `write_file`, `edit_file`, `delete`, `glob`, `grep` | Delegation and files inside Symbi's conversation workspace |
+| Configured external MCP servers | Varies by live discovery | Names returned by each server's live discovery | That server's configured credentials and permissions |
+
+The application does not add a separate hardcoded set of shared-document agent tools. Installed Deep Agents 1.14.1 supplies these eight through Symbi's `ChatOpenAI` and `FilesystemBackend` configuration. Other harness configurations can add `write_todos`. Deep Agents' `execute` tool requires an execution-capable backend; Symbi's configured `FilesystemBackend` supplies file operations. `create_doc`, `edit_doc`, and `import_documents` were replaced by the explicit file upload modes. `jev_propose` was removed in favor of `jev_do`.
+
+### Agent file workflow
+
+1. Discover sources with `ask_symbi`, `search_docs`, or canvas/document reads.
+2. Claim a long-running edit with `claim_doc`.
+3. Call `download_file` with `canvasId`, `blockId`, and optional `branch`. Save the returned source and working-copy manifest in the agent's environment.
+4. Edit the local file using the agent's own editor, filesystem tools, or shell.
+5. Call `upload_file` with `mode: "replace"`, the original `checkoutId`, edited file bytes, filename, and an `idempotencyKey`. The server validates the authoritative checkout and current version, then returns a durable receipt.
+6. Read back the saved result and release the lock.
+
+An HTTP client materializes files locally and uploads their bytes; server paths are never client paths. Stdio additionally accepts local `destinationPath` and `sourcePath`. Symbi's adapter manages files inside its persistent conversation directory.
+
+`download_file` returns `{ manifest, content, filename }`. The manifest binds the working file to its caller, workspace, canvas, document incarnation, branch, loader, base hash, and base revision. Exports use format-aware filenames. Website sources are `.symbi-site.json` packages containing `documentContent` and source files.
+
+`upload_file` has explicit modes: `create` makes a document; `replace` commits an edited checkout; `propose` submits an edited checkout for review. It returns `{ operationId, mode, canvasId, blockId, branch, contentHash, revision, kind, filename, title, savedAt, proposalId? }`. Repeating the same key and payload returns the same receipt. Reusing a key with different bytes fails. Replacement preserves the document's identity and format unless an authorized conversion is explicitly requested.
+
+A stale version fails with `409`; keep the edited file, download the current source, merge locally, and upload using a fresh checkout. Branch downloads and uploads leave the shared visible branch unchanged. `switch_branch` explicitly changes the shared visible branch for everyone.
+
+Direct agent content-edit tools are absent. Metadata and task operations remain typed MCP tools.
 
 ## HTTP API
 
@@ -138,8 +169,8 @@ curl -s -H "$AUTH" -H 'content-type: application/json' \
 
 ## Adding a new MCP tool
 
-1. Add the HTTP route first (`server/api-*.ts`) so the browser, WebMCP, and MCP share one implementation.
-2. Register the tool in `server/mcp-tools.ts` (or `mcp-brain-tools.ts`) with a zod `inputSchema` and a description that says what it changes.
-3. If it only reads, add it to `readableMcpTools` in `server/settings.ts` so read tokens can use it; check `scopedResult` filtering in `server/mcp-scope.ts`.
-4. Mirror it in WebMCP (`src/webmcp*.ts`) if the browser tab should expose it.
-5. Test in `server/mcp-tools.test.ts` (request contract) and `server/mcp.test.ts` / `server/collaboration.test.ts` (end to end).
+1. Add the authoritative API handler when the operation accesses shared state.
+2. Register the tool in its owning `server/mcp-*-tools.ts` module with a Zod schema, an accurate description, and permission metadata. Use `annotations.readOnlyHint: true` for reads or `_meta.permission` for proposal, approval, and configuration grants.
+3. Include a new registrar in `server/mcp-registry.ts` when needed. Discovery, Settings validation, and audit policy derive from these registrations.
+4. Verify authorization both at MCP execution and at the underlying API boundary; canvas scope must apply before search pagination.
+5. Test real MCP calls, durable save/read-back, conflicts, restricted callers, and relevant transport behavior.

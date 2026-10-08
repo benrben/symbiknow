@@ -2,6 +2,7 @@ type Registration = { getActiveCanvasId: () => string; onChanged: () => void };
 // A reused widget follows the newest live consumer; disposal restores the preceding owner.
 let registrations: Registration[] = [];
 
+export function hasRegistrations(): boolean { return registrations.length > 0; }
 export function activeCanvas(): string { return registrations.at(-1)?.getActiveCanvasId() ?? ''; }
 export function changed(): void { registrations.at(-1)?.onChanged(); }
 

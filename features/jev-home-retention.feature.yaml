@@ -1,0 +1,17 @@
+feature: Preserve the current home when no destination wins
+tags:
+  - "@engine"
+  - "@home-retention"
+scenarios:
+  - name: Leading none retains the canonical document without an evidence call
+    steps:
+      - given: an isolated home placement with "leading none" and an accepted destination gate
+      - when: the public Jev runtime evaluates the document home
+      - then: one placement call and no evidence call produce a durable no change outcome
+      - and: native reload preserves the document in its original canvas
+  - name: A tie with none retains the canonical document without an evidence call
+    steps:
+      - given: an isolated home placement with "tied none" and an accepted destination gate
+      - when: the public Jev runtime evaluates the document home
+      - then: one placement call and no evidence call produce a durable no change outcome
+      - and: native reload preserves the document in its original canvas

@@ -6,12 +6,17 @@ import type { Server } from 'node:http';
 import { createApiServer } from './index.js';
 import { CanvasStore } from './storage.js';
 import { internalToken } from './auth.js';
-import { stageJevDraft, setJevDraftState } from './jev/drafts.js';
+import { stageJevDraft } from './jev/drafts.js';
 import { sourceSnapshot } from './jev/stamps.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createProjectMcpServer } from './mcp.js';
 
 let server: Server;
 let directory: string;
+let client: Client | undefined;
 afterEach(async () => {
+  await client?.close();
   server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));
   await rm(directory, { recursive: true, force: true });
 });
@@ -32,18 +37,39 @@ it('holds MCP source writes and version changes behind a durable draft while bro
   const send = (route: string, method: string, headers: Record<string, string>, body?: unknown) => fetch(base + route, {
     method, headers: { 'content-type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const agentHeaders: Array<Record<string, string>> = [{ 'x-symbiknow-agent-transport': 'mcp' }, { authorization: `Bearer ${internalToken}` }];
-  for (const headers of agentHeaders) {
-    for (const [suffix, method] of [['', 'PUT'], ['', 'DELETE'], ['/versions/switch', 'POST'], ['/versions/merge', 'POST'], ['/versions/restore', 'POST']]) {
-      const response = await send(blockRoute + suffix, method, headers, method === 'DELETE' ? undefined : { content: 'Bypass draft', name: 'main', revision: 'HEAD' });
-      expect(response.status).toBe(403); expect(await response.json()).toMatchObject({ error: expect.stringMatching(/reviewed draft is active/) });
-    }
-    expect((await send(blockRoute, 'GET', headers)).status).toBe(200);
-    expect((await send('/api/workspaces', 'GET', headers)).status).toBe(200);
-    expect((await send(blockRoute, 'PATCH', headers)).status).toBe(404);
+  const token = await store.createMcpToken('Draft-aware file writer', 'write', { allowedCanvasIds: ['product-roadmap'] });
+  const mcp = createProjectMcpServer(base + '/api', fetch, { localFiles: false, headers: { authorization: `Bearer ${token.token}` } });
+  client = new Client({ name: 'draft-aware-file-writer', version: '1' });
+  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+  await Promise.all([mcp.connect(serverSide), client.connect(clientSide)]);
+  const args = { canvasId: 'product-roadmap', blockId: block.id };
+  const read = await client.callTool({ name: 'read_doc', arguments: args });
+  expect(read.isError).not.toBe(true);
+  const download = await client.callTool({ name: 'download_file', arguments: args });
+  expect(download.isError).not.toBe(true);
+  const exported = JSON.parse((download.content as Array<{ text: string }>)[0].text) as {
+    manifest: { checkoutId: string }; content: string; filename: string };
+  const upload = { canvasId: args.canvasId, mode: 'replace', checkoutId: exported.manifest.checkoutId,
+    filename: exported.filename, content: `${block.content}\nApproved after cancellation.`, idempotencyKey: 'draft-guard-retry' };
+  for (const [name, arguments_] of [
+    ['upload_file', upload], ['delete_doc', { ...args, expectedContentHash: block.contentHash! }], ['switch_branch', { ...args, name: 'main' }],
+    ['merge_branch', { ...args, name: 'main' }], ['restore_revision', { ...args, revision: '0000000' }],
+  ] as const) {
+    const denied = await client.callTool({ name, arguments: arguments_ });
+    expect(denied.isError, name).toBe(true);
+    expect((denied.content as Array<{ text: string }>)[0].text, name).toMatch(/reviewed draft is active/);
   }
+  expect((await store.getCanvasBlock(args.canvasId, block.id)).content).toBe(block.content);
+  const spoofed = await send(blockRoute, 'GET', { authorization: `Bearer ${internalToken}` });
+  expect(spoofed.status).toBe(403); expect(await spoofed.json()).toEqual({ error: 'An authenticated agent identity is required' });
+  const direct = await send(blockRoute, 'PUT', { authorization: `Bearer ${token.token}` }, { content: upload.content });
+  expect(direct.status).toBe(403); expect(await direct.json()).toEqual({ error: 'This caller does not permit those tool arguments or canvases' });
+  expect((await send(blockRoute, 'PATCH', { authorization: `Bearer ${token.token}` })).status).toBe(403);
   expect((await send(blockRoute, 'PUT', {}, { content: block.content })).status).toBe(200);
-  await setJevDraftState(directory, 'product-roadmap', block.id, draft.id, 'cancelled');
-  expect((await send(blockRoute, 'PUT', { 'x-symbiknow-agent-transport': 'mcp' }, { content: `${block.content}\nApproved after cancellation.` })).status).toBe(200);
-  expect((await send('/api/canvases/product-roadmap/blocks/release-checklist', 'PUT', { 'x-symbiknow-agent-transport': 'mcp' }, { content: 'No draft here.' })).status).toBe(404);
+  const cancelled = await send(`/api/canvases/${args.canvasId}/jev/drafts/${block.id}/cancel`, 'POST', {}, { draftId: draft.id });
+  expect(cancelled.status).toBe(200); expect(await cancelled.json()).toEqual({ ok: true });
+  const saved = await client.callTool({ name: 'upload_file', arguments: upload });
+  expect(saved.isError, JSON.stringify(saved)).not.toBe(true);
+  const reopened = new CanvasStore(directory); await reopened.init();
+  expect((await reopened.getCanvasBlock(args.canvasId, block.id)).content).toBe(upload.content);
 });

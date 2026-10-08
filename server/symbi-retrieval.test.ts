@@ -119,3 +119,30 @@ it('orders tied evidence deterministically by canvas, document, then source offs
     'a:a:0', 'a:b:0', 'a:b:10', 'z:b:0',
   ]);
 });
+
+it('gives a judging caller weak candidates, more passages per document, and each document closest passage first', () => {
+  const unit = (angle: number) => [Math.cos(angle), Math.sin(angle)];
+  const keywordHit = passage(1, { blockId: 'doc-a', startOffset: 0, excerpt: 'Rollback keyword match', vector: unit(1.4) });
+  const closest = passage(2, { blockId: 'doc-a', startOffset: 40, excerpt: 'Closest meaning', vector: unit(0.2) });
+  const weak = passage(3, { blockId: 'doc-b', excerpt: 'Loosely related notes', vector: unit(1.3) });
+  const extra = [4, 5, 6].map((rowid) => passage(rowid, { blockId: 'doc-a', startOffset: rowid * 40, vector: unit(1) }));
+  const options = { passages: [keywordHit, closest, weak, ...extra], query: 'rollback', queryVector: [1, 0],
+    keywordRanks: new Map([[1, 0]]), limit: 20, mode: 'hybrid' as const };
+  const standard = rankPassages(options);
+  expect(standard.some((item) => item.blockId === 'doc-b')).toBe(false);
+  expect(standard.filter((item) => item.blockId === 'doc-a')).toHaveLength(3);
+  const judged = rankPassages({ ...options, minimumSimilarity: -1, passagesPerDocument: 8, passageOrder: 'similarity' });
+  expect(judged.map((item) => item.excerpt).slice(0, 2)).toEqual(['Closest meaning', 'Release recovery instructions']);
+  expect(judged.filter((item) => item.blockId === 'doc-a')).toHaveLength(5);
+  expect(judged.at(-1)).toMatchObject({ blockId: 'doc-b', excerpt: 'Loosely related notes' });
+  expect(rankPassages({ ...options, minimumSimilarity: -1, passagesPerDocument: 1 }).map((item) => item.blockId))
+    .toEqual(['doc-a', 'doc-b']);
+});
+
+it('lists a not-yet-embedded keyword passage after its document embedded passages in similarity order', () => {
+  const pending = passage(1, { blockId: 'doc-a', startOffset: 0, excerpt: 'Rollback steps awaiting embedding', vector: null });
+  const embedded = passage(2, { blockId: 'doc-a', startOffset: 40, excerpt: 'Rollback summary', vector: [0.6, 0.8] });
+  const ranked = rankPassages({ passages: [pending, embedded], query: 'rollback', queryVector: [1, 0],
+    keywordRanks: new Map([[1, 0], [2, 1]]), limit: 8, mode: 'hybrid', passageOrder: 'similarity' });
+  expect(ranked.map((item) => item.excerpt)).toEqual(['Rollback summary', 'Rollback steps awaiting embedding']);
+});

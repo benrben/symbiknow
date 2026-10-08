@@ -21,6 +21,7 @@
     "dev:server": "tsx watch server/index.ts",
     "prebuild": "tsx scripts/sync-symbi-avatar-preview.ts",
     "mcp": "tsx server/mcp.ts",
+    "jev:bench": "tsx scripts/jev-bench/run.mts",
     "build": "tsc --noEmit && vite build && npm run build:sdk",
     "pretest": "npm run build",
     "test": "node .quality/run-tests.mjs",

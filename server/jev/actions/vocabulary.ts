@@ -5,9 +5,10 @@ import { plainGroupName } from '../../../shared/names.js';
 import { choice, noul, type JevAnswer } from '../../jev.js';
 import { matchesGroupTerm, renamedGroupKey, vocabularyGroupKey } from './groups.js';
 import { groupHierarchy } from './vocabulary-hierarchy.js';
+import { calibrated, decisionBoundaries } from './calibration.js';
 import type { JevQuestionSet } from './question-batch.js';
 import { arrayOption, candidates, confidence, evaluation, judge, passages, proposal, selected,
-  selectedDocuments, sourceState, supported, textOption, type JevEvaluationContext,
+  selectedDocuments, semanticThreshold, sourceState, supported, textOption, type JevEvaluationContext,
   type JevInputDocument } from './context.js';
 
 function kindFor(request: JevActionRequest): JevVocabularyTerm['kind'] {
@@ -160,6 +161,10 @@ export function mergeAssessmentSet(context: JevEvaluationContext, request: JevAc
     synonymous: noul('Do sourceConcept and targetConcept have the same intended meaning and boundaries? Co-occurrence alone is insufficient.'),
   } };
 }
+/** Keep synonym admission and execution on the existing slider scale. */
+export function synonymConfidence(synonymous: JevAnswer): number {
+  return calibrated(confidence(synonymous), decisionBoundaries.synonym);
+}
 /** A selected pair consumes only its own checked meaning assessment. */
 export function mergeAssessedTerms(context: JevEvaluationContext, request: JevActionRequest, synonymous: JevAnswer): JevEvaluation {
   const previous = findTerm(context, textOption(request, 'termId'));
@@ -171,14 +176,16 @@ export function mergeAssessedTerms(context: JevEvaluationContext, request: JevAc
   const term = { ...target, aliases: [...new Set([...target.aliases, previous.name, ...previous.aliases])],
     ...(target.kind === 'group' ? { groupKey: vocabularyGroupKey(target) } : {}),
     members, version: target.version + 1 };
-  const result = evaluation({ status: 'proposed', synonymySupported: supported(synonymous, context),
-    semanticConfidence: confidence(synonymous), requiresExplicitReview: context.settings.modes[request.action] !== 'auto', affectedMembers: documents.length });
+  const semanticConfidence = synonymConfidence(synonymous);
+  const result = evaluation({ status: 'proposed', synonymySupported: semanticConfidence >= semanticThreshold(context),
+    semanticConfidence, requiresExplicitReview: context.settings.modes[request.action] !== 'auto', affectedMembers: documents.length });
   const reviewedMembers = context.documents.filter(document => members.some(member =>
     member.canvasId === document.canvasId && member.blockId === document.block.id));
   result.proposals.push(termProposal(request, 'merge', term, reviewedMembers, previous.id));
   migrateDescendants(result, context, request, previous, term);
   result.proposals.push(termProposal(request, 'retire', { ...previous, state: 'retired', version: previous.version + 1 }, documents));
   migrateMemberships(result, request, documents, previous, term);
+  for (const candidate of result.proposals) candidate.decisionConfidences = [semanticConfidence];
   return result;
 }
 function migrateDescendants(result: JevEvaluation, context: JevEvaluationContext, request: JevActionRequest,

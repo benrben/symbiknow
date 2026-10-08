@@ -109,16 +109,19 @@ function assertCurrentProfile(profile) {
   assert.equal(profile.recall, undefined);
 }
 
-function independentAction(questionName) {
+function independentAction(questionName, state) {
   if (/^label_\d+$/.test(questionName)) return 'label';
-  return { role: 'profile', group: 'file', canvas: 'suggest_home_canvas' }[questionName];
+  if (questionName === 'place') return state.canvases ? 'suggest_home_canvas' : 'file';
+  return { role: 'profile', group: 'file' }[questionName];
 }
 
 Then('independent typed action questions share real provider requests without mixing their saved sources', async function () {
   const text = await readFile(join(this.dataDir, 'reflex-provider-requests.jsonl'), 'utf8');
   const calls = text.trim().split('\n').map(line => JSON.parse(line));
   const sources = [this.reflexSource, this.reflexReference];
+  const savedState = await request(this, stateRoute(this));
   for (const source of sources) {
+    let labelQuestions = 0;
     const matching = calls.filter(call => {
       const sets = call.state.questionSets;
       if (!Array.isArray(sets)) return false;
@@ -131,19 +134,39 @@ Then('independent typed action questions share real provider requests without mi
         assert.ok(question.instructions.startsWith(`Use only questionSets[${indexed[1]}] as the state for this question.`));
         assert.ok(['choice', 'score', 'noul'].includes(question.type));
         const document = state.document ?? state.source;
-        if (document?.id !== source.id) continue;
+        if (document?.title !== source.title || (document.id && document.id !== source.id)) continue;
         assert.equal(document.title, source.title);
         const original = source.content.replace(/\s+/g, ' ');
         assert.ok(document.passages.length > 0);
         for (const passage of document.passages) assert.ok(original.includes(passage.text.replace(/\s+/g, ' ')),
           `Question ${key} used a passage outside its selected saved source`);
-        const action = independentAction(indexed[2]);
+        const action = independentAction(indexed[2], state);
+        if (action === 'label') labelQuestions += 1;
         if (action) actions.add(action);
       }
-      return ['profile', 'label', 'suggest_home_canvas'].every(action => actions.has(action));
+      return ['profile', 'suggest_home_canvas'].every(action => actions.has(action));
     });
     assert.ok(matching.length > 0, `Independent initial action questions were not sent together for ${source.title}`);
-    assert.equal((await request(this, `/canvases/${this.canvasId}/blocks/${source.id}`)).content, source.content);
+    assert.equal(labelQuestions, 0, `Fresh profile labels must not call the provider again for ${source.title}`);
+    for (const action of ['profile', 'label', 'suggest_home_canvas']) {
+      assert.ok(completedActions(savedState, source).has(action), `Missing durable ${action} result for ${source.title}`);
+    }
+    const profile = savedState.profiles[`${this.canvasId}:${source.id}`];
+    assertCurrentProfile(profile);
+    assert.equal(profile.logicalIndex.calibration, 1);
+    assert.equal(profile.logicalIndex.source.contentHash, source.contentHash);
+    assert.equal(profile.logicalIndex.source.sourceGeneration, source.sourceGeneration);
+    const saved = await request(this, `/canvases/${this.canvasId}/blocks/${source.id}`);
+    assert.equal(saved.content, source.content);
+    const labelJob = savedState.jobs.find(job => job.state === 'completed' && job.request.action === 'label'
+      && job.sources.some(snapshot => snapshot.blockId === source.id && snapshot.sourceGeneration === source.sourceGeneration));
+    const labelDecision = labelJob.result.documents[source.id];
+    assert.deepEqual(labelDecision.options, [], `Labels must reuse the fresh profile for ${source.title}`);
+    if (saved.jevOwnership?.pins.includes('tags')) assert.deepEqual(saved.tags, source.tags);
+    for (const topic of profile.logicalIndex.topics) {
+      assert.ok((labelDecision.tags ?? saved.tags).some(tag => tag.toLocaleLowerCase() === topic.name.toLocaleLowerCase()),
+        `Accepted profile topic ${topic.name} was not retained in the label decision for ${source.title}`);
+    }
   }
 });
 

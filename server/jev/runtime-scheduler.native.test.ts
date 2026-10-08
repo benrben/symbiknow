@@ -27,7 +27,7 @@ beforeEach(async () => {
     const result = await accepted.json() as { answers: Record<string, JevAnswer> };
     // The provider can decline a canvas move; this fixture measures scheduling on stable saved sources.
     for (const [key, question] of Object.entries(body.questions)) {
-      if (key.replace(/^\d+__/, '') === 'canvas' && question.type === 'choice') {
+      if (['place', 'gate'].includes(key.replace(/^(?:\d+__)+/, '')) && question.type === 'choice') {
         result.answers[key] = { type: 'choice', choice: 'none', confidence: 1,
           probabilities: Object.fromEntries(Object.keys(question.criteria).map(choice => [choice, choice === 'none' ? 1 : 0])) };
       }

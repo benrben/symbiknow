@@ -54,7 +54,7 @@ it('keeps another initiator’s durable draft private and checks exact document 
   const source = await store.getCanvasBlock(canvasId, blockId);
   await stageJevDraft(root, sourceSnapshot(workspaceId, canvasId, source),
     { id: 'private-draft', baseContent: source.content, proposedContent: '# Private proposed content', instruction: 'Clarify' }, owner.id);
-  const credential = await store.createMcpToken('Agent', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_propose'] });
+  const credential = await store.createMcpToken('Agent', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_do'] });
   const principal: JevPrincipal = { ...(await store.mcpTokenIdentity(credential.token))!, kind: 'token' };
   await expect(runtime.readDraft(workspaceId, canvasId, blockId, principal)).rejects.toMatchObject({ status: 403 });
   await expect(runtime.readDraft('other-workspace', canvasId, blockId, owner)).rejects.toMatchObject({ status: 404 });

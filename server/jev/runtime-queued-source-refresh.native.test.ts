@@ -11,7 +11,8 @@ import { decideWithJev, type JevAnswer, type JevQuestion } from '../jev.js';
 import { evaluateJevAction } from './actions.js';
 import { evaluationContext } from './context.js';
 import { automationPrincipal } from './authorization.js';
-import { boundaryOwner, queueBoundaryFixture, type QueueBoundaryFixture } from './queue-boundary.test.fixture.js';
+import { boundaryOwner, type QueueBoundaryFixture } from './queue-boundary.test.fixture.js';
+import { queueBoundaryCopies } from './queue-boundary-copy.test.fixture.js';
 import { JevProposalExecutor } from './proposals.js';
 import type { StoredJevJob } from './runtime-queue.js';
 import { validateJevEvaluation } from './runtime-guards.js';
@@ -20,6 +21,7 @@ import { sourceSnapshot } from './stamps.js';
 import { JevWorkspaceFiles } from './workspace.js';
 
 let native: QueueBoundaryFixture;
+let copies: Awaited<ReturnType<typeof queueBoundaryCopies>>;
 let queued: StoredJevJob;
 let provider: Server; let origin: string; let requests: Array<{ state: unknown; questions: Record<string, JevQuestion> }>;
 function answer(question: JevQuestion): JevAnswer {
@@ -31,6 +33,7 @@ function answer(question: JevQuestion): JevAnswer {
     probabilities: Object.fromEntries(Object.keys(question.criteria).map(key => [key, key === selected ? 1 : 0])) };
 }
 beforeAll(async () => {
+  copies = await queueBoundaryCopies();
   provider = createServer(async (request, response) => {
     let raw = ''; for await (const chunk of request) raw += chunk;
     const body = JSON.parse(raw) as { state: unknown; questions: Record<string, JevQuestion> }; requests.push(body);
@@ -41,10 +44,13 @@ beforeAll(async () => {
   const address = provider.address(); if (!address || typeof address === 'string') throw new Error('Queued source provider did not listen');
   origin = `http://127.0.0.1:${address.port}`;
 });
-afterAll(async () => { provider.closeAllConnections(); await new Promise<void>((resolve, reject) => provider.close(error => error ? reject(error) : resolve())); });
+afterAll(async () => {
+  provider.closeAllConnections(); await new Promise<void>((resolve, reject) => provider.close(error => error ? reject(error) : resolve()));
+  await copies.close();
+});
 beforeEach(async () => {
   requests = [];
-  native = await queueBoundaryFixture();
+  native = await copies.fixture();
   queued = await native.admit({ action: 'profile', canvasId: native.canvasId,
     blockIds: [native.primary.id], idempotencyKey: `queued-profile-${randomUUID()}` }, automationPrincipal);
 });

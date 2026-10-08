@@ -3,6 +3,10 @@ import type { LinkRelation } from '../../../shared/types.js';
 import { choice,noul,score,type JevAnswer,type ScoreAnswer } from '../../jev.js';
 import { relevantNeighbors } from './candidates.js';
 import { judgeQuestionSets } from './question-batch.js';
+import { duplicateQuestionSet, duplicatePairAssessment } from './graph-duplicate.js';
+export { duplicateQuestionSet, duplicatePairAssessment } from './graph-duplicate.js';
+import { automaticLinkSet, automaticLinkAssessment } from './graph-link.js';
+export { automaticLinkSet, automaticLinkAssessment } from './graph-link.js';
 import {
 confidence,currentTime,evaluation,evidenceCandidates,exactEvidence,passages,
 json,
@@ -24,43 +28,39 @@ const meanings: Record<LinkRelation, string> = {
 function requestedRelation(request: JevActionRequest): LinkRelation | undefined {
   return (textOption(request, 'relation') || undefined) as LinkRelation | undefined;
 }
-type Pair = { source: JevInputDocument; target: JevInputDocument; hypothesis: string };
-type VerifiedPair = Pair & { finding: ReturnType<typeof verification> };
-const automaticRelations = { prerequisite: meanings.prerequisite, implements: meanings.implements,
-  example_of: meanings.example_of, same_topic: meanings.same_topic, related: meanings.related,
-  none: 'No directional relationship is sufficiently supported by both documents',
-  unknown: 'The supplied excerpts do not establish the relationship or its direction' };
+export type Pair = { source: JevInputDocument; target: JevInputDocument; hypothesis: string };
+type GraphFinding = { eligible: boolean; unsupported: boolean; confidence: number; evidence: ReturnType<typeof passages>;
+  usefulness: number; relation?: LinkRelation; overlap?: 'copy' | 'older_version'; calibration?: number };
+type VerifiedPair = Pair & { finding: GraphFinding };
 
-function verificationSet({ source, target, hypothesis }: Pair, kind: 'link' | 'duplicate' | 'recheck', chooseRelation: boolean) {
+function verificationSet({ source, target, hypothesis }: Pair, kind: 'link' | 'duplicate' | 'recheck') {
   return { state: { source: sourceState(source), target: sourceState(target), hypothesis }, questions: {
     supported: noul('Do source and target provide explicit evidence for hypothesis, including its direction, time, and scope?'),
     sourceEvidence: choice('Which exact source passage supports hypothesis?', evidenceCandidates(source)),
     targetEvidence: choice('Which exact target passage supports hypothesis?', evidenceCandidates(target)),
     ...(kind !== 'duplicate' ? { usefulness: score('How useful is target for understanding the supported hypothesis in source?',
       ['No useful value', 'Useful supporting context', 'Required or directly relevant context']) } : {}),
-    ...(chooseRelation ? { relation: choice('Which relationship is directly supported from source to target? Choose none when direction or type is unclear.', automaticRelations) } : {}),
   } };
 }
 function explicitlyUnsupported(context: JevEvaluationContext, answer: JevAnswer): boolean {
   return answer.type === 'noul' && answer.noul < 0.5 && 1 - answer.noul >= semanticThreshold(context);
 }
-function verification(context: JevEvaluationContext, { source, target }: Pair, answers: Record<string, JevAnswer>) {
+function verification(context: JevEvaluationContext, { source, target }: Pair, answers: Record<string, JevAnswer>): GraphFinding {
   const sourceEvidence = exactEvidence(source, answers.sourceEvidence);
   const targetEvidence = exactEvidence(target, answers.targetEvidence);
   const evidence = [...sourceEvidence, ...targetEvidence];
   return { eligible: supported(answers.supported, context) && sourceEvidence.length > 0 && targetEvidence.length > 0,
     unsupported: explicitlyUnsupported(context, answers.supported),
     confidence: confidence(answers.supported), evidence, usefulness: answers.usefulness ? (answers.usefulness as ScoreAnswer).score : 2,
-    relation: answers.relation ? selectedRelation(context, answers.relation) : undefined };
+    relation: undefined };
 }
-function selectedRelation(context: JevEvaluationContext, answer: JevAnswer): LinkRelation | undefined {
-  if (answer.type !== 'choice' || answer.confidence < semanticThreshold(context)) return undefined;
-  return answer.choice !== 'none' && answer.choice !== 'unknown' && Object.hasOwn(automaticRelations, answer.choice)
-    ? answer.choice as LinkRelation : undefined;
-}
-async function verifyPairs(context: JevEvaluationContext, pairs: Pair[], kind: 'link' | 'duplicate' | 'recheck' = 'link', chooseRelation = false): Promise<VerifiedPair[]> {
-  const answers = await judgeQuestionSets(context, pairs.map(pair => verificationSet(pair, kind, chooseRelation)));
+async function verifyPairs(context: JevEvaluationContext, pairs: Pair[], kind: 'link' | 'duplicate' | 'recheck' = 'link'): Promise<VerifiedPair[]> {
+  const answers = await judgeQuestionSets(context, pairs.map(pair => verificationSet(pair, kind)));
   return pairs.map((pair, index) => ({ ...pair, finding: verification(context, pair, answers[index]) }));
+}
+async function verifyAutomaticLinks(context: JevEvaluationContext, pairs: Pair[]): Promise<VerifiedPair[]> {
+  const answers = await judgeQuestionSets(context, pairs.map(automaticLinkSet));
+  return pairs.map((pair, index) => ({ ...pair, finding: automaticLinkAssessment(context, pair, answers[index]) }));
 }
 function candidatePairs(context: JevEvaluationContext, sources: JevInputDocument[], hypothesis: string): Pair[] {
   return sources.flatMap(source => relevantNeighbors(context, source).map(target => ({ source, target, hypothesis })));
@@ -80,7 +80,7 @@ function uniquePairs(pairs: Pair[]): Pair[] {
 }
 function edgePatch(source: JevInputDocument, target: JevInputDocument, relation: LinkRelation, certainty: number) {
   if (source.canvasId === target.canvasId) {
-    return { links: [...new Set([...source.block.links, target.block.id])].slice(0, 20),
+    return { links: [...new Set([...source.block.links, target.block.id])],
       linkTypes: { ...source.block.linkTypes, [target.block.id]: relation } };
   }
   const existing = source.block.crossLinks ?? [];
@@ -143,16 +143,19 @@ export async function link(context: JevEvaluationContext, request: JevActionRequ
   const candidates = candidatePairs(context, sources, hypothesis);
   result.result.candidateOptions = candidates.map(pair => ({ sourceId: pair.source.block.id, targetId: pair.target.block.id,
     targetCanvasId: pair.target.canvasId, origin: candidateOrigin(context, pair) }));
-  const pairs = await verifyPairs(context, candidates, 'link', !explicitRelation);
+  const pairs = explicitRelation ? await verifyPairs(context, candidates, 'link') : await verifyAutomaticLinks(context, candidates);
   result.result.verifiedPairs = pairs.length;
   for (const source of sources) {
     const generated = sourceLinks(request, source, explicitRelation, pairs.filter(pair => pair.source === source));
     edgeResults.push(...generated.edges);
     if (generated.candidate) result.proposals.push(generated.candidate);
   }
-  result.result.edges = edgeResults;
-  if (!edgeResults.length) result.result.reason = candidates.length ? 'No pair had sufficient typed evidence' : 'No relevant neighbors';
+  recordLinkResults(result, edgeResults, candidates.length);
   return result;
+}
+function recordLinkResults(result: JevEvaluation, edges: JevValues[], candidateCount: number): void {
+  result.result.edges = edges;
+  if (!edges.length) result.result.reason = candidateCount ? 'No pair had sufficient typed evidence' : 'No relevant neighbors';
 }
 function findingKind(request: JevActionRequest) {
   if (request.action === 'flag_duplicate') return { kind: 'duplicate', title: 'Compare possible duplicates',
@@ -161,36 +164,86 @@ function findingKind(request: JevActionRequest) {
   return { kind: 'conflict', title: 'Conflicting claims', hypothesis: meanings.contradicts,
     choices: ['dismiss', 'correct_source', 'select_authority'] };
 }
-function exactDuplicatePairs(request: JevActionRequest, pairs: Pair[]): Pair[] {
-  return request.action === 'flag_duplicate' ? pairs.filter(pair => pair.source.block.content.trim().length > 0
-    && pair.source.block.content === pair.target.block.content) : [];
+function duplicateBody(content: string): string {
+  const body = content.replace(/\r\n/g, '\n').replace(/^(?:[ \t]*\n)*/, '')
+    .replace(/^#[ \t]+[^\n]*(?:\n|$)/, '');
+  // Keep every body byte, including code, indentation, internal blank lines, and later headings.
+  return body.replace(/^(?:[ \t]*\n)*/, '').replace(/(?:\n[ \t]*)+$/, '');
+}
+function duplicateBodyEvidence(document: JevInputDocument) {
+  return passages(document).filter(passage => !/^#{1,6}[ \t]/.test(passage.quote)).slice(0, 1);
+}
+export function deterministicDuplicateMethod(source: JevInputDocument, target: JevInputDocument): string | undefined {
+  if (source.block.content === target.block.content) return passages(source, 1).length ? 'exact_content' : undefined;
+  if (!duplicateBodyEvidence(source).length || !duplicateBodyEvidence(target).length) return undefined;
+  return duplicateBody(source.block.content) === duplicateBody(target.block.content) ? 'substantive_content' : undefined;
+}
+function deterministicDuplicatePairs(request: JevActionRequest, pairs: Pair[]): Pair[] {
+  return request.action === 'flag_duplicate' ? pairs.filter(pair => deterministicDuplicateMethod(pair.source, pair.target)) : [];
+}
+function deterministicDuplicateTargets(context: JevEvaluationContext, source: JevInputDocument): JevInputDocument[] {
+  return context.documents.filter(target => target.snapshot.workspaceId === context.workspaceId)
+    .filter(target => !target.block.archived && !target.block.processingExcluded)
+    .filter(target => target.canvasId !== source.canvasId || target.block.id !== source.block.id)
+    .filter(target => deterministicDuplicateMethod(source, target)).slice(0, 12);
+}
+function deterministicDuplicateCandidates(context: JevEvaluationContext, request: JevActionRequest,
+  sources: JevInputDocument[], hypothesis: string): Pair[] {
+  if (request.action !== 'flag_duplicate') return [];
+  return sources.filter(source => passages(source, 1).length > 0)
+    .flatMap(source => deterministicDuplicateTargets(context, source).map(target => ({ source, target, hypothesis })));
+}
+function findingCandidates(context: JevEvaluationContext, request: JevActionRequest, hypothesis: string): Pair[] {
+  const sources = selectedDocuments(context, request);
+  return uniquePairs([...candidatePairs(context, sources, hypothesis),
+    ...deterministicDuplicateCandidates(context, request, sources, hypothesis)]);
 }
 function pairKey(pair: Pair): string {
   return `${pair.source.canvasId}:${pair.source.block.id}|${pair.target.canvasId}:${pair.target.block.id}`;
+}
+function deterministicEvidence(pair: Pair) {
+  const evidence = deterministicDuplicateMethod(pair.source, pair.target) === 'exact_content'
+    ? (document: JevInputDocument) => passages(document, 1) : duplicateBodyEvidence;
+  return [...evidence(pair.source), ...evidence(pair.target)];
+}
+async function semanticFindings(context: JevEvaluationContext, request: JevActionRequest, pairs: Pair[]): Promise<VerifiedPair[]> {
+  if (request.action !== 'flag_duplicate') return verifyPairs(context, pairs, 'duplicate');
+  const answers = await judgeQuestionSets(context, pairs.map(duplicateQuestionSet));
+  return pairs.map((pair, index) => ({ ...pair, finding: duplicatePairAssessment(context, pair, answers[index]) }));
+}
+function findingTitle(kind: ReturnType<typeof findingKind>, finding: VerifiedPair['finding']): string {
+  if (!finding.overlap) return kind.title;
+  return finding.overlap === 'copy' ? 'Possible copy' : 'Possible older version';
+}
+function addPairFinding(request: JevActionRequest, kind: ReturnType<typeof findingKind>, pair: VerifiedPair,
+  methods: Map<string, string | undefined>, result: JevEvaluation, findings: JevValues[]) {
+  const { source, target, finding } = pair;
+  if (!finding.eligible) return;
+  const values: JevValues = { kind: kind.kind, targetCanvasId: target.canvasId, targetId: target.block.id,
+    confidence: finding.confidence, status: 'detected', method: methods.get(pairKey(pair)) ?? 'semantic_review',
+    ...(finding.overlap ? { overlap: finding.overlap, calibration: 1 } : {}) };
+  findings.push(values);
+  const candidate = proposal(request, { kind: 'derived', blockId: source.block.id, values }, [source, target],
+    findingTitle(kind, finding), kind.hypothesis, finding.evidence, finding.confidence);
+  if (finding.overlap) candidate.decisionConfidences = [finding.confidence];
+  result.proposals.push(candidate);
 }
 export async function pairFinding(context: JevEvaluationContext, request: JevActionRequest): Promise<JevEvaluation> {
   const kind = findingKind(request);
   const findings: JevValues[] = [];
   const result = evaluation();
-  const pairs = uniquePairs(candidatePairs(context, selectedDocuments(context, request), kind.hypothesis));
+  const pairs = findingCandidates(context, request, kind.hypothesis);
   result.result.candidateOptions = pairs.map(pair => ({ sourceId: pair.source.block.id, targetId: pair.target.block.id,
     targetCanvasId: pair.target.canvasId, origin: candidateOrigin(context, pair) }));
-  const exact = exactDuplicatePairs(request, pairs);
-  const exactKeys = new Set(exact.map(pairKey));
-  const semantic = pairs.filter(pair => !exactKeys.has(pairKey(pair)));
-  const verified = [...exact.map(pair => ({ ...pair, finding: { eligible: true, confidence: 1,
-    evidence: [...passages(pair.source, 1), ...passages(pair.target, 1)], usefulness: 2,
-    unsupported: false, relation: undefined } })), ...await verifyPairs(context, semantic, 'duplicate')];
-  for (const { source, target, finding } of verified) {
-      if (!finding.eligible) continue;
-      const values: JevValues = { kind: kind.kind, targetCanvasId: target.canvasId,
-        targetId: target.block.id, confidence: finding.confidence, status: 'detected',
-        method: exactKeys.has(pairKey({ source, target, hypothesis: kind.hypothesis })) ? 'exact_content' : 'semantic_review' };
-      findings.push(values);
-      result.proposals.push(proposal(request, { kind: 'derived', blockId: source.block.id, values }, [source, target],
-        kind.title, kind.hypothesis, finding.evidence, finding.confidence));
-  }
+  const deterministic = deterministicDuplicatePairs(request, pairs);
+  const methods = new Map(deterministic.map(pair => [pairKey(pair), deterministicDuplicateMethod(pair.source, pair.target)]));
+  const semantic = pairs.filter(pair => !methods.has(pairKey(pair)));
+  const verified: VerifiedPair[] = [...deterministic.map(pair => ({ ...pair, finding: { eligible: true, confidence: 1,
+    evidence: deterministicEvidence(pair), usefulness: 2,
+    unsupported: false, relation: undefined, overlap: 'copy' as const, calibration: 1 } })), ...await semanticFindings(context, request, semantic)];
+  for (const pair of verified) addPairFinding(request, kind, pair, methods, result, findings);
   result.result.findings = findings;
+  if (request.action === 'flag_duplicate') result.result.calibration = 1;
   if (!findings.length) result.result.reason = pairs.length ? 'No candidate pair met duplicate evidence' : 'No relevant duplicate candidates';
   return result;
 }

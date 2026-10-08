@@ -70,7 +70,7 @@ function actionRole(job: JevJob | undefined, blockId: string): string | undefine
   return typeof role === 'string' ? role : undefined;
 }
 function groupApprovalAllowed(proposal: JevProposal, principal: JevPrincipal): boolean {
-  return proposal.state === 'pending' && !proposal.automaticHoldReason && principal.kind === 'user'
+  return proposal.state === 'pending' && !proposal.automaticHoldReason
     && principal.access === 'write' && Boolean(principal.canApprove);
 }
 function currentDecisionProposals(proposals: JevProposal[], canvasId: string, block: CanvasBlock): JevProposal[] {

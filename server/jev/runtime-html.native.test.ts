@@ -10,7 +10,8 @@ import { JevRuntime } from './runtime.js';
 import { evaluateJevAction } from './actions.js';
 
 type ProviderDocument = { id: string; title: string; passages: Array<{ id: string; text: string }> };
-type ProviderState = { document?: ProviderDocument; source?: ProviderDocument; kind?: string; labelCandidates?: Array<{ name: string }>; logicalTopicCandidates?: Array<{ name: string }>; questionSets?: ProviderState[] };
+type ProviderState = { document?: ProviderDocument; source?: ProviderDocument; kind?: string;
+  groups?: Array<{ name: string; option: string }>; labelCandidates?: Array<{ name: string }>; logicalTopicCandidates?: Array<{ name: string }>; questionSets?: ProviderState[] };
 const owner: JevPrincipal = { id: 'owner', kind: 'user', access: 'write', canApprove: true, canConfigure: true };
 let root: string; let runtime: JevRuntime;
 let store: CanvasStore; let workspaceId: string; let canvasId: string; let documents: CanvasBlock[];
@@ -18,10 +19,10 @@ let store: CanvasStore; let workspaceId: string; let canvasId: string; let docum
 function html(category: string, heading: string, fact: string): string {
   return `---\nformat: html\ntitle: PRIVATE_METADATA\n---\n<!doctype html><html><head><title>PRIVATE_CHROME</title><style>${'PRIVATE_CSS{color:red}\n'.repeat(50)}</style><script>PRIVATE_SCRIPT()</script></head><body><span>${category} · ${heading}</span><h1>${heading}</h1><p>${fact}</p><p>Saved documents retain checked source evidence.</p><pre>PRIVATE_IMPLEMENTATION</pre></body></html>`;
 }
-function groupChoice(question: Extract<JevQuestion, { type: 'choice' }>, state: ProviderState): string {
+function groupChoice(state: ProviderState): string {
   const local = state.document ?? state.source;
   const name = local?.passages.some(passage => passage.text.startsWith('Platform ·')) ? 'Platform' : 'Configuration';
-  return Object.keys(question.criteria).find(key => question.criteria[key].startsWith(`${name} (`)) ?? 'none';
+  return state.groups?.find(group => group.name === name)?.option ?? 'none';
 }
 function support(id: string, state: ProviderState): number {
   if (id.startsWith('label_')) return labelSupport(id, state);
@@ -34,11 +35,11 @@ function labelSupport(id: string, state: ProviderState): number {
 }
 function fixedChoice(id: string, state: ProviderState): string | undefined {
   const choices: Record<string, string | undefined> = { role: state.document?.title === 'Configuration' ? 'instructions' : 'specification',
-    pair: 'none', canvas: 'c0', concept: state.kind === 'entity' ? 'none' : undefined };
+    pair: 'none', place: 'A', gate: 'A', concept: state.kind === 'entity' ? 'none' : undefined };
   return choices[id];
 }
 function choice(id: string, question: Extract<JevQuestion, { type: 'choice' }>, state: ProviderState): string {
-  if (id === 'group') return groupChoice(question, state);
+  if (['place', 'gate'].includes(id) && state.groups) return groupChoice(state);
   const fixed = fixedChoice(id, state);
   if (fixed && fixed in question.criteria) return fixed;
   const keys = Object.keys(question.criteria);

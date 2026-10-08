@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { internalToken } from './auth.js';
 import { CanvasStore } from './storage.js';
-import { hasJevApiAccess, jevApiPrincipal, jevPrincipalHeaders } from './jev-api-principal.js';
+import { currentMcpIdentity, hasJevApiAccess, jevApiPrincipal, jevPrincipalHeaders } from './jev-api-principal.js';
 
 let store: CanvasStore;
 let root: string;
@@ -73,4 +73,20 @@ it('keeps legacy saved-token grants unprivileged and refuses review when no peer
   disconnected.headers = { host: 'localhost:8787' };
   await expect(jevApiPrincipal(store, disconnected, false)).rejects.toMatchObject({ status: 403 });
   await expect(jevApiPrincipal(store, request({ authorization: 'Bearer forged' }), false)).rejects.toMatchObject({ status: 401 });
+});
+
+it('ends a revoked MCP session identity quietly but surfaces an unreadable settings file', async () => {
+  expect(await currentMcpIdentity(store, 'symbi')).toMatchObject({ kind: 'automation', canApprove: true });
+  expect(await currentMcpIdentity(store, 'browser-owner')).toMatchObject({ kind: 'user', canConfigure: true });
+  const created = await store.createMcpToken('Session agent', 'read');
+  const tokenId = created.settings.mcpTokens![0].id;
+  expect(await currentMcpIdentity(store, tokenId)).toMatchObject({ id: tokenId, kind: 'token', access: 'read' });
+  await store.revokeMcpToken(tokenId);
+  expect(await currentMcpIdentity(store, tokenId)).toBeNull();
+  const corruptRoot = await mkdtemp(path.join(tmpdir(), 'reflex-principals-corrupt-'));
+  try {
+    const corrupt = new CanvasStore(corruptRoot); await corrupt.init();
+    await writeFile(path.join(corruptRoot, 'settings.json'), '{"mcpTokens": [');
+    await expect(currentMcpIdentity(corrupt, tokenId)).rejects.toBeInstanceOf(SyntaxError);
+  } finally { await rm(corruptRoot, { recursive: true, force: true }); }
 });

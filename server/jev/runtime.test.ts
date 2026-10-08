@@ -112,7 +112,7 @@ it('recovers a prepared mutation after a real canonical write obstruction withou
 });
 
 it('revocation during inference cancels the result and keeps canonical metadata unchanged', async () => {
-  const credential = await store.createMcpToken('Scoped reviewer', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_propose'] });
+  const credential = await store.createMcpToken('Scoped reviewer', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_do'] });
   const token = (await store.mcpTokenIdentity(credential.token))!;
   let resume!: () => void;
   let began!: () => void;
@@ -314,7 +314,7 @@ it('accepts owner interactive Auto with supported confidence and preserves agent
   certainty = 0.99;
   await runtime.run(workspaceId, { action: 'file', canvasId, blockIds: [block.id] }, owner); await runtime.idle();
   expect((await store.getCanvasBlock(canvasId, block.id)).group).toBe('custom:atlas');
-  const credential = await store.createMcpToken('Scoped agent', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_propose'] });
+  const credential = await store.createMcpToken('Scoped agent', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_do'] });
   const token = (await store.mcpTokenIdentity(credential.token))!;
   const agentSource = await store.createBlock(canvasId, { title: 'Agent source', content: '# Agent source' });
   const job = await runtime.run(workspaceId, { action: 'file', canvasId, blockIds: [agentSource.id] }, { ...token, kind: 'token' });

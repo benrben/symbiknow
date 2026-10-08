@@ -17,7 +17,7 @@ export function automaticReason(state: JevWorkspaceState, proposal: JevProposal,
   return automaticHoldReason(state, proposal, context);
 }
 function mayAutomaticallyApprove(job: StoredJevJob, principal: JevPrincipal): boolean {
-  return job.principal.id === automationPrincipal.id || (principal.kind === 'user' && principal.canApprove === true);
+  return job.principal.id === automationPrincipal.id || principal.canApprove === true;
 }
 
 interface AutomaticCompletion {

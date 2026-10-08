@@ -42,7 +42,7 @@ it('repairs malformed persisted last-use metadata after successful authenticatio
   saved.mcpTokens[0].lastUsedAt = 'invalid legacy timestamp';
   await writeFile(file, JSON.stringify(saved));
   expect(await store.mcpTokenIdentity(created.token)).toEqual({ id: created.settings.mcpTokens![0].id, name: 'Recoverable reader', access: 'read',
-    allowedCanvasIds: ['product-roadmap'], tools: ['read_doc'] });
+    allowedCanvasIds: ['product-roadmap'], tools: ['read_doc'], canApprove: false, canConfigure: false });
   // Queue a real settings write after the advisory metadata operation.
   const settings = await store.updateSettings({});
   const lastUsedAt = settings.mcpTokens![0].lastUsedAt!;
@@ -67,7 +67,7 @@ it.each(['read', 'write'])('keeps authentication and the real activity queue usa
       await mkdir(file);
     }
   } finally { await writer.close(); }
-  expect(await pending).toEqual({ id: tokenId, name: 'Advisory reader', access: 'read' });
+  expect(await pending).toEqual({ id: tokenId, name: 'Advisory reader', access: 'read', canApprove: false, canConfigure: false });
   if (failure === 'write') {
     const secondRead = await open(file, 'w');
     try {
@@ -123,11 +123,11 @@ it('persists scoped and legacy tokens, keeps other token metadata unchanged, and
   delete saved.mcpTokens[1].access;
   saved.mcpTokens[0].lastUsedAt = new Date(Date.now() + 60_000).toISOString();
   await writeFile(file, JSON.stringify(saved));
-  expect(await store.mcpTokenIdentity(legacy.token)).toEqual({ id: legacy.settings.mcpTokens![1].id, name: 'Legacy writer', access: 'write' });
+  expect(await store.mcpTokenIdentity(legacy.token)).toEqual({ id: legacy.settings.mcpTokens![1].id, name: 'Legacy writer', access: 'write', canApprove: false, canConfigure: false });
   await store.updateSettings({});
   const before = await readFile(file, 'utf8');
   expect(await store.mcpTokenIdentity(scoped.token)).toEqual({ id: scoped.settings.mcpTokens![0].id, name: 'Scoped proposer', access: 'propose',
-    allowedCanvasIds: ['product-roadmap'], tools: ['read_doc'] });
+    allowedCanvasIds: ['product-roadmap'], tools: ['read_doc'], canApprove: false, canConfigure: false });
   await store.recordMcpActivity({ tokenId: scoped.settings.mcpTokens![0].id, tokenName: 'Scoped proposer', access: 'propose', tool: 'read_doc',
     startedAt: '2026-10-01T00:00:00Z', endedAt: '2026-10-01T00:00:01Z', outcome: 'success', canvasIds: [], documentIds: [] });
   expect(await readFile(file, 'utf8')).toBe(before);
@@ -175,21 +175,21 @@ it('preserves provider keys and private secrets through HTTP updates, native ext
 it('keeps retired private configuration on disk while removing Jev settings and plugins from native HTTP reads and updates', async () => {
   const file = path.join(directory, 'settings.json');
   const legacy = { ...await store.secretSettings(), jevApiKey: 'retired-private-key', reviewers: 'Legacy reviewer', workAreas: 'Legacy area',
-    tagVocabulary: 'legacy tag', jevPolicy: { label: { show: 0.4, apply: 0.7 } }, agentPlugins: ['jev_insights', 'document_read'] };
+    tagVocabulary: 'legacy tag', jevPolicy: { label: { show: 0.4, apply: 0.7 } }, agentPlugins: ['jev_insights', 'external_mcp'] };
   await writeFile(file, JSON.stringify(legacy));
   const base = await api();
   const initial = await fetch(base + '/api/settings').then(response => response.json());
-  expect(initial.agentPlugins).toEqual(['document_read']);
+  expect(initial.agentPlugins).toEqual(['external_mcp']);
   for (const field of ['hasJevApiKey', 'reviewers', 'workAreas', 'tagVocabulary', 'jevPolicy']) expect(initial).not.toHaveProperty(field);
   expect(JSON.stringify(initial)).not.toContain('retired-private-key');
   const update = await fetch(base + '/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ model: 'ordinary-model', jevApiKey: 'replacement-key', reviewers: 'replacement', jevPolicy: {} }) });
   expect(update.status).toBe(200);
-  expect(await update.json()).toMatchObject({ model: 'ordinary-model', agentPlugins: ['document_read'] });
+  expect(await update.json()).toMatchObject({ model: 'ordinary-model', agentPlugins: ['external_mcp'] });
   const saved = JSON.parse(await readFile(file, 'utf8'));
   expect(saved).toMatchObject({ model: 'ordinary-model', jevApiKey: 'retired-private-key', reviewers: 'Legacy reviewer',
     workAreas: 'Legacy area', tagVocabulary: 'legacy tag', jevPolicy: legacy.jevPolicy });
-  expect(saved.agentPlugins).toEqual(['document_read']);
+  expect(saved.agentPlugins).toEqual(['external_mcp']);
   const restarted = await api();
   expect(await fetch(restarted + '/api/settings').then(response => response.json())).toEqual(await store.getSettings());
   const rejected = await fetch(restarted + '/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' },

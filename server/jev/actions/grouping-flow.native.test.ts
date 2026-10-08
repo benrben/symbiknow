@@ -31,7 +31,7 @@ function answer(body: Body, wireId: string, question: JevQuestion): JevAnswer {
   if (question.type === 'noul') return { type: 'noul', noul: .98 };
   if (question.type !== 'choice') throw new Error('Unexpected grouping question type');
   const { id } = questionInput(body, wireId); const keys = Object.keys(question.criteria);
-  const selected = id === 'group' ? keys.find(key => question.criteria[key].endsWith(`(${preferredGroup})`)) ?? keys[0]
+  const selected = id === 'group' ? keys.find(key => question.criteria[key].includes(`(${preferredGroup})`)) ?? keys[0]
     : keys.find(key => question.criteria[key].includes('Purpose: Engineering / Backend.')) ?? keys[0];
   return { type: 'choice', choice: selected, confidence: .98,
     probabilities: Object.fromEntries(keys.map(key => [key, key === selected ? 1 : 0])) };
@@ -260,9 +260,17 @@ it('assesses only the selected exact evidence when reusing an existing group in 
   const result = await file({ ...input, vocabulary: [previous], selectiveGroupAssessment: true }, request);
   expect(result.proposals).toHaveLength(1);
   expect(result.proposals[0].mutation).toMatchObject({ kind: 'document', patch: { group: 'custom:engineering' } });
-  expect(calls).toHaveLength(2);
-  expect(Object.keys(calls[0].questions).map(id => questionInput(calls[0], id).id)).toEqual(['group', 'evidence']);
-  expect(Object.keys(calls[1].questions)).toEqual([expect.stringMatching(/^purpose_\d$/)]);
+  expect(calls).toHaveLength(4);
+  expect(Object.keys(calls[0].questions).map(id => questionInput(calls[0], id).id)).toEqual(['place', 'gate']);
+  expect(calls[1].state).toMatchObject({ currentGroup: null, baselineGroup: 'custom:engineering' });
+  expect(Object.keys(calls[1].questions)).toEqual(['place', 'gate']);
+  expect(Object.keys(calls[2].questions)).toEqual(['evidence']);
+  expect(calls[2].state.selectedGroup).toMatchObject({ key: 'custom:engineering' });
+  expect(calls.slice(0, 3).every(call => Object.values(call.questions).every(question => question.type === 'choice'))).toBe(true);
+  const index = filingPassages(document).findIndex(passage => passage.quote.includes('Purpose: Engineering / Backend.'));
+  expect(Object.keys(calls[3].questions)).toEqual([`purpose_${index}`]);
+  expect(calls[3].state.selectedGroup).toMatchObject({ key: 'custom:engineering', definition: previous.definition });
+  expect(result.proposals[0].decisionConfidences).toEqual([1, .98]);
   expect(result.proposals[0].sources).toEqual([document.snapshot]);
 });
 
@@ -281,7 +289,7 @@ it('retains current existing membership without requesting a selective semantic 
   const result = await file({ ...input, documents: [current], selectiveGroupAssessment: true }, request);
   expect(result.proposals).toEqual([]);
   expect(calls).toHaveLength(1);
-  expect(Object.keys(calls[0].questions)).toEqual(['group']);
+  expect(Object.keys(calls[0].questions)).toEqual(['place', 'gate']);
 });
 
 it('rejects a malformed selected semantic response without returning a grouping proposal', async () => {

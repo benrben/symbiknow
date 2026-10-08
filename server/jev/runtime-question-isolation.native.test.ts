@@ -27,7 +27,7 @@ function scoped(body: Body, id: string) {
   return { state: resolveSharedQuestionSources(state, body.state.sourceStates), name };
 }
 function selectedName(name: string, state: Record<string, unknown>, keys: string[]): string {
-  const fixed: Record<string, string> = { parent: 'none', pair: 'none', role: 'specification', canvas: 'c0' };
+  const fixed: Record<string, string> = { parent: 'none', pair: 'none', role: 'specification' };
   if (/^evidence(?:_\d+)?$/.test(name) && 'assignment' in state) return 'p1';
   return fixed[name] ?? keys[0];
 }
@@ -38,7 +38,7 @@ function decision(body: Body, id: string, submitted: JevQuestion): JevAnswer {
   const keys = question.type === 'choice' ? Object.keys(question.criteria) : question.criteria.map((_, index) => String(index));
   const selected = question.type === 'choice' ? selectedName(name, state, keys) : keys.at(-1)!;
   const probabilities = Object.fromEntries(keys.map(key => [key, key === selected ? 1 : 0]));
-  if (invalid && name === 'canvas') return { type: 'choice', choice: 'none', confidence: .98, probabilities };
+  if (invalid && name === 'place' && 'canvases' in state) return { type: 'choice', choice: 'none', confidence: .98, probabilities };
   return question.type === 'choice' ? { type: 'choice', choice: selected, confidence: .98, probabilities }
     : { type: 'score', score: keys.length - 1, confidence: .98, probabilities };
 }
@@ -49,7 +49,9 @@ beforeEach(async () => {
   provider = createServer(async (request, response) => {
     let raw = ''; for await (const chunk of request) raw += chunk;
     const body = JSON.parse(raw) as Body; calls.push(body);
-    if (invalid && Object.keys(body.questions).some(id => scoped(body, id).name === 'canvas')) badCalls += 1;
+    if (invalid && Object.keys(body.questions).some(id => {
+      const local = scoped(body, id); return local.name === 'place' && 'canvases' in local.state;
+    })) badCalls += 1;
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ answers: Object.fromEntries(Object.entries(body.questions).map(([id, question]) => [id, decision(body, id, question)])) }));
   });
@@ -63,7 +65,7 @@ beforeEach(async () => {
   await store.createCanvas(workspaceId, { name: 'Alternative destination' });
   taskId = (await store.createTask(canvasId, { title: 'Atlas release', detail: 'Carry out Atlas release requirements.' }, 'Browser')).id;
   source = await store.createBlock(canvasId, { title: 'Atlas', x: 123, y: 456,
-    content: '# Atlas\nOwner: Alice\nAtlas release requirements.' });
+    content: '# Atlas\nOwner: Alice\nAtlas coordinate specification: every northern star entry records right ascension and declination.' });
 });
 afterEach(async () => {
   vi.useRealTimers(); await runtime?.shutdown();

@@ -40,15 +40,17 @@ it('preserves native scoped MCP read arguments and bounded request jobs, rejects
     { method, headers: { 'content-type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
   const store = new CanvasStore(root);
   const token = await store.createMcpToken('Scoped native boundary', 'propose', { allowedCanvasIds: ['product-roadmap'],
-    tools: ['jev_profile', 'find_by', 'jev_propose', 'jev_job'] });
+    tools: ['jev_profile', 'find_by', 'jev_do', 'jev_job'] });
   const headers = { authorization: `Bearer ${token.token}` };
-  const mcp = createProjectMcpServer(base + '/api', fetch, { headers, legacyBrainTools: true });
+  const mcp = createProjectMcpServer(base + '/api', fetch, { headers,  });
   const client = new Client({ name: 'scoped-boundary-client', version: '1' });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   try {
     expect((await request('/canvases/product-roadmap/jev')).status).toBe(200);
     const denied = await request('/canvases/engineering/jev/agent/state?view=jev_profile', 'GET', undefined, headers);
-    expect(denied.status).toBe(404); expect(await denied.json()).toEqual({ error: 'Canvas not found' });
+    expect(denied.status).toBe(403); expect(await denied.json()).toEqual({ error: 'This caller does not permit those tool arguments or canvases' });
+    const unknown = await request('/canvases/nonexistent/jev/agent/state?view=jev_profile', 'GET', undefined, headers);
+    expect(unknown.status).toBe(403); expect(await unknown.json()).toEqual({ error: 'This caller does not permit those tool arguments or canvases' });
     await request('/settings', 'PUT', { secrets: { TYPESAFE_API_KEY: 'native-boundary-key' } });
     expect((await request('/canvases/product-roadmap/jev/settings', 'PUT', { externalProcessing: true,
       modes: { profile: 'auto' } })).status).toBe(200);
@@ -57,8 +59,8 @@ it('preserves native scoped MCP read arguments and bounded request jobs, rejects
     expect((await client.callTool({ name: 'recall', arguments: { canvasId: 'product-roadmap', query: 'launch' } })).isError).toBe(true);
     const read = await client.callTool({ name: 'find_by', arguments: { canvasId: 'product-roadmap', blockId: 'roadmap-overview', query: 'launch' } });
     expect(read.isError, JSON.stringify(read)).not.toBe(true);
-    const first = decoded(await client.callTool({ name: 'jev_propose', arguments: { action: 'profile', canvasId: 'product-roadmap', query: 'launch', blockIds: ['roadmap-overview'] } }));
-    const second = decoded(await client.callTool({ name: 'jev_propose', arguments: { action: 'profile', canvasId: 'product-roadmap', query: 'launch delivery', blockIds: ['roadmap-overview'] } }));
+    const first = decoded(await client.callTool({ name: 'jev_do', arguments: { action: 'profile', canvasId: 'product-roadmap', query: 'launch', blockIds: ['roadmap-overview'] } }));
+    const second = decoded(await client.callTool({ name: 'jev_do', arguments: { action: 'profile', canvasId: 'product-roadmap', query: 'launch delivery', blockIds: ['roadmap-overview'] } }));
     expect(first.request).toMatchObject({ action: 'profile', query: 'launch', blockIds: ['roadmap-overview'] });
     expect(second.request).toMatchObject({ action: 'profile', query: 'launch delivery', blockIds: ['roadmap-overview'] });
     await expect.poll(async () => {

@@ -39,6 +39,10 @@ The document editor uses CodeMirror with Markdown or HTML highlighting. The **So
 
 Use the **↗ Open full page** button on any canvas card to read the complete document; uploaded HTML grows to its full height. Each open document has its own URL (`?canvas=…&doc=…`), so it can be linked, and the browser **Back** button, **← Back to canvas**, and Esc all return to the same canvas view. The previous/next buttons, the document list, the ← and → keys, and the links at the end of the page move through the canvas in reading order.
 
+Markdown documents support Hebrew, Arabic, and mixed RTL/LTR text automatically in canvas cards, the full-page reader, search previews, and the source editor. Each paragraph, heading, list, and table cell chooses its own direction. Code stays left-to-right. Explicit HTML `dir="rtl"` or `dir="ltr"` sections in Markdown are respected.
+
+Each canvas also has a **Tasks** view. Add work, switch between list and board layouts, and sort by priority, due date, size, or newest. Completing a task moves it to **Archive** automatically; restore it to reopen the work. MCP agents can use `list_todos`, `create_todo`, `update_todo`, and `set_todo_status` to manage the same saved tasks. See the [task guide](docs/todos.md).
+
 ## Run locally
 
 Use Node.js 20.19+ or 22.12+ and npm. The tested release environment uses Node.js 24.
@@ -161,16 +165,17 @@ The canvas server is an MCP server at `<your address>/mcp` (Streamable HTTP). Co
   ```
 - **Claude.ai / Claude Desktop custom connector:** add `https://symbiknow.example.com/mcp/t/<token>`. The token is in the path because connectors cannot send headers, so treat the URL as a secret.
 
-Tokens are stored hashed, show their last use, and can be revoked in Settings. A token's name is added to the agent's name in file history, so parallel agents stay distinguishable.
+Tokens are stored hashed, show their last use, and can be revoked in Settings. History and audit identify the authenticated token; its name is display metadata.
 
 ### Tools and shared work
 
-Agents get the same canvas people see: `list_canvases`, `read_canvas`, `search_docs`, `read_doc`, `create_doc` (use `kind: "html"` for an HTML page; `website` is only for MkDocs, Hugo, or Docusaurus sites, and HTML content is always kept on the HTML loader), `edit_doc`, `delete_doc`, `move_block`, `link_blocks`, `unlink_blocks`, `upload_file` (complete `content` plus a filename; set `blockId` to replace the whole file), `download_file`, and per-file history tools (`list_versions`, `create_branch`, `switch_branch`, `merge_branch`, `restore_revision`).
+The canonical MCP registry owns every shared tool, schema, permission and handler. Symbi, HTTP and stdio coding agents, and browser WebMCP all use it. Search includes `ask_symbi`, `symbi_reflex`, `search_docs`, `find_by`, and `related`; history, todos, navigation and Jev actions are discoverable from the same catalog. Symbi has full access. External agents use current token grants, including separate approval and configuration permissions.
 
 For working alongside people and other agents:
 
-- `read_doc` returns a `contentHash`. Pass it as `expectedContentHash` to `edit_doc` or `upload_file`, and the write fails instead of overwriting a newer change. `message` sets the revision message.
-- `claim_doc` locks a document's content for up to an hour (default 10 minutes); `release_doc` frees it. Others get a clear refusal while it is held, and the canvas card shows who is editing. People can take over a lock from the editor.
+- `download_file` creates a server-owned checkout and returns its manifest. Edit the downloaded source in the agent's environment, then `upload_file` with explicit `mode`, `checkoutId` and `idempotencyKey`. Replacement preserves the loader and rejects stale revisions; retries return the original saved receipt. `mode=create` explicitly creates a new file; `mode=propose` prepares a reviewable change without saving it.
+- Website working copies contain actual source files and binary assets. Branch-targeted downloads and uploads keep private changes separate until merge or approval.
+- `claim_doc` holds a document while editing; `release_doc` frees it. History attributes changes to the authenticated caller, independently of its display name.
 
 The browser refreshes the canvas every few seconds, so agent edits and locks appear without reloading.
 

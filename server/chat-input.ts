@@ -60,21 +60,6 @@ export function findBlock(store: CanvasStore, canvasId: string, blockId: string)
   });
 }
 
-const navigationTools = ['show_doc_on_canvas', 'show_group_on_canvas', 'draw_research_canvas'];
-
-const toolPlugins = new Map<string, string>([
-  ...['search_docs', 'read_doc', ...navigationTools].map(name => [name, 'document_read'] as [string, string]),
-  ...['create_doc', 'edit_doc', 'move_block', 'link_blocks', 'delete_doc'].map(name => [name, 'document_write'] as [string, string]),
-  ...['jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox'].map(name => [name, 'document_read'] as [string, string]),
-  ['jev_do', 'document_write'],
-]);
-
-export function pluginAllows(name: string, enabled: string[]): boolean {
-  if (name === 'draw_research_canvas') return true;
-  const plugin = toolPlugins.get(name);
-  return plugin !== undefined && enabled.includes(plugin);
-}
-
 export function asksForSources(request: string): boolean {
   if (/^\s*(?:open|go to|navigate to|take me to|focus on|show me (?:the )?(?:document|group|canvas))\b/iu.test(request)) return false;
   return /\?\s*$|^\s*(?:what|why|how|which|where|who|when|is|are|do|does|can|could|summari[sz]e|explain|compare|find|show me|tell me|answer|research|visuali[sz]e|map|explore|help|look into|work on)\b/iu.test(request);

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { lazy, memo, Suspense, useEffect } from 'react';
 import { AnswerCanvas } from './AnswerCanvas';
 import type { AppModel } from './app-model';
 import { dialogShowsError } from './app-dialog-errors';
@@ -9,8 +9,10 @@ import { CanvasSearch } from './CanvasSearch';
 import { type Theme } from './theme';
 import { WorkspaceToolbar } from './AppWorkspaceToolbar';
 import { useWorkspaceCanvasEvents } from './useWorkspaceCanvasEvents';
+import { useWorkspaceTaskView } from './useWorkspaceTaskView';
 
 const MemoCanvas = memo(Canvas);
+const TodoCanvas = lazy(() => import('./TodoCanvas').then(module => ({ default: module.TodoCanvas })));
 
 export function Sidebar({ model }: { model: AppModel }) {
   const { workspaces, canvasId, selectCanvas, requestDeleteCanvas, requestDeleteWorkspace, setDialog, openNamedDialog } = model;
@@ -25,10 +27,25 @@ export function Sidebar({ model }: { model: AppModel }) {
 }
 
 export function MainColumn({ model, theme, onToggleTheme }: { model: AppModel; theme: Theme; onToggleTheme: () => void }) {
+  const [tasks, setTasks] = useWorkspaceTaskView();
+  useEffect(() => {
+    function focusMobileTasks() {
+      if (tasks && window.innerWidth <= 620) model.setShowChat(false);
+    }
+    focusMobileTasks();
+    window.addEventListener('resize', focusMobileTasks);
+    return () => window.removeEventListener('resize', focusMobileTasks);
+  }, [tasks, model.setShowChat]);
+  function toggleTasks() {
+    model.setSearchOpen(false);
+    model.setBrowseGroupsOpen(false);
+    model.setAnswerCanvasOpen(false);
+    setTasks(!tasks);
+  }
   return <div className="main-column">
-    <WorkspaceToolbar model={model} theme={theme} onToggleTheme={onToggleTheme}/>
+    <WorkspaceToolbar model={model} theme={theme} onToggleTheme={onToggleTheme} tasks={tasks} onToggleTasks={toggleTasks}/>
     <GlobalErrorBanner model={model}/>
-    <CanvasArea model={model} theme={theme}/>
+    {tasks && model.canvas ? <Suspense fallback={<main className="canvas-main"><p role="status">Opening tasks…</p></main>}><TodoCanvas key={model.canvas.id} canvasId={model.canvas.id} canvasName={model.canvas.name}/></Suspense> : <CanvasArea model={model} theme={theme}/>}
   </div>;
 }
 
@@ -45,6 +62,7 @@ function CanvasArea({ model, theme }: { model: AppModel; theme: Theme }) {
   if (!canvas) return <EmptyCanvas model={model}/>;
   return <main className={canvasMainClass(model)}>
     <CanvasLabel name={canvas.name}/>
+    {canvas.jevStatusError && <p className="canvas-jev-notice" role="status">{canvas.jevStatusError}</p>}
     <CanvasSurface model={model} canvas={canvas} theme={theme} events={events}/>
 
     <CanvasSearchPanel model={model} canvasId={canvas.id}/>

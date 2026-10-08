@@ -62,7 +62,10 @@ async function assertNativeResearch(world, count) {
   const result = records.at(-1);
   assert.equal(result.sourceId, `${world.canvasId}:${world.block.id}`);
   assert.equal(result.sourceTitle, 'Launch evidence');
-  assert.deepEqual(result.drawResult, { drawn: true, blocks: count, edges: count === 3 ? 2 : 0 });
+  const patch = result.drawResult.presentation.researchPatch;
+  assert.equal(patch.blocks.length, count);
+  assert.equal(patch.edges.length, count === 3 ? 2 : 0);
+  assert.ok(patch.blocks.some(block => block.sourceIds.includes(result.sourceId)));
 }
 
 When('I ask {string} with selected evidence', async function (question) {

@@ -88,3 +88,31 @@ it('cancels a remote MCP write before its side effect commits', async () => {
   expect(remoteSignal.aborted).toBe(true);
   expect(saved).toBe(false);
 });
+
+it('imports every paginated tool without silently limiting large catalogs', async () => {
+  const cursors: Array<string | undefined> = [];
+  const mcp = new McpServer({ name: 'paginated-fixture', version: '1' });
+  mcp.registerTool('ready', { inputSchema: {} }, async () => ({ content: [] }));
+  mcp.server.setRequestHandler(ListToolsRequestSchema, async request => {
+    cursors.push(request.params?.cursor);
+    const start = request.params?.cursor ? 45 : 0;
+    return { tools: Array.from({ length: request.params?.cursor ? 5 : 45 }, (_, index) => ({ name: `tool_${start + index}`,
+      inputSchema: { type: 'object' as const, properties: {} } })), ...(start ? {} : { nextCursor: 'second-page' }) };
+  });
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => randomUUID() });
+  await mcp.connect(transport);
+  const server = createServer(async (request, response) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of request) chunks.push(Buffer.from(chunk));
+    await transport.handleRequest(request, response, chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : undefined);
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  close.push(async () => { await mcp.close(); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); });
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('Missing port');
+  const loaded = await externalTools([{ id: 'fixture', name: 'Fixture', enabled: true, url: `http://127.0.0.1:${address.port}` }], {}, message => { throw new Error(message); });
+  close.push(loaded.close);
+  expect(loaded.tools).toHaveLength(50);
+  expect(loaded.tools.at(-1)?.name).toBe('fixture__tool_49');
+  expect(cursors).toEqual([undefined, 'second-page']);
+});

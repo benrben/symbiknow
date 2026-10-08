@@ -7,6 +7,7 @@ import { createApiServer } from '../server/index.js';
 import type { DeepAgentFactory } from '../server/chat-agent.js';
 import type { CanvasBlock, SearchHit } from '../shared/types.js';
 import type { ResearchCanvasPatch } from '../shared/answer-canvas.js';
+import { answerSurface } from '../server/answer-surface.js';
 import { auditedReflexProvider } from './acceptance-provider-audit.js';
 
 type ResearchBlock = ResearchCanvasPatch['blocks'][number];
@@ -23,7 +24,7 @@ async function evidence(tools: StructuredToolInterface[], signal: AbortSignal) {
   const hit = hits.find(item => item.title === 'Launch evidence');
   if (!hit) throw new Error('Acceptance research needs a saved Launch evidence document');
   const document = JSON.parse(String(await requiredTool(tools, 'read_doc').invoke({
-    blockId: hit.blockId, sourceCanvasId: hit.canvasId,
+    blockId: hit.blockId, canvasId: hit.canvasId,
   }, { signal }))) as CanvasBlock;
   return { sourceId: `${hit.canvasId}:${document.id}`, document };
 }
@@ -75,15 +76,25 @@ export function acceptanceAgent(dataDir: string): DeepAgentFactory {
   return (_settings, tools) => async function* (messages, signal) {
     const latest = String(messages.at(-1)?.content ?? '');
     await appendFile(path.join(dataDir, 'chat-requests.jsonl'), JSON.stringify({ latest, tools: tools.map(item => item.name) }) + '\n');
-    if (tools.some(item => item.name === 'draw_research_canvas')) {
+    if (answerSurface(latest) === 'canvas') {
       const research = await draw(tools, messages, latest, signal);
       await appendFile(path.join(dataDir, 'chat-research.jsonl'), JSON.stringify(research) + '\n');
       yield { messages: [...messages, new AIMessage(research.answer)] };
       return;
     }
-    const answer = latest === 'yes'
-      ? 'Chat cannot delete Temporary Note directly. Open the document and use Delete in its editor, then confirm the deletion there.'
-      : latest === 'Which tests failed?' ? 'The mobile release has two failing tests.' : 'Ready.';
+    if (latest === 'yes') {
+      const previous = String(messages.at(-3)?.content ?? '');
+      const title = /^Can you remove (.+)\?$/u.exec(previous)?.[1];
+      if (!title) throw new Error('A deletion confirmation requires the original document request');
+      const hits = JSON.parse(String(await requiredTool(tools, 'search_docs').invoke({ query: title }, { signal }))) as SearchHit[];
+      const hit = hits.find(item => item.title === title);
+      if (!hit) throw new Error('The document requested for deletion was not found');
+      const document = JSON.parse(String(await requiredTool(tools, 'read_doc').invoke({ canvasId: hit.canvasId, blockId: hit.blockId }, { signal }))) as CanvasBlock;
+      await requiredTool(tools, 'delete_doc').invoke({ canvasId: hit.canvasId, blockId: hit.blockId, expectedContentHash: document.contentHash }, { signal });
+      yield { messages: [...messages, new AIMessage(`Deleted ${title} through MCP.`)] };
+      return;
+    }
+    const answer = latest === 'Which tests failed?' ? 'The mobile release has two failing tests.' : 'Ready.';
     yield { messages: [...messages, new AIMessage(answer)] };
   };
 }

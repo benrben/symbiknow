@@ -7,7 +7,7 @@ import { recordMcpToolEvent } from './mcp-http-activity.js';
 import { loopbackApi } from './mcp-http-protocol.js';
 import type { McpHttpIdentity, McpHttpSession } from './mcp-http-types.js';
 import type { CanvasStore } from './storage.js';
-import { jevPrincipalHeaders } from './jev-api-principal.js';
+import { jevPrincipalHeaders, currentMcpIdentity } from './jev-api-principal.js';
 
 const sessions = new Map<string, McpHttpSession>();
 const idleLimit = 60 * 60 * 1000;
@@ -36,6 +36,8 @@ export async function createHttpMcpTransport(store: CanvasStore, identity: McpHt
   const server = createProjectMcpServer(loopbackApi(request), fetch, {
     localFiles: false, headers: { authorization: `Bearer ${internalToken}`, ...jevPrincipalHeaders(identity.id) }, actorSuffix: actorSuffix(identity),
     access: identity.access, allowedCanvasIds: identity.allowedCanvasIds, tools: identity.tools,
+    callerId: identity.id, canApprove: identity.canApprove, canConfigure: identity.canConfigure,
+    resolvePermissions: () => currentMcpIdentity(store, identity.id),
     onToolCall: event => recordMcpToolEvent(store, identity, event),
   });
   const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({

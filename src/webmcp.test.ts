@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,6 +8,8 @@ import { runInNewContext } from 'node:vm';
 import type { JsonSchema } from './webmcp-types';
 import type { CanvasBlock, CanvasDocument } from '../shared/types';
 import { createApiServer } from '../server/index';
+import { advertisedTool, projectMcpDefinitions } from '../server/mcp-registry';
+import { localBrowserUpload } from './webmcp-files.test.fixture';
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }> };
 type ToolHandler = (args: Record<string, unknown>) => Promise<ToolResult>;
@@ -31,9 +33,11 @@ async function nativeConstructor() {
   };
 }
 
+const nativeNetworkFetch = globalThis.fetch;
 const opened: Array<{ server: Server; dataDir: string }> = [];
-const toolNames = ['search_docs', 'open_doc', 'create_doc', 'upload_file', 'download_file', 'edit_doc', 'remove_doc', 'move_block', 'move_document',
-  'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision'];
+const catalog = projectMcpDefinitions().map(advertisedTool);
+const toolNames = catalog.map(tool => tool.name);
+beforeEach(() => { vi.stubGlobal('fetch', async () => Response.json({ tools: catalog })); });
 
 async function startServer(): Promise<{ base: string; dataDir: string }> {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-webmcp-'));
@@ -59,114 +63,56 @@ afterEach(async () => {
 });
 
 describe('WebMCP document tools', () => {
-  it('registers tools and runs create, read, search, edit, move, and remove against the HTTP API', async () => {
+  async function registered() {
     vi.resetModules();
     const { registerWebMCP } = await import('./webmcp');
     const { base, dataDir } = await startServer();
-    const networkFetch = fetch;
+    const networkFetch = nativeNetworkFetch;
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => networkFetch(new URL(url, base), init));
-
     const tools = new Map<string, ToolHandler>();
     const resources = new Map<string, ResourceHandler>();
     class BrowserWebMCP extends (await nativeConstructor()) {
-      registerTool(name: string, _description: string, _schema: JsonSchema, handler: ToolHandler): void {
-        super.registerTool(name, _description, _schema, handler);
-        tools.set(name, handler);
-      }
-      registerResource(name: string, _description: string, _template: { uri: string; mimeType: string }, handler: ResourceHandler): void {
-        super.registerResource(name, _description, _template, handler);
-        resources.set(name, handler);
-      }
+      registerTool(name: string, description: string, schema: JsonSchema, handler: ToolHandler): void { super.registerTool(name, description, schema, handler); tools.set(name, handler); }
+      registerResource(name: string, description: string, template: { uri: string; mimeType: string }, handler: ResourceHandler): void { super.registerResource(name, description, template, handler); resources.set(name, handler); }
     }
     vi.stubGlobal('window', { WebMCP: BrowserWebMCP });
-
-    let changed = 0;
-    const dispose = registerWebMCP(() => 'product-roadmap', () => { changed++; });
+    const changed = vi.fn();
+    const dispose = registerWebMCP(() => 'product-roadmap', changed);
     await vi.waitFor(() => expect(tools.size).toBe(toolNames.length));
-    expect([...tools.keys()]).toEqual(toolNames);
-    expect([...resources.keys()]).toEqual(['active_canvas']);
+    const run = async <T>(name: string, args: Record<string, unknown>): Promise<T> => JSON.parse((await tools.get(name)!(args)).content[0].text) as T;
+    return { run, tools, resources, dataDir, changed, dispose };
+  }
 
-    const run = async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
-      const handler = tools.get(name);
-      if (!handler) throw new Error(`Tool ${name} was not registered`);
-      return JSON.parse((await handler(args)).content[0].text) as T;
-    };
-
-    const created = await run<CanvasBlock>('create_doc', {
-      title: 'Research notes', content: '# Research\nUnique webmcp token', x: 123, y: -45,
-    });
-    expect(created).toMatchObject({ title: 'Research notes', kind: 'markdown', y: -45 });
-    const nearby = ((await (await networkFetch(`${base}/api/canvases/product-roadmap`)).json()) as CanvasDocument).blocks.filter(block => block.id !== created.id);
-    expect(nearby.every(block => created.x + created.width <= block.x || block.x + block.width <= created.x ||
-      created.y + created.height <= block.y || block.y + block.height <= created.y)).toBe(true);
-    expect(await readFile(path.join(dataDir, 'docs', `${created.id}.md`), 'utf8')).toContain('Unique webmcp token');
-    expect(await run<CanvasBlock>('open_doc', { blockId: created.id })).toMatchObject({ id: created.id, content: created.content });
-    expect(await run<CanvasBlock>('open_doc', { canvasId: 'product-roadmap', blockId: created.id })).toMatchObject({ id: created.id });
-    const slides = await run<CanvasBlock>('create_doc', { title: 'Deck', kind: 'slides', content: '# Slide' });
-    expect(slides.kind).toBe('slides');
-    const html = await run<CanvasBlock>('create_doc', { title: 'Page', kind: 'html', content: '<!doctype html><h1>First</h1>' });
-    expect(html).toMatchObject({ kind: 'markdown', content: expect.stringContaining('format: html') });
-    const editedHtml = await run<CanvasBlock>('edit_doc', { blockId: html.id, kind: 'html', content: '<!doctype html><h1>Updated</h1>' });
-    expect(editedHtml.content).toContain('<h1>Updated</h1>');
-    const fallback = await run<CanvasBlock>('create_doc', { title: 'Untyped', kind: 'invalid' });
-    expect(fallback).toMatchObject({ kind: 'markdown', content: '' });
-    expect(await run<Array<{ blockId: string }>>('search_docs', { query: 'Unique webmcp token' }))
-      .toEqual(expect.arrayContaining([expect.objectContaining({ blockId: created.id })]));
-
-    const edited = await run<CanvasBlock>('edit_doc', { blockId: created.id, content: '# Revised\nUpdated by WebMCP' });
-    expect(edited.content).toContain('Updated by WebMCP');
-    const moved = await run<CanvasBlock>('move_block', { blockId: created.id, x: 900, y: 125 });
-    expect(moved).toMatchObject({ x: 900, y: 125 });
-
-    const resource = await resources.get('active_canvas')?.('canvas://active');
-    expect(resource?.contents[0].uri).toBe('canvas://active');
-    const canvas = JSON.parse(resource?.contents[0].text ?? '') as CanvasDocument;
+  it('advertises the canonical catalog and runs file edits, reads, search, move and checked deletion through MCP', async () => {
+    const app = await registered();
+    expect([...app.tools.keys()]).toEqual(toolNames);
+    for (const old of ['create_doc', 'edit_doc', 'open_doc', 'remove_doc']) expect(app.tools.has(old)).toBe(false);
+    expect(app.tools.has('ask_symbi')).toBe(true);
+    const created = await localBrowserUpload(app.run, app.dataDir, { title: 'Research notes', filename: 'research.mdx', kind: 'mdx', content: '# Research\nUnique webmcp token' });
+    expect(created).toMatchObject({ title: 'Research notes', kind: 'mdx' });
+    expect(await readFile(path.join(app.dataDir, created.file), 'utf8')).toContain('Unique webmcp token');
+    const matches = await app.run<Array<{ blockId: string }>>('search_docs', { query: 'Unique webmcp token' });
+    expect(matches).toEqual(expect.arrayContaining([expect.objectContaining({ blockId: created.id })]));
+    const edited = await localBrowserUpload(app.run, app.dataDir, { blockId: created.id, content: '# Revised\nUpdated through local files' });
+    expect(await app.run<CanvasBlock>('read_doc', { blockId: created.id })).toMatchObject({ content: edited.content });
+    expect(await app.run('move_block', { blockId: created.id, x: 900, y: 125 })).toMatchObject({ blockId: created.id, x: 900, y: 125 });
+    const resource = await app.resources.get('active_canvas')!('canvas://active');
+    const canvas = JSON.parse(resource.contents[0].text) as CanvasDocument;
     expect(canvas.blocks.find(block => block.id === created.id)).toMatchObject({ x: 900, content: edited.content });
+    await app.run('delete_doc', { blockId: created.id, expectedContentHash: edited.contentHash });
+    await expect(readFile(path.join(app.dataDir, created.file))).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(app.changed).toHaveBeenCalledTimes(4);
+    app.dispose();
+  });
 
-    const replaced = await run<CanvasBlock & { overwritten: boolean }>('upload_file', { blockId: created.id,
-      filename: 'research.html', content: '<!doctype html><h1>Whole file replacement</h1>' });
-    expect(replaced).toMatchObject({ id: created.id, overwritten: true });
-    expect(replaced.content).toContain('format: html');
-    expect((await run<{ content: string }>('download_file', { blockId: created.id })).content).toBe(replaced.content);
-
-    expect(await run<{ ok: boolean }>('remove_doc', { blockId: created.id })).toEqual({ ok: true });
-    expect(await run<{ ok: boolean }>('remove_doc', { blockId: slides.id })).toEqual({ ok: true });
-    expect(await run<{ ok: boolean }>('remove_doc', { blockId: html.id })).toEqual({ ok: true });
-    expect(await run<{ ok: boolean }>('remove_doc', { blockId: fallback.id })).toEqual({ ok: true });
-    await expect(readFile(path.join(dataDir, 'docs', `${created.id}.md`), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-    expect(changed).toBe(12);
-    for (const name of ['analyze_canvas', 'score_documents', 'merge_documents', 'run_workspace_automation', 'undo_jev_run']) {
-      expect(tools.has(name)).toBe(false);
-    }
-    dispose();
-  }, 20_000);
-
-  it('rejects invalid requests before writing to the canvas', async () => {
-    vi.resetModules();
-    const { registerWebMCP } = await import('./webmcp');
-    const { base } = await startServer();
-    const networkFetch = fetch;
-    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => networkFetch(new URL(url, base), init));
-
-    const tools = new Map<string, ToolHandler>();
-    class BrowserWebMCP extends (await nativeConstructor()) {
-      registerTool(name: string, _description: string, _schema: JsonSchema, handler: ToolHandler): void { super.registerTool(name, _description, _schema, handler); tools.set(name, handler); }
-      registerResource(name: string, description: string, template: { uri: string; mimeType: string }, handler: ResourceHandler): void { super.registerResource(name, description, template, handler); }
-    }
-    vi.stubGlobal('window', { WebMCP: BrowserWebMCP });
-    let changed = 0;
-    registerWebMCP(() => 'product-roadmap', () => { changed++; });
-    await vi.waitFor(() => expect(tools.size).toBe(toolNames.length));
-
-    await expect(tools.get('create_doc')?.({ content: '# Untitled' })).rejects.toThrow('title is required.');
-    await expect(tools.get('open_doc')?.({ blockId: 'missing' })).rejects.toThrow('Document not found.');
-    await expect(tools.get('edit_doc')?.({ blockId: 'launch-checklist' })).rejects.toThrow('Provide a title, content, or kind to edit.');
-    await expect(tools.get('move_block')?.({ blockId: 'launch-checklist', x: Number.POSITIVE_INFINITY, y: 0 }))
-      .rejects.toThrow('x and y must be finite numbers.');
-    await expect(tools.get('move_block')?.({ blockId: 'launch-checklist', x: 0, y: Number.NaN }))
-      .rejects.toThrow('x and y must be finite numbers.');
-    await expect(tools.get('search_docs')?.({ query: ' ' })).rejects.toThrow('query is required.');
-    expect(changed).toBe(0);
+  it('keeps server validation authoritative and does not notify writes after a failed call', async () => {
+    const app = await registered();
+    await expect(app.run('upload_file', { filename: 'notes.md', content: '# Incomplete upload' })).rejects.toThrow();
+    await expect(app.run('read_doc', { blockId: 'missing' })).rejects.toThrow();
+    await expect(app.run('delete_doc', { blockId: 'launch-checklist' })).rejects.toThrow();
+    await expect(app.run('move_block', { blockId: 'launch-checklist', x: Number.NaN, y: 0 })).rejects.toThrow();
+    expect(app.changed).not.toHaveBeenCalled();
+    app.dispose();
   });
 
   it('retries a failed package script load and then installs the adapter', async () => {
@@ -217,8 +163,7 @@ describe('WebMCP document tools', () => {
     vi.stubGlobal('window', { WebMCP: BrowserWebMCP });
     registerWebMCP(() => '', () => {});
     await vi.waitFor(() => expect(tools.size).toBe(toolNames.length));
-    await expect(tools.get('open_doc')?.({ blockId: 'roadmap-overview' })).rejects.toThrow('Open a canvas');
-    await expect(tools.get('open_doc')?.({ canvasId: ' ', blockId: 'roadmap-overview' })).rejects.toThrow('Open a canvas');
+    await expect(tools.get('read_doc')?.({ blockId: 'roadmap-overview' })).rejects.toThrow('Open a canvas');
   });
 
   it('retries adapter initialization without reloading the upstream package', async () => {

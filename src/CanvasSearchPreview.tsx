@@ -8,6 +8,7 @@ import { Icon } from './AppIcon';
 import type { SearchAction } from './canvas-search-types';
 import { searchCanvasName } from './canvas-search-model';
 import { useDocumentContent } from './useDocumentContent';
+import { rehypeMarkdownDirection } from './markdown-direction';
 
 type PreviewProps = {
   hit: SearchHit;
@@ -34,8 +35,8 @@ function presentationBody(block: CanvasBlock): string {
 
 function PreviewBody({ block }: { block: CanvasBlock }) {
   if (block.kind !== 'markdown') return <pre className="canvas-search__preview-source">{block.content}</pre>;
-  return <div className="loader-markdown canvas-search__preview-markdown">
-    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>{presentationBody(block)}</ReactMarkdown>
+  return <div className="loader-markdown canvas-search__preview-markdown" dir="auto">
+    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize, rehypeMarkdownDirection]}>{presentationBody(block)}</ReactMarkdown>
   </div>;
 }
 
@@ -53,7 +54,7 @@ function PreviewPaper({ content }: { content: ReturnType<typeof useDocumentConte
   return <article className="canvas-search__preview-paper">
     {content.error ? <p role="alert">Could not load document. <button type="button" onClick={content.retry}>Retry</button></p>
       : !content.block ? <p role="status">Loading document preview…</p>
-        : <><h3>{content.block.title}</h3><PreviewBody block={content.block}/></>}
+        : <><h3 dir="auto">{content.block.title}</h3><PreviewBody block={content.block}/></>}
   </article>;
 }
 

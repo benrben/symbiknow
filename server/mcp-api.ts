@@ -1,4 +1,5 @@
 import type { CanvasBlock } from '../shared/types.js';
+import { mcpCallSignal, mcpCallTool } from './mcp-call-context.js';
 
 export function result(value: unknown) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
@@ -21,12 +22,18 @@ async function responseFailure(response: Response) {
 }
 export class CanvasApi {
   constructor(private readonly base: string, private readonly fetcher: typeof fetch,
-    private readonly headers: () => Record<string, string>) {}
+    private readonly headers: Record<string, string> | (() => Record<string, string>)) {}
+
+  private requestHeaders() {
+    return typeof this.headers === 'function' ? this.headers() : this.headers;
+  }
 
   async request<T>(route: string, method = 'GET', body?: unknown): Promise<T> {
     let response: Response;
-    try { response = await this.fetcher(this.base + route, requestOptions(method, body, this.headers())); }
-    catch { throw new Error(`Canvas API is unavailable at ${this.base}`); }
+    const signal = mcpCallSignal();
+    signal?.throwIfAborted();
+    try { response = await this.fetcher(this.base + route, { ...requestOptions(method, body, { ...this.requestHeaders(), ...(mcpCallTool() ? { 'x-symbiknow-mcp-tool': mcpCallTool()! } : {}) }), signal }); }
+    catch { if (signal?.aborted) throw signal.reason; throw new Error(`Canvas API is unavailable at ${this.base}`); }
     if (!response.ok) throw await responseFailure(response);
     return response.json() as Promise<T>;
   }

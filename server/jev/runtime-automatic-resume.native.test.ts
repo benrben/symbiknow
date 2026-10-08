@@ -45,7 +45,7 @@ it.each(['profile', 'label'] as const)
       const store = new CanvasStore(root); await store.init(); await store.deleteWorkspace('acme-team');
       const workspace = await store.createWorkspace({ name: 'Automatic resume' });
       const canvas = await store.createCanvas(workspace.id, { name: 'Atlas' });
-      const source = await store.createBlock(canvas.id, { title: 'Atlas', content: '# Atlas\nOwner: Alice\nAtlas release requirements.' });
+      const source = await store.createBlock(canvas.id, { title: 'Atlas', content: '# Atlas\nOwner: Alice\nAtlas coordinate specification: every northern star entry records right ascension and declination.' });
       await store.createTask(canvas.id, { title: 'Atlas release', detail: 'Deliver Atlas release requirements.' }, 'Browser');
       vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime('2026-10-04T12:00:00.000Z');
       runtime = new JevRuntime(store, { startTimer: false,

@@ -169,7 +169,7 @@ describe('block loaders', () => {
 
   it('renders Markdown tasks and code without exposing frontmatter', () => {
     const html = renderBlock('markdown', '---\ntitle: Hidden\n---\n# Visible\n- [ ] Review\n\n```ts\nconst answer = 42\n```');
-    expect(html).toContain('<h1>Visible</h1>');
+    expect(html).toContain('<h1 dir="auto">Visible</h1>');
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('const answer = 42');
     expect(html).not.toContain('title: Hidden');
@@ -206,7 +206,7 @@ describe('block loaders', () => {
     vi.stubGlobal('window', { location: { href: 'not a valid base URL' } });
     try {
       const html = renderBlock('markdown', '`inline` and [Clip](https://example.com/video.mp4)');
-      expect(html).toContain('<code>inline</code>');
+      expect(html).toContain('<code dir="ltr">inline</code>');
       expect(html).toContain('href="https://example.com/video.mp4"');
       expect(html).not.toContain('loader-video');
     } finally {

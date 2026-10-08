@@ -87,10 +87,10 @@ describe('chat history recovery through public storage and the actual chat view'
 
 describe('public turn transitions and presentation', () => {
   const categories: Array<[string, SymbiState]> = [
-    ['search_docs', 'searching'], ['search_canvas', 'searching'],
-    ['read_doc', 'reading'], ['read_block', 'reading'], ['read_file', 'reading'],
+    ['search_docs', 'searching'], ['ask_symbi', 'searching'], ['find_by', 'searching'], ['related', 'searching'],
+    ['read_doc', 'reading'], ['download_file', 'reading'], ['read_file', 'reading'],
     ['show_doc_on_canvas', 'moving'], ['show_group_on_canvas', 'moving'],
-    ['move_block', 'moving'], ['create_doc', 'writing'], ['edit_doc', 'writing'],
+    ['move_block', 'moving'], ['upload_file', 'writing'], ['edit_file', 'writing'], ['apply_file_proposal', 'writing'],
     ['delete_doc', 'writing'], ['link_blocks', 'connecting'],
     ['draw_research_canvas', 'organizing'], ['remote_tool', 'tooling'],
   ];

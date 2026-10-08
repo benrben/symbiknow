@@ -67,15 +67,15 @@ describe('document actions through the real canvas API', () => {
       registerResource(name: string, _description: string, _template: unknown, handler: ResourceHandler) { resources.set(name, handler); }
     };
     const { result, intercept, read } = await fixture();
-    await waitFor(() => expect(tools.has('create_doc')).toBe(true));
-    const create = tools.get('create_doc')!;
-    await act(async () => { await create({ title: 'MCP written note', content: '# MCP written note' }); });
+    await waitFor(() => expect(tools.has('upload_file')).toBe(true));
+    const create = tools.get('upload_file')!;
+    await act(async () => { await create({ mode: 'create', filename: 'note.md', idempotencyKey: 'written-note', title: 'MCP written note', content: '# MCP written note' }); });
     await waitFor(() => expect(result.current.state.canvas?.blocks.some(block => block.title === 'MCP written note')).toBe(true));
     expect((await read()).blocks.some(block => block.title === 'MCP written note')).toBe(true);
     const active = await resources.get('active_canvas')!('canvas://active');
     expect(JSON.parse(active.contents[0].text)).toMatchObject({ id: 'product-roadmap' });
     intercept((route, init) => route === '/api/canvases/product-roadmap' && !init?.method ? failure('MCP canvas refresh unavailable') : undefined);
-    await act(async () => { await create({ title: 'Saved despite refresh', content: '# Saved despite refresh' }); });
+    await act(async () => { await create({ mode: 'create', filename: 'refresh.md', idempotencyKey: 'despite-refresh', title: 'Saved despite refresh', content: '# Saved despite refresh' }); });
     await waitFor(() => expect(result.current.state.error).toBe('MCP canvas refresh unavailable'));
     expect((await read()).blocks.some(block => block.title === 'Saved despite refresh')).toBe(true);
   });

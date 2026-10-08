@@ -64,7 +64,7 @@ function ReaderPage({ model, block: summary, sequence, index, neighbors, scrolle
     </header>
     <main className="page-reader__scroll" ref={scroller}><div className="page-reader__document">
       <div className="page-reader__eyebrow">{block.kind} · {block.file}<ReaderLock block={block}/></div>
-      <h1>{block.title}</h1>
+      <h1 dir="auto">{block.title}</h1>
       <ReaderContent model={model} content={content}/>
       {model.canvas && <JevDocumentReview key={`${model.canvasId}:${block.id}`} workspaceId={model.canvas.workspaceId}
         canvasId={model.canvasId} blockId={block.id} contentHash={block.contentHash} groupLabels={model.canvas.groupLabels}

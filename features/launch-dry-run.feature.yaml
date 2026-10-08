@@ -1,0 +1,12 @@
+feature: Automatic organization of the exact eight launch files
+scenarios:
+  - name: A burst of ordinary uploads becomes shared topics useful links and a heading-only duplicate
+    steps:
+      - given: a fresh Dry run canvas with the synthetic launch provider
+      - when: I upload the eight exact launch files in alphabetical order
+      - then: all eight launch files automatically settle into their shared main topics
+      - and: the named launch dependencies and heading-only duplicate are saved
+      - when: I open the current canvas in a browser
+      - then: the launch canvas displays Reflex attribution useful links and both duplicate badges
+      - when: I reload the exact launch canvas
+      - then: its organization source bytes and duplicate references survive reload without browser errors

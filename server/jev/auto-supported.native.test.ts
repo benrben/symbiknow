@@ -20,7 +20,7 @@ function answer(id: string, question: JevQuestion) {
   if (question.type === 'score') return { type: 'score', score: 1, confidence: 0.67,
     probabilities: Object.fromEntries(question.criteria.map((_, index) => [String(index), index === 1 ? 1 : 0])) };
   const keys = Object.keys(question.criteria);
-  const specific: Record<string, string> = { canvas: 'c1', impact: 'urgent' };
+  const specific: Record<string, string> = { place: 'B', gate: 'B', impact: 'urgent' };
   const selected = specific[id] ?? keys[0];
   return { type: 'choice', choice: selected, confidence: 0.67,
     probabilities: Object.fromEntries(keys.map(key => [key, key === selected ? 1 : 0])) };

@@ -80,7 +80,7 @@ describe('MCP activity ledger', () => {
       try {
         await client.callTool({ name: 'read_doc', arguments: { canvasId: 'product-roadmap', blockId: 'missing' } });
         await client.callTool({ name: 'read_doc', arguments: { canvasId: 'product-roadmap', content: 'invalid secret argument' } });
-        await client.callTool({ name: 'edit_doc', arguments: { canvasId: 'product-roadmap', blockId: 'missing', content: 'secret content' } });
+        await client.callTool({ name: 'upload_file', arguments: { mode: 'create', canvasId: 'product-roadmap', filename: 'denied.md', content: 'secret content', idempotencyKey: 'denied-write' } });
         await client.callTool({ name: 'list_canvases', arguments: {} });
       } finally { await client.close(); }
       const writeResponse = await fetch(base + '/api/mcp/tokens', { method: 'POST', headers: { 'content-type': 'application/json' },
@@ -90,9 +90,9 @@ describe('MCP activity ledger', () => {
       await writer.connect(new StreamableHTTPClientTransport(new URL(base + '/mcp'),
         { requestInit: { headers: { authorization: 'Bearer ' + writerToken } } }));
       try {
-        const createdDoc = await writer.callTool({ name: 'create_doc', arguments: { canvasId: 'product-roadmap', title: 'Activity proof', content: 'private document body' } });
-        const document = JSON.parse((createdDoc.content as Array<{ text: string }>)[0].text) as { id: string; contentHash: string };
-        expect((await writer.callTool({ name: 'delete_doc', arguments: { canvasId: 'product-roadmap', blockId: document.id,
+        const createdDoc = await writer.callTool({ name: 'upload_file', arguments: { mode: 'create', filename: 'document.md', idempotencyKey: 'create-document', canvasId: 'product-roadmap', title: 'Activity proof', content: 'private document body' } });
+        const document = JSON.parse((createdDoc.content as Array<{ text: string }>)[0].text) as { blockId: string; contentHash: string };
+        expect((await writer.callTool({ name: 'delete_doc', arguments: { canvasId: 'product-roadmap', blockId: document.blockId,
           expectedContentHash: document.contentHash } })).isError).not.toBe(true);
       } finally { await writer.close(); }
       const store = new CanvasStore(dataDir);
@@ -100,11 +100,11 @@ describe('MCP activity ledger', () => {
       const apiEntries = await (await fetch(base + '/api/mcp/activity')).json() as { entries: typeof entries };
       expect(apiEntries.entries).toEqual(entries);
       expect(entries.map(entry => [entry.tool, entry.outcome])).toEqual(expect.arrayContaining([
-        ['read_doc', 'error'], ['edit_doc', 'denied'], ['list_canvases', 'success'], ['create_doc', 'success'], ['delete_doc', 'success'],
+        ['read_doc', 'error'], ['upload_file', 'denied'], ['list_canvases', 'success'], ['upload_file', 'success'], ['delete_doc', 'success'],
       ]));
       expect(entries.filter(entry => entry.access === 'read').every(entry => entry.tokenId === created.settings.mcpTokens[0].id && entry.tokenName === 'Audit agent')).toBe(true);
       expect(entries.find(entry => entry.tool === 'read_doc' && entry.documentIds.length)?.documentIds).toEqual(['missing']);
-      expect(entries.find(entry => entry.tool === 'create_doc')?.revision).toMatch(/^[0-9a-f]{40}$/);
+      expect(entries.find(entry => entry.tool === 'upload_file' && entry.outcome === 'success')?.revision).toMatch(/^[0-9a-f]{40}$/);
       expect(entries.find(entry => entry.tool === 'delete_doc')?.revision).toMatch(/^[0-9a-f]{40}$/);
       expect(JSON.stringify(entries)).not.toContain(created.token);
       expect(JSON.stringify(entries)).not.toContain('secret content');

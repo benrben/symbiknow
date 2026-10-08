@@ -421,6 +421,7 @@ html[data-theme='dark'] .version-panel__error { background: #492b30; color: #ffd
 
 /* Shared semantic roles across the app shell and its dialogs. */
 .app-shell, .main-column, .canvas-label, .page-reader, .login-screen { color: var(--sk-text); background-color: var(--sk-canvas); }
+.app-shell .topbar .task-view-toggle { display: inline-flex; }
 .topbar, .chat-panel, .modal, .search-dialog, .login-card, .page-reader__document, .page-reader__header { color: var(--sk-text); background-color: var(--sk-surface); border-color: var(--sk-border); }
 .breadcrumb, .canvas-label p, .chat-welcome p, .chat-message > span, .search-hint, .search-results small, .page-reader__location { color: var(--sk-muted); }
 .breadcrumb strong, .canvas-label h1, .empty-state h2, .chat-header strong, .chat-welcome h2, .search-results strong, .login-card h1, .page-reader__document > h1 { color: var(--sk-text); }

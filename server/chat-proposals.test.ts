@@ -22,6 +22,7 @@ function expectRestoredCanvas(current: { blocks: import('../shared/types.js').Ca
 
 import { createChatStream, type DeepAgentFactory } from './chat-stream.js';
 import { createApiServer } from './index.js';
+import { uploadLocalEdit } from './chat-file-tools.test.fixture.js';
 
 const directories: string[] = [];
 const servers: Server[] = [];
@@ -254,11 +255,10 @@ describe('Chat document proposals', () => {
     const store = await fixture();
     await store.updateSettings({ apiKey: 'key', model: 'vendor/model' });
     const before = await store.getCanvas('product-roadmap');
-    const factory: DeepAgentFactory = (_settings, tools) => async function* (messages) {
-      expect(tools.map(item => item.name)).not.toContain('delete_doc');
+    const factory: DeepAgentFactory = (_settings, tools, _prompt, environment) => async function* (messages) {
+      expect(tools.map(item => item.name)).toContain('delete_doc');
       expect(tools.map(item => item.name)).not.toContain('organize_canvas');
-      const edit = tools.find(item => item.name === 'edit_doc')!;
-      expect(await edit.invoke({ blockId: 'launch-checklist', content: '# Proposed checklist' })).toContain('"saved":false');
+      expect(await uploadLocalEdit(tools, environment!.workdir, 'launch-checklist', '# Proposed checklist')).toContain('proposalId');
       yield { messages: [...messages, new AIMessage('I prepared a proposal for review.')] };
     };
     const session = await createChatStream(store, { canvasId: before.id, messages: [{ role: 'user', content: 'Edit the checklist' }] }, factory);
@@ -272,8 +272,8 @@ describe('Chat document proposals', () => {
   it('serves proposal, Apply, and Undo through the HTTP contract', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-proposal-http-'));
     directories.push(root);
-    const factory: DeepAgentFactory = (_settings, tools) => async function* (messages) {
-      await tools.find(item => item.name === 'edit_doc')!.invoke({ blockId: 'launch-checklist', content: '# HTTP proposal' });
+    const factory: DeepAgentFactory = (_settings, tools, _prompt, environment) => async function* (messages) {
+      await uploadLocalEdit(tools, environment!.workdir, 'launch-checklist', '# HTTP proposal');
       yield { messages: [...messages, new AIMessage('Review this edit.') ] };
     };
     const server = await createApiServer({ dataDir: root, agentFactory: factory });
@@ -309,10 +309,12 @@ describe('Chat document proposals', () => {
       body: JSON.stringify({ canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Edit the checklist again' }] }) });
     const secondMatch = /event: chat_proposal\ndata: ([^\n]+)/.exec(await secondStream.text());
     const second = JSON.parse(secondMatch![1]) as { id: string };
-    await store.updateBlock('product-roadmap', 'launch-checklist', { title: 'Changed while reviewing' });
+    await store.updateBlock('product-roadmap', 'launch-checklist', { content: '# Changed while reviewing' });
     const conflict = await fetch(`${base}/api/chat/proposals/${second.id}/apply`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) });
     expect(conflict.status).toBe(409);
-    expect(await conflict.json()).toMatchObject({ conflicts: [{ id: 'launch-checklist' }] });
+    expect(await conflict.json()).toEqual({ error: 'The proposal branch changed; download and review it again' });
+    expect((await store.getCanvas('product-roadmap')).blocks.find(block => block.id === 'launch-checklist')?.content)
+      .toBe('# Changed while reviewing');
   });
 });

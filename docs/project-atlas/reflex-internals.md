@@ -2,6 +2,12 @@
 
 How the Reflex runtime under `server/jev/` admits, schedules, runs, stores, checks, and undoes its work. Read [symbi-reflex.md](symbi-reflex.md) first for the engine basics, the six actions, and the endpoint list.
 
+## Source isolation and card attribution
+
+Decision requests can share transport only when every original question set has the same exact source objects and compatible context. Filing candidate definitions and origins stay separate from profiling and labelling, while candidates for the same filing source share bounded requests. `actions/question-source-scope.ts` splits unrelated documents before request budgeting, concurrent transport, answer validation, and cache reuse; answers return in their original order. Source-derived headings nominate labels and repeated category headings nominate root groups, while semantic checks and exact source evidence still decide whether changes apply.
+
+The canvas projects checked applied duplicate findings onto both current cards. This projection checks source incarnation, generation, content hash, availability, and processing eligibility without adding duplicate metadata to the source documents. Cards display “Reflex did it” and briefly highlight new applied mutation stamps. Symbi Reflex saved activity shows “Reflex” for automatic receipts while retaining the stored actor ID and original timestamps.
+
 ## Component map
 
 ```mermaid
@@ -95,9 +101,9 @@ interface JevDocumentPlan {            // server/jev/runtime-document.ts
 
 ```json
 {
-  "id": "5c1e9a2e-…", "questionVersion": "symbi-reflex-10", "state": "running", "attempts": 1,
+  "id": "5c1e9a2e-…", "questionVersion": "symbi-reflex-13", "state": "running", "attempts": 1,
   "request": { "action": "profile", "canvasId": "ops", "blockIds": ["rollback-runbook"],
-    "idempotencyKey": "source:ops:rollback-runbook:7f0c…:3:symbi-reflex-10:automatic-knowledge-13:1a2b3c4d5e6f" },
+    "idempotencyKey": "source:ops:rollback-runbook:7f0c…:3:symbi-reflex-13:automatic-knowledge-21:1a2b3c4d5e6f" },
   "followupKey": "document:5c1e9a2e-…", "followupActions": ["file", "suggest_home_canvas"],
   "documentPlan": { "version": 2, "completedActions": ["profile", "label", "link", "flag_duplicate"],
     "claimPreparedAt": "2026-10-06T08:12:03.114Z", "queueWaitMs": 412, "originalSources": ["…"] }
@@ -111,7 +117,7 @@ How `DocumentRunner` works:
 3. If all of a step's proposals are workspace-only (`derived`, `vocabulary`, or held), the step is only *staged* in memory. No disk write yet.
 4. If a step has a canonical change (document metadata, move), the runner saves `activeJob` first, then applies each proposal through `JevProposalExecutor.applyInside`. A `400`/`409` from a write marks that proposal `stale` or `dismissed` and fails the step.
 5. `complete()` writes the organization checkpoint, sets the root `completed`, and sets `completionPreparedAt`, all in one flush.
-6. If the document's `group` field is pinned or not managed, `file` returns `no_change` without calling Jev (`protectedFiling`).
+6. A pinned group or an existing group without automatic ownership makes `file` return `no_change` without calling Jev (`protectedFiling`). An ungrouped, unpinned document can receive its first automatic group; the applied receipt records group ownership.
 
 ## Admission, scheduling, and followups
 
@@ -139,7 +145,7 @@ After 6 organization picks in a row, the next slot goes to background work. With
 
 **Followups** (`followups.ts`). Outside the document plan, a finished automatic `profile` starts a chain: `label → link → flag_duplicate → file → suggest_home_canvas`. Each step is enqueued only after the previous one completes, so it sees a fresh canonical snapshot. Admission metadata `{ key, remaining }` is private: only the automation principal may supply it, and the step key must be `<key>:<action>` (`runtime-followup-admission.ts`). A pending chain for the same source identity blocks a second chain (`hasPendingSourceFollowup`).
 
-When a chain ends, the profile gets an organization checkpoint: `organizationKey` and `organizationContextKey` (sha256 of `automatic-knowledge-13`, settings, vocabulary, and every canvas's block inputs). A failed chain stores `organizationFailedContextKey` and `organizationRetryAt` = now + 60 s instead.
+When a chain ends, the profile gets an organization checkpoint: `organizationKey` and `organizationContextKey` (sha256 of `automatic-knowledge-21`, settings, vocabulary, and every canvas's block inputs). Version 21 lets normally enabled automation reconsider earlier broad groups using independently verified subject families, member-specific candidate ranking, consistent category scope, saved canonical restrictions, main-subject proof for existing root groups, consistent subject-family admission after an initial rejection, and preservation of checked definitions and parent/subgroup scope. Manual group assignments and group pins remain protected. A failed chain stores `organizationFailedContextKey` and `organizationRetryAt` = now + 60 s instead.
 
 **Maintenance tick.** Every 60,000 ms (`setInterval`, `unref`). Each tick runs, per workspace: reset recovery, pruning, parent-Undo recovery, prepared-mutation recovery, approved-ownership reconciliation, document-plan resume, requeue of interrupted `running` jobs, then backfill.
 
@@ -151,14 +157,33 @@ When a chain ends, the profile gets an organization checkpoint: `organizationKey
 
 | Action | Main questions (`actions/*.ts`) | Limits |
 | --- | --- | --- |
-| `profile` | `role` (Choice), `keyPassage` (Choice), `entity_i` (Noul), `logicalTopic_i` (Noul) + `logicalTopicEvidence_i` (Choice) | ≤ 8 entities, ≤ 16 topic candidates |
-| `label` | per candidate: `label_i` (Noul) + `evidence_i` (Choice) | ≤ 8 candidates, ≤ 20 tags saved |
-| `link` | per pair: `supported` (Noul), `sourceEvidence`, `targetEvidence` (Choice), `usefulness` (Score, 3 levels), `relation` (Choice) | ≤ 12 neighbors, hard max 24; ≤ 20 links saved |
-| `flag_duplicate` | same pair set without `usefulness` | identical content skips Jev |
-| `file` | `group` (Choice over existing groups), then `evidence` + `purpose_i` / `containment_i` / `coherent` | ≤ 16 existing groups, ≤ 3 selection rounds |
-| `suggest_home_canvas` | `canvas` (Choice), then `evidence` (Choice) | ≤ 16 canvases |
+| `profile` | One round: role/key passage/entities plus topic membership and exact evidence; document outline includes 30 section names | ≤ 8 entities, ≤ 16 topic candidates |
+| `label` | Current calibrated profile topics and stored rejections reuse without another call; other documents ask topic membership + evidence | ≤ 8 fallback candidates, ≤ 20 saved tags |
+| `link` | Automatic pairs ask useful-context support, exact evidence at both ends, and a five-option directional relation | Existing explicit-relation/recheck/conflict questions remain separate |
+| `flag_duplicate` | One `overlap` Choice: copy, version, distinct; combine copy + version probabilities | Identical-content path remains local; semantic evidence retains exact body offsets |
+| `file` | Existing groups: place + none gate, then one small exact-evidence round | ≤ 16 groups; 14 document sections; up to 6 member outlines with 4 sections each |
+| `suggest_home_canvas` | Place + none gate, then exact destination evidence | ≤ 16 canvases including the authorized current canvas; one canvas makes no provider call |
 
-Every Choice question gets two extra options: `none` and `unknown` (`candidates()` in `actions/context.ts`, max 24 named options). Evidence options are exact passages: up to 8 per document, each quote at most 600 chars (`source-passages.ts`). Answers are validated: probabilities must sum to 1 ± 0.015, the chosen option must be the leader, scores must be in range.
+Only builders using `candidates()` add `none` and `unknown`. The duplicate Choice has three explicit options; filing/home place and gate include `none`. Exact passage options preserve current source offsets. All answers retain SDK validation: valid distributions, leading Choice selections, and bounded probabilities.
+
+### Calibrated confidence
+
+`actions/calibration.ts` maps each measured raw boundary to the existing default slider value, 0.70. The lower and upper segments are linear and clamp to 0–1; non-finite input maps to zero. New saved results use numeric `calibration: 1`, and `JEV_QUESTION_VERSION` is `symbi-reflex-13`. Older profile confidence is rejudged before the zero-call label path.
+
+| Decision | Raw boundary at slider 70% | Measure |
+| --- | --- | --- |
+| Topic membership / labels | 0.30 | Main substantive topic, with exact evidence |
+| Vocabulary synonym | 0.30 | Existing equivalent-definition question |
+| Duplicate overlap | 0.50 | 1 − P(distinct); values below 0.50 always skip |
+| Existing-group filing | 0.40 | 1 − P(gate.none), independent of winning place probability |
+| Home subject gate | 0.30 | 1 − P(gate.none) |
+| Home destination margin | 0.20 | Best canvas probability minus current canvas probability |
+
+Filing keeps the existing bootstrap/coherent/subgroup-containment paths. Home stays when gate.none ≥ 0.70, `place.none` leads or ties every canvas, the best canvas is current, or the margin is below 0.20. Every recorded decision confidence must also pass the configured slider. Claim-checking uses a fixed API cutoff: a `no` below 0.70 or with incomplete retrieval coverage becomes `insufficient_evidence`; low-confidence `yes` is preserved.
+
+Benchmarks on 2026-10-07 use frozen Project Atlas inputs and `jev-1.13.0`. Two duplicate runs score 21/21; two automatic-link runs find 7/8 useful links with 0/14 wrong; two claim API runs score 31/31. Two automatic vocabulary runs find 8/8 intended merges with 0/9 wrong. Profile and fresh-label runs score 63/64, with zero extra label calls: safe-collaboration → Rollback remains a false positive. Two final production filing runs score 19/19 with seven supplied group definitions and existing-root main-purpose proof; they do not establish automatic group discovery. Broad-start runs exposed excessive singleton groups. Sequential canonical runs verify actual writes and reloads, but the final two runs each retain eight documents in Engineering with no failed jobs, and UI/Canvas placements still vary. Automatic group discovery remains uncertified; these intermediate results are recorded in `docs/jev/performance-plan-evidence/group-discovery-measured.json`. The latest home-placement review2 runs each score 16/19 with no wrong moves; its accuracy target is not met. Both approved synthetic home repeats score 10/10 with zero wrong moves; both supplied-group filing repeats score 12/12 with zero incorrect existing-group placements in four off-topic cases. All four runs exit 0. These heldout results do not measure sequential group discovery. Recorded report and input hashes are in `docs/jev/performance-plan-evidence/graph-profile-filing-measured.json` and `reflex-vocabulary-measured.json`.
+
+After honoring a leading `place.none`, the latest two frozen Atlas home review2 runs score 16/19 with zero wrong moves. Chat internals, Canvas UI, and Architecture remain in their current canvases, so the accuracy target is still unmet; all earlier outcomes remain recorded.
 
 ### Batching, budget, and waves
 
@@ -177,7 +202,7 @@ flowchart LR
 - **Budget** (`question-request-budget.ts`): an ordinary request must fit 16,000 estimated tokens. A shared bundle must keep state + longest question ≤ 32,000 and state + all questions ≤ 64,000. Bundles reserve 4,200 tokens for provider overhead (200 for ordinary requests). Over budget at send time: `413`.
 - **Waves** (`question-batch-parallel.ts`): at most 4 chunk calls run at once. After a failure no new chunk starts. The earliest failed chunk's error is thrown.
 - **Recovery** (`question-batch-recovery.ts`): if the provider rejects a multi-set bundle for context length, it is split in half recursively.
-- **Prefetch** (`runtime-question-prefetch.ts`): an automatic `profile` with ≤ 8 blocks also asks the questions of `label`, `link`, `flag_duplicate`, and `suggest_home_canvas` in the same waves. Only answers are prefetched. `file` waits because it needs the applied labels and links. Failed optional prefetches are listed in `result.prefetchDeferredActions`.
+- **Prefetch** (`runtime-question-prefetch.ts`): an automatic `profile` with ≤ 8 blocks also asks the questions of `link`, `flag_duplicate`, and `suggest_home_canvas` in the same waves. Only answers are prefetched. `label` reads the applied calibrated profile without another call. `file` waits because it needs the applied labels and links. Failed optional prefetches are listed in `result.prefetchDeferredActions`.
 - **Transport**: Reflex calls use `maxRetries: 0`. Retries happen at job level instead. `jev-transport.ts` itself has a 20 s request timeout, 262,144-byte response limit, and up to 5 s backoff.
 
 ### Answer cache
@@ -207,6 +232,8 @@ Only exact automation jobs with explicit `blockIds` and no `query` or `options` 
 - **Topics** (`group-topics.ts`): candidate groups come from native groups, logical topics, level 1–2 headings (level 2 under level 1 becomes `parent/child`), tags, and the title. Up to 8 per source, up to 24 in the catalog, 4 origin passages each. A subgroup is reusable only if the text of at least 2 documents mentions it (`rankedTopic`).
 - **Passages** (`group-passages.ts`): filing uses prose passages as evidence options.
 - **Assessment** (`group-assessment.ts`): first an `evidence` choice. With `selectiveGroupAssessment` (always on in the document plan), the semantic checks (`purpose_i`, `containment_i` for subgroups, `coherent` for new groups) run only for the chosen passage.
+- **Broad-group refinement** (`filing-selection.ts`, `refinement-evidence.ts`): current calibrated topics and exact checked passages nominate up to 15 alternatives, ranked by the member's checked main subject and corpus specificity. Shared families require independently checked main-purpose passages from the member and a fresh local peer under the same category definition. Nearby titles and previews only help selection. Singleton subjects require independence from nearby main subjects; overlapping subjects can instead qualify with shared proof. Comparison previews share a peer dictionary and shrink within the existing byte budget; saved and selected evidence retains its complete source quote and offsets. Oversized semantic assessments use the evidence-first path before the unchanged selected-passage checks.
+- **Saved group meaning** (`canonical-group-scope.ts`): an existing vocabulary definition takes precedence when the executor will reuse that term. Otherwise the current canvas's saved native definition supplies the scope. Selection, bootstrap, and refinement checks use that same meaning, including its saved parent definition. Source nominations cannot broaden a saved definition or bypass retirement.
 - **New groups** (`grouping.ts`): a new group produces a `vocabulary` proposal (`define` or `promote`, id `group_<sha256(key)[0..16]>`) and a `document` proposal `{ group }`. Filing is held until the definition is active. Parent definitions are proposed first.
 - **Vocabulary** (`server/jev/vocabulary.ts`): operations `nominate, define, promote, rename, alias, retire, restore, merge, split, remove`; kinds `group, label, entity`; states `candidate, active, retired`. A parent must be active, the path must match, cycles are rejected, a parent with live subgroups cannot be removed.
 - **Hierarchy** (`actions/vocabulary-hierarchy.ts`): picks a parent among ≤ 16 active `custom:` groups with depth < 8, with a `containment` Noul and an exact passage.

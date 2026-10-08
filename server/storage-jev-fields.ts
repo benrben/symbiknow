@@ -43,6 +43,12 @@ function setReviewer(result: CanvasTask, value: unknown): void {
   if (value !== null && (typeof value !== 'string' || value.length > 120)) throw new ApiError(400, 'Invalid task reviewer');
   if (value) result.reviewer = String(value); else delete result.reviewer;
 }
+function setSize(result: CanvasTask, value: unknown): void {
+  if (value === undefined) return;
+  if (value === null) { delete result.size; return; }
+  if (!['xs', 's', 'm', 'l', 'xl'].includes(value as string)) throw new ApiError(400, 'Invalid task size');
+  result.size = value as CanvasTask['size'];
+}
 function setCriteria(result: CanvasTask, value: unknown): void {
   if (value === null) delete result.acceptanceCriteria;
   else if (value !== undefined) result.acceptanceCriteria = criteria(value);
@@ -50,6 +56,7 @@ function setCriteria(result: CanvasTask, value: unknown): void {
 export function taskJevFields(task: CanvasTask, input: Record<string, unknown>): CanvasTask {
   const result = { ...task };
   setPriority(result, input.priority);
+  setSize(result, input.size);
   setReviewer(result, input.reviewer);
   setCriteria(result, input.acceptanceCriteria);
   return result;

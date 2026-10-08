@@ -1,17 +1,16 @@
 import { createHash } from 'node:crypto';
 import { groupLabel, groupParent, normalizedGroup, validGroupKey } from '../../../shared/groups.js';
-import type { JevActionRequest, JevEvaluation, JevMutation, JevPassage, JevSettings, JevValues, JevVocabularyTerm } from '../../../shared/jev-types.js';
+import type { JevActionRequest, JevEvaluation, JevMutation, JevSettings, JevValues, JevVocabularyTerm } from '../../../shared/jev-types.js';
 import { choice, noul, type ChoiceAnswer, type JevAnswer } from '../../jev.js';
-import { candidates, confidence, evaluation, passages, proposal, selected, selectedDocuments,
+import { candidates, confidence, evaluation, selected, selectedDocuments, semanticThreshold,
   sourceState, supported, textOption, type JevEvaluationContext, type JevInputDocument } from './context.js';
 import { lexicalScore } from './candidates.js';
 import { batchedDiscoveryContext } from './discovery-batch.js';
 import { judgeQuestionSets, type JevQuestionSet } from './question-batch.js';
 import { vocabularyGroupKey } from './groups.js';
-import { recall } from './serving.js';
 import { semanticHeadingNames, sourcePassages } from './source-passages.js';
 import { sharedSourceCategories } from './source-categories.js';
-import { defineAssessedConcept, mergeAssessmentSet, mergeAssessedTerms, nominationFitSet, vocabularyLifecycle } from './vocabulary.js';
+import { defineAssessedConcept, mergeAssessmentSet, mergeAssessedTerms, nominationFitSet, synonymConfidence, vocabularyLifecycle } from './vocabulary.js';
 
 type People = JevSettings['people'];
 type Kind = JevVocabularyTerm['kind'];
@@ -218,33 +217,25 @@ function appendVocabulary(result: JevEvaluation, generated: JevEvaluation, conte
 
 function mergePairs(context: JevEvaluationContext): Array<{ source: JevVocabularyTerm; target: JevVocabularyTerm }> {
   const terms = context.vocabulary.filter(term => term.state === 'active').slice(0, 16);
-  return terms.flatMap((source, index) => terms.slice(index + 1).filter(target => mergeCandidate(source, target))
-    .map(target => ({ source: target, target: source }))).slice(0, 8);
+  const pairs = terms.flatMap((source, index) => terms.slice(index + 1).filter(target => source.kind === target.kind)
+    .map(target => ({ source: target, target: source })));
+  if (pairs.length <= 8) return pairs;
+  return pairs.sort((a, b) => mergePairRank(b) - mergePairRank(a)).slice(0, 8);
 }
 
-function mergeCandidate(source: JevVocabularyTerm, target: JevVocabularyTerm): boolean {
-  if (source.kind !== target.kind) return false;
-  const query = `${source.name} ${source.definition}`;
-  return sameName(target, source.name) || lexicalScore(query, `${target.name} ${target.definition}`) >= 0.6;
+function mergePairRank(pair: { source: JevVocabularyTerm; target: JevVocabularyTerm }): number {
+  return lexicalScore(`${pair.source.name} ${pair.source.definition}`, `${pair.target.name} ${pair.target.definition}`);
 }
 
 async function mergeVocabulary(context: JevEvaluationContext, request: JevActionRequest): Promise<JevEvaluation> {
   const pairs = mergePairs(context);
   if (!pairs.length) return evaluation();
-  const selection: JevQuestionSet = { state: { sources: selectedDocuments(context, request).slice(0, 8).map(sourceState) }, questions: {
-    pair: choice('Which supplied concept pair has the same meaning and boundaries and should share one definition? Choose none for merely related concepts.',
-      candidates(pairs.map((pair, index) => ({ id: `m${index}`, description:
-        `${pair.source.name}: ${pair.source.definition}\n${pair.target.name}: ${pair.target.definition}` })))),
-  } };
   const requests = pairs.map(pair => ({ ...request, options: { operation: 'merge', termId: pair.source.id, targetId: pair.target.id } }));
-  const answers = await judgeQuestionSets(context, [selection, ...requests.map(item => mergeAssessmentSet(context, item))]);
-  const id = selected(answers[0].pair, context);
-  const index = pairs.findIndex((_, index) => `m${index}` === id);
-  if (index < 0) return evaluation();
-  const result = mergeAssessedTerms(context, requests[index], answers[index + 1].synonymous);
-  if (result.result.synonymySupported !== true) return evaluation();
-  for (const candidate of result.proposals) candidate.decisionConfidences = [confidence(answers[0].pair), Number(result.result.semanticConfidence)];
-  return result;
+  const answers = await judgeQuestionSets(context, requests.map(item => mergeAssessmentSet(context, item)));
+  const best = answers.map((answer, index) => ({ index, value: synonymConfidence(answer.synonymous) }))
+    .filter(item => item.value >= semanticThreshold(context)).sort((a, b) => b.value - a.value)[0];
+  if (!best) return evaluation();
+  return mergeAssessedTerms(context, requests[best.index], answers[best.index].synonymous);
 }
 
 function discoveryKinds(request: JevActionRequest): Kind[] {
@@ -286,42 +277,5 @@ export async function automaticVocabulary(context: JevEvaluationContext, request
   result.result.synonymySupported = merged.result.synonymySupported ?? false;
   result.result.proposalCount = result.proposals.length;
   result.result.status = result.proposals.length ? 'proposed' : 'no_change';
-  return result;
-}
-
-function sourceQuery(document: JevInputDocument): string {
-  const topic = [...new Set([document.block.title, ...(document.block.tags ?? [])])].join(', ');
-  const claims = sourcePassages(document.block.content).slice(0, 3).map(passage => passage.text).join('\n');
-  return `Which other source passages support, explain, qualify, or contradict this topic and its claims?\nTopic: ${topic}\nSource claims:\n${claims}`.slice(0, 1800);
-}
-
-function recalledEvidence(result: JevEvaluation, documents: JevInputDocument[]): JevPassage[] {
-  const found = result.result.passages as JevValues[];
-  const keys = new Set(found.map(value => JSON.stringify(value.passage)));
-  return documents.flatMap(document => passages(document, 24)).filter(passage => keys.has(JSON.stringify(passage)));
-}
-
-async function recallDocument(context: JevEvaluationContext, request: JevActionRequest, document: JevInputDocument): Promise<JevEvaluation> {
-  const candidates = context.documents.filter(item => item.canvasId !== document.canvasId || item.block.id !== document.block.id)
-    .filter(item => !item.block.processingExcluded);
-  const query = sourceQuery(document);
-  const result = await recall({ ...context, documents: candidates }, { ...request, query });
-  const values: JevValues = { recall: { ...result.result, query, automatic: true } };
-  const evidence = [...passages(document, 1), ...recalledEvidence(result, candidates)];
-  const contributors = candidates.filter(item => evidence.some(passage => passage.source.canvasId === item.canvasId && passage.source.blockId === item.block.id));
-  const candidate = proposal(request, { kind: 'derived', blockId: document.block.id, values }, [document, ...contributors],
-    `Supporting knowledge: ${document.block.title}`, 'Searches other scoped sources using exact source text and retains bounded passage support.', evidence, 1);
-  return { result: values, proposals: [candidate] };
-}
-
-export async function automaticRecall(context: JevEvaluationContext, request: JevActionRequest): Promise<JevEvaluation> {
-  if (request.query?.trim()) return recall(context, request);
-  const result = evaluation({ documents: {} });
-  for (const document of selectedDocuments(context, request).filter(item => !item.block.processingExcluded).slice(0, 8)) {
-    const generated = await recallDocument(context, request, document);
-    (result.result.documents as JevValues)[document.block.id] = generated.result.recall;
-    result.proposals.push(...generated.proposals);
-  }
-  result.result.status = result.proposals.length ? 'support_checked' : 'no_available_sources';
   return result;
 }

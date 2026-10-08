@@ -12,6 +12,7 @@ import { evaluationContext } from '../context.js';
 import { cachedQuestionContext } from '../runtime-question-prefetch.js';
 import { emptyJevWorkspace, JevWorkspaceFiles } from '../workspace.js';
 import { passages, sourceState, type JevEvaluationContext } from './context.js';
+import { calibrated, decisionBoundaries } from './calibration.js';
 import { QuestionAnswerCache } from './question-answer-cache.js';
 import { resolveSharedQuestionSources, resolveSharedQuestionTexts } from './question-state-pool.test.helpers.js';
 
@@ -38,7 +39,7 @@ function answer(body: Body, wireId: string, submitted: JevQuestion): JevAnswer {
   const { id, input } = scoped(body, wireId);
   const candidate = input.labelCandidates[Number(id.split('_')[1])];
   const question = resolveSharedQuestionTexts(submitted, body.state.questionTexts);
-  if (question.type === 'noul') return { type: 'noul', noul: candidate.name === names[6] ? .6 : .98 };
+  if (question.type === 'noul') return { type: 'noul', noul: candidate.name === names[6] ? .2 : .98 };
   if (question.type !== 'choice') throw new Error('Labels must retain typed yes/no and exact-passage decisions');
   const selected = candidate.name === names[7] ? 'none' : input.document.passages.find(passage => passage.text.includes('checked API release workflow'))!.id;
   return { type: 'choice', choice: selected, confidence: .51,
@@ -97,7 +98,7 @@ async function changeTerm(index: number, patch: Partial<JevVocabularyTerm>) {
 function exactProposal(result: Awaited<ReturnType<typeof evaluated>>, input: JevEvaluationContext) {
   expect(result.proposals).toHaveLength(1); const proposal = result.proposals[0]; const source = input.documents[0];
   expect(proposal.sources).toEqual([source.snapshot]);
-  expect(proposal.decisionConfidences?.every(confidence => confidence === .98)).toBe(true);
+  expect(proposal.decisionConfidences?.every(confidence => confidence === calibrated(.98, decisionBoundaries.topicMembership))).toBe(true);
   expect(proposal.evidence.length).toBeGreaterThan(0);
   for (const evidence of proposal.evidence) {
     expect(evidence.source).toEqual(source.snapshot);
@@ -173,6 +174,6 @@ it('retains the manual eight-candidate flat state and keeps low confidence and e
   expect(Object.keys(calls[0].questions)).toEqual(names.slice(0, 8).flatMap((_, index) => [`label_${index}`, `evidence_${index}`]));
   expect(proposal.mutation).toMatchObject({ kind: 'document', patch: { tags: names.slice(0, 6) } });
   expect(proposal.evidence).toHaveLength(6); expect(unchangedInput(input)).toEqual(before);
-  const stricter = await evaluateJevAction({ ...input, settings: { ...input.settings, confidenceThresholds: { label: .99 } } }, request);
+  const stricter = await evaluateJevAction({ ...input, settings: { ...input.settings, confidenceThresholds: { label: .999 } } }, request);
   expect(stricter.proposals).toEqual([]); expect(calls).toHaveLength(2);
 });

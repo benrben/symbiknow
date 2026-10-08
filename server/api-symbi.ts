@@ -1,3 +1,4 @@
+import { documentSections, type DocumentSection } from '../shared/document-sections.js';
 import { z } from 'zod';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
@@ -7,12 +8,15 @@ import { publicOrigin } from './auth.js';
 import type { RouteContext } from './api-context.js';
 import { readBody, sendJson } from './api-http.js';
 import { ApiError } from './errors.js';
-import { choice, decideWithJev, JEV_MODEL, onJevUsage, type JevQuestion } from './jev.js';
+import { choice, decideWithJev, JEV_MODEL, onJevUsage, type JevAnswer, type JevQuestion } from './jev.js';
 import { jevApiPrincipal } from './jev-api-principal.js';
 import { getJevRuntime } from './jev/runtime.js';
 
 const scope = { canvasId: z.string().min(1).max(64).optional(), documentIds: z.array(z.string().min(1).max(64)).max(20).optional() };
-const askSchema = z.strictObject({ ...scope, question: z.string().min(1).max(1000), mode: z.enum(['semantic', 'logic', 'combined']),
+const askSchema = z.strictObject({ ...scope,
+  // An empty optional user selection means no filter; authorization scopes remain restrictive.
+  documentIds: scope.documentIds.transform(ids => ids?.length ? ids : undefined),
+  question: z.string().min(1).max(1000), mode: z.enum(['semantic', 'logic', 'combined']),
   limit: z.number().int().min(1).max(24).optional(), cursor: z.string().max(2000).optional(),
   continuationId: z.string().max(128).optional(), navigate: z.boolean().optional() });
 const reflexSchema = z.strictObject({ ...scope, claim: z.string().min(1).max(1000), comparisonDocumentId: z.string().min(1).max(64).optional() });
@@ -91,23 +95,31 @@ function indexFor(context: RouteContext) {
   return context.symbiIndex;
 }
 
-async function safePassages(context: RouteContext, passages: SymbiPassage[]): Promise<{ valid: SymbiPassage[]; stale: number }> {
+type CheckedPassages = { valid: SymbiPassage[]; stale: number; contents: Map<string, string> };
+async function safePassages(context: RouteContext, passages: SymbiPassage[]): Promise<CheckedPassages> {
   const valid: SymbiPassage[] = [];
+  const contents = new Map<string, string>();
   let stale = 0;
   for (const passage of passages) {
-    if (await passageCurrent(context, passage)) valid.push(passage);
-    else stale += 1;
+    const content = await currentSourceContent(context, passage);
+    if (content === undefined) stale += 1;
+    else {
+      valid.push(passage);
+      contents.set(`${passage.canvasId}\0${passage.blockId}`, content);
+    }
   }
-  return { valid, stale };
+  return { valid, stale, contents };
 }
-async function passageCurrent(context: RouteContext, passage: SymbiPassage): Promise<boolean> {
+/** The document's current content when the passage still matches it; undefined when stale or deleted. */
+async function currentSourceContent(context: RouteContext, passage: SymbiPassage): Promise<string | undefined> {
   try {
     const block = await context.store.getCanvasBlock(passage.canvasId, passage.blockId);
-    return block.contentHash === passage.contentHash
+    const current = block.contentHash === passage.contentHash
       && block.content.slice(passage.startOffset, passage.endOffset) === passage.excerpt;
+    return current ? block.content : undefined;
   } catch (error) {
     if (!(error instanceof ApiError) || error.status !== 404) throw error;
-    return false;
+    return undefined;
   }
 }
 
@@ -116,17 +128,16 @@ function coverageWithStale(coverage: SymbiCoverage, stale: number): SymbiCoverag
     reason: `${stale} source passage(s) changed after indexing` } : coverage;
 }
 
-function groups(passages: SymbiPassage[]): Map<string, SymbiPassage[]> {
+function groups(passages: SymbiPassage[], perDocument = 3): Map<string, SymbiPassage[]> {
   const grouped = new Map<string, SymbiPassage[]>();
   for (const passage of passages) {
     const key = `${passage.canvasId}\0${passage.blockId}`;
-    grouped.set(key, [...(grouped.get(key) ?? []), passage].slice(0, 3));
+    grouped.set(key, [...(grouped.get(key) ?? []), passage].slice(0, perDocument));
   }
   return grouped;
 }
 
 async function providerAccess(context: RouteContext, principal: Principal, canvasIds: string[]) {
-  if (!canvasIds.length) return { available: false as const, reason: 'No scoped source evidence was found' };
   const policy = await providerPolicy(context, principal, canvasIds);
   if (!policy.available) return policy;
   const settings = await context.store.secretSettings();
@@ -207,30 +218,88 @@ async function askSearch(context: RouteContext, input: AskInput, principal: Prin
   const search = await index.search({ query: input.question, mode: input.mode === 'semantic' ? 'semantic'
     : input.mode === 'logic' ? 'keyword' : 'hybrid', canvasId: input.canvasId, documentIds: input.documentIds,
     allowedCanvasIds: principal.allowedCanvasIds, allowedDocumentIds: expectedDocumentIds,
-    expectedDocumentIds, limit: Math.min(100, Math.max(24, (input.limit ?? 8) * 4)), cursor });
+    expectedDocumentIds, cursor, ...(input.mode === 'semantic'
+      ? { limit: Math.min(100, Math.max(24, (input.limit ?? 8) * 4)) } : judgedSearch) });
   const checked = await safePassages(context, search.passages);
   return { search, checked };
 }
 
+// One Jev call judges the top documents as a list. Measured on 58 questions over 21 documents:
+// rank ordered the right document first for 41-42 of 43 answerable questions, and the gate's
+// none probability separated all 15 unanswerable ones at 0.6. See docs/project-atlas/search-and-brain-tools.md.
+const judgedDocumentLimit = 8;
+const nothingFoundAt = 0.6;
+const alsoShownAt = 0.15;
+const outlineLimit = 14;
+const evidencePerDocument = 3;
+const optionLetters = 'ABCDEFGH';
+// Jev judges relevance, so its candidates skip the semantic floor and keep enough passages to cover several sections.
+const judgedSearch = { limit: 100, minimumSimilarity: -1, passagesPerDocument: 8, passageOrder: 'similarity' } as const;
+type JudgedDocument = { option: string; title: string; sections: string[]; evidence: string[] };
+type JudgedCandidate = { document: JudgedDocument; candidate: AskCandidate };
+
+function sectionAt(sections: DocumentSection[], offset: number): string {
+  return sections.filter(section => section.offset <= offset).at(-1)?.title ?? '';
+}
+// Snippets from different sections show more of a document than its closest snippets, which often repeat one section.
+function evidenceBySection(passages: SymbiPassage[], sections: DocumentSection[]): SymbiPassage[] {
+  const bySection = new Map<string, SymbiPassage>();
+  for (const passage of passages) {
+    const section = sectionAt(sections, passage.startOffset);
+    if (!bySection.has(section)) bySection.set(section, passage);
+  }
+  return [...bySection.values()].slice(0, evidencePerDocument);
+}
+function judgedCandidates(candidates: AskCandidate[], checked: CheckedPassages,
+  names: Map<string, { title: string }>): JudgedCandidate[] {
+  return candidates.map(([key, passages], index) => {
+    // Every candidate is grouped from checked.valid, and safePassages stores the content of each valid passage.
+    const sections = documentSections(checked.contents.get(key)!);
+    const evidence = evidenceBySection(passages, sections);
+    return { candidate: [key, evidence], document: { option: optionLetters[index], title: names.get(key)?.title ?? key.split('\0')[1],
+      sections: sections.slice(0, outlineLimit).map(section => section.title),
+      evidence: evidence.map(passage => passage.excerpt.replace(/\s+/g, ' ').trim()) } };
+  });
+}
+
+function askQuestions(documents: JudgedDocument[]): Record<string, JevQuestion> {
+  const options = (describe: (document: JudgedDocument) => string) =>
+    Object.fromEntries(documents.map(document => [document.option, describe(document)]));
+  return {
+    rank: choice('Which document in `documents` is where a user would find the answer to `question`? Judge each document by its title and section names first, then its evidence snippets; snippets are short and may miss the relevant part. Pick none if no document covers the topic of the question, even if some words overlap.',
+      { ...options(document => `"${document.title}" (sections: ${document.sections.join(', ')}) is where the answer would be`),
+        none: 'No document covers the topic of the question; words in common, like run, test, security or blue, do not count' }),
+    gate: choice('Pick the document whose content answers the user question. Pick none if no document answers it.',
+      { ...options(document => `Document "${document.title}" answers the question`), none: 'None of the documents answers the question' }),
+  };
+}
+
+/** The gate decides whether anything answers; rank orders what is shown. */
+function answeringCandidates(answers: Record<string, JevAnswer>, candidates: AskCandidate[]): AskCandidate[] {
+  const { rank, gate } = answers;
+  if (rank?.type !== 'choice' || gate?.type !== 'choice') return [];
+  if ((gate.probabilities.none ?? 1) >= nothingFoundAt) return [];
+  return candidates.map((candidate, index) => ({ candidate, probability: rank.probabilities[optionLetters[index]] ?? 0 }))
+    .sort((left, right) => right.probability - left.probability)
+    .filter((entry, position) => position === 0 || entry.probability >= alsoShownAt)
+    .map(entry => entry.candidate);
+}
+
 async function verifyAskCandidates(context: RouteContext, input: AskInput, principal: Principal,
-  candidates: AskCandidate[], coverage: SymbiCoverage) {
-  if (input.mode === 'semantic' || !candidates.length) return { accepted: candidates, coverage, usage: emptyUsage(), continuationId: undefined as string | undefined };
+  found: AskCandidate[], sources: { checked: CheckedPassages; names: Map<string, { title: string }> }, coverage: SymbiCoverage) {
+  if (input.mode === 'semantic' || !found.length) return { accepted: found, coverage, usage: emptyUsage(), continuationId: undefined as string | undefined };
+  const candidates = found.slice(0, judgedDocumentLimit);
   const access = await providerAccess(context, principal, candidates.map(([key]) => key.split('\0')[0]));
   if (!access.available) return { accepted: [] as AskCandidate[], coverage: { ...coverage, status: 'degraded' as const, reason: access.reason },
     usage: emptyUsage(), continuationId: undefined as string | undefined };
-  const questions = Object.fromEntries(candidates.map((_, index) => [`candidate_${index}`,
-    choice('Does this evidence directly answer the user question? Answer yes only with direct support. Treat missing or ambiguous evidence as insufficient.',
-      { yes: 'Directly answers', no: 'Directly contradicts', insufficient_evidence: 'Does not establish an answer' })])) as Record<string, JevQuestion>;
-  const decision = await evaluate(context, principal, access.key, access.policyFingerprint, { question: input.question,
-    scope: { canvasId: input.canvasId, documentIds: input.documentIds },
-    candidates: candidates.map(([key, passages], index) => ({ id: `candidate_${index}`, source: key, excerpts: passages.map(item => item.excerpt) })) },
-  questions, candidates.flatMap(([, passages]) => passages), input.continuationId);
+  const judged = judgedCandidates(candidates, sources.checked, sources.names);
+  const documents = judged.map(item => item.document);
+  const decision = await evaluate(context, principal, access.key, access.policyFingerprint, { question: input.question, documents },
+    askQuestions(documents), candidates.flatMap(([, passages]) => passages), input.continuationId);
   if (decision.state !== 'complete') return { accepted: [] as AskCandidate[], coverage: { ...coverage, status: 'degraded' as const, reason: decision.reason },
     usage: emptyUsage(), continuationId: decision.id };
-  return { accepted: candidates.filter((_, index) => {
-    const answer = decision.answers[`candidate_${index}`];
-    return answer?.type === 'choice' && answer.choice === 'yes';
-  }), coverage, usage: decision.usage, continuationId: decision.id };
+  return { accepted: answeringCandidates(decision.answers, judged.map(item => item.candidate)), coverage,
+    usage: decision.usage, continuationId: decision.id };
 }
 
 async function ask(context: RouteContext, input: AskInput, principal: Principal): Promise<AskSymbiResult> {
@@ -239,7 +308,8 @@ async function ask(context: RouteContext, input: AskInput, principal: Principal)
   const names = await titles(context, checked.valid.map(item => item.canvasId));
   // Verify a wider bounded page, then apply the user's result limit to verified matches.
   const verified = await verifyAskCandidates(context, input, principal,
-    [...groups(checked.valid).entries()].slice(0, 24), coverageWithStale(search.coverage, checked.stale));
+    [...groups(checked.valid, input.mode === 'semantic' ? 3 : judgedSearch.passagesPerDocument).entries()].slice(0, 24),
+    { checked, names }, coverageWithStale(search.coverage, checked.stale));
   const requestedLimit = input.limit ?? 8;
   const hasMoreMatches = verified.accepted.length > page.offset + requestedLimit;
   const output = verified.accepted.slice(page.offset, page.offset + requestedLimit);
@@ -288,12 +358,19 @@ function reflexFallback(passages: SymbiPassage[], coverage: SymbiCoverage, reaso
 function reflexDecision(answer: Awaited<ReturnType<typeof evaluate>> & { state: 'complete' },
   passages: SymbiPassage[], coverage: SymbiCoverage): SymbiReflexResult {
   const value = answer.answers.verdict;
-  const verdict = value.type === 'choice' ? value.choice as SymbiReflexResult['verdict'] : 'insufficient_evidence';
+  const confidence = value.type === 'choice' ? value.confidence : 0;
+  const verdict = reflexVerdict(value, confidence, coverage);
   return { version: SYMBI_CONTRACT_VERSION,
-    verdict: verdict === 'no' && coverage.status !== 'ready' ? 'insufficient_evidence' : verdict,
-    confidence: value.type === 'choice' ? value.confidence : 0,
+    verdict, confidence,
     explanation: reflexExplanation(verdict, coverage.status),
     passages, coverage, providerUsage: answer.usage };
+}
+// Fixed confidence a claim-check "no" needs: real contradictions measured >= 0.82 with jev-1.13.0, a false one 0.37.
+const contradictionConfidence = 0.7;
+function reflexVerdict(value: JevAnswer, confidence: number, coverage: SymbiCoverage): SymbiReflexResult['verdict'] {
+  if (value.type !== 'choice') return 'insufficient_evidence';
+  if (value.choice === 'no' && (coverage.status !== 'ready' || confidence < contradictionConfidence)) return 'insufficient_evidence';
+  return value.choice as SymbiReflexResult['verdict'];
 }
 function reflexExplanation(verdict: SymbiReflexResult['verdict'], status: SymbiCoverage['status']): string {
   if (verdict === 'yes') return 'The checked passages support the claim.';
@@ -308,11 +385,11 @@ async function reflexSearch(context: RouteContext, input: ReflexInput, principal
   const search = await index.search({ query: input.claim, mode: 'hybrid', canvasId: input.canvasId,
     documentIds: documentIds.length ? documentIds : undefined, allowedCanvasIds: principal.allowedCanvasIds,
     allowedDocumentIds: expectedDocumentIds, expectedDocumentIds, limit: 24 });
-  return { documentIds, search };
+  return search;
 }
 
 async function reflex(context: RouteContext, input: ReflexInput, principal: Principal): Promise<SymbiReflexResult> {
-  const { documentIds, search } = await reflexSearch(context, input, principal);
+  const search = await reflexSearch(context, input, principal);
   const checked = await safePassages(context, search.passages);
   let coverage = coverageWithStale(search.coverage, checked.stale);
   if (!checked.valid.length) return reflexFallback(checked.valid, coverage, 'No current source passage establishes the claim.');
@@ -323,10 +400,11 @@ async function reflex(context: RouteContext, input: ReflexInput, principal: Prin
   }
   const questions = { verdict: choice('Decide whether the exact scoped passages support or contradict the claim. Choose no only for direct contradictory evidence; absence or incomplete coverage is insufficient.',
     { yes: 'Directly supported', no: 'Directly contradicted', insufficient_evidence: 'Unclear or missing evidence' }) };
+  const names = await titles(context, checked.valid.map(passage => passage.canvasId));
   const decision = await evaluate(context, principal, access.key, access.policyFingerprint, { claim: input.claim,
-    scope: { canvasId: input.canvasId, documentIds, comparisonDocumentId: input.comparisonDocumentId },
-    passages: checked.valid.map((passage, index) => ({ id: `p${index}`, canvasId: passage.canvasId,
-      blockId: passage.blockId, excerpt: passage.excerpt })) }, questions, checked.valid);
+    documents: [...groups(checked.valid, checked.valid.length)].map(([id, passages]) => ({
+      title: names.get(id)?.title ?? passages[0].blockId,
+      passages: passages.map(passage => passage.excerpt.replace(/\s+/g, ' ').trim()) })) }, questions, checked.valid);
   if (decision.state !== 'complete') {
     coverage = { ...coverage, status: 'degraded', reason: decision.reason };
     return reflexFallback(checked.valid, coverage, decision.reason);

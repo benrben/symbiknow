@@ -34,13 +34,23 @@ function fixture(groupCount: number, support: number | ((group?: string) => numb
         const { name, state: selectedState } = scoped(body, id);
         const group = selectedState.selectedGroup as { key: string } | undefined;
         const purpose = name.startsWith('purpose_');
-        const answer: JevAnswer = question.type === 'noul' ? { type: 'noul', noul: purpose ? typeof support === 'number' ? support : support(group?.key) : .98 }
+        const selected = (selectedState.groups as Array<{ key: string }> | undefined)?.[0];
+        const supportValue = typeof support === 'number' ? support : support(group?.key ?? selected?.key);
+        const answer: JevAnswer = name === 'gate' ? gateAnswer(question, supportValue)
+          : question.type === 'noul' ? { type: 'noul', noul: purpose ? supportValue : .98 }
           : choiceAnswer(question, group?.key === 'custom:delivery' ? 'p3' : 'p1');
         return [id, answer];
       }));
       return Response.json({ answers });
     }, options) };
   return { source, context, calls, run: () => evaluateJevAction(context, { action: 'file', canvasId: 'canvas', blockIds: [source.block.id] }) };
+}
+function gateAnswer(question: JevQuestion, confidence: number): JevAnswer {
+  if (question.type !== 'choice') throw new Error('Expected the canonical filing gate');
+  const probability = confidence >= .7 ? .4 + (confidence - .7) * .6 / .3 : confidence * .4 / .7;
+  const selected = Object.keys(question.criteria).find(key => key !== 'none')!;
+  return { type: 'choice', choice: probability >= .5 ? selected : 'none', confidence: .98,
+    probabilities: Object.fromEntries(Object.keys(question.criteria).map(key => [key, key === selected ? probability : key === 'none' ? 1 - probability : 0])) };
 }
 function choiceAnswer(question: JevQuestion, evidence: string): JevAnswer {
   if (question.type !== 'choice') throw new Error('Unexpected grouping score question');
@@ -52,17 +62,27 @@ function choiceAnswer(question: JevQuestion, evidence: string): JevAnswer {
 }
 function names(body: Body) { return Object.keys(body.questions).map(key => scoped(body, key).name); }
 
-it.each([0, 1])('checks a single candidate selection and every exact-passage semantic certificate in one SDK request (existing groups: %s)', async groupCount => {
-  const native = fixture(groupCount);
+it.each([0, 1])('keeps bootstrap in one wave and existing placement in separate selection and proof calls (existing groups: %s)', async groupCount => {
+  const native = fixture(groupCount, groupCount ? .705 : .7);
   const result = await native.run();
-  expect(native.calls).toHaveLength(1);
+  expect(native.calls).toHaveLength(groupCount ? 3 : 1);
   const submitted = names(native.calls[0]);
-  expect(submitted).toContain('group'); expect(submitted).toContain('evidence');
-  expect(submitted.filter(name => name.startsWith('purpose_'))).toEqual(filingPassages(native.source).map((_, index) => `purpose_${index}`));
-  if (!groupCount) expect(submitted).toContain('coherent');
+  if (groupCount) {
+    expect(submitted).toEqual(['place', 'gate']);
+    expect(names(native.calls[1])).toEqual(['evidence']);
+    expect(names(native.calls[2])).toEqual(['purpose_1']);
+  } else {
+    expect(submitted).toContain('group'); expect(submitted).toContain('evidence');
+    expect(submitted.filter(name => name.startsWith('purpose_'))).toEqual(filingPassages(native.source).map((_, index) => `purpose_${index}`));
+    expect(submitted).toContain('coherent');
+  }
   const membership = result.proposals.find(proposal => proposal.mutation.kind === 'document')!;
   expect(membership).toBeDefined(); expect(membership.evidence).toEqual([filingPassages(native.source)[1]]);
-  expect(membership.decisionConfidences).toEqual(groupCount ? [.98, .7] : [.98, .98, .7]);
+  if (groupCount) {
+    expect(membership.decisionConfidences).toHaveLength(2);
+    expect(membership.decisionConfidences![0]).toBeCloseTo(.705);
+    expect(membership.decisionConfidences![1]).toBe(.705);
+  } else expect(membership.decisionConfidences).toEqual([.98, .98, .7]);
   expect(native.context.selectiveGroupAssessment).toBe(true);
   expect(native.context.settings.confidenceThresholds?.file).toBe(.7);
 });
@@ -70,8 +90,8 @@ it.each([0, 1])('checks a single candidate selection and every exact-passage sem
 it.each([0, 1])('rejects .69 semantic support for a single shared candidate at the unchanged .7 threshold (existing groups: %s)', async groupCount => {
   const native = fixture(groupCount, .69);
   const result = await native.run();
-  expect(native.calls).toHaveLength(1);
-  expect(names(native.calls[0])).toContain('purpose_1');
+  expect(native.calls).toHaveLength(groupCount ? 2 : 1);
+  expect(names(native.calls.at(-1)!)).toContain('purpose_1');
   expect(result.proposals).toEqual([]);
   expect(native.context.settings.confidenceThresholds?.file).toBe(.7);
 });
@@ -79,10 +99,11 @@ it.each([0, 1])('rejects .69 semantic support for a single shared candidate at t
 it('retains selective semantic assessment for multiple existing groups instead of certifying every candidate eagerly', async () => {
   const native = fixture(2, .98);
   const result = await native.run();
-  expect(native.calls).toHaveLength(2);
-  expect(names(native.calls[0]).filter(name => name === 'evidence')).toHaveLength(2);
+  expect(native.calls).toHaveLength(3);
+  expect(names(native.calls[0])).toEqual(['place', 'gate']);
   expect(names(native.calls[0]).some(name => name.startsWith('purpose_'))).toBe(false);
-  expect(names(native.calls[1])).toEqual(['purpose_1']);
+  expect(names(native.calls[1])).toEqual(['evidence']);
+  expect(names(native.calls[2])).toEqual(['purpose_1']);
   expect(result.proposals.find(proposal => proposal.mutation.kind === 'document')?.evidence).toEqual([filingPassages(native.source)[1]]);
 });
 
@@ -93,7 +114,7 @@ it('restores selective assessment when a rejected single existing group falls ba
   native.context.documents.push(peer); native.source.block.links = [peer.block.id];
   const result = await native.run();
   expect(native.calls).toHaveLength(3);
-  expect(names(native.calls[0])).toContain('purpose_1');
+  expect(names(native.calls[0])).toEqual(['place', 'gate']);
   expect(names(native.calls[1]).filter(name => name === 'evidence').length).toBeGreaterThan(1);
   expect(names(native.calls[1]).some(name => name.startsWith('purpose_'))).toBe(false);
   expect(names(native.calls[2])).toEqual(['coherent', 'purpose_3']);

@@ -12,11 +12,14 @@ import { createApiServer } from './index.js';
 import { choice, decideWithJev } from './jev.js';
 import { CanvasStore } from './storage.js';
 import { SymbiJudgmentCache } from './symbi-judgment-cache.js';
+import { getJevRuntime } from './jev/runtime.js';
 
 const roots: string[] = [];
 const servers: Server[] = [];
+const controlledRuntimes: Array<ReturnType<typeof getJevRuntime>> = [];
 afterEach(async () => {
   for (const server of servers.splice(0)) await new Promise<void>(resolve => server.close(() => resolve()));
+  for (const runtime of controlledRuntimes.splice(0)) await runtime.shutdown();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
   vi.unstubAllEnvs();
 });
@@ -48,6 +51,16 @@ async function fixture(providerOverride?: typeof fetch) {
   return { root, store, canvas, source, other, provider, post, base, token };
 }
 
+async function claimFixture(provider: typeof fetch) {
+  const f = await fixture(provider);
+  const runtime = getJevRuntime(f.store, { fetcher: provider });
+  controlledRuntimes.push(runtime);
+  await runtime.configure(f.canvas.workspaceId, { paused: true, externalProcessing: true },
+    { id: 'fixture-owner', kind: 'user', access: 'write', canConfigure: true });
+  await f.store.updateSettings({ secrets: { TYPESAFE_API_KEY: 'offline-fixture-key' } });
+  return f;
+}
+
 async function controlledIndexRoute(f: Awaited<ReturnType<typeof fixture>>, passages: SymbiPassage[],
   coverage: SymbiCoverage, options: { index?: boolean; judgments?: boolean; token?: string;
     onSearch?: (request: unknown) => void; judgmentOverride?: unknown } = {}) {
@@ -76,6 +89,17 @@ async function controlledIndexRoute(f: Awaited<ReturnType<typeof fixture>>, pass
       'content-type': 'application/json' }, body: JSON.stringify(body) });
     return { status: response.status, value: await response.json() as T };
   };
+}
+
+type FixtureQuestions = Record<string, { criteria: Record<string, string> }>;
+/** Answers "yes" to a claim check and picks the first listed document in a search judgment. */
+function supportingAnswers(questions: FixtureQuestions) {
+  return Object.fromEntries(Object.entries(questions).map(([id, question]) => {
+    const keys = Object.keys(question.criteria);
+    const picked = keys.includes('yes') ? 'yes' : keys[0];
+    return [id, { type: 'choice', choice: picked, confidence: 1,
+      probabilities: Object.fromEntries(keys.map(key => [key, key === picked ? 1 : 0])) }];
+  }));
 }
 
 async function readySource(f: Awaited<ReturnType<typeof fixture>>) {
@@ -115,12 +139,10 @@ it('checks a claim once and reuses the scoped, source-versioned judgment on retr
   let claimCalls = 0;
   let askCalls = 0;
   const provider = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
-    const request = JSON.parse(String(init?.body)) as { questions: Record<string, unknown>; state?: { claim?: string; question?: string } };
+    const request = JSON.parse(String(init?.body)) as { questions: FixtureQuestions; state?: { claim?: string; question?: string } };
     if (request.state?.claim) claimCalls++;
     if (request.state?.question) askCalls++;
-    const answers = Object.fromEntries(Object.keys(request.questions).map(id => [id, {
-      type: 'choice', choice: 'yes', probabilities: { yes: 1, no: 0, insufficient_evidence: 0 }, confidence: 1,
-    }]));
+    const answers = supportingAnswers(request.questions);
     return new Response(JSON.stringify({ answers, usage: { input_tokens: 140, output_tokens: 20 } }),
       { status: 200, headers: { 'content-type': 'application/json' } });
   });
@@ -184,12 +206,12 @@ it('returns actual related documents from saved links and never treats the sourc
 
 it('validates each brain route, cursor, and scoped related lookup without provider work', async () => {
   const f = await fixture();
-  expect((await f.post('/api/symbi/ask', { question: 'rollback', mode: 'unknown' })).status).toBe(400);
+  expect((await f.post('/api/symbi/ask', { question: 'rollback', mode: 'unknown' })).status).toBe(403);
   expect((await f.post('/api/symbi/find', { question: '', mode: 'semantic' })).status).toBe(400);
-  expect((await f.post('/api/symbi/reflex', { claim: '' })).status).toBe(400);
+  expect((await f.post('/api/symbi/reflex', { claim: '' })).status).toBe(403);
   expect((await f.post('/api/symbi/related', { canvasId: f.canvas.id, blockId: f.source.id, limit: 0 })).status).toBe(400);
   expect((await f.post('/api/symbi/ask', { question: 'rollback', mode: 'semantic', cursor: 'brain:not-json' })).status).toBe(400);
-  expect((await f.post('/api/symbi/related', { canvasId: f.other.id, blockId: f.source.id })).status).toBe(404);
+  expect((await f.post('/api/symbi/related', { canvasId: f.other.id, blockId: f.source.id })).status).toBe(403);
   expect((await f.post('/api/symbi/related', { canvasId: f.canvas.id, blockId: f.source.id, cursor: '-1' })).status).toBe(400);
   const found = await f.post<AskSymbiResult>('/api/symbi/find', { question: 'Release operations', mode: 'logic', canvasId: f.canvas.id, navigate: true });
   expect(found.status).toBe(200);
@@ -214,11 +236,9 @@ it('keeps saved link, group, and tag reasons when local similarity is still pend
 it('rejects a reused continuation after the question changes and validates decoded page offsets', async () => {
   let brainQuestionCalls = 0;
   const provider = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
-    const request = JSON.parse(String(init?.body)) as { questions: Record<string, unknown>; state?: { question?: string } };
+    const request = JSON.parse(String(init?.body)) as { questions: FixtureQuestions; state?: { question?: string } };
     if (request.state?.question) brainQuestionCalls++;
-    const answers = Object.fromEntries(Object.keys(request.questions).map(id => [id, {
-      type: 'choice', choice: 'yes', probabilities: { yes: 1, no: 0, insufficient_evidence: 0 }, confidence: 1,
-    }]));
+    const answers = supportingAnswers(request.questions);
     return new Response(JSON.stringify({ answers, usage: { input_tokens: 1, output_tokens: 1 } }),
       { status: 200, headers: { 'content-type': 'application/json' } });
   });
@@ -267,6 +287,41 @@ it('returns a direct contradiction only with ready scoped evidence and no extern
     explanation: 'The checked passages contradict the claim.', providerUsage: { requests: 1 } } });
   expect(provider).toHaveBeenCalledTimes(1);
 }, 30000);
+
+it('returns public empty-evidence results before provider policy or inference for both brain callers', async () => {
+  const f = await fixture();
+  const before = await f.store.getCanvasBlock(f.canvas.id, f.source.id);
+  const post = await controlledIndexRoute(f, [], { status: 'ready', checkedDocuments: 1, eligibleDocuments: 1, pendingDocuments: 0 });
+  const ask = await post<AskSymbiResult>('/api/symbi/ask', { question: 'Unrelated subject without evidence', mode: 'combined', canvasId: f.canvas.id });
+  expect(ask).toMatchObject({ status: 200, value: { matches: [], coverage: { status: 'ready' }, providerUsage: { requests: 0 } } });
+  const claim = await post<SymbiReflexResult>('/api/symbi/reflex', { claim: 'An unsupported assertion', canvasId: f.canvas.id });
+  expect(claim).toMatchObject({ status: 200, value: { verdict: 'insufficient_evidence', passages: [],
+    explanation: 'No current source passage establishes the claim.', providerUsage: { requests: 0 } } });
+  expect(f.provider).not.toHaveBeenCalled();
+  expect(await new CanvasStore(f.root).getCanvasBlock(f.canvas.id, f.source.id)).toEqual(before);
+});
+
+it('uses an environment-only provider configuration for scoped claim evidence without persisting its credential', async () => {
+  const provider = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+    expect(new Headers(init?.headers).get('authorization')).toBe('Bearer offline-environment-fixture');
+    const request = JSON.parse(String(init?.body)) as { questions: FixtureQuestions };
+    return Response.json({ answers: supportingAnswers(request.questions) });
+  });
+  const f = await fixture(provider as unknown as typeof fetch);
+  const runtime = getJevRuntime(f.store, { fetcher: f.provider }); controlledRuntimes.push(runtime);
+  await runtime.configure(f.canvas.workspaceId, { paused: true, externalProcessing: true },
+    { id: 'fixture-owner', kind: 'user', access: 'write', canConfigure: true });
+  vi.stubEnv('TYPESAFE_API_KEY', 'offline-environment-fixture');
+  expect((await f.store.secretSettings()).secrets?.TYPESAFE_API_KEY).toBeFalsy();
+  const excerpt = 'restore the previous deployment'; const startOffset = f.source.content.indexOf(excerpt);
+  const passage: SymbiPassage = { canvasId: f.canvas.id, blockId: f.source.id, contentHash: f.source.contentHash!,
+    startOffset, endOffset: startOffset + excerpt.length, excerpt };
+  const post = await controlledIndexRoute(f, [passage], { status: 'ready', checkedDocuments: 1, eligibleDocuments: 1, pendingDocuments: 0 });
+  expect(await post<SymbiReflexResult>('/api/symbi/reflex', { claim: 'Rollback restores the previous deployment', canvasId: f.canvas.id }))
+    .toMatchObject({ status: 200, value: { verdict: 'yes', passages: [passage], providerUsage: { requests: 1 } } });
+  expect(provider).toHaveBeenCalledTimes(1);
+  expect((await new CanvasStore(f.root).secretSettings()).secrets?.TYPESAFE_API_KEY).toBeFalsy();
+});
 
 it('drops stale, deleted, and wrong-excerpt evidence before scoped answers and reports pending coverage', async () => {
   const f = await fixture();
@@ -521,6 +576,48 @@ it('treats a malformed cached choice as insufficient evidence with zero confiden
     explanation: 'The checked passages do not establish a reliable answer.', providerUsage: { requests: 0 } } });
 });
 
+it.each([
+  ['no', 0.69, 'insufficient_evidence', 'The checked passages do not establish a reliable answer.'],
+  ['no', 0.70, 'no', 'The checked passages contradict the claim.'],
+  ['yes', 0.52, 'yes', 'The checked passages support the claim.'],
+] as const)('uses the claim decision boundary for %s at %s with consistent explanation', async (choice, confidence, verdict, explanation) => {
+  const provider = vi.fn(async () => new Response(JSON.stringify({ answers: { verdict: {
+    type: 'choice', choice, confidence, probabilities: { yes: choice === 'yes' ? 1 : 0,
+      no: choice === 'no' ? 1 : 0, insufficient_evidence: 0 } } } }),
+    { headers: { 'content-type': 'application/json' } })) as unknown as typeof fetch;
+  const f = await claimFixture(provider);
+  const excerpt = 'restore the previous deployment';
+  const startOffset = f.source.content.indexOf(excerpt);
+  const passage: SymbiPassage = { canvasId: f.canvas.id, blockId: f.source.id, contentHash: f.source.contentHash!,
+    startOffset, endOffset: startOffset + excerpt.length, excerpt };
+  const post = await controlledIndexRoute(f, [passage], { status: 'ready', checkedDocuments: 1, eligibleDocuments: 1, pendingDocuments: 0 });
+  const answer = await post<SymbiReflexResult>('/api/symbi/reflex', { claim: 'The source restores the previous deployment', canvasId: f.canvas.id });
+  expect(answer).toMatchObject({ status: 200, value: { verdict, confidence, explanation, passages: [passage] } });
+});
+
+it('groups all checked claim passages under their current document titles', async () => {
+  let state: Record<string, unknown> = {};
+  const provider = vi.fn(async (_input, init) => {
+    const body = JSON.parse(String(init?.body)); state = body.state;
+    return new Response(JSON.stringify({ answers: supportingAnswers(body.questions) }), { headers: { 'content-type': 'application/json' } });
+  }) as unknown as typeof fetch;
+  const f = await claimFixture(provider);
+  const peer = await f.store.createBlock(f.canvas.id, { title: 'Service health checks', content: 'Verify every service after restoring the release.' });
+  const passage = (block: typeof f.source, excerpt: string): SymbiPassage => {
+    const startOffset = block.content.indexOf(excerpt);
+    return { canvasId: f.canvas.id, blockId: block.id, contentHash: block.contentHash!, startOffset, endOffset: startOffset + excerpt.length, excerpt };
+  };
+  const passages = [passage(f.source, 'restore the previous deployment'), passage(peer, 'Verify every service'), passage(f.source, 'verify service health')];
+  const post = await controlledIndexRoute(f, passages, { status: 'ready', checkedDocuments: 2, eligibleDocuments: 2, pendingDocuments: 0 });
+  const answer = await post<SymbiReflexResult>('/api/symbi/reflex', { claim: 'Verify services after restoring the deployment', canvasId: f.canvas.id });
+  expect(answer.value.passages).toEqual(passages);
+  expect(state.documents).toEqual([
+    { title: f.source.title, passages: ['restore the previous deployment', 'verify service health'] },
+    { title: peer.title, passages: ['Verify every service'] },
+  ]);
+  expect(state).not.toHaveProperty('passages');
+});
+
 it('leaves unrelated local Jev usage outside the brain request counter', async () => {
   const localProvider = vi.fn(async () => new Response(JSON.stringify({ answers: { check: {
     type: 'choice', choice: 'yes', probabilities: { yes: 1, no: 0 }, confidence: 1,
@@ -532,3 +629,53 @@ it('leaves unrelated local Jev usage outside the brain request counter', async (
   expect(answer.check).toMatchObject({ type: 'choice', choice: 'yes' });
   expect(localProvider).toHaveBeenCalledTimes(1);
 });
+
+it('judges candidate documents in one listwise call, shows them in rank order, and stops at the none gate', async () => {
+  const requests: Array<{ questions: FixtureQuestions; state: { question: string; documents: unknown[] } }> = [];
+  const gateNone: Record<string, number> = { 'how to check service health': 0.59, 'how to buy a team plan': 0.6 };
+  const provider = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+    const request = JSON.parse(String(init?.body)) as (typeof requests)[number];
+    if (!request.state?.documents) throw new Error('Only search judgments reach this fixture provider');
+    requests.push(request);
+    const none = gateNone[request.state.question];
+    const answers = {
+      rank: { type: 'choice', choice: 'B', confidence: 0.8, probabilities: { A: 0.1, B: 0.8, none: 0.1 } },
+      gate: { type: 'choice', choice: none >= 0.5 ? 'none' : 'B', confidence: 0.6, probabilities: { A: 0.1, B: 0.9 - none, none } },
+    };
+    return new Response(JSON.stringify({ answers, usage: { input_tokens: 300, output_tokens: 10 } }),
+      { status: 200, headers: { 'content-type': 'application/json' } });
+  });
+  const f = await fixture(provider as unknown as typeof fetch);
+  const health = await f.store.createBlock(f.canvas.id, { title: 'Health check',
+    content: '# Health check\n## Probes\nVerify service health. Probe every minute.\n## Alerts\nPage the on-call engineer.' });
+  const passage = (block: typeof health, excerpt: string): SymbiPassage => ({ canvasId: f.canvas.id, blockId: block.id,
+    contentHash: block.contentHash!, startOffset: block.content.indexOf(excerpt), endOffset: block.content.indexOf(excerpt) + excerpt.length, excerpt });
+  const probes = passage(health, 'Verify service health.');
+  const alerts = passage(health, 'Page the on-call engineer.');
+  const searches: unknown[] = [];
+  expect((await fetch(f.base + '/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ secrets: { TYPESAFE_API_KEY: 'offline-fixture-key' } }) })).status).toBe(200);
+  expect((await fetch(f.base + `/api/canvases/${f.canvas.id}/jev/settings`, { method: 'PUT',
+    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ externalProcessing: true }) })).status).toBe(200);
+  const post = await controlledIndexRoute(f, [passage(f.source, 'restore the previous deployment'), probes,
+    passage(health, 'Probe every minute.'), alerts], { status: 'ready', checkedDocuments: 2, eligibleDocuments: 2, pendingDocuments: 0 },
+  { onSearch: request => searches.push(request) });
+
+  const found = await post<AskSymbiResult>('/api/symbi/ask', { question: 'how to check service health', mode: 'combined', canvasId: f.canvas.id });
+  expect(searches[0]).toMatchObject({ mode: 'hybrid', limit: 100, minimumSimilarity: -1, passagesPerDocument: 8, passageOrder: 'similarity' });
+  expect(requests).toHaveLength(1);
+  expect(Object.keys(requests[0].questions)).toEqual(['rank', 'gate']);
+  expect(requests[0].questions.gate.criteria).toEqual({ A: 'Document "Rollback procedure" answers the question',
+    B: 'Document "Health check" answers the question', none: 'None of the documents answers the question' });
+  expect(requests[0].state.documents).toEqual([
+    { option: 'A', title: 'Rollback procedure', sections: [], evidence: ['restore the previous deployment'] },
+    { option: 'B', title: 'Health check', sections: ['Probes', 'Alerts'], evidence: ['Verify service health.', 'Page the on-call engineer.'] },
+  ]);
+  expect(found.value.matches).toEqual([expect.objectContaining({ blockId: health.id, passages: [probes, alerts],
+    reason: 'Provider-validated source evidence' })]);
+  expect(found.value.providerUsage).toMatchObject({ requests: 1, questions: 2, inputTokens: 300 });
+
+  const nothing = await post<AskSymbiResult>('/api/symbi/ask', { question: 'how to buy a team plan', mode: 'combined', canvasId: f.canvas.id });
+  expect(requests).toHaveLength(2);
+  expect(nothing.value).toMatchObject({ matches: [], coverage: { status: 'ready' } });
+}, 30000);

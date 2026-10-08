@@ -30,10 +30,6 @@ vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({ Client: class {
 vi.mock('@modelcontextprotocol/sdk/client/streamableHttp.js', () => ({ StreamableHTTPClientTransport: class {
   constructor(url: URL, options: Record<string, unknown>) { fixtures.transports.push({ url, options }); }
 } }));
-vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => ({ SSEClientTransport: class {
-  constructor(url: URL, options: Record<string, unknown>) { fixtures.transports.push({ url, options }); }
-} }));
-
 import { connectExternal, externalTools, testExternal } from './external-mcp.js';
 const server: ExternalMcpServer = { id: 'docs', name: 'Docs', url: 'http://localhost:1234/mcp', enabled: true };
 beforeEach(() => { fixtures.plans.length = 0; fixtures.clients.length = 0; fixtures.transports.length = 0; });
@@ -48,20 +44,8 @@ it('tests advertised tools, resolves saved credentials, and closes the connectio
   expect(fixtures.clients[0].closed).toBe(true);
 });
 
-it('falls back to SSE while retaining authentication on event-stream requests', async () => {
-  fixtures.plans.push({ connectError: new Error('HTTP unavailable') }, {});
-  const client = await connectExternal({ ...server, headers: { Authorization: '${secret:TOKEN}' } }, { TOKEN: 'fixture' });
-  expect(fixtures.clients[0].closed).toBe(true);
-  expect(client).toBe(fixtures.clients[1]);
-  const fetcher = vi.fn(async () => new Response(''));
-  vi.stubGlobal('fetch', fetcher);
-  const options = fixtures.transports[1].options as { eventSourceInit: { fetch: typeof fetch } };
-  await options.eventSourceInit.fetch(server.url, { headers: { 'x-extra': 'kept', Authorization: 'untrusted' } });
-  expect(fetcher).toHaveBeenCalledWith(server.url, { headers: { 'x-extra': 'kept', Authorization: 'fixture' } });
-});
-
-it.each([new Error('unavailable'), 'invalid response'])('reports both transport failures and releases clients: %s', async error => {
-  fixtures.plans.push({ connectError: error }, { connectError: error });
+it.each([new Error('unavailable'), 'invalid response'])('reports transport failures and releases clients: %s', async error => {
+  fixtures.plans.push({ connectError: error });
   await expect(connectExternal(server, {})).rejects.toMatchObject({ status: 502 });
   expect(fixtures.clients.every(client => client.closed)).toBe(true);
 });
@@ -93,9 +77,9 @@ it('bounds tool discovery waits and releases the timed out client', async () => 
   expect(fixtures.clients[0].closed).toBe(true);
 });
 
-it('bounds both connection attempts', async () => {
+it('bounds the connection attempt', async () => {
   vi.useFakeTimers();
-  fixtures.plans.push({ pendingConnect: true }, { pendingConnect: true });
+  fixtures.plans.push({ pendingConnect: true });
   const result = connectExternal(server, {}, 10);
   const rejected = expect(result).rejects.toMatchObject({ status: 502 });
   await vi.advanceTimersByTimeAsync(21);
@@ -119,8 +103,7 @@ it('closes a connection if cancellation arrives while the SDK begins connecting'
 });
 
 it('skips unavailable and disabled servers while retaining usable tools', async () => {
-  fixtures.plans.push({ connectError: new Error('unreachable') }, { tools: [{ name: 'read document', inputSchema: { type: 'object', properties: {} } }] },
-    { connectError: 'legacy unavailable' });
+  fixtures.plans.push({ connectError: 'unreachable' }, { tools: [{ name: 'read document', inputSchema: { type: 'object', properties: {} } }] });
   const warning = vi.fn();
   const loaded = await externalTools([{ ...server, id: 'bad' }, { ...server, id: 'good' }, { ...server, id: 'disabled', enabled: false }], {}, warning);
   expect(warning).toHaveBeenCalledWith('Docs is unavailable: Could not connect to Docs: connection failed');
@@ -129,12 +112,12 @@ it('skips unavailable and disabled servers while retaining usable tools', async 
   expect(fixtures.clients.every(client => client.closed)).toBe(true);
 });
 
-it('bounds the number of imported tools and names, and supplies missing schemas', async () => {
+it('imports all granted tools and bounds names while supplying missing schemas', async () => {
   fixtures.plans.push({ tools: Array.from({ length: 45 }, (_, index) => ({ name: 'x'.repeat(70) + index })) });
   const loaded = await externalTools([server], {}, vi.fn());
-  expect(loaded.tools).toHaveLength(40);
+  expect(loaded.tools).toHaveLength(45);
   expect(loaded.tools.every(tool => tool.name.length <= 64)).toBe(true);
-  expect(new Set(loaded.tools.map(tool => tool.name)).size).toBe(40);
+  expect(new Set(loaded.tools.map(tool => tool.name)).size).toBe(45);
   await loaded.close();
 });
 

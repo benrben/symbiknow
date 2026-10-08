@@ -1,7 +1,7 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 import type { JevMutation, JevPrincipal, JevProposal, JevReceipt, JevSourceSnapshot, JevWorkspaceState } from '../../shared/jev-types.js';
 import { CanvasStore } from '../storage.js';
 import { evaluationContext, type JevEvaluationContextOptions } from './context.js';
@@ -14,9 +14,12 @@ const owner: JevPrincipal = { id: 'activity-reviewer', kind: 'user', access: 'wr
 const createdAt = '2026-10-05T00:00:00Z';
 let root: string; let store: CanvasStore; let files: JevWorkspaceFiles;
 let workspaceId: string; let canvasId: string; let sources: JevSourceSnapshot[]; let hidden: JevSourceSnapshot;
+let baselineRoot: string;
+let retainedBaseline: { file: string; expected: string };
 
-beforeEach(async () => {
+beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), 'jev-context-activity-'));
+  baselineRoot = root;
   store = new CanvasStore(root); await store.init(); files = new JevWorkspaceFiles(root);
   workspaceId = (await store.createWorkspace({ name: 'Retained activity' })).id;
   canvasId = (await store.createCanvas(workspaceId, { name: 'Checked release sources' })).id;
@@ -30,8 +33,21 @@ beforeEach(async () => {
   const block = await store.createBlock(hiddenCanvas, { title: 'Private responsibility', content: '# Private\nRestricted responsibility.' });
   await store.ensureJevStamps(hiddenCanvas);
   hidden = sourceSnapshot(workspaceId, hiddenCanvas, await store.getCanvasBlock(hiddenCanvas, block.id));
+  const retained = await createRetainedLedger();
+  const file = path.join(baselineRoot, 'retained-activity-baseline.json');
+  await cp(files.file(workspaceId), file);
+  retainedBaseline = { file, expected: retained.expected };
+  await rm(files.file(workspaceId));
+});
+beforeEach(async () => {
+  root = await mkdtemp(path.join(tmpdir(), 'jev-context-activity-copy-'));
+  // Preserve a complete native Git/data baseline; each assertion still operates
+  // on an independent directory, fresh store, and independently written ledger.
+  await cp(baselineRoot, root, { recursive: true });
+  store = new CanvasStore(root); await store.init(); files = new JevWorkspaceFiles(root);
 });
 afterEach(async () => { await rm(root, { recursive: true, force: true }); });
+afterAll(async () => { await rm(baselineRoot, { recursive: true, force: true }); });
 
 function receipt(id: string, scopedSources = sources, after: JevMutation = { kind: 'derived', blockId: sources[0].blockId,
   values: { scopedSources: scopedSources as never, role: 'reference' } }): JevReceipt {
@@ -42,7 +58,7 @@ function context(state: JevWorkspaceState, options?: JevEvaluationContextOptions
   return evaluationContext(store, workspaceId, state, { action: 'profile', canvasId, blockIds: [sources[0].blockId] },
     principal, new AbortController().signal, options);
 }
-async function retainedLedger(): Promise<{ state: JevWorkspaceState; expected: string }> {
+async function createRetainedLedger(): Promise<{ state: JevWorkspaceState; expected: string }> {
   const state = emptyJevWorkspace();
   for (let index = 0; index < 2428; index++) {
     const item = receipt(`retained-${index}`);
@@ -55,6 +71,12 @@ async function retainedLedger(): Promise<{ state: JevWorkspaceState; expected: s
   }
   await files.write(workspaceId, state);
   return { state: await new JevWorkspaceFiles(root).read(workspaceId), expected: JSON.stringify(encodeJevWorkspace(state)) };
+}
+async function retainedLedger(): Promise<{ state: JevWorkspaceState; expected: string }> {
+  // The large packet was produced by the actual writer once. Copy its bytes
+  // into this case's independent workspace and read through the native codec.
+  await cp(retainedBaseline.file, files.file(workspaceId));
+  return { state: await new JevWorkspaceFiles(root).read(workspaceId), expected: retainedBaseline.expected };
 }
 
 it('validates a retained disk ledger without reading pooled vectors or dropping saved history and private metadata', async () => {

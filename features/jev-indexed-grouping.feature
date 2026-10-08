@@ -2,23 +2,29 @@
 @engine @indexed-grouping
 Feature: Evidence-checked grouping from Jev indexes labels and links
 
-  Scenario: Supported grouping uses a durable Jev logical index and current organization signals
+  Scenario: Managed broad groups compare differently named subjects and preserve meaningful singleton taxonomy across native reload
+    Given an isolated broad group with different checked subject names and a meaningful singleton
+    When the public Reflex runtime profiles and refines the managed broad group
+    Then the shared family and singleton refinements survive native store reload with exact member evidence
+    And numbered document folders and owner-pinned groups remain unchanged
+
+  Scenario: Supported grouping uses a durable Jev logical index and source-based placement
     Given an isolated indexed grouping fixture with "supported" semantic evidence
     When Jev profiles the source and then evaluates its filing through the public runtime
     Then its logical topics and exact evidence survive native reload
-    And the filing decision receives the current logical index labels and directional links
+    And the filing decision receives the source outline and checked group definitions without treating links as evidence
     And the supported group is durably applied without changing content labels or positions
 
   Scenario: A directional link and incidental words cannot force grouping
     Given an isolated indexed grouping fixture with "incidental linked" semantic evidence
     When Jev profiles the source and then evaluates its filing through the public runtime
     Then its logical topics and exact evidence survive native reload
-    And the filing decision receives the current logical index labels and directional links
+    And the filing decision receives the source outline and checked group definitions without treating links as evidence
     And semantic rejection leaves the document ungrouped at the existing confidence threshold
 
   Scenario: Retrieval signals cannot lower the grouping confidence threshold
     Given an isolated indexed grouping fixture with "below threshold" semantic evidence
     When Jev profiles the source and then evaluates its filing through the public runtime
     Then its logical topics and exact evidence survive native reload
-    And the filing decision receives the current logical index labels and directional links
+    And the filing decision receives the source outline and checked group definitions without treating links as evidence
     And semantic rejection leaves the document ungrouped at the existing confidence threshold

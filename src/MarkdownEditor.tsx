@@ -7,6 +7,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { html } from '@codemirror/lang-html';
 import { tags } from '@lezer/highlight';
 import './editor.css';
+import { editorDirection } from './editor-direction';
 
 export type EditorMode = 'source' | 'split' | 'preview';
 
@@ -15,6 +16,7 @@ const theme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', lineHeight: '1.65' },
   '.cm-content': { padding: '14px 0', caretColor: 'var(--sk-link)' },
+  '.cm-line': { textAlign: 'start' },
   '.cm-gutters': { backgroundColor: 'var(--sk-surface-soft)', color: 'var(--sk-muted)', border: 'none', borderRight: '1px solid var(--sk-border)' },
   '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--sk-blue) 12%, transparent)' },
   '.cm-activeLineGutter': { backgroundColor: 'var(--sk-surface-soft)', color: 'var(--sk-link)' },
@@ -54,7 +56,7 @@ export function MarkdownEditor({ value, onChange, label, onToggleView }: {
     const editor = new EditorView({
       parent: host.current!,
       state: EditorState.create({ doc: value, extensions: [
-        basicSetup, EditorView.lineWrapping, theme, syntaxHighlighting(syntaxTheme),
+        basicSetup, EditorView.lineWrapping, editorDirection, theme, syntaxHighlighting(syntaxTheme),
         language.current.of(htmlDocument ? html() : markdown()),
         EditorView.contentAttributes.of({ 'aria-label': label, spellcheck: 'true' }),
         keymap.of([{ key: 'Mod-e', preventDefault: true, run: () => { onToggleRef.current?.(); return true; } }]),

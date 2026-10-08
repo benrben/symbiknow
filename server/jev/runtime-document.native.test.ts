@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import type { JevEvaluation, JevProposal } from '../../shared/jev-types.js';
 import { randomUUID } from 'node:crypto';
 import { derived, type JevEvaluationContext } from './actions/context.js';
@@ -8,18 +8,22 @@ import { evaluationContext } from './context.js';
 import { automaticHoldReason } from './eligibility.js';
 import { JevRuntime } from './runtime.js';
 import type { PreparedJevMutation } from './proposals.js';
-import { queueBoundaryFixture, type QueueBoundaryFixture } from './queue-boundary.test.fixture.js';
+import type { QueueBoundaryFixture } from './queue-boundary.test.fixture.js';
+import { queueBoundaryCopies } from './queue-boundary-copy.test.fixture.js';
 import { automaticDocumentEligible, checkDocumentSources, documentActions, executeAutomaticDocument,
   initializeDocumentPlan, type DocumentExecution, type DocumentJob } from './runtime-document.js';
 import type { StoredJevJob } from './runtime-queue.js';
 import { sourceSnapshot } from './stamps.js';
 
 let native: QueueBoundaryFixture;
+let copies: Awaited<ReturnType<typeof queueBoundaryCopies>>;
 let job: DocumentJob;
 let calls: string[];
 let controller: AbortController;
+beforeAll(async () => { copies = await queueBoundaryCopies(); });
+afterAll(async () => { await copies.close(); });
 beforeEach(async () => {
-  native = await queueBoundaryFixture(); calls = []; controller = new AbortController();
+  native = await copies.fixture(); calls = []; controller = new AbortController();
   job = await native.admit({ action: 'profile', canvasId: native.canvasId, blockIds: [native.primary.id] }, automationPrincipal);
   const state = await native.files.read(native.workspaceId);
   job = state.jobs.find(item => item.id === job.id) as DocumentJob;

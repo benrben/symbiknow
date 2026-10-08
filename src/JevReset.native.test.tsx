@@ -39,7 +39,7 @@ async function connectedFixture() {
     const response = await acceptanceReflexProvider(url, options);
     const request = JSON.parse(String(options?.body)) as { state: Record<string, unknown>; questions: Record<string, JevQuestion> };
     const questions = resolveSharedQuestionTexts(request.questions, request.state.questionTexts);
-    const homeQuestions = Object.entries(questions).filter(([id]) => id.replace(/^(\d+__)+/, '') === 'canvas');
+    const homeQuestions = Object.entries(questions).filter(([id]) => ['place', 'gate'].includes(id.replace(/^(\d+__)+/, '')));
     if (!homeQuestions.length) return response;
     // These sources already have a home; the external decision provides no supported reason to move them.
     const payload = await response.json();
@@ -47,6 +47,7 @@ async function connectedFixture() {
       let state = request.state; let originalId = id; let indexed = /^(\d+)__(.+)$/.exec(originalId);
       while (indexed) { state = (state.questionSets as Record<string, unknown>[])[Number(indexed[1])]; originalId = indexed[2]; indexed = /^(\d+)__(.+)$/.exec(originalId); }
       const scoped = resolveSharedQuestionSources(state, request.state.sourceStates);
+      if (!scoped.canvases) continue;
       expect(scoped.source).toBeDefined(); expect(question.type).toBe('choice');
       if (question.type !== 'choice') throw new Error('Home checks must keep their bounded canvas choices');
       payload.answers[id] = { type: 'choice', choice: 'none', confidence: 1,

@@ -5,7 +5,8 @@ import path from 'node:path';
 import { AIMessage } from '@langchain/core/messages';
 import { chat } from './chat.js';
 import { CanvasStore } from './storage.js';
-import { applyChatProposal, getChatProposal } from './chat-proposals.js';
+import { applyFileProposal, getFileProposal } from './file-branch-proposals.js';
+import { uploadLocalEdit } from './chat-file-tools.test.fixture.js';
 import type { DeepAgentFactory } from './chat-stream.js';
 
 const roots: string[] = [];
@@ -18,22 +19,22 @@ async function fixture() {
   return store;
 }
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
-const request = { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Create a launch note.' }] };
+const request = { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Update the launch checklist for review.' }] };
 
 describe('non-streaming chat compatibility', () => {
   it('returns reviewable document proposals without immediate writes', async () => {
     const store = await fixture();
     const before = await store.getCanvas(request.canvasId);
-    const factory: DeepAgentFactory = (_settings, tools) => async function* (messages, signal) {
-      await tools.find(tool => tool.name === 'create_doc')!.invoke({ title: 'Launch note', content: '# Launch note' }, { signal });
+    const factory: DeepAgentFactory = (_settings, tools, _prompt, environment) => async function* (messages, signal) {
+      await uploadLocalEdit(tools, environment!.workdir, 'launch-checklist', '# Launch note', signal);
       yield { messages: [...messages, new AIMessage('Review the proposed launch note.')] };
     };
     const reply = await chat(store, request, { agentFactory: factory });
     expect(reply).toMatchObject({ message: 'Review the proposed launch note.', changed: false, proposalId: expect.any(String) });
-    expect(await store.getCanvas(request.canvasId)).toEqual(before);
-    expect(getChatProposal(store, reply.proposalId!)).toMatchObject({ changes: [{ type: 'create' }] });
-    await applyChatProposal(store, reply.proposalId!);
-    expect((await store.getCanvas(request.canvasId)).blocks.find(block => block.title === 'Launch note')?.content).toBe('# Launch note');
+    expect((await store.getCanvas(request.canvasId)).blocks.map(block => block.content)).toEqual(before.blocks.map(block => block.content));
+    expect(await getFileProposal(store, reply.proposalId!)).toMatchObject({ changes: [{ type: 'edit' }] });
+    await applyFileProposal(store, reply.proposalId!);
+    expect((await store.getCanvas(request.canvasId)).blocks.find(block => block.id === 'launch-checklist')?.content).toBe('# Launch note');
   });
 
   it('uses canvas tools to search and read sources without changing them', async () => {

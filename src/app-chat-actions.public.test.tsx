@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import type { Server } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApiServer } from '../server/index';
 import { CanvasStore } from '../server/storage';
 import { DocumentVersions } from '../server/version-control';
@@ -13,12 +13,24 @@ import { useAppModel } from './app-model';
 
 const nativeFetch = globalThis.fetch;
 const opened: Array<{ server: Server; root: string }> = [];
+let baselineRoot: string;
+beforeAll(async () => {
+  baselineRoot = await mkdtemp(path.join(os.tmpdir(), 'symbi-chat-actions-baseline-'));
+  const store = new CanvasStore(baselineRoot); await store.init();
+  const workspace = (await store.listWorkspaces())[0];
+  await store.createCanvas(workspace.id, { name: 'Another native canvas' });
+  const canvas = await store.getCanvas('product-roadmap');
+  for (const block of canvas.blocks) await store.documentHistory(canvas.id, block.id);
+});
+afterAll(async () => {
+  if (baselineRoot) await rm(baselineRoot, { recursive: true, force: true });
+});
 type Intercept = (route: string, init?: RequestInit) => Promise<Response> | Response | undefined;
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; }
 async function fixture() {
   const root = await mkdtemp(path.join(os.tmpdir(), 'symbi-chat-actions-'));
+  await cp(baselineRoot, root, { recursive: true });
   const store = new CanvasStore(root); await store.init();
-  await store.createCanvas((await store.listWorkspaces())[0].id, { name: 'Another native canvas' });
   const server = await createApiServer({ dataDir: root }); opened.push({ server, root });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address(); if (!address || typeof address === 'string') throw new Error('Missing native fixture port');

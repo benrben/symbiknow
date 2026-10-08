@@ -47,11 +47,13 @@ function flowNode(id: string): FlowNode {
   return node;
 }
 async function enterFiles(group: string) {
-  const frame = await waitFor(() => {
-    const element = document.querySelector(`[data-canvas-group="${group}"]`);
-    expect(element).toBeTruthy();
-    return element!;
+  await waitFor(() => {
+    expect(flow.instance?.viewportInitialized).toBe(true);
+    expect(flow.instance?.getNode('group:' + group)?.data.group).toBe(group);
+    expect(document.querySelector(`[data-canvas-group="${group}"]`)).toBeTruthy();
   });
+  // waitFor drains pending React work before returning; take the live frame at action time.
+  const frame = document.querySelector(`[data-canvas-group="${group}"]`)!;
   fireEvent.click(within(frame as HTMLElement).getAllByRole('button')[0]);
   const label = group === '__ungrouped' ? 'Ungrouped' : group.split(':').at(-1)!.replace(/^./, first => first.toUpperCase());
   await waitFor(() => expect(document.querySelector('.canvas-breadcrumb')?.textContent).toContain(label));
@@ -293,11 +295,15 @@ describe('Canvas group drag through native persistence', () => {
     await enterFiles('area:backend');
     await act(async () => current().onNodeDragStop?.(new MouseEvent('mouseup'), { ...flowNode(source.id), position: { x: 1020, y: 30 } }, current().nodes ?? []));
     await waitFor(async () => expect((await new CanvasStore(root).getCanvas(created.id)).blocks.find(value => value.id === source.id)).toMatchObject({ group: 'area:frontend', workArea: 'frontend', purpose: 'decision', x: 1020, y: 30 }));
+    // The drop handler starts its save asynchronously. Disk persistence precedes the GET refresh;
+    // wait for the installed renderer to remove the moved card from its previous group too.
+    await waitFor(() => expect(flow.instance?.getNode(source.id)).toBeUndefined());
     fireEvent.click(screen.getByRole('button', { name: 'Return to canvas group overview' }));
     await enterFiles('area:frontend');
     await waitFor(() => expect(flowNode(source.id).data).toMatchObject({ block: { group: 'area:frontend' } }));
     await act(async () => current().onNodeDragStop?.(new MouseEvent('mouseup'), { ...flowNode(source.id), position: { x: 2020, y: 30 } }, current().nodes ?? []));
     await waitFor(async () => expect((await new CanvasStore(root).getCanvas(created.id)).blocks.find(value => value.id === source.id)).toMatchObject({ group: 'purpose:guide', purpose: 'guide', workArea: 'frontend', x: 2020, y: 30 }));
+    await waitFor(() => expect(flow.instance?.getNode(source.id)).toBeUndefined());
     fireEvent.click(screen.getByRole('button', { name: 'Return to canvas group overview' }));
     await enterFiles('purpose:guide');
     await waitFor(() => expect(flowNode(source.id).data).toMatchObject({ block: { group: 'purpose:guide', purpose: 'guide', workArea: 'frontend' } }));

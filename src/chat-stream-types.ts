@@ -19,6 +19,7 @@ export type ChatProposalUndoReceipt = { id: string; status: 'reverted' | 'partia
 
 export type StreamOptions = {
   canvasId: string;
+  conversationId?: string;
   messages: ChatTurn[];
   viewContext?: ChatViewContext;
   signal: AbortSignal;
@@ -34,4 +35,3 @@ export type StreamOptions = {
 };
 
 export type Handlers = Pick<StreamOptions, 'onChunk' | 'onStep' | 'onReset' | 'onAnswerCanvas' | 'onNavigation' | 'onResearchPatch' | 'onProposal'>;
-

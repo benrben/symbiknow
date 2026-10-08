@@ -108,7 +108,7 @@ Feature: Markdown canvas
     And I can switch between source and a live HTML preview in the editor
     And I can download its Markdown file and upload an edited version
 
-  Scenario: Chat confirmation leaves document deletion to the document controls
+  Scenario: Full-access Symbi deletes an explicitly requested document through MCP
     Given a fresh workspace
     When the assistant asks to delete "Temporary Note" and I reply "yes"
-    Then "Temporary Note" remains until I use its document controls
+    Then "Temporary Note" is deleted through the canonical MCP tool

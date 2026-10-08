@@ -333,3 +333,28 @@ it('shows the latest outcome without reporting earlier rejection as a current su
   expect(within(panel).getByRole('alert').textContent).toBe('Grouping provider unavailable.');
   expectAutomaticOnly(panel); expect(fixture.calls.every(call => call.method === 'GET')).toBe(true);
 });
+
+it('names Reflex automation and preserves named historical actors with saved timestamps', async () => {
+  const fixture = await workspaceFixture();
+  const files = new JevWorkspaceFiles(fixture.root); const state = await files.read(fixture.workspace.id);
+  const source = sourceSnapshot(fixture.workspace.id, fixture.canvas.id, fixture.canvas.blocks[0]);
+  const createdAt = '2026-10-07T10:30:00Z';
+  const mutation = { kind: 'document' as const, canvasId: fixture.canvas.id, blockId: source.blockId, patch: { tags: ['Release'] } };
+  for (const [id, actor, automatic] of [['historical-agent', 'Claude Code', false], ['automatic-reflex', 'jev-workspace-automation', true]] as const) {
+    state.proposals.push({ id, jobId: `job-${id}`, action: 'label', title: `Saved ${id}`, explanation: 'Saved source organization',
+      state: 'applied', createdAt, sources: [source], evidence: [], mutation });
+    state.receipts.push({ id: `receipt-${id}`, proposalId: id, action: 'label', actor, automatic, createdAt,
+      sourcesAfter: [source], state: 'applied', before: mutation, after: mutation });
+  }
+  await files.write(fixture.workspace.id, state);
+  const { panel } = await mountPanel(fixture);
+  await toggleDetails(panel, 'Saved activity · 2 results');
+  expect(within(panel).getByText('Reflex', { exact: true }).getAttribute('title')).toBe('jev-workspace-automation');
+  expect(within(panel).getByText('Claude Code', { exact: true }).getAttribute('title')).toBe('Claude Code');
+  const times = Array.from(panel.querySelectorAll('.jev-saved-attribution time'));
+  expect(times).toHaveLength(2);
+  expect(times.map(time => [time.getAttribute('datetime'), time.textContent]))
+    .toEqual([[createdAt, new Date(createdAt).toLocaleString()], [createdAt, new Date(createdAt).toLocaleString()]]);
+  expect((await files.read(fixture.workspace.id)).receipts).toEqual(state.receipts);
+  expect(fixture.calls.every(call => call.method === 'GET')).toBe(true);
+});

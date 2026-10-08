@@ -7,7 +7,8 @@ import { useAppState } from './app-state';
 import { useCanvasData } from './app-canvas-data';
 import { useCanvasNavigationActions } from './app-navigation';
 import { closeWorkspaceFixtures, workspaceFixture } from './native-workspace.test.fixture';
-import { createDoc } from './webmcp-documents';
+import { api } from './api';
+import { changed } from './webmcp-context';
 
 afterEach(async () => { cleanup(); await closeWorkspaceFixtures(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 function canvasSession() { return renderHook(() => { const state = useAppState(); return { state, actions: useCanvasData(state), navigation: useCanvasNavigationActions(state) }; }); }
@@ -122,14 +123,15 @@ it('updates changed native source metadata while retaining every unchanged docum
   expect(hook.result.current.state.draftBlock.content).toBe('# Existing editor draft');
 });
 
-it('refreshes a real WebMCP source write, reports a lost read response, and retains the durable new document', async () => {
+it('refreshes a real owner API source write, reports a lost read response, and retains the durable new document', async () => {
   const fixture = await workspaceFixture();
   window.history.replaceState(null, '', `/?canvas=${fixture.canvas.id}`);
   const hook = canvasSession();
   await waitFor(() => expect(hook.result.current.state.canvas?.id).toBe(fixture.canvas.id));
   const before = hook.result.current.state.canvas!;
   const refresh = fixture.hold(`/api/canvases/${fixture.canvas.id}?summary=1`, 'GET');
-  await act(async () => { await createDoc({ title: 'Saved through WebMCP', content: '# Native tool source\nA durable source written by the public tool.' }); });
+  await act(async () => { await api(`/canvases/${fixture.canvas.id}/blocks`, { method: 'POST', body: JSON.stringify({ title: 'Saved through WebMCP', content: '# Native tool source\nA durable source written by the public tool.' }) });
+    changed(); });
   await refresh.response;
   await act(async () => { refresh.fail('Saved canvas read interrupted'); });
   await waitFor(() => expect(hook.result.current.state.error).toBe('Saved canvas read interrupted'));

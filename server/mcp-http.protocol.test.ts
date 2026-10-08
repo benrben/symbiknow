@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import type { DownloadedFile, FileUploadReceipt } from '../shared/working-copy.js';
 import type { CanvasBlock } from '../shared/types.js';
 import { CanvasStore } from './storage.js';
 import { mcpSessionCount } from './mcp-http.js';
@@ -78,18 +79,18 @@ describe('remote MCP protocol and token boundaries', () => {
     const { client } = await sdkClient(base, token);
     const tools = (await client.listTools()).tools;
     expect(tools.find(tool => tool.name === 'upload_file')?.inputSchema.properties).not.toHaveProperty('sourcePath');
-    const created = toolJson<CanvasBlock>(await client.callTool({ name: 'create_doc', arguments: {
+    const created = toolJson<FileUploadReceipt>(await client.callTool({ name: 'upload_file', arguments: { mode: 'create', filename: 'document.md', idempotencyKey: 'create-document',
       canvasId: 'product-roadmap', title: 'HTTP revision proof', content: '# Original private source',
     } }));
-    const changed = await client.callTool({ name: 'edit_doc', arguments: { canvasId: 'product-roadmap', blockId: created.id,
-      content: '# Saved native HTTP edit', expectedContentHash: created.contentHash } });
+    const downloaded = toolJson<DownloadedFile>(await client.callTool({ name: 'download_file', arguments: { canvasId: 'product-roadmap', blockId: created.blockId } }));
+    const changed = await client.callTool({ name: 'upload_file', arguments: { mode: 'replace', canvasId: 'product-roadmap', checkoutId: downloaded.manifest.checkoutId, filename: downloaded.filename, idempotencyKey: 'replace-document', content: '# Saved native HTTP edit' } });
     expect(changed.isError).not.toBe(true);
     const reopened = await new CanvasStore(root).getCanvas('product-roadmap');
-    expect(reopened.blocks.find(block => block.id === created.id)?.content).toBe('# Saved native HTTP edit');
-    const history = await store.documentHistory('product-roadmap', created.id);
-    expect(history.commits[0].author).toBe('Codex - Reviewed writer');
+    expect(reopened.blocks.find(block => block.id === created.blockId)?.content).toBe('# Saved native HTTP edit');
+    const history = await store.documentHistory('product-roadmap', created.blockId);
+    expect(history.commits[0].author).toBe((await store.mcpTokenIdentity(token))!.id);
     const entries = (await new CanvasStore(root).mcpActivity()).entries;
-    expect(entries.map(entry => [entry.tool, entry.outcome])).toEqual([['edit_doc', 'success'], ['create_doc', 'success']]);
+    expect(entries.map(entry => [entry.tool, entry.outcome])).toEqual([['upload_file', 'success'], ['download_file', 'success'], ['upload_file', 'success']]);
     expect(entries.every(entry => /^[a-f0-9]{40}$/.test(entry.revision ?? ''))).toBe(true);
     expect(JSON.stringify(entries)).not.toContain(token);
     expect(JSON.stringify(entries)).not.toContain('# Original private source');
@@ -151,12 +152,12 @@ describe('remote MCP protocol and token boundaries', () => {
     const { base, store, root } = await remoteMcpFixture();
     expect((await fetch(base + '/api/canvases/product-roadmap')).status).toBe(401);
     const { client } = await sdkClient(base, token);
-    const created = toolJson<CanvasBlock>(await client.callTool({ name: 'create_doc', arguments: {
+    const created = toolJson<FileUploadReceipt>(await client.callTool({ name: 'upload_file', arguments: { mode: 'create', filename: 'document.md', idempotencyKey: 'create-document',
       canvasId: 'product-roadmap', title: 'Protected MCP write', content: '# Internal API proof',
     } }));
-    expect((await new CanvasStore(root).getCanvas('product-roadmap')).blocks.find(block => block.id === created.id)?.content)
+    expect((await new CanvasStore(root).getCanvas('product-roadmap')).blocks.find(block => block.id === created.blockId)?.content)
       .toBe('# Internal API proof');
-    expect((await store.documentHistory('product-roadmap', created.id)).commits[0].author).toBe('Codex');
+    expect((await store.documentHistory('product-roadmap', created.blockId)).commits[0].author).toBe((await store.mcpTokenIdentity(token))!.id);
   });
 
   it('keeps proposal tokens read-only when an SDK client attempts document creation or automation Apply', async () => {
@@ -166,8 +167,8 @@ describe('remote MCP protocol and token boundaries', () => {
     const before = await store.getCanvas('product-roadmap');
     const tools = (await client.listTools()).tools.map(tool => tool.name);
     expect(tools).not.toContain('run_workspace_automation');
-    expect(tools).not.toContain('create_doc');
-    expect((await client.callTool({ name: 'create_doc', arguments: { canvasId: before.id,
+    expect(tools).toContain('upload_file');
+    expect((await client.callTool({ name: 'upload_file', arguments: { mode: 'create', filename: 'document.md', idempotencyKey: 'create-document', canvasId: before.id,
       title: 'Unauthorized document', content: '# Must remain absent',
     } })).isError).toBe(true);
     expect((await client.callTool({ name: 'run_workspace_automation', arguments: { workspaceId: before.workspaceId,
@@ -175,7 +176,7 @@ describe('remote MCP protocol and token boundaries', () => {
     } })).isError).toBe(true);
     expect(await new CanvasStore(root).getCanvas(before.id)).toEqual(before);
     await vi.waitFor(async () => expect((await store.mcpActivity()).entries.map(entry => [entry.tool, entry.outcome]))
-      .toEqual([['run_workspace_automation', 'denied'], ['create_doc', 'denied']]));
+      .toEqual([['run_workspace_automation', 'denied'], ['upload_file', 'denied']]));
   });
 
   it('checks token revocation on an established SDK session rather than retaining its old authorization', async () => {
@@ -198,7 +199,7 @@ describe('remote MCP protocol and token boundaries', () => {
     const controller = new AbortController();
     const reason = new Error('Cancelled before sending the tool request');
     controller.abort(reason);
-    await expect(client.callTool({ name: 'create_doc', arguments: { canvasId: before.id,
+    await expect(client.callTool({ name: 'upload_file', arguments: { mode: 'create', filename: 'document.md', idempotencyKey: 'create-document', canvasId: before.id,
       title: 'Cancelled document', content: '# Should never be sent',
     } }, undefined, { signal: controller.signal })).rejects.toBe(reason);
     expect(await new CanvasStore(root).getCanvas(before.id)).toEqual(before);
@@ -240,11 +241,11 @@ describe('MCP session namespace regression', () => {
     expect(toolJson<CanvasBlock>(await own.client.callTool({ name: 'read_doc', arguments: {
       canvasId: 'product-roadmap', blockId: 'launch-checklist',
     } })).content).toBe('# Private root B');
-    const created = toolJson<CanvasBlock>(await own.client.callTool({ name: 'create_doc', arguments: {
+    const created = toolJson<FileUploadReceipt>(await own.client.callTool({ name: 'upload_file', arguments: { mode: 'create', filename: 'document.md', idempotencyKey: 'create-document',
       canvasId: 'product-roadmap', title: 'Only in B', content: '# Root B write',
     } }));
-    expect((await new CanvasStore(second.root).getCanvas('product-roadmap')).blocks.some(block => block.id === created.id)).toBe(true);
-    expect((await new CanvasStore(first.root).getCanvas('product-roadmap')).blocks.some(block => block.id === created.id)).toBe(false);
-    expect((await second.store.documentHistory('product-roadmap', created.id)).commits[0].author).toBe('Codex');
+    expect((await new CanvasStore(second.root).getCanvas('product-roadmap')).blocks.some(block => block.id === created.blockId)).toBe(true);
+    expect((await new CanvasStore(first.root).getCanvas('product-roadmap')).blocks.some(block => block.id === created.blockId)).toBe(false);
+    expect((await second.store.documentHistory('product-roadmap', created.blockId)).commits[0].author).toBe((await second.store.mcpTokenIdentity(token))!.id);
   });
 });

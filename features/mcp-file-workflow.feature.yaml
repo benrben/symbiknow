@@ -1,0 +1,25 @@
+feature: Agents edit shared documents through canonical MCP working files
+scenarios:
+  - name: A coding agent edits an MDX working copy and safely retries its upload
+    steps:
+      - given: a fresh workspace
+      - and: a writable MCP file client
+      - when: the MCP file client creates an MDX document from a local file
+      - and: the MCP file client downloads and edits its local working copy
+      - and: the MCP file client uploads its working copy twice with the same key
+      - then: the saved MDX source matches the local file after reopening the workspace
+      - and: the repeated upload returns one receipt and one new revision
+  - name: Restricted agents cannot commit files or read another canvas
+    steps:
+      - given: a fresh workspace
+      - and: a writable MCP file client
+      - when: the MCP file client creates an MDX document from a local file
+      - and: a read-only MCP file client attempts to upload and read outside its canvas
+      - then: both restricted MCP operations are denied without changing saved documents
+  - name: Symbi has the complete catalog and edits a document outside its active canvas
+    steps:
+      - given: a fresh workspace
+      - when: native Symbi connects to the canonical MCP catalog
+      - then: native Symbi discovers every tool including Jev search and explicit reviewer tools
+      - when: native Symbi downloads edits and uploads a file on another canvas
+      - then: the Symbi file edit is durable outside its active canvas

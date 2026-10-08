@@ -45,7 +45,13 @@ export async function appBody(dist: string, file: string): Promise<Buffer> {
   return body;
 }
 
-export async function readBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+const bodyCache = new WeakMap<IncomingMessage, Promise<Record<string, unknown>>>();
+export function readBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+  let body = bodyCache.get(request);
+  if (!body) { body = parseBody(request); bodyCache.set(request, body); }
+  return body;
+}
+async function parseBody(request: IncomingMessage): Promise<Record<string, unknown>> {
   // Requiring JSON means another site cannot post here with a plain form or a simple cross-origin request.
   if (!String(request.headers['content-type'] ?? '').toLowerCase().includes('application/json')) {
     throw new ApiError(415, 'Send the request body as application/json');

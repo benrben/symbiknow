@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type { AgentPlugin, AgentProfile, ChatSettings, ExternalMcpServer, GroupBy, McpTokenInfo, ModelProvider } from '../shared/types.js';
 import { hashToken } from './auth.js';
 import { ApiError } from './errors.js';
+import { projectMcpMetadata } from './mcp-registry.js';
 
 export type StoredMcpToken = McpTokenInfo & { hash: string };
 
@@ -24,17 +25,11 @@ export type PrivateSettings = {
 
 export const providers: ModelProvider[] = ['openrouter', 'openai', 'anthropic', 'custom'];
 export const builtInProfiles = ['general', 'research', 'planner', 'builder'] as const;
-export const allPlugins: AgentPlugin[] = ['document_read', 'document_write', 'external_mcp'];
-export const mcpToolNames = [
-  'ask_symbi', 'symbi_reflex',
-  'list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'create_doc', 'import_documents', 'edit_doc', 'delete_doc', 'move_block',
-  'link_blocks', 'unlink_blocks', 'upload_file', 'download_file', 'claim_doc', 'release_doc',
-  'list_versions', 'create_branch', 'delete_branch', 'switch_branch', 'merge_branch', 'restore_revision',
-  'jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox', 'jev_do', 'jev_job', 'jev_propose',
-] as const;
-export const readableMcpTools = new Set<string>(['ask_symbi', 'symbi_reflex', 'list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'download_file',
-  'list_versions', 'jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox', 'jev_job',]);
-export const defaultPlugins: AgentPlugin[] = ['document_read', 'document_write', 'external_mcp'];
+export const allPlugins: AgentPlugin[] = ['external_mcp'];
+export const mcpToolNames = projectMcpMetadata().map(tool => tool.name);
+export const readableMcpTools = new Set(projectMcpMetadata().filter(tool => tool.permission === 'read').map(tool => tool.name));
+const proposalMcpTools = new Set(projectMcpMetadata().filter(tool => tool.permission === 'propose').map(tool => tool.name));
+export const defaultPlugins: AgentPlugin[] = ['external_mcp'];
 const retiredSettings = new Set(['jevApiKey', 'reviewers', 'workAreas', 'tagVocabulary', 'jevPolicy']);
 const groupings: GroupBy[] = ['work_area', 'purpose', 'lane'];
 const secretName = /^[A-Z][A-Z0-9_]{0,63}$/;
@@ -97,10 +92,16 @@ function publicMcpSettings(settings: PrivateSettings) {
   return {
     secretNames: Object.keys(settings.secrets ?? {}).sort(),
     mcpServers: settings.mcpServers ?? [],
-    mcpTokens: (settings.mcpTokens ?? []).map(({ id, name, access, preview, createdAt, lastUsedAt, allowedCanvasIds, tools }) => ({ id, name,
+    mcpToolCatalog: projectMcpMetadata().map(tool => ({ name: tool.name, access: tool.permission === 'read' || tool.permission === 'propose' ? tool.permission : 'write' as const,
+      ...(tool.permission === 'approve' ? { canApprove: true } : {}), ...(tool.permission === 'configure' ? { canConfigure: true } : {}) })),
+    mcpTokens: (settings.mcpTokens ?? []).map(({ id, name, access, preview, createdAt, lastUsedAt, allowedCanvasIds, tools, canApprove, canConfigure }) => ({ id, name,
       access: access ?? 'write', preview, createdAt, ...(lastUsedAt ? { lastUsedAt } : {}),
-      ...(allowedCanvasIds ? { allowedCanvasIds } : {}), ...(tools ? { tools } : {}) })),
+      ...(allowedCanvasIds ? { allowedCanvasIds } : {}), ...(tools ? { tools } : {}),
+      ...publicTokenGrants(canApprove, canConfigure) })),
   };
+}
+function publicTokenGrants(canApprove: boolean | undefined, canConfigure: boolean | undefined) {
+  return { ...(canApprove ? { canApprove } : {}), ...(canConfigure ? { canConfigure } : {}) };
 }
 
 function text(value: unknown, field: string, max: number, required = false): string {
@@ -293,16 +294,18 @@ function updatedConnectionSettings(previous: PrivateSettings, input: Record<stri
   };
 }
 
-export function newMcpToken(name: unknown, access: unknown = 'read', scope?: { allowedCanvasIds?: unknown; tools?: unknown }): { token: string; stored: StoredMcpToken } {
+export function newMcpToken(name: unknown, access: unknown = 'read', scope?: { allowedCanvasIds?: unknown; tools?: unknown; canApprove?: unknown; canConfigure?: unknown }): { token: string; stored: StoredMcpToken } {
   const label = text(name, 'Token name', 60, true);
   const level = tokenAccess(access);
   const canvasIds = distinctScope(scope?.allowedCanvasIds, 100, validCanvasId, 'allowedCanvasIds must contain 1 to 100 distinct canvas IDs');
   const tools = distinctScope(scope?.tools, mcpToolNames.length, validToolName, 'tools must contain distinct supported MCP tool names');
-  validateToolAccess(tools, level);
+  const canApprove = explicitGrant(scope?.canApprove, level);
+  const canConfigure = explicitGrant(scope?.canConfigure, level);
+  validateToolAccess(tools, level, { canApprove, canConfigure });
   const token = `atm_${randomBytes(24).toString('base64url')}`;
   return { token, stored: { id: randomUUID(), name: label, access: level, hash: hashToken(token), preview: `…${token.slice(-4)}`,
     createdAt: new Date().toISOString(), ...(canvasIds ? { allowedCanvasIds: canvasIds } : {}),
-    ...(tools ? { tools } : {}) } };
+    ...(tools ? { tools } : {}), ...(canApprove ? { canApprove } : {}), ...(canConfigure ? { canConfigure } : {}) } };
 }
 
 type TokenAccess = 'read' | 'propose' | 'write';
@@ -331,10 +334,19 @@ function validToolName(tool: unknown): boolean {
   return typeof tool === 'string' && mcpToolNames.includes(tool as typeof mcpToolNames[number]);
 }
 
-function validateToolAccess(tools: string[] | undefined, access: TokenAccess): void {
-  if (tools?.some(tool => access !== 'write' && !readableMcpTools.has(tool) && !(access === 'propose' && tool === 'jev_propose'))) {
-    throw new ApiError(400, 'The selected tools exceed this token access level');
-  }
+function explicitGrant(value: unknown, access: TokenAccess): boolean {
+  if (value === undefined || value === false) return false;
+  if (value !== true || access !== 'write') throw new ApiError(400, 'Reviewer and configuration grants require write access and an explicit boolean');
+  return true;
+}
+function validateToolAccess(tools: string[] | undefined, access: TokenAccess, grants: { canApprove: boolean; canConfigure: boolean }): void {
+  const permitted = (name: string) => {
+    const permission = projectMcpMetadata().find(tool => tool.name === name)!.permission;
+    if (permission === 'approve') return grants.canApprove;
+    if (permission === 'configure') return grants.canConfigure;
+    return access === 'write' || readableMcpTools.has(name) || (access === 'propose' && proposalMcpTools.has(name));
+  };
+  if (tools?.some(tool => !permitted(tool))) throw new ApiError(400, 'The selected tools exceed this token access level or explicit grants');
 }
 
 /** Replace `${secret:NAME}` references and add the bearer secret for an outside MCP server. */

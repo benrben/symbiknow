@@ -22,7 +22,7 @@ export async function chatHttpFixture(options: Partial<Parameters<typeof createA
   const base = `http://127.0.0.1:${address.port}`;
   const store = new CanvasStore(root);
   await store.updateSettings({ provider: 'custom', baseUrl: 'http://localhost:1234/v1', apiKey: 'fixture-key',
-    model: 'fixture-model', agentPlugins: ['document_read', 'document_write'] });
+    model: 'fixture-model', agentPlugins: ['external_mcp'] });
   return { base, store, root };
 }
 

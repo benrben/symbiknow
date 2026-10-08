@@ -1,0 +1,11 @@
+feature: Right-to-left Markdown documents
+scenarios:
+- name: Mixed Hebrew, Arabic and English survive editing, preview and reload
+  steps:
+  - given: a fresh workspace
+  - when: I create an empty canvas for group automations
+  - and: I open the current canvas in a browser
+  - and: I write a mixed direction Markdown document
+  - then: the source lines and live preview use the appropriate text directions
+  - when: I save the mixed direction document and reload
+  - then: its canvas card and full page retain RTL prose and LTR code

@@ -1,0 +1,27 @@
+feature: Canvas tasks shared by people and MCP agents
+scenarios:
+  - name: Plan tasks in different views and archive completed work
+    steps:
+      - given: a fresh workspace
+      - when: I open the current canvas in a browser
+      - and: I open the canvas task view
+      - and: I add three tasks with different priorities dates and sizes
+      - then: priority date and size sorting change the task order
+      - when: I switch the tasks to a status board
+      - then: the tasks appear in their status columns
+      - when: I complete a task and reload the task view
+      - then: the completed task is archived with its details
+      - when: I restore the archived task
+      - then: it returns to active work and survives reload
+  - name: An agent edits the same tasks and stale browser edits recover safely
+    steps:
+      - given: a fresh workspace
+      - when: an MCP agent creates a canvas todo
+      - and: I open the current canvas in a browser
+      - and: I open the canvas task view
+      - and: I draft a task edit before an MCP agent changes it
+      - then: saving the stale edit preserves both the agent change and my draft
+      - when: I refresh tasks and retry my draft
+      - then: the retried edit is saved and readable by MCP
+      - when: an MCP agent marks the todo done
+      - then: the browser shows the agent completed todo in Archive

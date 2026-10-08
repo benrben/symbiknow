@@ -119,7 +119,8 @@ it('reads and cancels protected historic drafts through native owner HTTP withou
   const route = '/canvases/product-roadmap/jev/drafts/roadmap-overview';
   expect(await request(route).then(response => response.json())).toEqual(draft);
   const headers = { authorization: `Bearer ${token.token}` };
-  expect(await request(route, 'GET', undefined, headers).then(response => response.json())).toEqual(draft);
+  const agentRead = await request(route, 'GET', undefined, headers);
+  expect(agentRead.status).toBe(403); expect(await agentRead.json()).toEqual({ error: 'This caller does not permit that canonical API operation' });
   expect((await request(route, 'GET', undefined, { 'x-symbiknow-actor': identity.id })).status).toBe(200);
   expect((await request('/canvases/product-roadmap/jev/agent/drafts/roadmap-overview')).status).toBe(403);
   expect((await request(route + '/cancel', 'POST', { draftId: draft.id }, headers)).status).toBe(403);
@@ -210,6 +211,43 @@ it('rejects stale saved evidence and applies and undoes exact retained label cha
   expect(restored.tags).toBe(original.tags); expect(restored.content).toBe(original.content);
 });
 
+it('uses explicit canonical reviewer and configuration grants for source-checked changes and undo', async () => {
+  const { root, base, request, state } = await fixture();
+  const store = new CanvasStore(root);
+  const created = await store.createMcpToken('Explicit Reflex reviewer', 'write', {
+    allowedCanvasIds: ['product-roadmap'], tools: ['jev_resolve', 'jev_undo', 'jev_configure'], canApprove: true, canConfigure: true,
+  });
+  const client = new Client({ name: 'reviewer display name', version: '1' });
+  await client.connect(new StreamableHTTPClientTransport(new URL(base + '/mcp'), {
+    requestInit: { headers: { authorization: `Bearer ${created.token}` } },
+  }));
+  const call = async (name: string, args: Record<string, unknown>) => {
+    const result = await client.callTool({ name, arguments: { canvasId: 'product-roadmap', ...args } });
+    expect(result.isError, JSON.stringify(result)).not.toBe(true);
+    return JSON.parse((result.content as Array<{ text: string }>)[0].text) as JevReceipt;
+  };
+  try {
+    await call('jev_configure', { settings: { confidenceThresholds: { label: .85 } } });
+    expect((await state()).settings.confidenceThresholds?.label).toBe(.85);
+    const before = await request('/canvases/product-roadmap/blocks/roadmap-overview').then(response => response.json()) as CanvasBlock;
+    const [proposal] = await savedDocumentProposals(root, 'product-roadmap', ['roadmap-overview'], { tags: ['Reviewed release'] });
+    const applied = await call('jev_resolve', { proposalId: proposal.id, decision: 'apply' });
+    expect(applied).toMatchObject({ state: 'applied', actor: created.settings.mcpTokens![0].id });
+    const updated = await store.getCanvasBlock('product-roadmap', 'roadmap-overview');
+    expect(updated).toMatchObject({ tags: ['Reviewed release'], content: before.content, contentHash: before.contentHash });
+    await call('jev_undo', { receiptId: applied.id });
+    const restored = await store.getCanvasBlock('product-roadmap', 'roadmap-overview');
+    expect(restored.tags).toEqual(before.tags);
+    expect(restored.content).toBe(before.content);
+    await call('jev_configure', { settings: { paused: true } });
+    expect((await state()).settings.paused).toBe(true);
+    await store.revokeMcpToken(created.settings.mcpTokens![0].id);
+    await expect(client.callTool({ name: 'jev_configure', arguments: { canvasId: 'product-roadmap', settings: { paused: false } } }))
+      .rejects.toThrow('Missing or invalid MCP token');
+    expect((await state()).settings.paused).toBe(true);
+  } finally { await client.close(); }
+});
+
 it('exposes native HTTP and stdio MCP request/read tools while rejecting approval, out-of-scope calls and revoked credentials', async () => {
   const remote = provider(); const { request, base, root, state } = await fixture(remote);
   await request('/canvases/product-roadmap/blocks/roadmap-overview', 'PUT', { tags: [] });
@@ -219,13 +257,13 @@ it('exposes native HTTP and stdio MCP request/read tools while rejecting approva
   await request('/settings', 'PUT', { secrets: { TYPESAFE_API_KEY: 'native-fixture-key' } });
   expect((await request('/canvases/product-roadmap/jev/settings', 'PUT', { externalProcessing: true, modes: { label: 'auto' } })).status).toBe(200);
   const store = new CanvasStore(root);
-  const created = await store.createMcpToken('Reflex proposer', 'propose', { allowedCanvasIds: ['product-roadmap'], tools: ['jev_propose', 'jev_job', 'brain_inbox'] });
+  const created = await store.createMcpToken('Reflex proposer', 'propose', { allowedCanvasIds: ['product-roadmap'], tools: ['jev_do', 'jev_job', 'brain_inbox'] });
   const client = new Client({ name: 'reflex-native-client', version: '1' });
   const transport = new StreamableHTTPClientTransport(new URL(base + '/mcp'), { requestInit: { headers: { authorization: `Bearer ${created.token}` } } });
   await client.connect(transport);
   try {
-    expect((await client.listTools()).tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['jev_propose', 'jev_job', 'brain_inbox']));
-    const response = await client.callTool({ name: 'jev_propose', arguments: { canvasId: 'product-roadmap', action: 'label', blockIds: ['roadmap-overview'] } });
+    expect((await client.listTools()).tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['jev_do', 'jev_job', 'brain_inbox']));
+    const response = await client.callTool({ name: 'jev_do', arguments: { canvasId: 'product-roadmap', action: 'label', blockIds: ['roadmap-overview'] } });
     expect(response.isError).not.toBe(true); const job = JSON.parse((response.content as Array<{ text: string }>)[0].text) as JevJob;
     await completed(state, job.id);
     expect((await client.callTool({ name: 'jev_job', arguments: { canvasId: 'product-roadmap', jobId: job.id } })).isError).not.toBe(true);
@@ -237,7 +275,7 @@ it('exposes native HTTP and stdio MCP request/read tools while rejecting approva
     await store.revokeMcpToken(created.settings.mcpTokens![0].id);
     expect((await request('/canvases/product-roadmap/jev/agent/state?view=brain_inbox', 'GET', undefined, { authorization: `Bearer ${created.token}` })).status).not.toBe(200);
   } finally { await client.close(); }
-  const stdio = createProjectMcpServer(base + '/api', fetch, { legacyBrainTools: true }); const local = new Client({ name: 'stdio-agent', version: '1' });
+  const stdio = createProjectMcpServer(base + '/api', fetch); const local = new Client({ name: 'stdio-agent', version: '1' });
   const [localSide, serverSide] = InMemoryTransport.createLinkedPair(); await Promise.all([stdio.connect(serverSide), local.connect(localSide)]);
   try { expect((await local.callTool({ name: 'jev_profile', arguments: { canvasId: 'product-roadmap' } })).isError).not.toBe(true); }
   finally { await local.close(); await stdio.close(); }
@@ -335,14 +373,14 @@ it('rejects the seven removed actions through owner and scoped agent HTTP before
   const remote = provider(); const { request, state, root } = await fixture(remote);
   const store = new CanvasStore(root);
   const created = await store.createMcpToken('Removed action checks', 'propose', {
-    allowedCanvasIds: ['product-roadmap'], tools: ['jev_propose'] });
+    allowedCanvasIds: ['product-roadmap'], tools: ['jev_do'] });
   const headers = { authorization: `Bearer ${created.token}` };
   const before = await state();
   for (const action of ['vocab_lifecycle', 'score_quality', 'flag_conflict', 'recheck_links', 'attach_doc_to_task', 'assign_owner', 'recall']) {
     for (const prefix of ['', '/agent']) {
       const rejected = await request(`/canvases/product-roadmap/jev${prefix}/actions`, 'POST',
         { action, blockIds: ['roadmap-overview'] }, prefix ? headers : {});
-      expect(rejected.status, action).toBe(400);
+      expect(rejected.status, action).toBe(prefix ? 403 : 400);
     }
   }
   expect(await state()).toEqual(before);

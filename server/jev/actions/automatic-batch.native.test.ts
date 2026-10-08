@@ -14,6 +14,7 @@ import { evaluationContext } from '../context.js';
 import { JevProposalExecutor } from '../proposals.js';
 import { JevWorkspaceFiles } from '../workspace.js';
 import { cachedQuestionContext } from '../runtime-question-prefetch.js';
+import { calibrated, decisionBoundaries } from './calibration.js';
 import { QuestionAnswerCache } from './question-answer-cache.js';
 
 type State = Record<string, unknown>;
@@ -27,7 +28,6 @@ let choiceConfidence = 0.96;
 let fitConfidence = 0.91;
 let selectNone = false;
 let fits: Record<string, number> = {};
-let mergePairChoice = 'none';
 let synonymies: Record<string, number> = {};
 let requestReceived: (() => void) | undefined;
 const held = new Set<ServerResponse>();
@@ -36,7 +36,7 @@ function answer(id: string, question: JevQuestion, body: ProviderBody): JevAnswe
   const batch = /^(\d+)__(.+)$/.exec(id);
   const state = batch ? body.state.questionSets![Number(batch[1])] : body.state;
   if (question.type === 'noul') {
-    if ((batch?.[2] ?? id) === 'synonymous') return { type: 'noul', noul: synonymies[`${state.sourceName}->${state.targetName}`] ?? fitConfidence };
+    if ((batch?.[2] ?? id) === 'synonymous') return { type: 'noul', noul: synonymies[`${state.sourceName}->${state.targetName}`] ?? 0.1 };
     const concept = (state.selectedConcept ?? state.concept) as { name: string } | undefined;
     return { type: 'noul', noul: fits[concept?.name ?? ''] ?? fitConfidence };
   }
@@ -44,7 +44,6 @@ function answer(id: string, question: JevQuestion, body: ProviderBody): JevAnswe
   const keys = Object.keys(question.criteria);
   let selected = selectNone ? 'none' : state.kind === 'entity' ? keys.find(key => question.criteria[key] === 'Alice') ?? 'none' : keys[0];
   if ((batch?.[2] ?? id) === 'parentEvidence') selected = keys.find(key => key.endsWith('p2')) ?? keys[0];
-  if ((batch?.[2] ?? id) === 'pair') selected = mergePairChoice;
   return { type: 'choice', choice: selected, confidence: choiceConfidence,
     probabilities: Object.fromEntries(keys.map(key => [key, key === selected ? 1 : 0])) };
 }
@@ -72,7 +71,7 @@ afterAll(async () => {
 });
 afterEach(() => { for (const response of held) response.destroy(); held.clear(); });
 beforeEach(() => { requests = []; failAt = 0; holdAt = 0; choiceConfidence = 0.96; fitConfidence = 0.91;
-  requestReceived = undefined; selectNone = false; fits = {}; mergePairChoice = 'none'; synonymies = {}; });
+  requestReceived = undefined; selectNone = false; fits = {}; synonymies = {}; });
 
 function document(id: string): JevInputDocument {
   return { canvasId: 'canvas', block: { id, title: 'Atlas', file: `${id}.md`, content: '# Atlas\nOwner: Alice\nAtlas defines release requirements and source history.',
@@ -188,7 +187,7 @@ describe('native automatic vocabulary waves', () => {
       name: 'Atlas', parentId: 'group-Platform', groupKey: 'custom:platform/atlas',
     } });
     expect(result.proposals[0].decisionConfidences).toEqual([.96, .91]);
-    expect(result.proposals).toHaveLength(1); expect(requests[2].questions['0__pair'].instructions).toContain('same meaning and boundaries');
+    expect(result.proposals).toHaveLength(1); expect(requests[2].questions.synonymous.instructions).toContain('same intended meaning and boundaries');
     expect(input.vocabulary).toHaveLength(1);
   });
 
@@ -237,7 +236,8 @@ describe('native automatic vocabulary waves', () => {
       { ...term('Atlas', 'entity'), state: 'active', definition: 'Archive account authentication.' }];
     const original = structuredClone(input.vocabulary);
     const result = await automaticVocabulary(input, request(['one', 'two']));
-    expect(requests).toHaveLength(1);
+    expect(requests).toHaveLength(2);
+    expect(Object.keys(requests[1].questions)).toEqual(['synonymous']);
     expect(Object.keys(requests[0].questions)).toEqual(['0__concept', '1__fit', '2__concept', '3__fit', '4__concept', '5__fit']);
     expect(states(requests[0]).filter(state => 'concept' in state).map(state => state.concept)).toEqual(original.slice(0, 3));
     expect(result.proposals).toHaveLength(3);
@@ -378,24 +378,27 @@ describe('native automatic vocabulary waves', () => {
     expect(input.vocabulary[0]).toMatchObject({ name: 'Platform', state: 'active', groupKey: 'custom:platform' });
   });
 
-  it.each([['m0', false], ['none', false], ['m1', true]] as const)
-  ('checks merge choice %s and every exact pair synonymy in one native wave, without using an unselected pair assessment', async (choice, merged) => {
+  it.each([[.29, .28, .1, false], [.3, .6, .5, true], [.99, .31, .4, true]] as const)
+  ('checks every exact synonym pair and takes one highest accepted merge at scores %s/%s/%s', async (first, second, third, merged) => {
     const input = context(); input.vocabulary = ['Atlas', 'Release policy', 'Shipping guidance'].map(name => ({ ...term(name, 'label'), state: 'active' }));
     const original = structuredClone(input.vocabulary);
-    mergePairChoice = choice; synonymies = { 'Release policy->Atlas': .2, 'Shipping guidance->Atlas': .99, 'Shipping guidance->Release policy': .99 };
+    synonymies = { 'Release policy->Atlas': first, 'Shipping guidance->Atlas': second, 'Shipping guidance->Release policy': third };
     const result = await automaticVocabulary(input, { ...request(), options: { kind: 'label' } });
     expect(requests).toHaveLength(1);
-    expect(Object.keys(requests[0].questions)).toEqual(['0__pair', '1__synonymous', '2__synonymous', '3__synonymous']);
-    expect(states(requests[0]).slice(1)).toMatchObject([
+    expect(Object.keys(requests[0].questions)).toEqual(['0__synonymous', '1__synonymous', '2__synonymous']);
+    expect(states(requests[0])).toMatchObject([
       { sourceName: 'Release policy', targetName: 'Atlas', sourceConcept: original[1].definition, targetConcept: original[0].definition },
       { sourceName: 'Shipping guidance', targetName: 'Atlas' }, { sourceName: 'Shipping guidance', targetName: 'Release policy' },
     ]);
     expect(result.result.synonymySupported).toBe(merged); expect(input.vocabulary).toEqual(original);
     if (!merged) { expect(result.proposals).toEqual([]); return; }
     expect(result.proposals).toHaveLength(3);
-    expect(result.proposals[0].mutation).toMatchObject({ kind: 'vocabulary', operation: 'merge', previousId: 'label-Shipping guidance',
-      term: { id: 'label-Atlas', aliases: ['Shipping guidance'], version: 2 } });
-    expect(result.proposals.every(candidate => JSON.stringify(candidate.decisionConfidences) === JSON.stringify([.96, .99]))).toBe(true);
+    const selectedName = first > second ? 'Release policy' : 'Shipping guidance';
+    expect(result.proposals[0].mutation).toMatchObject({ kind: 'vocabulary', operation: 'merge', previousId: 'label-' + selectedName,
+      term: { id: 'label-Atlas', aliases: [selectedName], version: 2 } });
+    const expectedConfidence = calibrated(Math.max(first, second, third), decisionBoundaries.synonym);
+    expect(result.proposals.every(candidate => JSON.stringify(candidate.decisionConfidences) === JSON.stringify([expectedConfidence]))).toBe(true);
+    expect(result.proposals.filter(candidate => candidate.mutation.kind === 'vocabulary' && candidate.mutation.operation === 'merge')).toHaveLength(1);
     expect(result.proposals.every(candidate => candidate.evidence.every(passage => input.documents[0].block.content.slice(passage.start, passage.end) === passage.quote))).toBe(true);
   });
 });

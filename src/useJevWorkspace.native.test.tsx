@@ -76,6 +76,8 @@ it('refreshes saved canvas metadata after automatic receipt changes and tolerate
     state: 'applied', createdAt: new Date().toISOString(), sources: [source], evidence: [], mutation: state.receipts[0].after });
   await files.write(fixture.workspace.id, state);
   await waitFor(() => expect(changed).toHaveBeenCalledOnce(), { timeout: 2200 });
+  // Invocation precedes the native canvas read; observe its completion before checking the saved labels.
+  await act(async () => { await changed.mock.results[0].value; });
   expect(labels).toEqual(['Release']); expect(hook.result.current.state?.receipts[0]?.id).toBe('automatic-label');
   hook.unmount();
   const reader = renderHook(() => useJevWorkspace(fixture.workspace.id));
@@ -106,9 +108,12 @@ it('rejects a scoped agent read as an owner view and requires complete owner-sta
   const fixture = await workspaceFixture();
   const credential = await fixture.store.createMcpToken('Read saved activity', 'read', { allowedCanvasIds: [fixture.canvas.id], tools: ['jev_activity'] });
   const owner = await api<JevViewState>(`/workspaces/${fixture.workspace.id}/jev/state`);
-  const scoped = await api<JevViewState>(`/workspaces/${fixture.workspace.id}/jev/state`, { headers: { authorization: `Bearer ${credential.token}` } });
+  await expect(api<JevViewState>(`/workspaces/${fixture.workspace.id}/jev/state`, { headers: { authorization: `Bearer ${credential.token}` } }))
+    .rejects.toThrow('This caller does not permit that canonical API operation');
+  const scoped = await api<JevViewState>(`/canvases/${fixture.canvas.id}/jev/agent/state?view=jev_activity`, { headers: { authorization: `Bearer ${credential.token}` } });
   const message = 'Open Symbi Reflex with an authenticated workspace owner session.';
-  expect(ownerWorkspaceView(owner)).toEqual(owner); expect(() => ownerWorkspaceView(scoped)).toThrow(message);
+  expect(ownerWorkspaceView(owner)).toEqual(owner);
+  expect(() => ownerWorkspaceView(scoped)).toThrow(message);
   expect(() => ownerWorkspaceView({ ...owner, hasApiKey: undefined } as unknown as JevViewState)).toThrow(message);
   expect(() => ownerWorkspaceView(null as unknown as JevViewState)).toThrow(message);
   expect(() => ownerWorkspaceView({ settings: {} } as JevViewState)).toThrow(message);

@@ -8,6 +8,7 @@ import type { JevQuestion } from '../jev.js';
 import { CanvasStore } from '../storage.js';
 import { JevRuntime } from './runtime.js';
 import { evaluateJevAction } from './actions.js';
+import { calibrated, decisionBoundaries } from './actions/calibration.js';
 
 const owner: JevPrincipal = { id: 'owner', kind: 'user', access: 'write', canApprove: true, canConfigure: true };
 let provider: Server;
@@ -23,10 +24,10 @@ function answer(id: string, question: JevQuestion) {
   if (question.type === 'score') return { type: 'score', score: 0, confidence: certainty,
     probabilities: Object.fromEntries(question.criteria.map((_, index) => [String(index), index === 0 ? 1 : 0])) };
   const keys = Object.keys(question.criteria);
-  const descriptions = question.criteria as Record<string, string>;
-  const selected = id === 'group' ? keys.find(key => descriptions[key].startsWith('Atlas / Rollout (')) ?? keys[0] : keys[0];
+  const selected = keys[0];
+  const probability = id === 'gate' ? certainty : 1;
   return { type: 'choice', choice: selected, confidence: certainty,
-    probabilities: Object.fromEntries(keys.map(key => [key, key === selected ? 1 : 0])) };
+    probabilities: Object.fromEntries(keys.map(key => [key, key === selected ? probability : key === 'none' ? 1 - probability : 0])) };
 }
 
 beforeEach(async () => {
@@ -67,5 +68,6 @@ it('keeps manual group pins while automatically reusing supported native groups 
   expect((await store.getCanvasBlock(canvasId, uncertain.id)).group).toBe('custom:manual');
   const state = await runtime.read(workspaceId, owner);
   expect(state.vocabulary).toEqual([]);
-  expect(state.proposals.some(proposal => proposal.state === 'applied' && proposal.decisionConfidences?.includes(0.8))).toBe(true);
+  expect(state.proposals.some(proposal => proposal.state === 'applied'
+    && proposal.decisionConfidences?.includes(calibrated(0.8, decisionBoundaries.fileGate)))).toBe(true);
 });

@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-07",
+  "provider": "TypeSafe",
+  "model": "jev-1.13.0",
+  "inputs": {
+    "README.md": "b23f8398d74bd9452235456e06a7d96b8f6961f03b65442260572fef3dd3fbea",
+    "architecture.md": "749f310f744d1f9592a132ac69802a00737cf8c0a6787456f59e28baf2546acb",
+    "assistant-and-research.md": "b8dcc29ac8ff2d4cd3a9ee3a5321243fec680d9943b58559b9adb21c91a3398c",
+    "brand-and-ui.md": "d58aa215405563b2d24b992dc1c5926cf60b604a626e6e8abc15154add6c17e5",
+    "canvas-ui.md": "2d26270d6749c9a8eed6ffea898e74d091d153a22f7d92da26b086a566d873b1",
+    "chat-internals.md": "3da706955b9ec3376c62dc3a98b4d12a94dffce97f822c70afb3cf5a1be11abe",
+    "data-model.md": "a988e8022ceccf8dcad5e4220e9c58e8e6045114a788f33b708c4e96a9490d56",
+    "document-operations.md": "adb01d18e9ae0ea05cb160fa989093dc2ac6cdfe9b86b7fed0e74beefa187b33",
+    "errors.md": "2f926eb5d74ba1b633cc56d02730c84524cc773c09541317d5b0a93001eaa3af",
+    "history.md": "b9aef5320296312cd7dce333b29ae6a2a54bd926779ff8f96ebfd6749b7751b0",
+    "mcp-and-api.md": "186afa814627b5304fd4a7f000e0be6d1cfd33738ab58b95f24e0d6ec8bd0389",
+    "operations.md": "5a1effbb1ec1f0b36d0ac61f14370644c7d70a8c599301df516cd61f64d627f7",
+    "plan-status.md": "321952040f559c3bf4132aa4aa53e31337910d43e37f9a47dae5c79d78abe4ca",
+    "reflex-internals.md": "4c74aa771f8f54e9473431f331effaf03408d3959a2b0bea492793329205ea01",
+    "safe-collaboration.md": "a7ff1f42f33acbb8f77db978bc96c0e684fe55516ddecf48a0aaef96abd1bc45",
+    "sdk-and-webmcp.md": "e01f4abe1a4b4af19313f346fa74dc93da21532a456b4919a9b97b0971042956",
+    "search-and-brain-tools.md": "76badabdb4f370b8bd6c65dc7b8c2c25729034abd36a8fcc0ec7bc671a2be7d9",
+    "security-and-access.md": "7778c22b145f8c43a24d55a02612636aa0642c10916e6fcf83812073f83c58eb",
+    "symbi-reflex.md": "f1cbb1523b8ccd9c7c1f113c641de3c133009b07200129d9fb666e9c568ccbcf",
+    "tasks-board.md": "08e900b58f3f06d1b17999552d961b301e27231f6744569330683c59a204d75f",
+    "testing.md": "651fa76d2906682ca45038c9de2a885b72f0667d91965284f487afb0473f391a"
+  },
+  "claim_check": {
+    "implementation": "Actual shipped /api/symbi/reflex endpoint with native local search",
+    "baseline": {
+      "variant": "shipped API",
+      "run": "baseline-r1",
+      "right": "30/31",
+      "wrong": [
+        {
+          "claim": "SymbiKnow has a native iPad app.",
+          "expected": "insufficient_evidence",
+          "actual": "no"
+        }
+      ],
+      "providerRequests": 31
+    },
+    "verification": [
+      {
+        "variant": "shipped API",
+        "run": "measured-r1",
+        "right": "31/31",
+        "wrong": [],
+        "providerRequests": 31
+      },
+      {
+        "variant": "shipped API",
+        "run": "measured-r2",
+        "right": "31/31",
+        "wrong": [],
+        "providerRequests": 31
+      }
+    ],
+    "decision": "Titles group checked evidence; provider state excludes opaque scope IDs; fixed no confidence boundary 0.7; API source scope and passages preserved"
+  },
+  "vocabulary_merge": {
+    "implementation": "Shipped vocabularyLifecycle and automaticVocabulary implementations, with exact mergeAssessmentSet wording",
+    "baseline": [
+      {
+        "variant": "shipped vocabulary paths",
+        "run": "baseline-r1",
+        "corpus": "normal",
+        "merges": "2/4",
+        "wrongMerges": "0/5",
+        "automaticMerges": "0/4",
+        "automaticWrongMerges": "0/5",
+        "providerRequests": 13
+      },
+      {
+        "variant": "shipped vocabulary paths",
+        "run": "baseline-r1",
+        "corpus": "heldout",
+        "merges": "1/4",
+        "wrongMerges": "0/4",
+        "automaticMerges": "0/4",
+        "automaticWrongMerges": "0/4",
+        "providerRequests": 10
+      }
+    ],
+    "verification": [
+      {
+        "variant": "shipped vocabulary paths",
+        "run": "wired-r1",
+        "corpus": "normal",
+        "merges": "4/4",
+        "wrongMerges": "0/5",
+        "automaticMerges": "4/4",
+        "automaticWrongMerges": "0/5",
+        "providerRequests": 18
+      },
+      {
+        "variant": "shipped vocabulary paths",
+        "run": "wired-r1",
+        "corpus": "heldout",
+        "merges": "3/4",
+        "wrongMerges": "0/4",
+        "automaticMerges": "4/4",
+        "automaticWrongMerges": "0/4",
+        "providerRequests": 16
+      },
+      {
+        "variant": "shipped vocabulary paths",
+        "run": "wired-r2",
+        "corpus": "normal",
+        "merges": "4/4",
+        "wrongMerges": "0/5",
+        "automaticMerges": "4/4",
+        "automaticWrongMerges": "0/5",
+        "providerRequests": 18
+      },
+      {
+        "variant": "shipped vocabulary paths",
+        "run": "wired-r2",
+        "corpus": "heldout",
+        "merges": "3/4",
+        "wrongMerges": "0/4",
+        "automaticMerges": "4/4",
+        "automaticWrongMerges": "0/4",
+        "providerRequests": 16
+      }
+    ],
+    "decision": "Raw synonym boundary 0.3 calibrated to existing confidence sliders; same-kind active pairs admitted; lexical rank used only above eight-pair budget; one highest accepted merge per pass",
+    "combined_each_run": {
+      "lifecycle_correct": "7/8",
+      "automatic_correct": "8/8",
+      "wrong_merges": "0/9"
+    }
+  }
+}

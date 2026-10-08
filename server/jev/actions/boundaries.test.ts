@@ -1,12 +1,10 @@
-import { automaticRecall, automaticVocabulary } from './automatic.js';
+import { automaticVocabulary } from './automatic.js';
 import { recheckLinks } from './graph.js';
 import { describe, expect, it } from 'vitest';
 import { jevActions, type JevActionRequest, type JevVocabularyTerm } from '../../../shared/jev-types.js';
-import { ApiError } from '../../errors.js';
 import type { JevAnswer, JevQuestion } from '../../jev.js';
 import { evaluateJevAction, type JevEvaluationContext, type JevInputDocument } from '../actions.js';
 import { mergeAssessmentSet, mergeAssessedTerms, vocabularyLifecycle } from './vocabulary.js';
-import { recall } from './serving.js';
 
 type DecisionRule = (id: string, question: JevQuestion, state: Record<string, unknown>) => string | number | undefined;
 function document(canvasId: string, id: string, content = 'Atlas requirements.\n- [ ] Enable pilot.') : JevInputDocument {
@@ -107,7 +105,7 @@ describe('Symbi Reflex uncertainty, idempotency, and incomplete evidence boundar
     expect(exact.result.findings).toMatchObject([{ method: 'exact_content', confidence: 1 }]);
     expect(exact.proposals[0].evidence.map(item => item.source.blockId)).toEqual(['one', 'two']);
     input.documents[1].block.content += '\nNew evidence extends the release plan.';
-    input.decider = context(id => id === 'supported' ? .02 : undefined).decider;
+    input.decider = context(id => id === 'overlap' ? 'distinct' : undefined).decider;
     const update = await evaluateJevAction(input, request('flag_duplicate'));
     expect(update.proposals).toEqual([]);
     expect(update.result.reason).toBe('No candidate pair met duplicate evidence');
@@ -125,17 +123,6 @@ describe('Symbi Reflex uncertainty, idempotency, and incomplete evidence boundar
     input.decider = context(id => id === 'supported' ? 0.01 : undefined).decider;
     const removed = await recheckLinks(input, request('recheck_links'));
     expect(removed.proposals[1].mutation).toMatchObject({ patch: { crossLinks: expect.arrayContaining([{ canvasId: 'other', blockId: 'unavailable', relation: 'related' }]) } });
-  });
-
-  it('keeps local recall honest and propagates cancellation and unexpected errors', async () => {
-    const input = context(id => id === 'relevance' || id === 'conflict' ? 0.1 : undefined);
-    expect((await automaticRecall(input, request('recall'))).result.status).toBe('support_checked');
-    expect((await automaticRecall(input, { ...request('recall'), query: 'Atlas' })).result.evidenceStatus).toBe('no_verified_support');
-    input.decider = async () => { throw new ApiError(499, 'Cancelled'); };
-    await expect(automaticRecall(input, { ...request('recall'), query: 'Atlas' })).rejects.toMatchObject({ status: 499 });
-    const error = new Error('Adapter defect');
-    input.decider = async () => { throw error; };
-    await expect(automaticRecall(input, { ...request('recall'), query: 'Atlas' })).rejects.toBe(error);
   });
 
   it('distinguishes new, existing, and insufficiently supported vocabulary concepts', async () => {
@@ -164,13 +151,6 @@ describe('Symbi Reflex uncertainty, idempotency, and incomplete evidence boundar
     input.documents[0].block.title = ''; input.documents[0].block.content = '';
     expect(await vocabularyLifecycle(input, request('vocab_lifecycle', { operation: 'nominate' }))).toEqual({
       result: { status: 'no_text_derived_names' }, proposals: [] });
-  });
-
-  it('returns no recall evidence for a missing or blank query before consulting a provider', async () => {
-    const input = context(); input.decider = async () => { throw new Error('Empty recall query reached provider'); };
-    for (const query of [undefined, ' \n ']) {
-      expect(await recall(input, { ...request('recall'), query })).toEqual({ result: { status: 'missing_query', passages: [], conflicts: [] }, proposals: [] });
-    }
   });
 
   it('migrates only matching label memberships and never writes document fields for entities', async () => {
@@ -221,13 +201,16 @@ describe('Symbi Reflex uncertainty, idempotency, and incomplete evidence boundar
 
   it('bootstraps groups only from supported topics and respects active, candidate, and retired definitions', async () => {
     const selectNewOnly: DecisionRule = (id, question) => {
+      if (id === 'place' || id === 'gate') return 'none';
       if (id !== 'group' || question.type !== 'choice') return undefined;
       if ('g0' in question.criteria) return 'none';
       return Object.keys(question.criteria).find(key => question.criteria[key].includes('(custom:atlas/rollout)'));
     };
     const input = context(selectNewOnly);
     input.documents = input.documents.slice(0, 2);
-    input.documents.forEach(document => { document.block.content = '# Atlas\n## Rollout\nWork to ship Atlas.'; });
+    input.documents.forEach(document => { document.block.content = document.block.id === 'one'
+      ? '# Atlas\n## Rollout\nThe Atlas rollout plan defines pilot readiness and delivery approval.'
+      : '# Atlas\n## Rollout\nThe Atlas rollout execution guide defines deployment stages and recovery checkpoints.'; });
     const parent = { ...term('group', 'Atlas'), groupKey: 'custom:atlas', members: [] };
     input.vocabulary = [parent];
     const active = await evaluateJevAction(input, request('file'));
@@ -245,6 +228,23 @@ describe('Symbi Reflex uncertainty, idempotency, and incomplete evidence boundar
     expect((await evaluateJevAction(input, request('file'))).proposals[0].mutation).toMatchObject({ operation: 'define' });
     input.documents[0].block.title = ''; input.documents[0].block.content = '';
     expect((await evaluateJevAction(input, request('file'))).result.status).toBe('no_source_derived_group_names');
+  });
+
+  it('keeps a copied source category as a root instead of inferring independent parent hierarchy evidence', async () => {
+    const input = context((id, question) => {
+      if (id !== 'group' || question.type !== 'choice') return undefined;
+      return Object.keys(question.criteria).find(key => question.criteria[key].includes('(custom:rollout)')) ?? 'none';
+    });
+    input.documents = input.documents.slice(0, 2);
+    input.documents.forEach(document => { document.block.content = '# Atlas\n## Rollout\nThe Atlas rollout guide defines pilot readiness and delivery approval.'; });
+    expect(input.documents[0].block.content).toBe(input.documents[1].block.content);
+    const result = await evaluateJevAction(input, request('file'));
+    expect(result.proposals.find(proposal => proposal.mutation.kind === 'document')?.mutation)
+      .toMatchObject({ patch: { group: 'custom:rollout' } });
+    const definitions = result.proposals.flatMap(proposal => proposal.mutation.kind === 'vocabulary' ? [proposal.mutation.term] : []);
+    expect(definitions).toHaveLength(1);
+    expect(definitions[0]).toMatchObject({ groupKey: 'custom:rollout' });
+    expect(definitions[0].parentId).toBeUndefined();
   });
 
   it('validates subgroup parents and explicit native paths before proposing hierarchy changes', async () => {

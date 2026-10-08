@@ -1,18 +1,19 @@
 import { type CanvasStore } from './storage.js';
 import { defaultPlugins } from './settings.js';
 import { externalTools } from './external-mcp.js';
-import { ChatProposalDraft } from './chat-proposals.js';
+import { createHash } from 'node:crypto';
 import { chatContext, requiredString, conversationMessages, modelSettings, viewContext } from './chat-input.js';
 import type { AgentConfiguration, ExternalTools, PreparedRequest } from './chat-stream-types.js';
 
 export async function requestContext(store: CanvasStore, body: Record<string, unknown>): Promise<PreparedRequest> {
   const canvasId = requiredString(body.canvasId, 'canvasId');
   const activeCanvas = await store.getCanvas(canvasId);
-  const proposalDraft = new ChatProposalDraft(store, canvasId, activeCanvas);
   const currentView = viewContext(body.viewContext, activeCanvas);
   const history = conversationMessages(body.messages);
   const context = chatContext(history);
-  return { canvasId, activeCanvas, proposalDraft, currentView, history, context,
+  const conversationId = typeof body.conversationId === 'string' && body.conversationId.trim()
+    ? body.conversationId : createHash('sha256').update(JSON.stringify([canvasId, history[0]])).digest('hex');
+  return { canvasId, conversationId, activeCanvas, currentView, history, context,
     requestedResearchCanvas: /\b(?:temporary|research)\s+canvas\b/iu.test(context.latest) };
 }
 

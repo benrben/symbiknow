@@ -12,6 +12,7 @@ import { recordJevCandidates } from './runtime-proposals.js';
 import type { StoredJevJob } from './runtime-queue.js';
 import { commitWorkspaceJobs, stageWorkspaceJob, type WorkspaceCompletion } from './runtime-workspace-completion.js';
 import { JevWorkspaceFiles } from './workspace.js';
+import { automaticGroupingAllowed } from './group-ownership.js';
 
 export const documentActions: readonly JevCurrentAction[] = ['profile', 'label', 'link', 'flag_duplicate', 'file', 'suggest_home_canvas'];
 export interface JevDocumentPlan {
@@ -136,7 +137,7 @@ class DocumentRunner {
     const source = this.context.documents.find(document => document.canvasId === job.request.canvasId
       && document.block.id === job.request.blockIds?.[0]);
     const ownership = source?.block.jevOwnership;
-    if (!source || !ownership || (ownership.managed.includes('group') && !ownership.pins.includes('group'))) return undefined;
+    if (!source || !ownership || automaticGroupingAllowed(source.block)) return undefined;
     const reason = 'A field is pinned or managed manually';
     return { proposals: [], result: { status: 'no_change', reason, documents: { [source.block.id]: {
       status: 'no_change', reason, source: { ...source.snapshot } } } } };

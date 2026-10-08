@@ -16,7 +16,7 @@ type OrganizationDocument = { canvasId: string; block: CanvasBlock };
 type OrganizationContext = { key: string; documents: OrganizationDocument[] };
 type ReadOrganizationContext = (state: JevWorkspaceState) => Promise<OrganizationContext>;
 type NativeGroup = { id: string; name: string; definition?: string; purpose?: string };
-export const JEV_ORGANIZATION_VERSION = 'automatic-knowledge-13';
+export const JEV_ORGANIZATION_VERSION = 'automatic-knowledge-21';
 const automaticActions: JevAction[] = ['label', 'link', 'flag_duplicate', 'file', 'suggest_home_canvas'];
 
 function documentInputs(block: CanvasBlock) {

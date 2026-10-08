@@ -477,7 +477,8 @@ export class SymbiIndex {
       catch (error) { reason = error instanceof Error ? error.message : String(error); }
     }
     return { ranked: rankPassages({ passages, query: request.query, queryVector, keywordRanks, limit: 500,
-      mode: request.mode }), reason };
+      mode: request.mode, minimumSimilarity: request.minimumSimilarity, passagesPerDocument: request.passagesPerDocument,
+      passageOrder: request.passageOrder }), reason };
   }
 
   private pageResult(ranked: SymbiPassage[], offset: number, limit: number, documents: DocumentRow[],
@@ -494,14 +495,16 @@ export class SymbiIndex {
     this.assertOpen();
     this.refreshExternalWrites();
     const generation = this.generation;
-    const queryKey = hash(JSON.stringify({ query: request.query, mode: request.mode, allowedCanvasIds: request.allowedCanvasIds,
+    const limits = { minimumSimilarity: request.minimumSimilarity, passagesPerDocument: request.passagesPerDocument,
+      passageOrder: request.passageOrder };
+    const queryKey = hash(JSON.stringify({ query: request.query, mode: request.mode, limits, allowedCanvasIds: request.allowedCanvasIds,
       allowedDocumentIds: request.allowedDocumentIds, canvasId: request.canvasId, documentIds: request.documentIds }));
     const offset = cursorOffset(request.cursor, generation, queryKey);
     const limit = Math.max(1, Math.min(request.limit ?? 24, 100));
     const scope = scopeSql(request);
     const documents = this.db.prepare(`SELECT d.* FROM index_documents d ${scope.where}`).all(...scope.values) as DocumentRow[];
     let reason = documents.find((row) => row.status === 'degraded')?.reason ?? undefined;
-    const cacheKey = JSON.stringify({ query: request.query, mode: request.mode, scope, generation: this.generation });
+    const cacheKey = JSON.stringify({ query: request.query, mode: request.mode, limits, scope, generation: this.generation });
     let ranked = this.cache.get(cacheKey)?.value;
     if (!ranked) {
       const result = await this.rankSearch(request, scope, reason);

@@ -1,11 +1,12 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
 import type { Server } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, expect, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from 'vitest';
 import { createApiServer } from '../server/index';
+import { CanvasStore } from '../server/storage';
 import type { AnswerCanvasTurn } from '../shared/answer-canvas';
 import type { CanvasDocument, WorkspaceSummary } from '../shared/types';
 import { App } from './App';
@@ -15,14 +16,31 @@ import { emptyResearchEdits } from './research-edits';
 
 const nativeFetch = globalThis.fetch;
 const opened: { server: Server; root: string }[] = [];
+let baselineRoot: string;
 export const turn: AnswerCanvasTurn = { id: 1, query: 'Release evidence', answer: 'The release needs review.', sources: [], status: 'complete', patch: {
   query: 'Release evidence', blocks: [{ id: 'release', type: 'text', title: 'Release review', content: 'Review before release.', sourceIds: [] }], edges: [],
 } };
 export function storedResearch() {
   return JSON.parse(localStorage.getItem(researchStorageKey) ?? 'null') as { turns: AnswerCanvasTurn[] };
 }
-export function installAssistantBrowser() {
+export function installAssistantBrowser(prepare?: (store: CanvasStore) => Promise<void>) {
   installCanvasBrowser();
+  beforeAll(async () => {
+    baselineRoot = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-assistant-baseline-'));
+    const store = new CanvasStore(baselineRoot); await store.init();
+    await prepare?.(store);
+    for (const workspace of await store.listWorkspaces()) {
+      for (const summary of workspace.canvases) {
+        const canvas = await store.getCanvas(summary.id);
+        for (const block of canvas.blocks) await store.documentHistory(canvas.id, block.id);
+      }
+    }
+    // Transformation belongs to fixture setup, before the timed App mount.
+    await import('./AIElementsChat');
+  });
+  afterAll(async () => {
+    if (baselineRoot) await rm(baselineRoot, { recursive: true, force: true });
+  });
   beforeEach(() => {
     vi.stubEnv('SYMBIKNOW_ACCESS_TOKEN', '');
     vi.stubEnv('ALLTEAM_ACCESS_TOKEN', '');
@@ -44,6 +62,8 @@ export type Network = (route: string, init: RequestInit, forward: () => Promise<
 type Prepare = (request: (route: string, init?: RequestInit) => Promise<Response>, root: string) => Promise<void>;
 export async function assistantFixture(network?: Network, research = true, prepare?: Prepare, providers: Omit<Parameters<typeof createApiServer>[0], 'dataDir'> = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-assistant-'));
+  // Every test owns a fresh native tree, including independent Git repositories.
+  await cp(baselineRoot, root, { recursive: true });
   const server = await createApiServer({ dataDir: root, ...providers });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   opened.push({ server, root });
@@ -58,9 +78,6 @@ export async function assistantFixture(network?: Network, research = true, prepa
     return network ? network(route, init, forward) : forward();
   });
   if (research) localStorage.setItem(researchStorageKey, JSON.stringify({ turns: [turn], edits: emptyResearchEdits(), layout: 'mindmap' }));
-  // Load the installed lazy views before mounting; module transformation is a
-  // test-runner concern, while the public UI still owns every mount and event.
-  await import('./AIElementsChat');
   const view = render(<App />);
   await screen.findByRole('button', { name: 'New chat' });
   await screen.findByRole('textbox', { name: 'Message Symbi' });
@@ -99,6 +116,6 @@ export async function completedResearchSave(fixture: Awaited<ReturnType<typeof a
   const saved = (await fixture.documents()).flatMap(workspace => workspace.canvases).find(document => document.name === 'Research — Release evidence');
   if (!saved) throw new Error('Research save did not persist');
   await waitFor(async () => expect((await fixture.read(saved.id)).blocks).toHaveLength(1));
-  await screen.findByRole('button', { name: 'Open canvas: ' + saved.name });
+  await screen.findByRole('button', { name: 'Open canvas: ' + saved.name, hidden: true });
   return saved;
 }

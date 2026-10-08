@@ -22,6 +22,11 @@ coverage/
 *.log
 /playwright-report/
 /test-results/
+/features/markdown-rtl.feature
+/features/todos.feature
+/features/jev-canvas-status.feature
+/features/launch-dry-run.feature
+/features/mcp-file-workflow.feature
 /.quality/*
 !/.quality/run-tests.mjs
 
@@ -48,3 +53,5 @@ __pycache__/
 
 # Local benchmark runs and implementation scratch files
 /work/
+
+/scripts/jev-bench/out/

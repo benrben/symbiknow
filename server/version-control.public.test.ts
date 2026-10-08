@@ -55,6 +55,36 @@ it('edits a named branch without switching or replacing the visible source and d
   expect((await versions.deleteBranch('agent/draft')).branches).toEqual(['main']);
 });
 
+it('keeps an unchanged private edit idempotent and requires visible edits for the active branch', async () => {
+  await versions.init('# Visible\n');
+  await versions.createBranch('agent/draft');
+  const before = await versions.branchContent('agent/draft');
+  expect(await versions.commitBranch('agent/draft', before.content, 'Unchanged private edit')).toEqual(before);
+  expect((await new DocumentVersions(repository).branchContent('agent/draft')).revision).toBe(before.revision);
+  expect(await versions.content()).toBe('# Visible\n');
+  expect((await readdir(directory)).filter(name => name.startsWith('branch-edit-'))).toEqual([]);
+  await expect(versions.commitBranch('main', '# Wrong branch\n', 'Use ordinary document edit')).rejects.toMatchObject({
+    status: 409, message: 'Use the visible document edit for the current branch',
+  });
+  await versions.switchBranch('agent/draft');
+  await expect(versions.commitBranch('agent/draft', '# Wrong branch\n', 'Use ordinary document edit')).rejects.toMatchObject({ status: 409 });
+  expect(await versions.content()).toBe('# Visible\n');
+  expect((await readdir(directory)).filter(name => name.startsWith('branch-edit-'))).toEqual([]);
+});
+
+it('protects main even when inactive and protects the currently visible private branch', async () => {
+  await versions.init('# Source\n');
+  await versions.createBranch('agent/draft');
+  await expect(versions.deleteBranch('main')).rejects.toMatchObject({ status: 409 });
+  await versions.switchBranch('agent/draft');
+  const before = await versions.status();
+  for (const name of ['main', 'agent/draft']) await expect(versions.deleteBranch(name)).rejects.toMatchObject({
+    status: 409, message: 'The current or protected branch cannot be deleted',
+  });
+  expect(await new DocumentVersions(repository).status()).toEqual(before);
+  expect(await versions.content()).toBe('# Source\n');
+});
+
 it('keeps a committed private branch when Git worktree cleanup fails and removes its temporary files', async () => {
   await versions.init('# Visible\n');
   await versions.createBranch('agent/draft');

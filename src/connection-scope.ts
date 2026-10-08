@@ -1,13 +1,15 @@
-import type { McpTokenInfo, WorkspaceSummary } from '../shared/types';
+import type { ChatSettings, McpTokenInfo, WorkspaceSummary } from '../shared/types';
 
-const readMcpTools = ['list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'download_file', 'list_versions'];
-const writeMcpTools = ['list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'create_doc', 'edit_doc', 'delete_doc', 'move_block',
-  'link_blocks', 'unlink_blocks', 'upload_file', 'download_file', 'claim_doc', 'release_doc',
-  'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision'];
-const readJevTools = ['jev_profile', 'find_by', 'related', 'memory_map', 'jev_activity', 'brain_inbox', 'jev_job'];
-export function toolsForAccess(access: 'read' | 'propose' | 'write'): string[] {
-  if (access === 'write') return [...writeMcpTools, ...readJevTools, 'jev_do', 'jev_propose'];
-  return access === 'propose' ? [...readMcpTools, ...readJevTools, 'jev_propose'] : [...readMcpTools, ...readJevTools];
+export function toolsForAccess(access: 'read' | 'propose' | 'write', catalog: ChatSettings['mcpToolCatalog'] = [],
+  grants: Pick<McpTokenInfo, 'canApprove' | 'canConfigure'> = {}): string[] {
+  return catalog.filter(tool => {
+    if (tool.canApprove && !grants.canApprove) return false;
+    if (tool.canConfigure && !grants.canConfigure) return false;
+    return permitsAccess(access, tool.access);
+  }).map(tool => tool.name);
+}
+function permitsAccess(access: 'read' | 'propose' | 'write', toolAccess: 'read' | 'propose' | 'write'): boolean {
+  return toolAccess === 'read' || access === 'write' || (access === 'propose' && toolAccess === 'propose');
 }
 export function effectiveTokenScope(token: Pick<McpTokenInfo, 'access' | 'allowedCanvasIds' | 'tools'>, workspaces: WorkspaceSummary[] | null): string {
   const canvasIds = token.allowedCanvasIds;

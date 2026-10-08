@@ -24,8 +24,8 @@ const connectionEndpoints: Endpoint[] = [
       accessProtected: Boolean(accessToken()), activeSessions: mcpSessionCount() });
   } },
   { method: 'POST', path: '/api/mcp/tokens', handle: async context => {
-    const { name, access, allowedCanvasIds, tools } = await readBody(context.request);
-    sendJson(context.response, 201, await context.store.createMcpToken(name, access, { allowedCanvasIds, tools }));
+    const { name, access, allowedCanvasIds, tools, canApprove, canConfigure } = await readBody(context.request);
+    sendJson(context.response, 201, await context.store.createMcpToken(name, access, { allowedCanvasIds, tools, canApprove, canConfigure }));
   } },
   { method: 'DELETE', path: /^\/api\/mcp\/tokens\/([^/]+)$/, handle: async (context, match) => {
     sendJson(context.response, 200, await context.store.revokeMcpToken(decodeURIComponent(match[1])));

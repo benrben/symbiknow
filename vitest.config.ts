@@ -2,6 +2,9 @@ import { configDefaults, defineConfig, mergeConfig } from 'vitest/config';
 import viteConfig from './vite.config.js';
 
 const nativePersistenceTests = [
+  'server/file-checkouts.public.test.ts',
+  'server/mcp-file-proposals.native.test.ts',
+  'server/symbi-mcp-client.test.ts',
   'server/jev/runtime-admission-drain.native.test.ts',
   'server/jev/runtime-scheduler.native.test.ts',
   'server/storage-tasks.public.test.ts',
@@ -13,6 +16,8 @@ export default mergeConfig(viteConfig, defineConfig({
   test: {
     // Native ONNX Runtime can crash V8 during worker isolate teardown; use process isolation.
     pool: 'forks',
+    // Match the quality gate's per-test budget (.quality max_test_seconds = 10); the gate still fails slower tests.
+    testTimeout: 10_000,
     projects: [
       {
         extends: true,

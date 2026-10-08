@@ -22,6 +22,13 @@ function props(overrides: Partial<AIElementsChatProps> = {}): AIElementsChatProp
 }
 function stream(text = 'Prepared QA changes', staged = proposal) { return new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\nevent: chat_proposal\ndata: ${JSON.stringify(staged)}\n\ndata: [DONE]\n\n`); }
 function send(text: string) { fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: text } }); fireEvent.click(screen.getByRole('button', { name: 'Submit' })); }
+function chatRequests() {
+  return vi.mocked(fetch).mock.calls.filter(([input, init]) => String(input) === '/api/chat/stream' && init?.method === 'POST');
+}
+function expectRetryRead() {
+  expect(vi.mocked(fetch).mock.calls.filter(([input]) => String(input) === '/api/canvases/planning')).toHaveLength(1);
+  expect(fetch).toHaveBeenCalledWith('/api/canvases/planning', expect.objectContaining({ cache: 'no-store' }));
+}
 function history(turns: Partial<DisplayTurn>[]) { window.localStorage.setItem('symbiknow:chat-history', JSON.stringify(turns.map((turn, index) => ({ id: index + 1, role: 'assistant', content: 'Cached proposal', activities: [], ...turn })))); }
 async function openSaved() { const heading = screen.getByText('Saved investigations'); if (!heading.closest('details')?.open) fireEvent.click(heading); fireEvent.click(await screen.findByRole('button', { name: 'Open' })); await screen.findByRole('button', { name: 'Review proposal in Chat' }); }
 function savedFetch(record: InvestigationRecord, result: ChatProposal | ChatProposalReceipt) {
@@ -214,7 +221,17 @@ describe('chat browser persistence and recovery', () => {
     const clear = vi.spyOn(window, 'clearInterval'); const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     let rejectChat!: (reason: unknown) => void; const reply = new Promise<Response>((_resolve, reject) => { rejectChat = reject; });
     let resolveProbe!: (response: Response) => void; const probe = new Promise<Response>(resolve => { resolveProbe = resolve; });
-    vi.mocked(fetch).mockReturnValueOnce(reply).mockReturnValueOnce(probe).mockRejectedValueOnce(new Error('Not yet')).mockResolvedValueOnce(Response.json([])).mockResolvedValueOnce(new Response('data: {"choices":[{"delta":{"content":"Recovered reply"}}]}\n\ndata: [DONE]\n\n'));
+    let chatAttempts = 0; let probes = 0;
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const route = String(input);
+      if (route === '/api/canvases/planning' && !init?.method) return Response.json(canvas);
+      if (route === '/api/chat/stream' && init?.method === 'POST') return chatAttempts++ === 0 ? reply
+        : new Response('data: {"choices":[{"delta":{"content":"Recovered reply"}}]}\n\ndata: [DONE]\n\n');
+      if (route !== '/api/workspaces' || init?.method) throw new Error('Unexpected reconnect request ' + route);
+      if (probes++ === 0) return probe;
+      if (probes === 2) throw new Error('Not yet');
+      return Response.json([]);
+    });
     render(<AIElementsChat {...props()}/>); send('Original question'); fireEvent.change(screen.getByRole('textbox', { name: 'Message Symbi' }), { target: { value: 'Later draft' } });
     await act(async () => rejectChat(new Error('Offline'))); await screen.findByText('Checking the connection. Your question is still here.');
     expect((screen.getByRole('textbox', { name: 'Message Symbi' }) as HTMLTextAreaElement).value).toBe('Later draft');
@@ -222,7 +239,10 @@ describe('chat browser persistence and recovery', () => {
     await act(async () => resolveProbe(new Response('', { status: 503 }))); await act(async () => tick()); expect(warning).toHaveBeenCalledWith('Canvas reconnect check failed; the visible error remains and the check will retry.');
     await act(async () => tick()); await screen.findByText('Connection restored. Your question is ready to retry.'); expect(clear).toHaveBeenCalledWith(999);
     fireEvent.click(screen.getByRole('button', { name: 'Retry answer' })); await screen.findByText('Recovered reply'); expect(screen.queryByRole('alert')).toBeNull();
-    const request = JSON.parse(String(vi.mocked(fetch).mock.calls.at(-1)?.[1]?.body)); expect(request.messages).toEqual([{ role: 'user', content: 'Original question' }]);
+    expectRetryRead(); expect(chatRequests()).toHaveLength(2);
+    expect(chatRequests()[1][1]?.body).toBe(chatRequests()[0][1]?.body);
+    expect(screen.getAllByText('Original question')).toHaveLength(1);
+    const request = JSON.parse(String(chatRequests()[1][1]?.body)); expect(request.messages).toEqual([{ role: 'user', content: 'Original question' }]);
   });
 
   it('ignores a reconnect reply and future timer callbacks after the chat unmounts', async () => {
@@ -317,9 +337,18 @@ it('returns the completion indicator to idle after the completion window', async
 });
 
 it('pauses retry of a failed answer while its canvas is unavailable and preserves the original question', async () => {
-  vi.mocked(fetch).mockResolvedValueOnce(Response.json({ error: 'Failed answer' }, { status: 409 })).mockResolvedValueOnce(new Response('data: {"choices":[{"delta":{"content":"Retried answer"}}]}\n\ndata: [DONE]\n\n'));
+  let attempts = 0;
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input) === '/api/canvases/planning' && !init?.method) return Response.json(canvas);
+    if (String(input) !== '/api/chat/stream' || init?.method !== 'POST') throw new Error('Unexpected retry request ' + String(input));
+    return attempts++ === 0 ? Response.json({ error: 'Failed answer' }, { status: 409 })
+      : new Response('data: {"choices":[{"delta":{"content":"Retried answer"}}]}\n\ndata: [DONE]\n\n');
+  });
   const current = props(); const view = render(<AIElementsChat {...current}/>); send('Original retry question'); await screen.findByText('Failed answer');
   view.rerender(<AIElementsChat {...current} canvasId=""/>); fireEvent.click(screen.getByRole('button', { name: 'Retry' })); await screen.findByText('Open a canvas before using the assistant.'); expect(fetch).toHaveBeenCalledTimes(1);
   view.rerender(<AIElementsChat {...current}/>); fireEvent.click(screen.getByRole('button', { name: 'Retry' })); await screen.findByText('Retried answer');
-  expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body)).messages).toEqual([{ role: 'user', content: 'Original retry question' }]);
+  expectRetryRead(); expect(chatRequests()).toHaveLength(2);
+  expect(chatRequests()[1][1]?.body).toBe(chatRequests()[0][1]?.body);
+  expect(screen.getAllByText('Original retry question')).toHaveLength(1);
+  expect(JSON.parse(String(chatRequests()[1][1]?.body)).messages).toEqual([{ role: 'user', content: 'Original retry question' }]);
 });

@@ -9,6 +9,7 @@ import type { CanvasDocument } from '../shared/types.js';
 import { createApiServer } from './index.js';
 import { CanvasStore } from './storage.js';
 import { DocumentVersions } from './version-control.js';
+import { sourceFile } from './version-source.js';
 
 const execute = promisify(execFile);
 const opened: Array<{ server: Server; root: string }> = [];
@@ -51,6 +52,26 @@ async function request(base: string, route: string, body?: unknown, method = 'PO
 
 async function readCanvas(base: string, id: string): Promise<CanvasDocument> {
   return (await request(base, `/api/canvases/${id}`, undefined, 'GET')).body as CanvasDocument;
+}
+
+async function seedSavedRevisions(repository: string, parent: string): Promise<string> {
+  const chunks: string[] = [];
+  const startedAt = Math.floor(Date.now() / 1000) - 100;
+  let latest = '';
+  for (let index = 0; index < 100; index += 1) {
+    const message = `Saved revision ${index}`;
+    latest = `# ${message}\n`;
+    const identity = `SymbiKnow <symbiknow@symbiknow.local> ${startedAt + index} +0000`;
+    chunks.push(`commit refs/heads/main\nmark :${index + 1}\nauthor ${identity}\ncommitter ${identity}\ndata ${Buffer.byteLength(message)}\n${message}\n`,
+      `from ${index === 0 ? parent : ':' + index}\nM 100644 inline ${sourceFile}\ndata ${Buffer.byteLength(latest)}\n${latest}\n`);
+  }
+  // Native Git creates every blob/tree/commit in one process; the public final write remains ordinary.
+  await new Promise<void>((resolve, reject) => {
+    const process = execFile('git', ['fast-import', '--quiet'], { cwd: repository }, error => error ? reject(error) : resolve());
+    process.stdin!.end(chunks.join('') + 'done\n');
+  });
+  await execute('git', ['reset', '--hard', 'HEAD'], { cwd: repository });
+  return latest;
 }
 
 it('persists branch revisions, exposes native switch/merge/restore previews, reads them after restart and records deletion attribution', async () => {
@@ -117,14 +138,16 @@ it('keeps private branch edits out of current source search until a guarded merg
 
 it('pages saved history beyond one hundred revisions without repeating or dropping commits', async () => {
   const { root, base, canvas, first } = await fixture();
-  const versions = new DocumentVersions(path.join(root, '.versions', first.id));
-  const initialCount = (await versions.status({ limit: 200 })).commits.length;
-  let latest = first.content;
-  for (let index = 0; index < 101; index += 1) {
-    latest = `# Saved revision ${index}\n`;
-    expect(await versions.commit(latest, `Saved revision ${index}`)).toBe(true);
-  }
-  await writeFile(path.join(root, first.file), latest);
+  const repository = path.join(root, '.versions', first.id);
+  const versions = new DocumentVersions(repository);
+  const initial = await versions.status({ limit: 200 });
+  const initialCount = initial.commits.length;
+  await writeFile(path.join(root, first.file), await seedSavedRevisions(repository, initial.commits[0].id));
+  const latest = '# Saved revision 100\n';
+  expect((await request(base, `/api/canvases/${canvas.id}/blocks/${first.id}`, { content: latest, message: 'Saved revision 100' }, 'PUT',
+    { 'x-symbiknow-actor': 'Paging reviewer' })).status).toBe(200);
+  expect((await new CanvasStore(root).getCanvasBlock(canvas.id, first.id)).content).toBe(latest);
+  expect(await readFile(path.join(root, first.file), 'utf8')).toBe(latest);
   const route = `/api/canvases/${canvas.id}/blocks/${first.id}/versions`;
   const firstPage = await request(base, `${route}?limit=50`, undefined, 'GET');
   const secondPage = await request(base, `${route}?limit=50&cursor=50`, undefined, 'GET');
@@ -134,11 +157,18 @@ it('pages saved history beyond one hundred revisions without repeating or droppi
   expect(finalPage.status).toBe(200);
   expect(finalPage.body.nextCursor).toBeUndefined();
   const commits = [...firstPage.body.commits, ...secondPage.body.commits, ...finalPage.body.commits] as
-    Array<{ id: string; createdAt: string }>;
+    Array<{ id: string; createdAt: string; message: string; author: string }>;
   expect([firstPage.body.commits.length, secondPage.body.commits.length, finalPage.body.commits.length])
     .toEqual([50, 50, initialCount + 1]);
   expect(new Set(commits.map(commit => commit.id)).size).toBe(101 + initialCount);
   expect(commits.every(commit => !Number.isNaN(Date.parse(commit.createdAt)) && commit.createdAt.endsWith('Z'))).toBe(true);
+  expect(commits.slice(0, 101).map(commit => commit.message)).toEqual(Array.from({ length: 101 }, (_, index) => `Saved revision ${100 - index}`));
+  expect(commits[0].author).toBe('Paging reviewer');
+  expect(commits.slice(1, 101).every(commit => commit.author === 'SymbiKnow')).toBe(true);
+  for (const index of [0, 50, 100]) {
+    const revision = commits[100 - index].id;
+    expect((await execute('git', ['show', `${revision}:${sourceFile}`], { cwd: repository })).stdout).toBe(`# Saved revision ${index}\n`);
+  }
 }, 30_000);
 
 it('keeps the active HTTP document branch after a failed filesystem import and retries it without losing the saved edit', async () => {

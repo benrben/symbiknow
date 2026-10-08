@@ -181,7 +181,7 @@ it('applies existing access control to summaries and individual documents and ac
   for (const route of routes) {
     const denied = await fetch(base + route, { headers: { authorization: 'Bearer invalid' } });
     expect(denied.status).toBe(401);
-    expect(await denied.json()).toEqual({ error: 'Sign in with the workspace access token' });
+    expect(await denied.json()).toEqual({ error: 'The agent token is no longer authorized' });
     expect((await fetch(base + route, { headers: { authorization: 'Bearer loading-access-test' } })).status).toBe(200);
   }
   const signedIn = await fetch(base + '/api/session', { method: 'POST', headers: { 'content-type': 'application/json' },

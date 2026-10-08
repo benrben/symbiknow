@@ -11,7 +11,8 @@ import { JevWorkspaceFiles } from './workspace.js';
 import { evaluateJevAction } from './actions.js';
 
 type ProviderState = { source?: { title: string; passages: Array<{ id: string; text: string }> };
-  document?: { title: string; passages: Array<{ id: string; text: string }> }; questionSets?: ProviderState[] };
+  document?: { title: string; passages: Array<{ id: string; text: string }> }; groups?: Array<{ key: string; option: string }>;
+  questionSets?: ProviderState[] };
 const owner: JevPrincipal = { id: 'owner', kind: 'user', access: 'write', canApprove: true, canConfigure: true };
 let provider: Server; let root: string; let store: CanvasStore; let runtime: JevRuntime;
 let workspaceId: string; let canvasId: string;
@@ -26,8 +27,8 @@ function answer(questionId: string, question: JevQuestion, input: ProviderState)
     probabilities: Object.fromEntries(question.criteria.map((_, index) => [String(index), Number(index === 0)])) };
   const keys = Object.keys(question.criteria); const source = state.source ?? state.document;
   let choice = keys[0];
-  if (id === 'group') choice = source?.title === 'Brand palette' ? 'none'
-    : keys.find(key => question.criteria[key].includes('(custom:engineering)')) ?? 'none';
+  if (['place', 'gate'].includes(id) && state.groups) choice = source?.title === 'Brand palette' ? 'none'
+    : state.groups.find(group => group.key === 'custom:engineering')?.option ?? 'none';
   if (id === 'evidence') choice = source?.passages.find(passage => /engineering/i.test(passage.text))?.id ?? 'none';
   return { type: 'choice', choice, confidence: 0.99,
     probabilities: Object.fromEntries(keys.map(key => [key, Number(key === choice)])) };

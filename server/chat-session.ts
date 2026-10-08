@@ -2,16 +2,15 @@ import type { BaseMessage } from '@langchain/core/messages';
 import type { AnswerCanvasResult, CanvasNavigationTarget, ResearchCanvasPatch } from '../shared/answer-canvas.js';
 import { patchFromMarkdown } from '../shared/research-patch.js';
 import type { CanvasStore } from './storage.js';
-import { ChatProposalDraft } from './chat-proposals.js';
 import { finalAnswer, textPieces, agentProgress, collectSnapshot,
   type AgentRun, type ChatStreamSession, type ChatStreamEvent, type ProgressState } from './chat-agent.js';
 import type { ChatContext } from './chat-input.js';
-import type { CanvasToolsOptions } from './chat-tools.js';
+import type { SymbiToolContext } from './symbi-mcp-client.js';
 import { combinedSignal } from './chat-cancellation.js';
 
 export type SessionContext = {
   model: string; providerName: string; messages: BaseMessage[]; runAgent: AgentRun; preparationSignal?: AbortSignal;
-  toolContext: CanvasToolsOptions; proposalDraft: ChatProposalDraft;
+  toolContext: SymbiToolContext;
   store: CanvasStore; canvasId: string; context: ChatContext;
   answerCanvas: AnswerCanvasResult | null; canvasEnabled: boolean; warnings: string[];
   navigationRequests: CanvasNavigationTarget[]; researchPatches: ResearchCanvasPatch[]; close: () => Promise<void>;
@@ -35,12 +34,24 @@ function* prelude(session: SessionContext): Generator<ChatStreamEvent> {
 }
 
 async function* completedEvents(session: SessionContext, answer: string, progress: ProgressState): AsyncGenerator<ChatStreamEvent> {
-  const proposal = session.proposalDraft.publish();
-  if (proposal) yield { kind: 'proposal', proposal };
+  for (const proposal of session.toolContext.proposals ?? []) yield { kind: 'proposal', proposal };
   for (const target of session.navigationRequests) yield { kind: 'navigate', target };
+  const readCanvas = canvasWithReadSources(session);
+  if (readCanvas) {
+    session.answerCanvas = readCanvas;
+    yield { kind: 'answer_canvas', canvas: session.answerCanvas };
+  }
   const patches = patchesForAnswer(session, answer);
   for (const patch of patches) yield { kind: 'research_patch', patch };
   yield* refreshedAnswer(answer, progress);
+}
+
+function canvasWithReadSources(session: SessionContext): AnswerCanvasResult | undefined {
+  if (!session.canvasEnabled || !session.toolContext.readSources?.length) return undefined;
+  const sources = [...new Map([...(session.answerCanvas?.sources ?? []), ...session.toolContext.readSources]
+    .map(source => [`${source.canvasId}:${source.blockId}`, source])).values()];
+  return { query: session.context.latest, canvasId: session.canvasId, selection: 'local',
+    surface: 'canvas', ...session.answerCanvas, sources };
 }
 
 export function createChatSession(session: SessionContext): ChatStreamSession {
@@ -57,7 +68,6 @@ export function createChatSession(session: SessionContext): ChatStreamSession {
         if (signal.aborted) return;
         const latest = await collectSnapshot(session.runAgent, session.messages, signal, session.providerName);
         if (signal.aborted) return;
-        session.proposalDraft.publish();
         const answer = finalAnswer(latest, session.providerName);
         for (const piece of textPieces(answer)) {
           if (signal.aborted) return;

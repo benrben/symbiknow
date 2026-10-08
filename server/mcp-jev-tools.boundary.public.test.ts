@@ -23,8 +23,8 @@ async function fixture() {
     if (request.path.includes('view=jev_job')) return Response.json(missingJob ? null : { id: 'job-1', state: 'complete' });
     return Response.json({ path: request.path, body: request.body });
   }) as unknown as typeof fetch;
-  const server = createProjectMcpServer('http://127.0.0.1:8787/api', fetcher, { legacyBrainTools: true });
-  const client = new Client({ name: 'jev-compat-boundary', version: '1.0.0' });
+  const server = createProjectMcpServer('http://127.0.0.1:8787/api', fetcher);
+  const client = new Client({ name: 'jev-canonical-boundary', version: '1.0.0' });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
   connections.push({ client, server });
@@ -41,7 +41,7 @@ async function fixture() {
   return { call, read, requests, setMissingJob: (value: boolean) => { missingJob = value; } };
 }
 
-it('preserves compatibility read routes, block-title fallback and encoded state paging', async () => {
+it('exposes canonical source read routes, block-title fallback and encoded state paging', async () => {
   const f = await fixture();
   const canvasId = 'canvas/one';
   expect((await f.read('find_by', { canvasId, query: 'release' })).body)

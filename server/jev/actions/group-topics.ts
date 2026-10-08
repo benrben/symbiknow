@@ -1,4 +1,4 @@
-import type { JevJson, JevPassage, JevValues } from '../../../shared/jev-types.js';
+import type { JevJson, JevPassage, JevSourceSnapshot, JevValues } from '../../../shared/jev-types.js';
 import { plainGroupName } from '../../../shared/names.js';
 import type { JevEvaluationContext, JevInputDocument } from './context.js';
 import { childGroupKey, membershipGroupKey, vocabularyGroupKey } from './groups.js';
@@ -6,9 +6,12 @@ import { groupLabel, normalizedGroup, validGroupKey } from '../../../shared/grou
 import { sameJevSource } from '../stamps.js';
 import { groupingSignals, type GroupingNeighbor } from './group-signals.js';
 import { sourcePassages, type SourcePassage } from './source-passages.js';
-import { sharedSourceCategories } from './source-categories.js';
+import { sharedSourceCategories, sourceSubjects, type SourceSubject } from './source-categories.js';
+import { sourceSubjectFamilies } from './source-subject-families.js';
 
-export type ProposedGroup = { name: string; key: string; parent?: { name: string; key: string }; origins: JevPassage[] };
+export type ProposedGroup = { name: string; key: string; definition?: string; parent?: { name: string; key: string }; origins: JevPassage[];
+  nomination?: 'source_subject' | 'source_family'; candidatePeers?: JevSourceSnapshot[];
+  subjectContext?: Array<{ name: string; passages: JevPassage[]; contextOnly: true }> };
 type TopicSource = { document: JevInputDocument; groups: ProposedGroup[]; logicalKeys: string[]; text: string };
 type RankedTopic = { group: ProposedGroup; rank: number; reusable: boolean };
 
@@ -43,7 +46,7 @@ function mergedSourceGroups(groups: ProposedGroup[]): ProposedGroup[] {
     if (!previous) { merged.set(group.key, group); continue; }
     const origins = [...new Map([...previous.origins, ...group.origins]
       .map(passage => [`${passage.start}:${passage.end}`, passage])).values()];
-    merged.set(group.key, { ...group, name: previous.name, origins });
+    merged.set(group.key, { ...previous, ...group, name: previous.name, origins });
   }
   return [...merged.values()];
 }
@@ -67,13 +70,20 @@ function logicalTopicShape(topic: JevValues): topic is JevValues & { name: strin
   return typeof topic.name === 'string' && Array.isArray(topic.evidence);
 }
 function validTopicName(name: string): boolean { return name.length >= 2 && name.length <= 80; }
+function profileThreshold(context: JevEvaluationContext): number {
+  return context.settings.confidenceThresholds?.profile ?? .7;
+}
 function logicalGroup(topic: JevValues, context: JevEvaluationContext, document: JevInputDocument,
   available: SourcePassage[]): ProposedGroup[] {
-  if (!logicalTopicShape(topic) || !topicConfidence(topic, context.settings.confidenceThresholds?.profile ?? .7)) return [];
+  if (!logicalTopicShape(topic) || !topicConfidence(topic, profileThreshold(context))) return [];
   const name = plainGroupName(topic.name);
   if (!validTopicName(name)) return [];
   const origins = topic.evidence.filter(record).flatMap(evidence => exactIndexOrigin(document, available, evidence));
-  return origins.length ? [{ name, key: membershipGroupKey(name), origins }] : [];
+  return origins.length ? [indexedGroup(topic, name, origins)] : [];
+}
+function indexedGroup(topic: JevValues, name: string, origins: JevPassage[]): ProposedGroup {
+  const definition = typeof topic.definition === 'string' ? topic.definition : undefined;
+  return { name, key: membershipGroupKey(name), ...(definition ? { definition } : {}), origins };
 }
 function logicalGroups(context: JevEvaluationContext, document: JevInputDocument, available: SourcePassage[]): ProposedGroup[] {
   const index = context.indexes?.[`${document.canvasId}:${document.block.id}`];
@@ -88,13 +98,19 @@ function exactIndexOrigin(document: JevInputDocument, available: SourcePassage[]
   const passage = available.find(item => item.start === evidence.start && item.end === evidence.end && item.quote === evidence.quote);
   return passage ? [{ source: document.snapshot, start: passage.start, end: passage.end, quote: passage.quote }] : [];
 }
+function canvasGroupName(context: JevEvaluationContext, canvasId: string, key: string): string | undefined {
+  return context.canvases.find(canvas => canvas.id === canvasId)?.groups?.find(group => normalizedGroup(group.id) === key)?.name;
+}
+function nativeGroupName(context: JevEvaluationContext, document: JevInputDocument, key: string): string {
+  const definition = canvasGroupName(context, document.canvasId, key);
+  const term = context.vocabulary.find(term => term.kind === 'group' && vocabularyGroupKey(term) === key);
+  return definition ?? term?.name ?? groupLabel(key);
+}
 function nativeGroups(context: JevEvaluationContext, document: JevInputDocument, available: SourcePassage[]): ProposedGroup[] {
   if (!validGroupKey(document.block.group)) return [];
   const key = normalizedGroup(document.block.group)!;
-  const definition = context.canvases.find(canvas => canvas.id === document.canvasId)?.groups?.find(group => normalizedGroup(group.id) === key);
-  const term = context.vocabulary.find(term => term.kind === 'group' && vocabularyGroupKey(term) === key);
   // Existing membership nominates its original native name; these quotes do not authorize a new member.
-  return [{ key, name: definition?.name ?? term?.name ?? groupLabel(key), origins: available.slice(0, 2)
+  return [{ key, name: nativeGroupName(context, document, key), origins: available.slice(0, 2)
     .map(({ start, end, quote }) => ({ source: document.snapshot, start, end, quote })) }];
 }
 
@@ -119,7 +135,8 @@ export function reusableGroup(context: JevEvaluationContext, member: JevInputDoc
 }
 
 /** Neighbor quotes nominate candidates; only the member's own evidence can justify placement. */
-export function canvasTopicCatalog(context: JevEvaluationContext, member: JevInputDocument): ProposedGroup[] {
+export function canvasTopicCatalog(context: JevEvaluationContext, member: JevInputDocument,
+  options: { sourceSubjects?: boolean } = {}): ProposedGroup[] {
   const scoped = catalogContext(context, member);
   if (!scoped) return [];
   const signals = groupingSignals(scoped, member).neighbors;
@@ -136,8 +153,49 @@ export function canvasTopicCatalog(context: JevEvaluationContext, member: JevInp
   const ranked = [...catalog.values()].map(group => scoredTopic(group, sources, texts, signals)).filter(topic => topic.reusable);
   const sharedRoots = sharedRootKeys(sources, member, categories.map(category => membershipGroupKey(category.name)));
   const manual = manualGroupKeys(sources);
-  const eligible = sharedRoots.size ? ranked.filter(topic => sharedRoots.has(topic.group.key) || manual.has(topic.group.key)) : ranked;
-  return retainedTopics(eligible, memberGroups(sources, member)).map(group => ({ ...group, origins: uniqueOrigins(group.origins).slice(0, 4) }));
+  const subjects = options.sourceSubjects ? subjectGroups(scoped, member, signals) : [];
+  const subjectKeys = supplementSubjects(ranked, subjects);
+  const eligible = sharedRoots.size ? ranked.filter(topic => eligibleSubject(topic.group.key, sharedRoots, manual, subjectKeys)) : ranked;
+  return retainedTopics(eligible, memberGroups(sources, member)).map(group => ({ ...group, origins: boundedOrigins(group.origins, member) }));
+}
+function supplementSubjects(ranked: RankedTopic[], subjects: ProposedGroup[]): Set<string> {
+  for (const [index, group] of subjects.entries()) {
+    const rank = group.nomination === 'source_family' ? -100000 + index : -1000 + index;
+    const existing = ranked.find(topic => topic.group.key === group.key);
+    if (existing) { existing.group = supplementedScope(existing.group, group); existing.rank = rank; }
+    else ranked.push({ group, rank, reusable: true });
+  }
+  return new Set(subjects.map(group => group.key));
+}
+/** A fresh nomination replaces proof and eligibility, never the established same-key topical scope. */
+function supplementedScope(existing: ProposedGroup, nomination: ProposedGroup): ProposedGroup {
+  return { ...nomination, definition: existing.definition ?? nomination.definition, parent: existing.parent ?? nomination.parent };
+}
+function eligibleSubject(key: string, shared: Set<string>, manual: Set<string>, subjects: Set<string>): boolean {
+  return shared.has(key) || manual.has(key) || subjects.has(key);
+}
+function nearbySubjects(context: JevEvaluationContext, member: JevInputDocument, signals: GroupingNeighbor[]): SourceSubject[] {
+  return checkedSubjectPeers(context, member, signals)
+    .flatMap(signal => sourceSubjects(context, signal.document).slice(0, 2));
+}
+function checkedSubjectPeers(context: JevEvaluationContext, member: JevInputDocument, signals: GroupingNeighbor[]): GroupingNeighbor[] {
+  return signals.filter(signal => signal.document.canvasId === member.canvasId
+    && sourceSubjects(context, signal.document).length > 0).slice(0, 4);
+}
+function subjectGroups(context: JevEvaluationContext, member: JevInputDocument, signals: GroupingNeighbor[]): ProposedGroup[] {
+  const own = sourceSubjects(context, member);
+  if (!own.length) return [];
+  const nearby = nearbySubjects(context, member, signals);
+  const names = [...new Set([...own, ...nearby].map(subject => subject.name))];
+  const singletons: ProposedGroup[] = names.map(name => ({ name, key: membershipGroupKey(name), nomination: 'source_subject' as const,
+    origins: own.find(subject => subject.name === name)?.origins ?? own[0].origins,
+    candidatePeers: checkedSubjectPeers(context, member, signals)
+      .map(signal => signal.document.snapshot),
+    subjectContext: nearby.filter(subject => subject.name === name).slice(0, 2)
+      .map(subject => ({ name: subject.name, passages: subject.origins.slice(0, 2), contextOnly: true as const })) }));
+  const families = sourceSubjectFamilies(context, member);
+  const familyKeys = new Set(families.map(group => group.key));
+  return [...families, ...singletons.filter(group => !familyKeys.has(group.key))].slice(0, 15);
 }
 function addSourceGroups(catalog: Map<string, ProposedGroup>, sources: TopicSource[], member: JevInputDocument,
   relevant: Set<JevInputDocument>, memberText: string): void {
@@ -152,7 +210,10 @@ function includeSourceGroup(source: TopicSource, group: ProposedGroup, member: J
 }
 function mergeCatalogGroup(catalog: Map<string, ProposedGroup>, group: ProposedGroup): void {
   const existing = catalog.get(group.key);
-  if (existing) existing.origins.push(...group.origins);
+  if (existing) {
+    existing.origins.push(...group.origins);
+    existing.definition ??= group.definition;
+  }
   else catalog.set(group.key, { ...group, origins: [...group.origins] });
 }
 function scoredTopic(group: ProposedGroup, sources: TopicSource[], texts: string[], signals: GroupingNeighbor[]): RankedTopic {
@@ -167,7 +228,9 @@ function scoredTopic(group: ProposedGroup, sources: TopicSource[], texts: string
  * Do not offer private title folders alongside them; the provider can still reject every shared option. */
 function sharedRootKeys(sources: TopicSource[], member: JevInputDocument, categoryKeys: string[]): Set<string> {
   const ownTopics = sources.find(source => source.document === member)!.logicalKeys;
-  const indexed = ownTopics.filter(key => !key.includes('/') && sources.filter(source => source.logicalKeys.includes(key)).length > 1);
+  const own = sources.find(source => source.document === member)!;
+  const indexed = ownTopics.filter(key => !key.includes('/') && (own.groups.some(group => group.key === key && group.definition)
+    || sources.filter(source => source.logicalKeys.includes(key)).length > 1));
   return new Set([...categoryKeys, ...indexed]);
 }
 function manualGroupKeys(sources: TopicSource[]): Set<string> {
@@ -179,6 +242,17 @@ function manualGroupKeys(sources: TopicSource[]): Set<string> {
 }
 function uniqueOrigins(origins: JevPassage[]): JevPassage[] {
   return [...new Map(origins.map(origin => [`${origin.source.canvasId}:${origin.source.blockId}:${origin.start}:${origin.end}`, origin])).values()];
+}
+/** Keep the member's proof and distinct peers when bounding a large shared category. */
+function boundedOrigins(origins: JevPassage[], member: JevInputDocument): JevPassage[] {
+  const distinct = uniqueOrigins(origins);
+  const own = distinct.find(origin => origin.source.canvasId === member.canvasId && origin.source.blockId === member.block.id);
+  const peers = new Map<string, JevPassage>();
+  for (const origin of distinct) {
+    const key = `${origin.source.canvasId}:${origin.source.blockId}`;
+    if (!peers.has(key)) peers.set(key, origin);
+  }
+  return uniqueOrigins([...(own ? [own] : []), ...peers.values(), ...distinct]).slice(0, 4);
 }
 function catalogContext(context: JevEvaluationContext, member: JevInputDocument): JevEvaluationContext | undefined {
   const allowed = (document: JevInputDocument) => catalogIdentityValid(context, document)

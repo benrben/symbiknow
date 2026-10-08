@@ -9,6 +9,7 @@ import remarkStringify from 'remark-stringify';
 import { unified } from 'unified';
 import type { CanvasBlock } from '../shared/types';
 import { useDocumentContent } from './useDocumentContent';
+import { rehypeMarkdownDirection } from './markdown-direction';
 
 const ReactPlayer = lazy(() => import('react-player'));
 
@@ -174,15 +175,15 @@ function MarkdownContent({ block, onUpdateBlock, onError, fullPage }: Pick<Block
     }
   }
 
-  return <div className="loader-markdown">
-    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]} components={{
-      pre: ({ children }) => <div className="loader-pre">{children}</div>,
+  return <div className="loader-markdown" dir="auto">
+    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize, rehypeMarkdownDirection]} components={{
+      pre: ({ children }) => <div className="loader-pre" dir="ltr">{children}</div>,
       code: ({ className, children }) => {
         const language = /language-([\w-]+)/.exec(className || '')?.[1];
         const source = String(children).replace(/\n$/, '');
         if (language === 'mermaid') return <MermaidDiagram source={source} />;
         if (language) return <CodeBlock language={language} code={source} highlight={Boolean(fullPage)} />;
-        return <code>{children}</code>;
+        return <code dir="ltr">{children}</code>;
       },
       input: ({ checked }) => {
         return <input type="checkbox" checked={Boolean(checked)} disabled={savingTask} onChange={event => {
@@ -245,7 +246,7 @@ function SlideDeck({ content }: { content: string }) {
 function WebsitePreview({ block, canvasId }: Pick<BlockContentProps, 'block' | 'canvasId'>) {
   if (canvasId === 'session-research') return <div className="loader-website">
     <div className="loader-website__footer">Save this research canvas to build and preview the website.</div>
-    <div className="loader-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{bodyWithoutFrontmatter(block.content)}</ReactMarkdown></div>
+    <div className="loader-markdown" dir="auto"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeMarkdownDirection]}>{bodyWithoutFrontmatter(block.content)}</ReactMarkdown></div>
   </div>;
   const preview = `/api/canvases/${encodeURIComponent(canvasId)}/blocks/${encodeURIComponent(block.id)}/site/`;
   return <div className="loader-website">

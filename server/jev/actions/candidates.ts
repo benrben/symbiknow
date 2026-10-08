@@ -25,6 +25,28 @@ function meaningTerms(text: string): Set<string> {
 function intersectionSize(left: Set<string>, right: Set<string>): number {
   return [...left].filter(term => right.has(term)).length;
 }
+function referenceWords(text: string): string[] {
+  return text.toLocaleLowerCase().match(/[\p{L}\p{N}]{2,}/gu) ?? [];
+}
+function bodyReferencePhrases(content: string): Set<string> {
+  return new Set(sourcePassages(content).filter(passage => passage.headingLevel === 0).flatMap(passage => {
+    const words = referenceWords(passage.text);
+    return words.slice(0, -1).map((word, index) => `${word} ${words[index + 1]}`);
+  }));
+}
+function referencedTitle(phrases: Set<string>, title: string): boolean {
+  const words = referenceWords(title).filter(word => !commonWords.has(word));
+  // A body phrase may omit a title qualifier: "SSO review" names "SSO security review".
+  // This only nominates a bounded pair; typed evidence still determines whether an edge exists.
+  return words.some((word, index) => words.slice(index + 1).some(next => phrases.has(`${word} ${next}`)));
+}
+function existingLink(source: JevInputDocument, target: JevInputDocument): boolean {
+  return (source.canvasId === target.canvasId && source.block.links.includes(target.block.id))
+    || (source.block.crossLinks ?? []).some(link => link.canvasId === target.canvasId && link.blockId === target.block.id);
+}
+function substantiveOverlap(overlap: number, coverage: number, sourceTopicInTarget: boolean): boolean {
+  return overlap >= 3 && coverage >= .08 && (sourceTopicInTarget || overlap >= 5);
+}
 export function neighbors(context: JevEvaluationContext, source: JevInputDocument, limit = 5): JevInputDocument[] {
   const query = `${source.block.title} ${(source.block.tags ?? []).join(' ')} ${knowledgeText(source.block.content).slice(0, 1800)}`;
   const required = terms(query);
@@ -43,6 +65,7 @@ export function relevantNeighbors(context: JevEvaluationContext, source: JevInpu
   const required = meaningTerms(query);
   const sourceBody = meaningTerms(knowledgeText(source.block.content));
   const titleTerms = meaningTerms(`${source.block.title} ${(source.block.tags ?? []).join(' ')}`);
+  const references = bodyReferencePhrases(source.block.content);
   const ranked = context.retrievedNeighbors?.[`${source.canvasId}:${source.block.id}`] ?? [];
   const semanticRank = new Map(ranked.slice(0, 24).map((id, index) => [id, index]));
   return context.documents.filter(document => document.snapshot.workspaceId === context.workspaceId)
@@ -56,14 +79,13 @@ export function relevantNeighbors(context: JevEvaluationContext, source: JevInpu
       const bodyCoverage = bodyOverlap / Math.max(1, Math.min(sourceBody.size, targetBody.size));
       const sourceTopicInTargetBody = intersectionSize(titleTerms, targetBody) > 0;
       const titleOverlap = intersectionSize(titleTerms, available);
-      const linked = (source.canvasId === document.canvasId && source.block.links.includes(document.block.id))
-        || (source.block.crossLinks ?? []).some(link => link.canvasId === document.canvasId && link.blockId === document.block.id);
+      const linked = existingLink(source, document);
       const rank = semanticRank.get(`${document.canvasId}:${document.block.id}`);
-      return { document, score: overlap / Math.max(1, required.size) + titleOverlap * .2 + Number(linked)
+      const referenced = referencedTitle(references, document.block.title);
+      return { document, score: overlap / Math.max(1, required.size) + titleOverlap * .2 + Number(linked) + Number(referenced)
         + (rank === undefined ? 0 : 1 + (24 - rank) / 24),
         // A copied title or metadata keyword alone is not evidence for a pair check.
-        relevant: rank !== undefined || linked || (bodyOverlap >= 3 && bodyCoverage >= .08
-          && (sourceTopicInTargetBody || bodyOverlap >= 5)) };
+        relevant: rank !== undefined || linked || referenced || substantiveOverlap(bodyOverlap, bodyCoverage, sourceTopicInTargetBody) };
     })
     .filter(candidate => candidate.relevant)
     .sort((left, right) => right.score - left.score || left.document.block.id.localeCompare(right.document.block.id))

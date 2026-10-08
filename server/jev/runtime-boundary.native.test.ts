@@ -51,11 +51,11 @@ it('holds owner Auto without a configured processing provider and rejects repeat
   await expect(runtime.dismiss(workspaceId, proposal.id, owner)).rejects.toMatchObject({ status: 409 });
 });
 it('refreshes durable token grants before consuming a queued request', async () => {
-  const credential = await store.createMcpToken('Scoped agent', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_propose', 'jev_activity'] });
+  const credential = await store.createMcpToken('Scoped agent', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_do', 'jev_activity'] });
   const principal: JevPrincipal = { ...(await store.mcpTokenIdentity(credential.token))!, kind: 'token', canApprove: false, canConfigure: false };
   const job = await admit(principal);
   const file = path.join(root, 'settings.json'); const settings = JSON.parse(await readFile(file, 'utf8'));
-  settings.mcpTokens.find((token: { id: string }) => token.id === principal.id).tools = ['jev_propose'];
+  settings.mcpTokens.find((token: { id: string }) => token.id === principal.id).tools = ['jev_do'];
   await atomicJson(file, settings, 0o600);
   runtime = new JevRuntime(store, { startTimer: false, evaluate }); await runtime.idle();
   expect((await runtime.read(workspaceId, owner)).jobs.find(item => item.id === job.id)).toMatchObject({ state: 'failed', error: 'The authorization changed while the action was queued' });

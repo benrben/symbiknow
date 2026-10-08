@@ -9,8 +9,8 @@ async function responseError(response: Response): Promise<string> {
   return payload?.error || `Canvas chat request failed (${response.status}). Retry in a moment.`;
 }
 
-function requestBody({ canvasId, messages, viewContext }: StreamOptions) {
-  return JSON.stringify({ canvasId, messages, viewContext });
+function requestBody({ canvasId, conversationId, messages, viewContext }: StreamOptions) {
+  return JSON.stringify({ canvasId, conversationId, messages, viewContext });
 }
 
 async function fetchChatResponse(options: StreamOptions): Promise<Response> {

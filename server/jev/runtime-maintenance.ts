@@ -21,6 +21,7 @@ import { hasPendingSourceFollowup } from './runtime-followup-pending.js';
 import { automationPrincipal, principalFingerprint } from './authorization.js';
 import type { StoredJevJob } from './runtime-queue.js';
 import { checkDocumentSources, type DocumentJob } from './runtime-document.js';
+import { admitDocumentContextRetry } from './runtime-document-retry.js';
 
 type Enqueue = (workspaceId: string, request: JevActionRequest) => Promise<JevJob>;
 type QueueFollowup = (request: JevActionRequest) => Promise<void>;
@@ -37,6 +38,9 @@ function currentProfile(state: JevWorkspaceState, source: JevSourceSnapshot): bo
   const threshold = actionConfidenceThreshold(state.settings, 'profile');
   return matchingProfileSource(profile, source) && profile?.questionVersion === JEV_QUESTION_VERSION
     && profile?.profileConfidenceThreshold === threshold;
+}
+function profileHasPendingFollowup(profiled: boolean, state: JevWorkspaceState, source: JevSourceSnapshot): boolean {
+  return profiled && hasPendingSourceFollowup(state, source);
 }
 function matchingProfileSource(profile: JevValues | undefined, source: JevSourceSnapshot): boolean {
   const previous = profile?.source as Record<string, unknown> | undefined;
@@ -81,7 +85,7 @@ function dueDocumentRetry(job: DocumentJob, state: JevWorkspaceState, policy: st
   return job.state === 'failed' && Date.parse(retryAt) <= Date.now() && !state.settings.paused
     && job.settingsKey === policy && checkedProfileAuthorization(job);
 }
-async function resumeDocument(store: CanvasStore, workspaceId: string, job: DocumentJob): Promise<boolean> {
+export async function resumeDocument(store: CanvasStore, workspaceId: string, job: DocumentJob): Promise<boolean> {
   try { await checkDocumentSources(store, workspaceId, job); }
   catch (error) {
     if (!(error instanceof ApiError) || ![404, 409].includes(error.status)) throw error;
@@ -143,9 +147,17 @@ export class JevRuntimeMaintenance {
     let changed = false;
     const policy = processingPolicyKey(state);
     for (const job of state.jobs as DocumentJob[]) {
-      if (dueDocumentRetry(job, state, policy)) changed = await resumeDocument(this.store, workspaceId, job) || changed;
+      if (!dueDocumentRetry(job, state, policy)) continue;
+      changed = await this.resumeDocumentRetry(workspaceId, state, job) || changed;
     }
     return changed;
+  }
+
+  private async resumeDocumentRetry(workspaceId: string, state: JevWorkspaceState, job: DocumentJob): Promise<boolean> {
+    if (!job.documentContextRetry) return resumeDocument(this.store, workspaceId, job);
+    const retryAt = job.documentContextRetry.retryAt;
+    const replacement = await admitDocumentContextRetry({ store: this.store, state, workspaceId, job });
+    return Boolean(replacement) || retryAt !== job.documentContextRetry.retryAt;
   }
 
   private async backfill(workspaceId: string, canvasId: string, block: CanvasBlock, pass: BackfillPass): Promise<void> {
@@ -153,7 +165,7 @@ export class JevRuntimeMaintenance {
     if (block.processingExcluded) return;
     const source = sourceSnapshot(workspaceId, canvasId, block);
     const profiled = currentProfile(state, source);
-    if (profiled && hasPendingSourceFollowup(state, source)) return;
+    if (profileHasPendingFollowup(profiled, state, source)) return;
     const baseKey = sourceKey(state, source);
     const previous = previousProfileJob(state, baseKey);
     if ((previous as DocumentJob | undefined)?.documentPlan?.retryAt) return;

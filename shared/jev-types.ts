@@ -104,7 +104,15 @@ export interface JevProposal {
   createdAt: string;
   receiptId?: string;
 }
+export interface JevDocumentContextRetry {
+  lineageId: string;
+  attempts: number;
+  retryAt?: string;
+  replacementJobId?: string;
+}
 export interface JevJob {
+  /** Internal recovery lineage for fresh intents after concurrent document-context changes. */
+  documentContextRetry?: JevDocumentContextRetry;
   questionVersion?: string;
   id: string;
   request: JevActionRequest;

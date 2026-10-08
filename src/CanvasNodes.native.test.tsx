@@ -66,7 +66,8 @@ describe('saved document node boundaries through native App and API', () => {
     const zoom = Number(/scale\(([^)]+)\)/.exec(style)?.[1]);
     expect(zoom).toBeGreaterThan(0);
     resizeHandle(handle, 120, 70);
-    await waitFor(async () => expect((await fixture.read(initial.id)).blocks[0].width).toBeGreaterThan(320));
+    // The resize save goes through HTTP and a Git commit; allow for a loaded coverage run, not the 1 s default.
+    await waitFor(async () => expect((await fixture.read(initial.id)).blocks[0].width).toBeGreaterThan(320), { timeout: 5_000 });
     const saved = await fixture.read(initial.id);
     expect(saved.blocks[0]).toMatchObject({ x: 100, y: 200 });
     expect(saved.blocks[0].width).toBeCloseTo(Math.round(320 + 120 / zoom), 0);

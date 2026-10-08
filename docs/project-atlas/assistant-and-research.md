@@ -1,6 +1,6 @@
 # Assistant and research canvas
 
-Symbi, the chat assistant: how a chat turn runs, which tools the agent has, how its edits are reviewed, and how the research canvas works.
+Symbi, the chat assistant: how a chat turn runs, which MCP tools the agent has, how it edits working files, and how the research canvas works.
 
 ## Who is who
 
@@ -18,40 +18,53 @@ sequenceDiagram
   participant API as POST /api/chat/stream
   participant AG as Deep Agent (server/chat-agent.ts)
   participant LLM as Chat model provider
+  participant MCP as Canonical MCP server
   participant ST as CanvasStore
   UI->>API: { canvasId, messages, viewContext }
-  API->>AG: system prompt + view context + enabled tool packs
+  API->>AG: system prompt + view context + full-access MCP tools
   loop until the answer is done (max 9,999 tool calls)
     AG->>LLM: messages + tools
     LLM-->>AG: tokens or a tool call
-    AG->>ST: read tools run directly
-    AG->>AG: write tools create a proposal draft
+    AG->>MCP: search/read or download_file
+    MCP->>ST: authorize and read shared source
+    AG->>AG: edit downloaded file in conversation workspace
+    AG->>MCP: upload_file with working-copy identity
+    MCP->>ST: authorize, check version, commit, return receipt
     AG-->>UI: SSE: tokens, agent_step, answer_reset
   end
   AG-->>UI: SSE: answer_canvas / research_canvas_patch / canvas_navigation
-  UI->>UI: show answer, activity list, and the proposal review card
+  UI->>UI: show answer, activity list, navigation, and optional file proposal
 ```
 
 - **Providers:** OpenRouter, OpenAI, Anthropic (through its OpenAI-compatible endpoint), or any OpenAI-compatible server such as Ollama or vLLM. Each keeps its own key. `ChatOpenAI` runs in streaming mode.
 - **Profiles:** built-in `general`, `research`, `planner`, `builder`, plus custom profiles with their own instructions.
-- **Plugins (tool packs):** `document_read`, `document_write`, `external_mcp`.
-- **Cancellation:** the stream aborts when the request closes. Provider errors end the run with an `error` event.
+- **Tools:** Symbi discovers the complete canonical MCP catalog under its full-access identity. Configured external MCP servers add their discovered tools. Local Deep Agents filesystem tools edit the conversation workspace.
+- **Cancellation:** the stream and MCP/API request share the abort signal. Durable upload receipts let an interrupted caller safely retry the same upload key. Provider errors end the run with an `error` event.
 
-## Agent tools (`server/chat-tools.ts`)
+## Agent tools and working files
 
-| Tool | Effect |
+`server/mcp-registry.ts` collects one set of tool schemas, handlers, descriptions, and required grants. Symbi connects through the MCP SDK in-memory transport; external agents use HTTP or stdio over the same catalog. The active canvas supplies defaults and does not restrict Symbi's authority.
+
+| Tool group | Effect |
 | --- | --- |
-| `search_docs`, `read_doc` | Read across workspaces; `sourceCanvasId` reads other canvases |
-| `show_doc_on_canvas`, `show_group_on_canvas` | Move the user's view to a document or group; no edits |
-| `draw_research_canvas` | Add blocks and edges to the session research canvas |
-| `create_doc`, `edit_doc`, `move_block`, `link_blocks` | Prepare **proposals** (`proposed: true, saved: false`) |
-| External MCP tools | From servers configured in Settings, authenticated with saved secrets |
+| `ask_symbi`, `symbi_reflex`, `search_docs`, `read_doc`, `find_by`, `related` | Search saved sources, inspect evidence, and check claims |
+| `list_canvases`, `read_canvas` | Discover shared canvases and documents |
+| `download_file`, `upload_file` | Download a versioned working copy; commit the locally edited file or propose it for review |
+| `claim_doc`, `release_doc` | Coordinate long edits using the authenticated caller's lock identity |
+| `delete_doc`, `move_block`, `move_document`, `link_blocks`, `unlink_blocks` | Perform authorized document and canvas operations |
+| Todo and version tools | Manage tasks, branches, history, merges, and restoration |
+| Jev profile, activity, inbox, job, action, review, and configuration tools | Inspect and operate Reflex under explicit permissions |
+| Navigation and research tools | Return presentation requests for the connected UI |
 
-There is no chat delete tool.
+Symbi's files persist in a separate directory for each conversation under `DATA_DIR/.agent-workspaces`. Deep Agents' filesystem backend reads and edits these files. A download writes the source and its `.symbi.json` manifest into that directory. Symbi uploads `sourcePath`; its MCP client adapter reads the local bytes and preserves the manifest's document, canvas, branch, and base version. A file without a manifest requires explicit create mode. An unsaved browser editor buffer blocks a conflicting Symbi upload until the user saves or discards that buffer.
 
-## Proposal review
+MCP owns shared-document writes. Search and reads remain available; editing happens in the agent's own working environment. Direct agent `create_doc`, `edit_doc`, and `import_documents` tools are absent.
 
-Write tools add changes to a draft. The UI shows a review card. **Apply** calls `POST /api/chat/proposals/:id/apply` with optional `changeIds`, which re-checks every source and returns `409` with conflicts if anything changed. **Undo** reverts applied changes when later edits allow it. Proposals are journaled (`server/chat-proposal-journal.ts`) and recover after a crash.
+The [canonical catalog and tool origins](mcp-and-api.md#canonical-tool-catalog) lists all 42 application MCP tools, native Deep Agents tools, and the origin of external tools. Shared access always goes through MCP; native filesystem tools operate on conversation working files.
+
+## File proposal review
+
+Symbi can save uploaded files directly with its full-access identity. A caller with proposal access uploads `mode: "propose"`, which creates a durable reviewable replacement while leaving saved source unchanged. `read_file_proposal`, `apply_file_proposal`, and `undo_file_proposal` expose the review lifecycle through MCP. Apply and undo require an explicit approval grant and recheck document versions and website assets. Existing browser review cards use the same proposal storage and execution rules.
 
 ## SSE events
 

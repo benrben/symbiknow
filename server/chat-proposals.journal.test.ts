@@ -121,7 +121,7 @@ describe('persisted Chat proposal validation', () => {
     expect(await applyChatProposal(store, proposal.id)).toMatchObject({ status: 'applied' });
   });
 
-  it('accepts a preview persisted with the previous property-order hash after restart', async () => {
+  it('requires a fresh proposal when its persisted state uses a noncanonical hash', async () => {
     const { store, canvas, proposal, file } = await fixture();
     const state = JSON.parse(await readFile(file, 'utf8'));
     const before = { ...state.proposal.changes[0].before };
@@ -131,8 +131,7 @@ describe('persisted Chat proposal validation', () => {
     await writeFile(file, JSON.stringify(state));
     const restarted = new CanvasStore(store.root);
     await restarted.init();
-    expect(await applyChatProposal(restarted, proposal.id)).toMatchObject({ status: 'applied' });
-    expect(await undoChatProposal(restarted, proposal.id)).toMatchObject({ status: 'reverted' });
+    await expect(applyChatProposal(restarted, proposal.id)).rejects.toMatchObject({ status: 410 });
     expectRestoredCanvas(await restarted.getCanvas(canvas.id), canvas);
   });
 

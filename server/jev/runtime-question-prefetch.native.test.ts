@@ -5,10 +5,14 @@ import path from 'node:path';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { jevActions, type JevPrincipal } from '../../shared/jev-types.js';
 import type { CanvasBlock } from '../../shared/types.js';
-import type { JevAnswer, JevQuestion } from '../jev.js';
+import { decideWithJev, type JevAnswer, type JevQuestion } from '../jev.js';
 import { CanvasStore } from '../storage.js';
 import { JevRuntime } from './runtime.js';
-import { JevWorkspaceFiles } from './workspace.js';
+import { emptyJevWorkspace, JevWorkspaceFiles } from './workspace.js';
+import { automationPrincipal } from './authorization.js';
+import { evaluationContext } from './context.js';
+import { QuestionAnswerCache } from './actions/question-answer-cache.js';
+import { evaluateWithQuestionPrefetch } from './runtime-question-prefetch.js';
 import { resolveSharedQuestionSources, resolveSharedQuestionTexts } from './actions/question-state-pool.test.helpers.js';
 
 type Body = { state: Record<string, unknown>; questions: Record<string, JevQuestion> };
@@ -56,7 +60,7 @@ beforeAll(async () => {
   canvasId = (await store.createCanvas(workspaceId, { name: 'Atlas' })).id;
   taskId = (await store.createTask(canvasId, { title: 'Atlas release', detail: 'Carry out Atlas release requirements.' }, 'Browser')).id;
   source = await store.createBlock(canvasId, { title: 'Atlas', x: 123, y: 456,
-    content: '# Atlas\nOwner: Alice\nAtlas release requirements.' });
+    content: '# Atlas\nOwner: Alice\nAtlas coordinate specification: every northern star entry records right ascension and declination.' });
 });
 afterAll(async () => {
   await runtime?.shutdown(); provider.closeAllConnections();
@@ -64,7 +68,30 @@ afterAll(async () => {
   await rm(root, { recursive: true, force: true }); vi.unstubAllEnvs();
 });
 
+it('prefetches and caches link, duplicate and home questions through the provider without obsolete label classification', async () => {
+  const request = { action: 'profile' as const, canvasId, blockIds: [source.id] };
+  const value = await evaluationContext(store, workspaceId, emptyJevWorkspace(), request, automationPrincipal, new AbortController().signal);
+  const peer = structuredClone(value.documents[0]);
+  peer.block.id = 'native-peer'; peer.snapshot.blockId = peer.block.id;
+  peer.block.content += '\nSouthern atlas entries also record right ascension and declination.';
+  peer.block.contentHash = peer.snapshot.contentHash = 'native-peer-body';
+  value.documents.push(peer);
+  value.canvases.unshift({ id: 'destination', name: 'Coordinate reference' });
+  value.apiKey = 'native-prefetch-key';
+  value.decider = (key, state, questions, _fetcher, options) => decideWithJev(key, state, questions, (_url, init) => fetch(origin, init), options);
+  const cache = new QuestionAnswerCache(); const before = calls.length;
+  const result = await evaluateWithQuestionPrefetch(value, request, cache, 'native-independent-reads');
+  const questions = calls.slice(before).flatMap(body => Object.keys(body.questions).map(id => scoped(body, id).name));
+  expect(questions).toEqual(expect.arrayContaining(['role', 'keyPassage', 'supported', 'sourceEvidence', 'targetEvidence', 'relation', 'overlap', 'place', 'gate']));
+  expect(questions.some(name => /^label_\d+$/.test(name))).toBe(false);
+  expect(result.proposals.map(proposal => proposal.action)).toEqual(['profile']);
+  const cached = calls.length;
+  await evaluateWithQuestionPrefetch(value, request, cache, 'native-independent-reads');
+  expect(calls).toHaveLength(cached);
+});
+
 it('retains validated answers across a sixty-one-second queue delay and commits all six fresh guarded jobs through the real typed SDK', async () => {
+  const beforeRuntime = calls.length;
   const write = JevWorkspaceFiles.prototype.write; let delayed = false;
   vi.useFakeTimers({ toFake: ['Date'] });
   JevWorkspaceFiles.prototype.write = async function (workspace, state) {
@@ -79,23 +106,26 @@ it('retains validated answers across a sixty-one-second queue delay and commits 
     await runtime.idle();
     expect(delayed).toBe(true);
   } finally { JevWorkspaceFiles.prototype.write = write; vi.useRealTimers(); }
-  const names = Object.keys(calls[0].questions).map(id => scoped(calls[0], id).name);
-  expect(names, `${calls.length} native SDK requests were made`).toEqual(expect.arrayContaining([
+  const runtimeCalls = calls.slice(beforeRuntime);
+  const names = Object.keys(runtimeCalls[0].questions).map(id => scoped(runtimeCalls[0], id).name);
+  expect(names, `${runtimeCalls.length} native SDK requests were made`).toEqual(expect.arrayContaining([
     'role', 'keyPassage',
   ]));
   expect(names).not.toContain('canvas');
   expect(names).not.toEqual(expect.arrayContaining(['specificity', 'matches', 'person']));
-  expect(calls.length).toBeLessThan(6);
+  expect(runtimeCalls.length).toBeLessThan(6);
+  const runtimeQuestions = runtimeCalls.flatMap(body => Object.keys(body.questions).map(id => scoped(body, id).name));
+  expect(runtimeQuestions.some(name => /^label_\d+$/.test(name))).toBe(false);
   const state = await runtime.read(workspaceId, owner);
   expect(state.jobs).toHaveLength(6);
   expect(new Set(state.jobs.map(job => job.request.action))).toEqual(new Set(jevActions));
   expect(state.jobs.every(job => job.state === 'completed')).toBe(true);
   expect(state.proposals.filter(proposal => proposal.state === 'pending')).toEqual([]);
   for (const name of ['role']) {
-    expect(calls.flatMap(body => Object.keys(body.questions).map(id => scoped(body, id).name)).filter(id => id === name)).toHaveLength(1);
+    expect(runtimeQuestions.filter(id => id === name)).toHaveLength(1);
   }
-  await writeFile('/tmp/jev-question-prefetch-native-metrics.json', JSON.stringify({ requests: calls.length,
-    questions: calls.reduce((sum, body) => sum + Object.keys(body.questions).length, 0), initialQuestions: names }, null, 2));
+  await writeFile('/tmp/jev-question-prefetch-native-metrics.json', JSON.stringify({ requests: runtimeCalls.length,
+    questions: runtimeQuestions.length, initialQuestions: names }, null, 2));
   const reloaded = new CanvasStore(root);
   expect(await reloaded.getCanvasBlock(canvasId, source.id)).toMatchObject({ content: source.content, x: source.x, y: source.y,
     group: 'custom:atlas', tags: ['Atlas'] });

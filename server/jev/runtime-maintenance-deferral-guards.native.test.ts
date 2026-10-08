@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { afterEach, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, expect, it } from 'vitest';
 import type { JevWorkspaceState } from '../../shared/jev-types.js';
 import type { WorkspaceSummary } from '../../shared/types.js';
 import { atomicJson } from '../storage-files.js';
@@ -18,20 +18,26 @@ import { enqueueJevJob, type StoredJevJob } from './runtime-queue.js';
 import type { JevFollowupAdmission } from './runtime-followup-admission.js';
 import { sourceSnapshot } from './stamps.js';
 import { JevWorkspaceFiles } from './workspace.js';
+import { queueBoundaryCopies } from './queue-boundary-copy.test.fixture.js';
 
 type GuardFixture = QueueBoundaryFixture & { maintenance: JevRuntimeMaintenance; followups: JevFollowupQueue; admitted: StoredJevJob };
 type Mutate = (native: GuardFixture, state: JevWorkspaceState, job: StoredJevJob) => void | Promise<void>;
 type Row = { label: string; mutate: Mutate; publicCheck?: boolean };
 const fixtures: QueueBoundaryFixture[] = [];
+let copies: Awaited<ReturnType<typeof queueBoundaryCopies>>;
+let baseline: GuardFixture;
+beforeAll(async () => { baseline = await fixture(); fixtures.pop(); copies = await queueBoundaryCopies(baseline); });
+afterAll(async () => { await copies.close(); });
 afterEach(async () => { for (const native of fixtures.splice(0)) await native.close(); });
 
 async function fixture(batch = false): Promise<GuardFixture> {
-  const native = await queueBoundaryFixture(); fixtures.push(native);
+  const native = copies ? await copies.fixture() : await queueBoundaryFixture(); fixtures.push(native);
   const enqueue = (id: string, request: StoredJevJob['request'], admission?: JevFollowupAdmission) =>
     enqueueJevJob(native.store, native.files, native.executor, id, request, automationPrincipal, admission);
   const followups = new JevFollowupQueue(native.store, native.files, enqueue);
   const maintenance = new JevRuntimeMaintenance(native.store, native.files, native.executor, followups, enqueue, native.running, async () => true, batch
     ? (id, requests) => enqueueJevJobs(native.store, native.files, native.executor, id, requests, automationPrincipal) : undefined);
+  if (copies) return { ...native, maintenance, followups, admitted: structuredClone(baseline.admitted) };
   const primary = await native.store.getCanvasBlock(native.canvasId, native.primary.id);
   const state = await native.files.read(native.workspaceId);
   state.profiles[`${native.canvasId}:${primary.id}`] = { source: { ...sourceSnapshot(native.workspaceId, native.canvasId, primary) },

@@ -118,7 +118,7 @@ export function SettingsPage({ settings, busy, onSave, onCancel, onSettings, onO
         <ConnectAgents settings={settings} onSettings={onSettings} onOpenHistory={onOpenHistory}/>
       </Section>
 
-      <Section id="plugins" title="Plugins & loaders" description="Choose which tool packs the chat agent can call. Canvas buttons and MCP clients keep their own controls.">
+      <Section id="plugins" title="Plugins & loaders" description="Symbi has full access to the workspace through MCP. Choose whether it can also use connected outside MCP servers.">
         {pluginInfo.map(item => <label className="plugin-toggle" key={item.id}><span><strong>{item.title}</strong><small>{item.detail}</small></span>
           <input type="checkbox" checked={draft.agentPlugins.includes(item.id)} onChange={() => togglePlugin(item.id)}/></label>)}
         <div className="settings-page__section-heading settings-page__section-heading--spaced"><h3>Installed canvas loaders</h3><p>These render document content in the canvas and full-page reader.</p></div>

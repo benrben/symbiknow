@@ -4,8 +4,8 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 import { chat } from './chat.js';
 import { CanvasStore } from './storage.js';
-import { getChatProposal } from './chat-proposals.js';
-import { answer, begin, chunk, fixture, nextRequest, toolCalls } from './chat-session.test.fixture.js';
+import { getFileProposal } from './file-branch-proposals.js';
+import { answer, begin, chunk, fixture, nextRequest, fileEditResponse } from './chat-session.test.fixture.js';
 
 const body = { canvasId: 'product-roadmap', messages: [{ role: 'user', content: 'Update the launch checklist.' }] };
 
@@ -31,24 +31,17 @@ it('uses default options and the installed native agent while excluding concurre
 
 it('resets native preliminary text, ignores progress/navigation events, and returns a persisted review proposal through JSON HTTP', async () => {
   const setup = await fixture();
-  setup.model.handle = (request, response) => {
-    if (request.messages.some(message => message.role === 'tool')) { answer(response, ['Review the ', 'proposed checklist.']); return; }
-    toolCalls(response, [
-      { name: 'read_doc', args: { blockId: 'launch-checklist' } },
-      { name: 'edit_doc', args: { blockId: 'launch-checklist', content: '# Native JSON reviewed checklist' } },
-      { name: 'show_doc_on_canvas', args: { blockId: 'launch-checklist' } },
-    ], 'Preliminary thought that must be reset. ');
-  };
+  setup.model.handle = (request, response) => fileEditResponse(request, response, '# Native JSON reviewed checklist', 'Review the proposed checklist.', 'propose');
   const base = await setup.app();
   const response = await post(base, '/api/chat', body);
   expect(response.status).toBe(200);
   expect(response.body).toEqual({ message: 'Review the proposed checklist.', changed: false, proposalId: expect.any(String) });
-  expect(await new CanvasStore(setup.root).getCanvas(body.canvasId)).toEqual(setup.canvas);
-  const proposal = getChatProposal(new CanvasStore(setup.root), response.body.proposalId);
+  expectRestoredCanvas(await new CanvasStore(setup.root).getCanvas(body.canvasId), setup.canvas);
+  const proposal = await getFileProposal(new CanvasStore(setup.root), response.body.proposalId);
   expect(proposal).toMatchObject({ status: 'pending', changes: [{ type: 'edit', blockId: 'launch-checklist', canApply: true }] });
-  expect(await readFile(path.join(setup.root, 'chat-proposals', response.body.proposalId + '.json'), 'utf8')).toContain('# Native JSON reviewed checklist');
-  expect(setup.model.requests).toHaveLength(2);
-  expect(setup.model.requests[1].body.messages.filter(message => message.role === 'tool')).toHaveLength(3);
+  expect(await readFile(path.join(setup.root, 'file-branch-proposals', response.body.proposalId + '.json'), 'utf8')).toContain('# Native JSON reviewed checklist');
+  expect(setup.model.requests).toHaveLength(6);
+  expect(setup.model.requests[5].body.messages.filter(message => message.role === 'tool')).toHaveLength(5);
   expect((await post(base, `/api/chat/proposals/${response.body.proposalId}/apply`)).status).toBe(200);
   expect((await new CanvasStore(setup.root).getCanvas(body.canvasId)).blocks.find(block => block.id === 'launch-checklist')?.content)
     .toBe('# Native JSON reviewed checklist');
@@ -77,7 +70,7 @@ it('maps a real model rejection safely through JSON HTTP and recovers on the sam
   expect(failed.status).toBe(502);
   expect(failed.body.error).toContain('The API key was rejected. Check it in Settings.');
   expect(JSON.stringify(failed.body)).not.toContain('local-model-secret');
-  expect(await new CanvasStore(setup.root).getCanvas(body.canvasId)).toEqual(setup.canvas);
+  expectRestoredCanvas(await new CanvasStore(setup.root).getCanvas(body.canvasId), setup.canvas);
   setup.model.handle = (_request, response) => answer(response, ['Recovered JSON answer.']);
   expect(await post(base, '/api/chat', body)).toEqual({ status: 200, body: { message: 'Recovered JSON answer.', changed: false } });
   expect(setup.model.requests).toHaveLength(2);
@@ -94,7 +87,7 @@ it('throws cancellation for a real in-flight native provider stream and starts a
   controller.abort();
   await rejected;
   await vi.waitFor(() => expect(setup.model.closed).toBe(1));
-  expect(await new CanvasStore(setup.root).getCanvas(body.canvasId)).toEqual(setup.canvas);
+  expectRestoredCanvas(await new CanvasStore(setup.root).getCanvas(body.canvasId), setup.canvas);
   setup.model.handle = (_request, response) => answer(response, ['Recovered after cancellation.']);
   expect(await chat(setup.store, body)).toEqual({ message: 'Recovered after cancellation.', changed: false });
   expect(setup.model.requests).toHaveLength(2);

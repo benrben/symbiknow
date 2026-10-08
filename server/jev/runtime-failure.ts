@@ -6,6 +6,7 @@ import { stopJobDraft } from './runtime-controls.js';
 import type { DocumentJob } from './runtime-document.js';
 import type { StoredJevJob } from './runtime-queue.js';
 import type { JevWorkspaceFiles } from './workspace.js';
+import { admitDocumentContextRetry, scheduleDocumentContextRetry } from './runtime-document-retry.js';
 
 export function providerUnavailable(error: unknown): boolean {
   return error instanceof ApiError && [401, 402, 403, 429, 502, 503, 504].includes(error.status);
@@ -73,9 +74,20 @@ export async function recordJevFailure(files: JevWorkspaceFiles, store: CanvasSt
     const state: JevWorkspaceState = await files.read(workspaceId);
     const job = state.jobs.find(item => item.id === jobId) as StoredJevJob | undefined;
     if (!job || ['cancelled', 'completed'].includes(job.state)) return 0;
-    const delay = markFailed(job, error, signal);
+    const delay = await recordFailure(state, store, workspaceId, job, error, signal);
     await files.write(workspaceId, state);
     await stopJobDraft(store, job, 'review_unavailable');
     return delay;
   });
+}
+
+async function recordFailure(state: JevWorkspaceState, store: CanvasStore, workspaceId: string,
+  job: StoredJevJob, error: unknown, signal: AbortSignal): Promise<number> {
+  const delay = scheduleDocumentContextRetry({ state, job, error, signal });
+  if (delay === undefined) return markFailed(job, error, signal);
+  job.error = publicError(error);
+  job.updatedAt = new Date().toISOString();
+  if (delay >= 60_000) return 0;
+  await admitDocumentContextRetry({ store, state, workspaceId, job });
+  return delay;
 }

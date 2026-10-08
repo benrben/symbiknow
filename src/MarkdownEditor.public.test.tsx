@@ -46,6 +46,18 @@ function ToggleOwner() {
 }
 
 describe('MarkdownEditor with installed CodeMirror and public React lifecycle', () => {
+  it('sets automatic direction on every source line and retains it after editing mixed text', async () => {
+    render(<EditorOwner initial={'# שלום עולם\n\nمرحبا بالعالم\n\nEnglish text'} />);
+    const editor = installedEditor();
+    expect(editor.state.facet(EditorView.perLineTextDirection)).toBe(true);
+    expect([...editor.contentDOM.querySelectorAll('.cm-line')].every(line => line.getAttribute('dir') === 'auto')).toBe(true);
+    await act(async () => { editor.dispatch({ changes: { from: editor.state.doc.length, insert: '\nשורה חדשה' } }); });
+    expect(editor.contentDOM.querySelector('.cm-line:last-child')?.getAttribute('dir')).toBe('auto');
+    expect(editor.state.doc.toString()).toContain('שורה חדשה');
+    await act(async () => { editor.dispatch({ selection: { anchor: 2 } }); });
+    expect(editor.contentDOM.querySelector('.cm-line')?.getAttribute('dir')).toBe('auto');
+  });
+
   it('initializes an HTML document under StrictMode and accepts a later Markdown value through the existing editor', () => {
     render(<StrictMode><EditorOwner initial={html} /></StrictMode>);
     const editor = installedEditor();

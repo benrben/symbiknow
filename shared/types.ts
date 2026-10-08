@@ -45,6 +45,8 @@ export interface CanvasBlock {
   sourceGeneration?: number;
   metadataRevision?: number;
   jevMutationId?: string;
+  /** Read-only, current duplicate findings projected from Symbi Reflex. */
+  jevDuplicates?: Array<{ findingId: string; blockId: string; title: string }>;
   jevOwnership?: { pins: string[]; removedLabels: string[]; removedLinks: string[]; managed: string[] };
   headline?: string;
   freshness?: { reviewAt?: string; expiresAt?: string; effectiveAt?: string };
@@ -55,6 +57,8 @@ export interface CanvasBlock {
 }
 
 export interface CanvasDocument {
+  /** Optional Reflex projection failure; saved documents remain available. */
+  jevStatusError?: string;
   /** Read-only display names for native group paths, hydrated from workspace vocabulary. */
   groupLabels?: Record<string, string>;
   id: string;
@@ -85,7 +89,7 @@ export interface WorkspaceSummary {
 }
 
 export type ModelProvider = 'openrouter' | 'openai' | 'anthropic' | 'custom';
-export type AgentPlugin = 'document_read' | 'document_write' | 'external_mcp';
+export type AgentPlugin = 'external_mcp';
 
 export interface AgentProfile {
   id: string;
@@ -110,6 +114,8 @@ export interface McpTokenInfo {
   access?: 'read' | 'propose' | 'write';
   allowedCanvasIds?: string[];
   tools?: string[];
+  canApprove?: boolean;
+  canConfigure?: boolean;
   preview: string;
   createdAt: string;
   lastUsedAt?: string;
@@ -129,6 +135,7 @@ export interface ChatSettings {
   secretNames?: string[];
   mcpServers?: ExternalMcpServer[];
   mcpTokens?: McpTokenInfo[];
+  mcpToolCatalog?: Array<{ name: string; access: 'read' | 'propose' | 'write'; canApprove?: boolean; canConfigure?: boolean }>;
   groupBy?: GroupBy;
 }
 
@@ -162,6 +169,8 @@ export interface CanvasTask {
   assignee?: string;
   reviewer?: string;
   priority?: 'low' | 'normal' | 'high' | 'urgent';
+  /** Relative effort; done tasks are shown in the Todo canvas Archive. */
+  size?: 'xs' | 's' | 'm' | 'l' | 'xl';
   acceptanceCriteria?: Array<{ id: string; text: string }>;
   jevMutationId?: string;
   revision?: number;

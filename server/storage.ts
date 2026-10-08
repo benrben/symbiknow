@@ -436,7 +436,7 @@ export class CanvasStore {
     return this.settings.updateSettings(input);
   }
 
-  async createMcpToken(name: unknown, access: unknown = 'read', scope?: { allowedCanvasIds?: unknown; tools?: unknown }): Promise<{ token: string; settings: ChatSettings }> {
+  async createMcpToken(name: unknown, access: unknown = 'read', scope?: { allowedCanvasIds?: unknown; tools?: unknown; canApprove?: unknown; canConfigure?: unknown }): Promise<{ token: string; settings: ChatSettings }> {
     return this.settings.createMcpToken(name, access, scope);
   }
 
@@ -457,7 +457,7 @@ export class CanvasStore {
   }
 
   async mcpTokenIdentity(token: string): Promise<{ id: string; name: string; access: 'read' | 'propose' | 'write';
-    allowedCanvasIds?: string[]; tools?: string[] } | null> {
+    allowedCanvasIds?: string[]; tools?: string[]; canApprove?: boolean; canConfigure?: boolean } | null> {
     return this.settings.mcpTokenIdentity(token);
   }
 

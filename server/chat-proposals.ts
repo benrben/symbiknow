@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { rmSync } from 'node:fs';
 import type { CanvasBlock, CanvasDocument } from '../shared/types.js';
@@ -11,6 +12,9 @@ import { initializeJevStamp } from './jev/stamps.js';
 
 export type { ChatProposal, ChatProposalChange, ChatProposalReceipt } from './chat-proposal-types.js';
 
+const proposalActor = new AsyncLocalStorage<string>();
+// Only reached inside applyChatProposal/undoChatProposal, which always run with an actor (default 'Symbi').
+function reviewActor(): string { return proposalActor.getStore()!; }
 const busy = new Set<string>();
 function clone(block: CanvasBlock): CanvasBlock { return structuredClone(block); }
 function cloneOrNull(block: CanvasBlock | null): CanvasBlock | null { return block ? clone(block) : null; }
@@ -61,11 +65,11 @@ export class ChatProposalDraft {
     this.projected.set(blockId, after); this.record(blockId, type); return clone(after);
   }
   delete(blockId: string): void { this.get(blockId); this.projected.delete(blockId); this.record(blockId, 'delete'); }
-  publish(): ChatProposal | null {
+  publish(requestedId?: string, includeUnchanged = false): ChatProposal | null {
     if (this.published) return this.published;
-    const changes = [...this.changed.values()].filter(change => JSON.stringify(change.before) !== JSON.stringify(change.after));
+    const changes = [...this.changed.values()].filter(change => includeUnchanged || JSON.stringify(change.before) !== JSON.stringify(change.after));
     if (!changes.length) return null;
-    const proposal: ChatProposal = { id: randomUUID(), canvasId: this.canvasId, status: 'pending',
+    const proposal: ChatProposal = { id: requestedId ?? randomUUID(), canvasId: this.canvasId, status: 'pending',
       expiresAt: new Date(Date.now() + lifetime).toISOString(), changes };
     saveState(this.store, proposal.id, { version: 1, kind: 'pending', proposal, expires: Date.parse(proposal.expiresAt) });
     this.published = proposal;
@@ -135,9 +139,9 @@ function savedLinkTypes(progress: ApplyProgress, types: CanvasBlock['linkTypes']
 async function saveCreatedChanges(store: CanvasStore, proposal: ChatProposal, changes: ChatProposalChange[], progress: ApplyProgress): Promise<void> {
   for (const change of changes.filter(item => item.type === 'create')) {
     const after = change.after!;
-    const initial = await store.createBlock(proposal.canvasId, { title: after.title, content: after.content, kind: after.kind, x: after.x, y: after.y }, 'Symbi');
+    const initial = await store.createBlock(proposal.canvasId, { title: after.title, content: after.content, kind: after.kind, x: after.x, y: after.y }, reviewActor());
     const saved = initial.x === after.x && initial.y === after.y ? initial
-      : await store.updateBlock(proposal.canvasId, initial.id, { x: after.x, y: after.y }, 'Symbi');
+      : await store.updateBlock(proposal.canvasId, initial.id, { x: after.x, y: after.y }, reviewActor());
     progress.createdBlockIds[change.blockId] = saved.id;
     progress.applied.push(change.id);
     progress.documents.push({ id: change.id, before: null, after: saved });
@@ -150,7 +154,7 @@ async function saveExistingChanges(store: CanvasStore, proposal: ChatProposal, c
       title: after.title, content: after.content, kind: after.kind, x: after.x, y: after.y,
       links: after.links.map(id => savedId(progress, id)), linkTypes: savedLinkTypes(progress, after.linkTypes),
       expectedContentHash: change.expectedContentHash,
-    }, 'Symbi');
+    }, reviewActor());
     progress.applied.push(change.id);
     progress.documents.push({ id: change.id, before: change.before, after: saved });
   }
@@ -161,7 +165,7 @@ async function saveCreatedLinks(store: CanvasStore, proposal: ChatProposal, chan
     const id = savedId(progress, change.blockId);
     const saved = await store.updateBlock(proposal.canvasId, id, {
       links: after.links.map(link => savedId(progress, link)), linkTypes: savedLinkTypes(progress, after.linkTypes),
-    }, 'Symbi');
+    }, reviewActor());
     progress.documents = progress.documents.map(item => item.after?.id === id ? { ...item, after: saved } : item);
   }
 }
@@ -214,8 +218,8 @@ async function applyPending(store: CanvasStore, id: string, changeIds?: string[]
   saveState(store, id, { version: 1, kind: 'applied', canvasId: proposal.canvasId, receipt, expires: Date.now() + lifetime });
   return receipt;
 }
-export async function applyChatProposal(store: CanvasStore, id: string, changeIds?: string[]): Promise<ChatProposalReceipt> {
-  return withProposalLock(store, id, 'applied', () => applyPending(store, id, changeIds));
+export async function applyChatProposal(store: CanvasStore, id: string, changeIds?: string[], actor = 'Symbi'): Promise<ChatProposalReceipt> {
+  return proposalActor.run(actor, () => withProposalLock(store, id, 'applied', () => applyPending(store, id, changeIds)));
 }
 
 type UndoResult = { id: string; status: 'reverted' | 'partial'; reverted: string[]; skipped: { id: string; reason: string }[] };
@@ -250,8 +254,8 @@ function restorePatch(before: CanvasBlock, after: CanvasBlock): Parameters<Canva
     expectedContentHash: contentHash(after.content) };
 }
 async function revertDocument(store: CanvasStore, canvasId: string, item: ReceiptDocument): Promise<void> {
-  if (!item.before) { await store.deleteBlock(canvasId, item.after!.id, 'Symbi'); return; }
-  await store.updateBlock(canvasId, item.after!.id, restorePatch(item.before, item.after!), 'Symbi');
+  if (!item.before) { await store.deleteBlock(canvasId, item.after!.id, reviewActor()); return; }
+  await store.updateBlock(canvasId, item.after!.id, restorePatch(item.before, item.after!), reviewActor());
   await store.jevExecutor.setOwnership(canvasId, item.after!.id, initializeJevStamp(item.before).jevOwnership!);
 }
 async function revertDocuments(store: CanvasStore, run: AppliedState, ordered: ReceiptDocument[]): Promise<unknown> {
@@ -261,7 +265,7 @@ async function revertDocuments(store: CanvasStore, run: AppliedState, ordered: R
       const canvas = await store.getCanvas(run.canvasId, true);
       const parent: JevParentUndo = item.before ? { kind: 'edited', before: item.before, after: item.after! } : { kind: 'created', after: item.after! };
       await withCausalParentUndo(store, canvas.workspaceId, canvas.id, [parent],
-        { id: 'browser-reviewer', kind: 'user', access: 'write', canApprove: true }, () => revertDocument(store, run.canvasId, item), { peers });
+        { id: reviewActor(), kind: 'user', access: 'write', canApprove: true }, () => revertDocument(store, run.canvasId, item), { peers });
     }
     catch (error) { return error; }
   }
@@ -303,8 +307,8 @@ async function undoApplied(store: CanvasStore, id: string): Promise<UndoResult> 
   const failure = await revertDocuments(store, run, ordered);
   return finalizeUndo(store, id, run, ordered, failure);
 }
-export async function undoChatProposal(store: CanvasStore, id: string): Promise<UndoResult> {
-  return withProposalLock(store, id, 'undone', () => undoApplied(store, id));
+export async function undoChatProposal(store: CanvasStore, id: string, actor = 'Symbi'): Promise<UndoResult> {
+  return proposalActor.run(actor, () => withProposalLock(store, id, 'undone', () => undoApplied(store, id)));
 }
 
 export class ChatProposalConflict extends ApiError {

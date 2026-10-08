@@ -9,8 +9,8 @@ import type { QuestionAnswerCache } from './actions/question-answer-cache.js';
 import { automationPrincipal, principalFingerprint } from './authorization.js';
 import type { StoredJevJob } from './runtime-queue.js';
 
-// Filing consumes the checked labels and links applied earlier in the document plan.
-const independentActions: JevCurrentAction[] = ['label', 'link', 'flag_duplicate', 'suggest_home_canvas'];
+// Labels consume the fresh profile index; filing consumes the labels and links applied later.
+const independentActions: JevCurrentAction[] = ['link', 'flag_duplicate', 'suggest_home_canvas'];
 
 type QuestionTransport = { apiKey?: string; fetcher?: typeof fetch; decider?: JevDecider };
 export function questionTransportChanged(current: QuestionTransport, next: QuestionTransport): boolean {

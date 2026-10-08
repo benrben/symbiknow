@@ -2,6 +2,8 @@ import type { JevCurrentAction, JevMutation, JevOwnership, JevProposal, JevWorks
 import type { JevEvaluationContext } from './actions/context.js';
 import { normalizedGroup } from '../../shared/groups.js';
 import { automaticTaskHold } from './auto-task-policy.js';
+import type { CanvasBlock } from '../../shared/types.js';
+import { automaticGroupingAllowed } from './group-ownership.js';
 import { hasCheckedAutomaticOutcome, explicitAutomaticCommand, automaticJobResult, automaticOperationHold } from './auto-outcomes.js';
 
 type DocumentMutation = Extract<JevMutation, { kind: 'document' }>;
@@ -42,13 +44,19 @@ function certificates(state: JevWorkspaceState, proposal: JevProposal, supplied:
 function pinnedField(ownership: JevOwnership, field: string): boolean {
   return ownership.pins.includes(field) || (field === 'links' && ownership.pins.includes('linkTypes'));
 }
-function fieldsHold(ownership: JevOwnership, mutation: DocumentMutation): string | undefined {
+function fieldsHold(block: CanvasBlock, mutation: DocumentMutation): string | undefined {
+  const ownership = block.jevOwnership!;
   const fields = Object.keys(mutation.patch).map(field => field === 'linkTypes' ? 'links' : field);
-  if (fields.some(field => pinnedField(ownership, field) || !ownership.managed.includes(field))) return 'A field is pinned or managed manually';
+  if (fields.some(field => fieldProtected(block, field))) return 'A field is pinned or managed manually';
   if (mutation.patch.tags?.some(label => ownership.removedLabels.includes(label))) return 'A removed label correction prevents this change';
   if (mutation.patch.links?.some(link => ownership.removedLinks.includes(link))
     || mutation.patch.crossLinks?.some(link => ownership.removedLinks.includes(`${link.canvasId}:${link.blockId}`))) return 'A removed connection correction prevents this change';
   return undefined;
+}
+function fieldProtected(block: CanvasBlock, field: string): boolean {
+  if (field === 'group') return !automaticGroupingAllowed(block);
+  const ownership = block.jevOwnership!;
+  return pinnedField(ownership, field) || !ownership.managed.includes(field);
 }
 function pendingDefinition(state: JevWorkspaceState, proposal: JevProposal, group: string): boolean {
   return state.proposals.some(candidate => candidate.jobId === proposal.jobId && candidate.state === 'pending'
@@ -74,7 +82,7 @@ function documentHold(state: JevWorkspaceState, proposal: JevProposal, mutation:
   if (Object.hasOwn(mutation.patch, 'processingExcluded')) return 'Processing exclusions require explicit review';
   const document = context.documents.find(item => item.canvasId === mutation.canvasId && item.block.id === mutation.blockId);
   if (!document?.block.jevOwnership) return 'The document needs organization ownership reconciliation';
-  return fieldsHold(document.block.jevOwnership, mutation) ?? groupHold(state, proposal, mutation, context);
+  return fieldsHold(document.block, mutation) ?? groupHold(state, proposal, mutation, context);
 }
 function automaticDefinition(proposal: JevProposal, mutation: VocabularyMutation): boolean {
   return proposal.action === 'file' && ['define', 'promote'].includes(mutation.operation) && mutation.term.kind === 'group'
@@ -87,7 +95,7 @@ function parentHold(state: JevWorkspaceState, mutation: VocabularyMutation): str
 }
 function memberHold(proposal: JevProposal, member: VocabularyMutation['term']['members'][number], context: JevEvaluationContext): string | undefined {
   const document = context.documents.find(item => item.canvasId === member.canvasId && item.block.id === member.blockId);
-  if (!document || !document.block.jevOwnership?.managed.includes('group') || document.block.jevOwnership.pins.includes('group')) return 'A member’s group is pinned or managed manually';
+  if (!document || !automaticGroupingAllowed(document.block)) return 'A member’s group is pinned or managed manually';
   if (!proposal.evidence.some(evidence => evidence.source.canvasId === member.canvasId && evidence.source.blockId === member.blockId)) return 'Each group member requires exact supporting evidence';
   return undefined;
 }

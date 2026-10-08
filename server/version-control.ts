@@ -147,6 +147,72 @@ export class DocumentVersions {
     }
   }
 
+  /** Website assets are versioned beside source so asset-only uploads receive a unique revision. */
+  async commitPackage(name: string, content: string, message: string, author = 'SymbiKnow'): Promise<string> {
+    await this.requireBranch(name);
+    const current = (await this.status()).current;
+    if (name === current) {
+      await this.commitPackageAt(this.root, content, message, author);
+      return git(this.root, 'rev-parse', 'HEAD');
+    }
+    const previous = await git(this.root, 'rev-parse', name);
+    const worktree = await mkdtemp(path.join(path.dirname(this.root), 'package-edit-'));
+    try {
+      await git(this.root, 'worktree', 'add', '--detach', worktree, previous);
+      await this.commitPackageAt(worktree, content, message, author);
+      const revision = await git(worktree, 'rev-parse', 'HEAD');
+      await git(this.root, 'update-ref', `refs/heads/${name}`, revision, previous);
+      return revision;
+    } finally {
+      await git(this.root, 'worktree', 'remove', '--force', worktree).catch(() => undefined);
+      await rm(worktree, { recursive: true, force: true });
+    }
+  }
+
+  private async commitPackageAt(root: string, content: string, message: string, author: string): Promise<void> {
+    await writeFile(path.join(root, 'source-assets.json'), content);
+    await git(root, 'add', '--', 'source-assets.json');
+    if (!await git(root, 'diff', '--cached', '--name-only')) return;
+    const { name, email } = commitIdentity(author);
+    await git(root, '-c', `user.name=${name}`, '-c', `user.email=${email}`, 'commit', '-q', '-m', message.slice(0, 180));
+  }
+
+  async packageContent(revision: string): Promise<string | undefined> {
+    checkedRevision(revision);
+    await this.requireRevision(revision);
+    const files = await git(this.root, 'ls-tree', '--name-only', revision, '--', 'source-assets.json');
+    return files ? git(this.root, 'show', revision + ':source-assets.json') : undefined;
+  }
+
+  /** A serialized website transaction can restore exactly the heads it owned on failure. */
+  async packageCheckpoint() {
+    const status = await this.status();
+    const heads = await Promise.all(status.branches.map(async branch => ({ branch, revision: await git(this.root, 'rev-parse', branch) })));
+    return { current: status.current, heads };
+  }
+
+  async restorePackageCheckpoint(checkpoint: Awaited<ReturnType<DocumentVersions['packageCheckpoint']>>): Promise<void> {
+    const current = (await this.status()).current;
+    const head = checkpoint.heads.find(item => item.branch === current);
+    if (!head) throw new ApiError(409, 'The website transaction branch disappeared during rollback');
+    await git(this.root, 'reset', '--hard', head.revision);
+    for (const item of checkpoint.heads) await git(this.root, 'update-ref', 'refs/heads/' + item.branch, item.revision);
+    await git(this.root, 'switch', '-q', checkpoint.current);
+  }
+
+  async previewPackage(kind: 'switch' | 'merge' | 'restore', target: string): Promise<string | undefined> {
+    if (kind !== 'merge') {
+      const revision = kind === 'switch' ? (await this.branchContent(target)).revision : target;
+      return this.packageContent(revision);
+    }
+    await this.requireBranch(target);
+    let tree: string;
+    try { tree = (await git(this.root, 'merge-tree', '--write-tree', 'HEAD', target)).split('\n')[0]; }
+    catch { throw new ApiError(409, 'Merge conflict in the website source package. No changes were applied.'); }
+    const files = await git(this.root, 'ls-tree', '--name-only', tree, '--', 'source-assets.json');
+    return files ? git(this.root, 'show', tree + ':source-assets.json') : undefined;
+  }
+
   async deleteBranch(name: string) {
     await this.requireBranch(name);
     if (name === 'main' || name === (await this.status()).current) throw new ApiError(409, 'The current or protected branch cannot be deleted');

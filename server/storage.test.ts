@@ -348,8 +348,8 @@ describe('canvas storage', () => {
 
   it('saves agent profiles and plugin choices while rejecting unknown options', async () => {
     const store = await makeStore();
-    const saved = await store.updateSettings({ agentProfile: 'planner', agentPlugins: ['document_read', 'document_write'] });
-    expect(saved).toMatchObject({ agentProfile: 'planner', agentPlugins: ['document_read', 'document_write'] });
+    const saved = await store.updateSettings({ agentProfile: 'planner', agentPlugins: ['external_mcp'] });
+    expect(saved).toMatchObject({ agentProfile: 'planner', agentPlugins: ['external_mcp'] });
     await expect(store.updateSettings({ agentProfile: 'unknown' })).rejects.toMatchObject({ status: 400 });
     await expect(store.updateSettings({ agentPlugins: ['tasks'] })).rejects.toMatchObject({ status: 400 });
     await expect(store.updateSettings({ agentPlugins: ['document_read', 'unknown'] })).rejects.toMatchObject({ status: 400 });

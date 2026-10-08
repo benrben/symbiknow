@@ -5,6 +5,7 @@ import { workAreaLabel } from '../shared/work-areas';
 import { browserActor } from './api';
 import type { CanvasNode, CanvasNodeData, GroupNode, GroupNodeData } from './canvas-types';
 import { BlockContent } from './Loaders';
+import { JevCardStatus } from './JevCardStatus';
 
 export function LockBadge({ block }: { block: CanvasBlock }) {
   if (!block.lock || block.lock.owner === browserActor) return null;
@@ -19,6 +20,7 @@ export const DocumentNode = memo(function DocumentNode({ data, selected }: NodeP
       onResizeEnd={(_, dimensions) => onResize(block.id, dimensions)}/>
     <Handle type="target" position={Position.Left} className="canvas-handle"/>
     <DocumentHeader data={data}/>
+    <JevCardStatus block={block} onOpenRelated={id => data.onOpenCrossLink(canvasId, id)}/>
     <DocumentRelationships data={data}/>
     {data.detail !== 'titles' && <div className="canvas-card__body nowheel nodrag" onDoubleClick={event => event.stopPropagation()}>
       <BlockContent block={block} canvasId={canvasId} onUpdateBlock={onUpdateBlock} onError={onError}/>

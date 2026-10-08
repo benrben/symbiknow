@@ -105,7 +105,7 @@ it('selects pending evidence over newer history, includes only its checked group
   const review = documentReview(state, owner, canvasId, block);
   expect(review.grouping).toMatchObject({ proposalId: placement.id,
     proposalIds: ['parent-definition', placement.id], canApprove: true });
-  expect(documentReview(state, { ...owner, kind: 'token' }, canvasId, block).grouping?.canApprove).toBe(false);
+  expect(documentReview(state, { ...owner, kind: 'token' }, canvasId, block).grouping?.canApprove).toBe(true);
   expect(documentReview(state, { ...owner, access: 'read' }, canvasId, block).grouping?.canApprove).toBe(false);
   expect(documentReview(state, { ...owner, canApprove: false }, canvasId, block).grouping?.canApprove).toBe(false);
   placement.automaticHoldReason = 'Reviewer owns this group';

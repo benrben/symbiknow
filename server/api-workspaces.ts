@@ -7,7 +7,9 @@ import path from 'node:path';
 
 const workspaceAndSettingsEndpoints: Endpoint[] = [
   { method: 'GET', path: '/api/workspaces', handle: async context => {
-    const workspaces = await context.store.listWorkspaces();
+    const listed = await context.store.listWorkspaces();
+    const allowed = context.mcpPrincipal?.allowedCanvasIds;
+    const workspaces = allowed ? listed.map(workspace => ({ ...workspace, canvases: workspace.canvases.filter(canvas => allowed.includes(canvas.id)) })).filter(workspace => workspace.canvases.length) : listed;
     if (context.url.searchParams.get('stats') !== '1') { sendJson(context.response, 200, workspaces); return; }
     sendJson(context.response, 200, await Promise.all(workspaces.map(async workspace => ({ ...workspace,
       canvases: await Promise.all(workspace.canvases.map(async canvas => {

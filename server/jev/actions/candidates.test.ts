@@ -128,3 +128,34 @@ it('keeps an explicit source link and a scoped semantic paraphrase despite lexic
   input.retrievedNeighbors = { 'canvas:source': ['canvas:semantic'] };
   expect(relevantNeighbors(input, source).map(item => item.block.id)).toEqual(['semantic', 'manual']);
 });
+
+it('nominates short explicit body references to scoped document titles without pre-tags or semantic retrieval', () => {
+  const source = document('pricing', 'Pricing tiers decision', 'Enterprise requires the SSO review to be complete.');
+  const sso = document('sso', 'SSO security review', 'Validate administrator authentication before approval.');
+  const pen = document('pen', 'Pen test findings', 'Check the penetration assessment results.');
+  const pricing = document('decision', 'Pricing tiers decision', 'Approved Pro charge: $24.');
+  const access = document('access', 'Access control policy', 'Administrators must authenticate securely.');
+  expect(relevantNeighbors(context([source, sso]), source)).toEqual([sso]);
+  source.block.content = 'Review the pen-test, pricing decision, and access policy before publishing.';
+  const documents = [source, sso, pen, pricing, access,
+    document('foreign', pen.block.title, pen.block.content, 'canvas', 'foreign'),
+    document('archived', pricing.block.title, pricing.block.content, 'canvas', 'workspace', { archived: true }),
+    document('excluded', access.block.title, access.block.content, 'canvas', 'workspace', { processingExcluded: true })];
+  expect(relevantNeighbors(context(documents), source).map(item => item.block.id).sort()).toEqual(['access', 'decision', 'pen']);
+  expect(relevantNeighbors(context(documents), source, 1)).toHaveLength(1);
+  expect(relevantNeighbors(context(documents), source, 0)).toEqual([]);
+});
+
+it('requires a multiword visible body title reference, preserving headings, hidden markup and code boundaries', () => {
+  const source = document('source', 'SSO review', '# SSO review\n\n```text\nSSO review\n```\n<script>SSO review</script>\nUnrelated work.');
+  const target = document('target', 'SSO security review', 'Administrator authentication approval.');
+  const short = document('short', 'Review', 'Administrative approval.');
+  const emptyTitle = document('empty-title', '.', 'Other unrelated topic.');
+  expect(relevantNeighbors(context([source, target, short, emptyTitle]), source)).toEqual([]);
+  source.block.content = 'SSO is mentioned; unrelated work records administrative review.';
+  expect(relevantNeighbors(context([source, target]), source)).toEqual([]);
+  source.block.content = 'Review SSO before publishing.';
+  expect(relevantNeighbors(context([source, target]), source)).toEqual([]);
+  source.block.content = 'Unrelated introduction.\n'.repeat(90) + '\nThe SSO review must finish.';
+  expect(relevantNeighbors(context([source, target]), source)).toEqual([target]);
+});

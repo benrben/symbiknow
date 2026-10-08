@@ -20,8 +20,9 @@ function accumulate(reply: { message: string; proposalId?: string }, event: Chat
 /** JSON compatibility endpoint using the same agent, permissions and review flow as streaming chat. */
 export async function chat(store: CanvasStore, body: Record<string, unknown>, options: ChatOptions = {}): Promise<ChatReply> {
   const signal = options.signal ?? new AbortController().signal;
-  const session = await createChatStream(store, body, options.agentFactory, { signal });
+  const session = await createChatStream(store, body, options.agentFactory, { ...options, signal });
   const canvasId = requiredString(body.canvasId, 'canvasId');
+  await store.ensureJevStamps(canvasId);
   const before = await canvasState(store, canvasId);
   const reply: { message: string; proposalId?: string } = { message: '' };
   for await (const event of session.events!(signal)) {

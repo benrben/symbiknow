@@ -29,6 +29,22 @@ function send(message: string) {
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
 }
 
+function retryOracle(first: () => Response | Promise<Response>, second: () => Response) {
+  let attempts = 0;
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input) === '/api/canvases/planning' && !init?.method) return Response.json({ id: 'planning', blocks: [] });
+    if (String(input) === '/api/chat/stream' && init?.method === 'POST') return attempts++ === 0 ? first() : second();
+    throw new Error('Unexpected retry request ' + String(input));
+  });
+}
+function chatRequests() {
+  return vi.mocked(fetch).mock.calls.filter(([input, init]) => String(input) === '/api/chat/stream' && init?.method === 'POST');
+}
+function expectRetryBaseline() {
+  expect(vi.mocked(fetch).mock.calls.filter(([input]) => String(input) === '/api/canvases/planning')).toHaveLength(1);
+  expect(fetch).toHaveBeenCalledWith('/api/canvases/planning', expect.objectContaining({ cache: 'no-store' }));
+}
+
 function activityPanel() {
   return screen.getByRole('region', { name: 'Agent activity' });
 }
@@ -417,14 +433,17 @@ describe('AI Elements agent activity', () => {
   });
 
   it('keeps the question editable after a connection failure and retries without sending it twice', async () => {
-    vi.mocked(fetch).mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce(new Response('data: {"choices":[{"delta":{"content":"Connected again."}}]}\n\ndata: [DONE]\n\n'));
+    retryOracle(() => Promise.reject(new Error('offline')),
+      () => new Response('data: {"choices":[{"delta":{"content":"Connected again."}}]}\n\ndata: [DONE]\n\n'));
     render(<AIElementsChat {...viewProps()}/>);
     send('Which tests failed?');
     expect((await screen.findByRole('alert')).textContent).toContain('Canvas server is unavailable');
     expect((screen.getByRole('textbox', { name: 'Message Symbi' }) as HTMLTextAreaElement).value).toBe('Which tests failed?');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(chatRequests()).toHaveLength(2));
+    expectRetryBaseline();
+    expect(chatRequests()[1][1]?.body).toBe(chatRequests()[0][1]?.body);
+    expect(screen.getAllByText('Which tests failed?')).toHaveLength(1);
     expect(await screen.findByText('Connected again.')).toBeTruthy();
     expect((screen.getByRole('textbox', { name: 'Message Symbi' }) as HTMLTextAreaElement).value).toBe('');
   });
@@ -560,16 +579,17 @@ describe('AI Elements agent activity', () => {
 
   it('keeps the same user turn when retrying after a failed stream', async () => {
     const answer = 'data: {"choices":[{"delta":{"content":"Found it."}}]}\n\ndata: [DONE]\n\n';
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ error: 'OpenRouter unavailable' }, { status: 502 })).mockResolvedValueOnce(new Response(answer));
+    retryOracle(() => Response.json({ error: 'OpenRouter unavailable' }, { status: 502 }), () => new Response(answer));
     render(<AIElementsChat {...viewProps()}/>);
     send('Find the guide');
     expect((await screen.findByRole('alert')).textContent).toContain('OpenRouter unavailable');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('Found it.')).toBeTruthy();
     expect(screen.getAllByText('Find the guide')).toHaveLength(1);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    const first = vi.mocked(fetch).mock.calls[0][1]?.body;
-    const second = vi.mocked(fetch).mock.calls[1][1]?.body;
+    expect(chatRequests()).toHaveLength(2);
+    expectRetryBaseline();
+    const first = chatRequests()[0][1]?.body;
+    const second = chatRequests()[1][1]?.body;
     expect(second).toBe(first);
   });
 

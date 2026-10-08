@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { jevActions, type JevActionRequest, type JevVocabularyTerm } from '../../../shared/jev-types.js';
 import type { JevAnswer, JevQuestion } from '../../jev.js';
-import { automaticPeople, automaticRecall, automaticVocabulary } from './automatic.js';
+import { automaticPeople, automaticVocabulary } from './automatic.js';
 import type { JevEvaluationContext, JevInputDocument } from './context.js';
 
 type Rule = (id: string, question: JevQuestion, state: Record<string, unknown>) => string | number | undefined;
@@ -14,7 +14,7 @@ function answer(id: string, question: JevQuestion, state: Record<string, unknown
   const questionState = batch ? (state.questionSets as Record<string, unknown>[])[Number(batch[1])] : state;
   const questionId = batch?.[2] ?? id;
   const value = rule(questionId, question, questionState);
-  if (question.type === 'noul') return { type: 'noul', noul: Number(value ?? (questionId === 'conflict' ? 0.01 : 0.98)) };
+  if (question.type === 'noul') return { type: 'noul', noul: Number(value ?? (questionId === 'conflict' ? 0.01 : questionId === 'synonymous' ? 0.1 : 0.98)) };
   const keys = question.type === 'choice' ? Object.keys(question.criteria) : question.criteria.map((_, index) => String(index));
   const picked = String(value ?? keys[0]);
   const probabilities = Object.fromEntries(keys.map(key => [key, key === picked ? 1 : 0]));
@@ -249,7 +249,7 @@ describe('automatic source-grounded vocabulary and supporting knowledge', () => 
   });
 
   it('merges only independently supported equivalent definitions and leaves unrelated concepts intact', async () => {
-    const input = context();
+    const input = context(id => id === 'synonymous' ? .98 : undefined);
     input.documents[0].block.tags = ['Release'];
     input.vocabulary = [term('Atlas'), term('Release')];
     const action = request('vocab_lifecycle', { kind: 'label' });
@@ -259,80 +259,68 @@ describe('automatic source-grounded vocabulary and supporting knowledge', () => 
     expect(merged.proposals.every(candidate => candidate.decisionConfidences?.every(Number.isFinite))).toBe(true);
     input.decider = context(id => id === 'synonymous' ? 0.1 : undefined).decider;
     expect((await automaticVocabulary(input, action)).proposals).toEqual([]);
-    input.decider = context(id => id === 'pair' ? 'none' : undefined).decider;
-    expect((await automaticVocabulary(input, action)).proposals).toEqual([]);
+    input.decider = context(id => id === 'synonymous' ? 0.3 : undefined).decider;
+    expect((await automaticVocabulary(input, action)).result.synonymySupported).toBe(true);
     input.vocabulary[1].definition = 'Legal invoice collection.';
+    input.decider = context(id => id === 'synonymous' ? 0.1 : undefined).decider;
     expect((await automaticVocabulary(input, action)).proposals).toEqual([]);
   });
 
-  it('finds supporting passages and conflicts automatically, excludes self, and preserves every exact evidence snapshot', async () => {
-    const input = context(id => id === 'conflict' ? 0.98 : undefined);
-    const source = input.documents[0];
-    input.documents.push(document('support', 'Atlas release has shipped.', 'other'), document('excluded', 'Atlas release secrets.', 'other'));
-    input.documents[2].block.processingExcluded = true;
-    const result = await automaticRecall(input, request('recall'));
-    expect(result.result.documents).toMatchObject({ one: { automatic: true, evidenceFound: true, candidateCount: 1 } });
-    const candidate = result.proposals[0];
-    expect(candidate.mutation).toMatchObject({ kind: 'derived', blockId: 'one', values: { recall: { conflicts: [{ kind: 'premise_conflict' }] } } });
-    expect(candidate.sources).toEqual([source.snapshot, input.documents[1].snapshot]);
-    expect(candidate.evidence.every(passage => input.documents.some(item => item.snapshot === passage.source
-      && item.block.content.slice(passage.start, passage.end) === passage.quote))).toBe(true);
-    expect(candidate.mutation.kind === 'derived' && JSON.stringify(candidate.mutation.values).includes('"blockId":"one"')).toBe(false);
+  it.each([[0.29, 0.7, false], [0.3, 0.7, true], [0.3, 0.9, false]] as const)
+  ('calibrates synonym score %s to the existing confidence slider %s', async (raw, threshold, accepted) => {
+    const questions: string[] = [];
+    const input = context((id, question) => {
+      questions.push(id);
+      if (id !== 'synonymous') return undefined;
+      expect(question.instructions).toBe('Do sourceConcept and targetConcept have the same intended meaning and boundaries? Co-occurrence alone is insufficient.');
+      expect(question.type).toBe('noul');
+      expect(question).not.toHaveProperty('criteria');
+      return raw;
+    });
+    input.confidenceThreshold = threshold;
+    input.documents[0].block.tags = ['Release'];
+    input.vocabulary = [term('Atlas'), term('Release')];
+    const result = await automaticVocabulary(input, request('vocab_lifecycle', { kind: 'label' }));
+    expect(result.result.synonymySupported).toBe(accepted);
+    expect(questions).not.toContain('pair');
+    const merges = result.proposals.filter(candidate => candidate.mutation.kind === 'vocabulary' && candidate.mutation.operation === 'merge');
+    expect(merges).toHaveLength(accepted ? 1 : 0);
+    if (accepted) expect(result.proposals.every(candidate => JSON.stringify(candidate.decisionConfidences) === '[0.7]')).toBe(true);
   });
 
-  it('asks an actual supporting-evidence question using readable HTML claims including the opening body paragraph', async () => {
-    const input = context();
-    input.documents[0].block.title = 'Architecture';
-    input.documents[0].block.content = '---\nformat: html\n---\n<html><head><style>body{color:red}</style></head><body><div>Platform · Architecture</div><h1>The server contract</h1><p>The <code>CanvasStore</code> persists documents and rejects stale writes.</p><h2>Implementation details</h2><p>Additional implementation detail.</p><p>Closing contact instructions.</p></body></html>';
-    input.documents.push(document('support', 'CanvasStore rejects stale writes using the expected source hash.'));
-    const result = await automaticRecall(input, request('recall'));
-    const query = ((result.result.documents as Record<string, { query: string }>).one.query);
-    expect(query).toContain('Which other source passages support, explain, qualify, or contradict');
-    expect(query).toContain('CanvasStore persists documents and rejects stale writes.');
-    expect(query).not.toContain('Closing contact instructions.');
-    expect(query).not.toContain('<code>'); expect(query).not.toContain('color:red');
-    expect(query.length).toBeLessThanOrEqual(1800);
-    expect(result.proposals[0].sources.map(source => source.blockId)).toEqual(['one', 'support']);
-  });
-
-  it('keeps automatic recall queries and exact supporting evidence stable after adding a generated tag equal to the title', async () => {
-    const seen: string[] = [];
-    const input = context((_id, _question, state) => {
-      if (typeof state.query === 'string') seen.push(state.query);
+  it.each([
+    ['Access tokens', 'Bearer tokens that let agents call the API', 'API tokens', 'Tokens agents use to authenticate their API calls'],
+    ['Git history', 'Per-document revision history stored in Git', 'Version history', 'Past revisions of each document'],
+    ['Self-hosting', 'Running SymbiKnow on your own server', 'On-premise deployment', 'Deploying SymbiKnow on infrastructure you control'],
+  ])('checks semantically related %s and %s despite different source wording', async (sourceName, sourceDefinition, targetName, targetDefinition) => {
+    const checked: unknown[] = [];
+    const input = context((id, _question, state) => {
+      if (id === 'synonymous') { checked.push(state); return .42; }
       return undefined;
     });
-    input.documents.push(document('support', 'Atlas release requirements are checked against source evidence.'));
-    const content = input.documents[0].block.content;
-    const original = await automaticRecall(input, request('recall'));
-    const query = (original.result.documents as Record<string, { query: string }>).one.query;
-    expect(query).toContain('Topic: Atlas\n'); expect(seen).toContain(query);
-    input.documents[0].block.tags = ['Atlas']; seen.length = 0;
-    const equal = await automaticRecall(input, request('recall'));
-    expect((equal.result.documents as Record<string, { query: string }>).one.query).toBe(query);
-    expect(equal.proposals[0].evidence).toEqual(original.proposals[0].evidence);
-    expect(equal.proposals[0].sources).toEqual(original.proposals[0].sources);
-    expect(seen).toContain(query); expect(new Set(seen)).toEqual(new Set([query]));
-    input.documents[0].block.tags = ['Atlas', 'Release operations']; seen.length = 0;
-    const distinct = await automaticRecall(input, request('recall'));
-    const changed = (distinct.result.documents as Record<string, { query: string }>).one.query;
-    expect(changed).not.toBe(query); expect(changed).toContain('Topic: Atlas, Release operations\n'); expect(seen).toContain(changed);
-    expect(input.documents[0].block.content).toBe(content);
+    input.documents = [];
+    input.vocabulary = [{ ...term(sourceName), definition: sourceDefinition }, { ...term(targetName), definition: targetDefinition }];
+    const result = await automaticVocabulary(input, { action: 'vocab_lifecycle', canvasId: 'canvas' });
+    expect(checked).toEqual([expect.objectContaining({ sourceName: targetName, targetName: sourceName,
+      sourceConcept: targetDefinition, targetConcept: sourceDefinition })]);
+    expect(result.result.synonymySupported).toBe(true);
+    expect(result.proposals.filter(candidate => candidate.mutation.kind === 'vocabulary' && candidate.mutation.operation === 'merge')).toHaveLength(1);
   });
 
-  it('keeps explicit recall queries, local fallback, archived scope, and empty automatic scope honest', async () => {
-    const input = context();
-    expect((await automaticRecall(input, { ...request('recall'), query: 'Atlas' })).proposals).toEqual([]);
-    input.settings.externalProcessing = false;
-    input.documents.push(document('support', 'Atlas release evidence.'), document('archive', 'Atlas historical evidence.'));
-    input.documents[2].block.archived = true;
-    let result = await automaticRecall(input, request('recall'));
-    expect(result.result.documents).toMatchObject({ one: { evidenceStatus: 'local_unverified', candidateCount: 1 } });
-    result = await automaticRecall(input, request('recall', { includeArchived: true }));
-    expect(result.result.documents).toMatchObject({ one: { candidateCount: 2 } });
-    input.documents[0].block.processingExcluded = true;
-    expect((await automaticRecall(input, request('recall'))).result.status).toBe('no_available_sources');
+  it('bounds same-kind active pair assessment and ranks candidates only when its eight-pair budget is exceeded', async () => {
+    const checked: Array<{ sourceName: string; targetName: string }> = [];
+    const input = context((id, _question, state) => {
+      if (id === 'synonymous') { checked.push(state as { sourceName: string; targetName: string }); return .1; }
+      return undefined;
+    });
     input.documents = [];
-    expect((await automaticRecall(input, { action: 'recall', canvasId: 'canvas' })).result.status).toBe('no_available_sources');
+    input.vocabulary = Array.from({ length: 5 }, (_, index) => ({ ...term('Topic ' + index), definition: 'Independent topic ' + index }));
+    input.vocabulary.push({ ...term('A retired synonym'), state: 'retired' }, { ...term('Candidate term'), state: 'candidate' }, term('Different kind', 'entity'));
+    const result = await automaticVocabulary(input, { action: 'vocab_lifecycle', canvasId: 'canvas' });
+    expect(checked).toHaveLength(8);
+    expect(checked.every(pair => pair.sourceName.startsWith('Topic ') && pair.targetName.startsWith('Topic '))).toBe(true);
+    expect(result.proposals).toEqual([]);
+    expect(input.vocabulary).toHaveLength(8);
   });
 
   it('does not guess people from authorship or incidental names and retains configured identifiers', () => {

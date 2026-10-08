@@ -1,7 +1,7 @@
 import type { CanvasBlock } from '../shared/types.js';
 import { contentHash } from './storage.js';
 import type { ChatProposal, ChatProposalChange, ChatProposalReceipt, StoredState } from './chat-proposal-types.js';
-import { isRecord, isString, isStringArray, legacyStateHash, stateHash } from './chat-proposal-values.js';
+import { isRecord, isString, isStringArray, stateHash } from './chat-proposal-values.js';
 
 function validBlock(value: unknown): value is CanvasBlock {
   if (!isRecord(value)) return false;
@@ -28,8 +28,7 @@ function validChangeSnapshots(change: ChatProposalChange): boolean {
 function validChangeHashes(change: ChatProposalChange): boolean {
   const content = change.before ? contentHash(change.before.content) : null;
   const state = change.before ? stateHash(change.before) : null;
-  const hashes = change.before ? [state, legacyStateHash(change.before)] : [state];
-  return change.expectedContentHash === content && hashes.includes(change.expectedStateHash);
+  return change.expectedContentHash === content && state === change.expectedStateHash;
 }
 function validChange(value: unknown): boolean {
   if (!isRecord(value)) return false;

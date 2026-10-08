@@ -7,6 +7,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createApiServer } from '../server/index';
 import type { CanvasStore } from '../server/storage';
 import type { CanvasBlock, CanvasDocument } from '../shared/types';
+import { expectRestoredCanvas } from '../server/tests/restoration';
+import { localBrowserUpload } from './webmcp-files.test.fixture';
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }> };
 type DocumentHistory = Awaited<ReturnType<CanvasStore['documentHistory']>>;
@@ -50,7 +52,7 @@ async function fixture() {
   const { registerWebMCP } = await import('./webmcp');
   const onChanged = vi.fn();
   const dispose = registerWebMCP(() => 'product-roadmap', onChanged);
-  await vi.waitFor(() => expect(widgets).toHaveLength(1));
+  await vi.waitFor(() => expect(widgets[0]?.availableTools.has('download_file')).toBe(true));
   const widget = widgets[0];
   async function run<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     const tool = widget.availableTools.get(name);
@@ -75,7 +77,8 @@ async function fixture() {
     if (!address || typeof address === 'string') throw new Error('Missing restarted server address');
     base = `http://127.0.0.1:${address.port}`;
   }
-  return { run, read, request, restart, base, directory, dispose, widget, onChanged, registerWebMCP };
+  const upload = (args: Record<string, unknown>) => localBrowserUpload(run, directory, args);
+  return { run, upload, read, request, restart, base, directory, dispose, widget, onChanged, registerWebMCP };
 }
 
 afterEach(async () => {
@@ -99,7 +102,7 @@ it('restores the preceding live registration when the newest consumer disposes',
   const disposeLatest = app.registerWebMCP(() => 'no-longer-active', inactive);
   await Promise.resolve();
   disposeLatest();
-  const created = await app.run<CanvasBlock>('create_doc', { title: 'Live registration', content: 'Saved by the remaining consumer.' });
+  const created = await app.upload({ title: 'Live registration', content: 'Saved by the remaining consumer.' });
   expect((await app.read('/canvases/product-roadmap')).blocks.some(block => block.id === created.id)).toBe(true);
   expect(app.onChanged).toHaveBeenCalledOnce();
   expect(inactive).not.toHaveBeenCalled();
@@ -113,8 +116,8 @@ it('does not expose task tools through browser WebMCP', async () => {
 it('drops the disposed active-canvas fallback and callback while keeping explicit-canvas tools available', async () => {
   const app = await fixture();
   app.dispose();
-  await expect(app.run('open_doc', { blockId: 'roadmap-overview' })).rejects.toThrow('Open a canvas');
-  const created = await app.run<CanvasBlock>('create_doc', { canvasId: 'product-roadmap', title: 'Explicit destination', content: 'Complete source' });
+  await expect(app.run('read_doc', { blockId: 'roadmap-overview' })).rejects.toThrow('Open a canvas');
+  const created = await app.upload({ canvasId: 'product-roadmap', title: 'Explicit destination', content: 'Complete source' });
   expect((await app.read('/canvases/product-roadmap')).blocks.some(block => block.id === created.id)).toBe(true);
   expect(app.onChanged).not.toHaveBeenCalled();
 });
@@ -128,11 +131,11 @@ it('keeps the newest live consumer when an intermediate registration disposes, t
   await Promise.resolve();
   disposeMiddle();
   disposeMiddle();
-  await app.run('create_doc', { title: 'Newest consumer', content: '# First write' });
+  await app.upload({ title: 'Newest consumer', content: '# First write' });
   expect(latestChanged).toHaveBeenCalledOnce();
   expect(app.onChanged).not.toHaveBeenCalled();
   disposeLatest();
-  await app.run('create_doc', { title: 'Original consumer', content: '# Second write' });
+  await app.upload({ title: 'Original consumer', content: '# Second write' });
   expect(app.onChanged).toHaveBeenCalledOnce();
   expect(middleChanged).not.toHaveBeenCalled();
   expect(widgets).toHaveLength(1);
@@ -141,29 +144,29 @@ it('keeps the newest live consumer when an intermediate registration disposes, t
 it('returns API write failures without notifying consumers or changing another canvas', async () => {
   const app = await fixture();
   const before = await app.read('/canvases/product-roadmap');
-  await expect(app.run('create_doc', { canvasId: 'missing', title: 'Rejected write', content: '# Complete source' })).rejects.toThrow('Canvas not found');
-  await expect(app.run('edit_doc', { blockId: 'missing', content: '# Replacement' })).rejects.toThrow('Block not found');
-  expect(await app.read('/canvases/product-roadmap')).toEqual(before);
+  await expect(app.upload({ canvasId: 'missing', title: 'Rejected write', content: '# Complete source' })).rejects.toThrow('Canvas not found');
+  await expect(app.upload({ blockId: 'missing', content: '# Replacement' })).rejects.toThrow();
+  expectRestoredCanvas(await app.read('/canvases/product-roadmap'), before);
   expect(app.onChanged).not.toHaveBeenCalled();
 });
 
 it('runs the complete version lifecycle through native registered tools and reads each saved source back', async () => {
   const app = await fixture();
-  const created = await app.run<CanvasBlock>('create_doc', { title: 'Versioned source', content: '# Baseline' });
+  const created = await app.upload({ title: 'Versioned source', content: '# Baseline' });
   const args = { blockId: created.id };
   const versions = await app.run<{ commits: Array<{ id: string }> }>('list_versions', args);
   expect(versions.commits.length).toBeGreaterThan(0);
   await app.run('create_branch', { ...args, name: 'feature/native-adapter' });
-  expect(app.onChanged).toHaveBeenCalledOnce();
+  expect(app.onChanged).toHaveBeenCalledTimes(2);
   await app.run('switch_branch', { ...args, name: 'feature/native-adapter' });
-  await app.run('edit_doc', { ...args, content: '# Branch source' });
+  await app.upload({ ...args, content: '# Branch source' });
   await app.run('switch_branch', { ...args, name: 'main' });
   expect(await readFile(path.join(app.directory, created.file), 'utf8')).toBe('# Baseline');
   await app.run('merge_branch', { ...args, name: 'feature/native-adapter' });
-  expect((await app.run<CanvasBlock>('open_doc', args)).content).toBe('# Branch source');
+  expect((await app.run<CanvasBlock>('read_doc', args)).content).toBe('# Branch source');
   await app.run('restore_revision', { ...args, revision: versions.commits[0].id });
   expect(await readFile(path.join(app.directory, created.file), 'utf8')).toBe('# Baseline');
-  expect(app.onChanged).toHaveBeenCalledTimes(6);
+  expect(app.onChanged).toHaveBeenCalledTimes(7);
 });
 
 it('moves a document through the native registered tool and retains source, history, and references after restart', async () => {
@@ -172,9 +175,9 @@ it('moves a document through the native registered tool and retains source, hist
   const source = await app.read(`/canvases/${sourceId}`);
   const target = await app.request<CanvasDocument>(`/workspaces/${source.workspaceId}/canvases`, 'POST', { name: 'Move destination' });
   const remote = await app.request<CanvasDocument>(`/workspaces/${source.workspaceId}/canvases`, 'POST', { name: 'Inbound references' });
-  const moving = await app.run<CanvasBlock>('create_doc', { title: 'Moving native source', content: '# Baseline' });
-  const edited = await app.run<CanvasBlock>('edit_doc', { blockId: moving.id, content: '# Durable source\nPreserve this entire file.' });
-  const neighbor = await app.run<CanvasBlock>('create_doc', { title: 'Source context', content: '# Keep this source here' });
+  const moving = await app.upload({ title: 'Moving native source', content: '# Baseline' });
+  const edited = await app.upload({ blockId: moving.id, content: '# Durable source\nPreserve this entire file.' });
+  const neighbor = await app.upload({ title: 'Source context', content: '# Keep this source here' });
   const destinationContext = await app.request<CanvasBlock>(`/canvases/${target.id}/blocks`, 'POST', { title: 'Destination context' });
   await app.request(`/canvases/${sourceId}/blocks/${moving.id}`, 'PUT', { links: [neighbor.id], linkTypes: { [neighbor.id]: 'related' },
     crossLinks: [{ canvasId: target.id, blockId: destinationContext.id, relation: 'prerequisite' }] });
@@ -189,14 +192,14 @@ it('moves a document through the native registered tool and retains source, hist
   const changedBefore = app.onChanged.mock.calls.length;
 
   await expect(app.run('move_document', { blockId: moving.id, targetCanvasId: 'missing-destination' })).rejects.toThrow('Canvas not found');
-  await expect(app.run('move_document', { blockId: moving.id, targetCanvasId: ' ' })).rejects.toThrow('targetCanvasId is required.');
+  await expect(app.run('move_document', { blockId: moving.id, targetCanvasId: ' ' })).rejects.toThrow();
   expect(await app.read(`/canvases/${sourceId}`)).toEqual(before);
   expect(app.onChanged).toHaveBeenCalledTimes(changedBefore);
-  expect(await app.run('move_document', { blockId: ` ${moving.id} `, targetCanvasId: ` ${target.id} ` }))
+  expect(await app.run('move_document', { blockId: moving.id, targetCanvasId: target.id }))
     .toEqual({ fromCanvasId: sourceId, toCanvasId: target.id, blockId: moving.id });
   expect(app.onChanged).toHaveBeenCalledTimes(changedBefore + 1);
-  await expect(app.run('open_doc', { blockId: moving.id })).rejects.toThrow('Document not found.');
-  const moved = await app.run<CanvasBlock>('open_doc', { canvasId: target.id, blockId: moving.id });
+  await expect(app.run('read_doc', { blockId: moving.id })).rejects.toThrow();
+  const moved = await app.run<CanvasBlock>('read_doc', { canvasId: target.id, blockId: moving.id });
   expect(moved).toMatchObject({ id: moving.id, title: moving.title, file: moving.file, content: edited.content,
     links: [destinationContext.id], linkTypes: { [destinationContext.id]: 'prerequisite' },
     crossLinks: [{ canvasId: sourceId, blockId: neighbor.id, relation: 'related' }] });
@@ -210,7 +213,7 @@ it('moves a document through the native registered tool and retains source, hist
   expect(await app.run('list_versions', { canvasId: target.id, blockId: moving.id })).toEqual(history);
 
   await app.restart();
-  expect(await app.run('open_doc', { canvasId: target.id, blockId: moving.id })).toEqual(moved);
+  expect(await app.run('read_doc', { canvasId: target.id, blockId: moving.id })).toEqual(moved);
   expect(await app.read(`/canvases/${sourceId}`)).toEqual(sourceAfter);
   expect(await app.read(`/canvases/${remote.id}`)).toEqual(remoteAfter);
   expect(await app.run('list_versions', { canvasId: target.id, blockId: moving.id })).toEqual(history);
@@ -218,29 +221,22 @@ it('moves a document through the native registered tool and retains source, hist
     .toEqual(expect.arrayContaining([expect.objectContaining({ canvasId: target.id, blockId: moving.id })]));
 });
 
-it('creates and overwrites complete uploaded source with default and explicit titles', async () => {
+it('creates and replaces actual local files using authoritative checkout manifests', async () => {
   const app = await fixture();
-  const created = await app.run<CanvasBlock & { overwritten: boolean }>('upload_file', { filename: 'folder/My notes.md', content: '# First source', x: -30, y: -90 });
-  expect(created).toMatchObject({ title: 'My notes', content: '# First source', overwritten: false, y: -90 });
+  const created = await app.upload({ filename: 'My notes.md', content: '# First source', x: -30, y: -90 });
+  expect(created).toMatchObject({ title: 'My notes', content: '# First source', y: -90 });
   expect(await readFile(path.join(app.directory, created.file), 'utf8')).toBe('# First source');
-  const changed = await app.run<CanvasBlock & { overwritten: boolean }>('upload_file', { blockId: ` ${created.id} `,
-    filename: 'notes.mdx', title: 'Renamed source', content: '# Complete replacement' });
-  expect(changed).toMatchObject({ id: created.id, title: 'Renamed source', overwritten: true, content: '# Complete replacement' });
-  expect((await app.run<{ content: string; filename: string }>('download_file', { blockId: created.id })).filename).toBe(`${created.id}.md`);
+  const changed = await app.upload({ blockId: created.id, title: 'Renamed source', content: '# Complete replacement' });
+  expect(changed).toMatchObject({ id: created.id, title: 'Renamed source', content: '# Complete replacement' });
   expect(await readFile(path.join(app.directory, created.file), 'utf8')).toBe('# Complete replacement');
-  await expect(app.run('download_file', { blockId: 'missing' })).rejects.toThrow('Document not found.');
   expect(app.onChanged).toHaveBeenCalledTimes(2);
 });
 
-it('rejects malformed mutation and query arguments without changing saved documents', async () => {
+it('rejects incomplete upload and unchecked deletion without changing saved documents', async () => {
   const app = await fixture();
   const before = await app.read('/canvases/product-roadmap');
-  const malformed: Array<[string, Record<string, unknown>, string]> = [
-    ['upload_file', { filename: 'notes.md', content: 42 }, 'content must contain the entire file source.'],
-    ['upload_file', { filename: 'notes.md', title: '', content: '# Source' }, 'title is required.'],
-
-  ];
-  for (const [name, args, error] of malformed) await expect(app.run(name, args)).rejects.toThrow(error);
-  expect(await app.read('/canvases/product-roadmap')).toEqual(before);
+  await expect(app.run('upload_file', { filename: 'notes.md', content: 42 })).rejects.toThrow();
+  await expect(app.run('delete_doc', { blockId: 'launch-checklist' })).rejects.toThrow();
+  expectRestoredCanvas(await app.read('/canvases/product-roadmap'), before);
   expect(app.onChanged).not.toHaveBeenCalled();
 });

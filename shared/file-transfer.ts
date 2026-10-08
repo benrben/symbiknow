@@ -104,3 +104,10 @@ export function uploadedSource(filename: string, source: string): UploadedSource
   if (/\.html$/i.test(name)) return { title, kind: 'markdown', content: asHtmlDocument(source) };
   return { title, kind: /\.mdx$/i.test(name) ? 'mdx' : 'markdown', content: source };
 }
+
+/** Export names describe the loader rather than the internal storage suffix. */
+export function documentFilename(document: { id: string; kind: BlockKind; content: string }): string {
+  if (document.kind === 'website') return document.id + '.symbi-site.json';
+  const extension = isHtmlDocument(document.content) ? '.html' : document.kind === 'mdx' ? '.mdx' : '.md';
+  return document.id + extension;
+}

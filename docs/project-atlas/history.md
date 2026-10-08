@@ -190,7 +190,7 @@ The project was first called **allteam** (the repository folder still is). Old n
 - Now the UI calls it **Symbi Reflex** (tab beside Chat in `src/AppAssistantPanel.tsx`). The chat guide is **Symbi**.
 - **Jev** remains the internal name: the TypeSafe engine (`server/jev.ts`, SDK in `server/sdk.ts`), the `server/jev/` folder, `/jev` routes, `jev_*` MCP tools, and the "Reset and rerun Jev" button.
 - Old Git revision authors such as `Jev` and `SymbiKnow assistant` keep their names (`README.md`).
-- The nine `jev_*` / brain diagnostic MCP tools (`jev_profile`, `find_by`, `related`, `memory_map`, `jev_activity`, `brain_inbox`, `jev_do`, `jev_job`, `jev_propose`) are hidden unless `SYMBIKNOW_LEGACY_BRAIN_TOOLS=1` or a token lists them (`server/mcp.ts`). They were added during the uncommitted work, not at `HEAD`.
+- Jev search, profile, activity, map, inbox, action, job, review, and configuration tools are now part of the canonical MCP registry. Discovery follows the caller's current grants. `jev_do` is the sole action entry point; `jev_propose` and the conditional registration flag were removed.
 
 ### Retired Jev actions
 

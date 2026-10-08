@@ -220,7 +220,7 @@ describe('suggestions through the owning assistant browser UI', () => {
     const followups = within(await screen.findByRole('group', { name: 'Suggested follow-up questions' })).getAllByRole('button');
     expect(followups).toHaveLength(2);
     expect(followups[0].textContent).toBe(prompt);
-    expect(submitted).toEqual([{ canvasId: canvas.id, messages: [{ role: 'user', content: prompt }], viewContext: context }]);
+    expect(submitted).toEqual([{ canvasId: canvas.id, conversationId: expect.stringMatching(/^chat-/), messages: [{ role: 'user', content: prompt }], viewContext: context }]);
     expect(current.onCanvasChanged).toHaveBeenCalledWith(canvas.id, canvas.blocks);
     fireEvent(window, new Event('pagehide'));
     const history = JSON.parse(localStorage.getItem('symbiknow:chat-history') ?? 'null') as { role: string; content: string }[];
@@ -245,7 +245,7 @@ describe('suggestions through the owning assistant browser UI', () => {
     expect(starters().getAllByRole('button')).toHaveLength(3);
     fireEvent.click(starters().getAllByRole('button')[0]);
     await screen.findByRole('group', { name: 'Suggested follow-up questions' });
-    expect(submitted[0]).toEqual({ canvasId: canvas.id, messages: [{ role: 'user', content: 'What matters most in Launch planning?' }], viewContext: { selectedBlockIds: [], viewMode: 'overview', answerSourceIds: [], editingBlockId: 'qa', editorHasUnsavedChanges: true } });
+    expect(submitted[0]).toEqual({ canvasId: canvas.id, conversationId: expect.stringMatching(/^chat-/), messages: [{ role: 'user', content: 'What matters most in Launch planning?' }], viewContext: { selectedBlockIds: [], viewMode: 'overview', answerSourceIds: [], editingBlockId: 'qa', editorHasUnsavedChanges: true } });
   });
   it('never starts a second suggestion while a response is pending and uses the latest view for the next follow-up', async () => {
     let resolveReply!: (response: Response) => void;

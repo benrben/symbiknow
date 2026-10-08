@@ -1,7 +1,7 @@
 import { validateActionOptions } from './actions/options.js';
-import { automaticRecall, automaticVocabulary } from './actions/automatic.js';
+import { calibrated, decisionBoundaries } from './actions/calibration.js';
+import { automaticVocabulary } from './actions/automatic.js';
 import { recheckLinks } from './actions/graph.js';
-import { scoreQuality } from './actions/work.js';
 import { mkdtemp,rm } from 'node:fs/promises';
 import { createServer,type Server } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -39,7 +39,7 @@ function defaultAnswer(id: string, question: JevQuestion, body: ProviderBody): J
     probabilities: Object.fromEntries(question.criteria.map((_, index) => [String(index), index === question.criteria.length - 1 ? 1 : 0])) };
   const keys = Object.keys(question.criteria);
   const preferred: Record<string, string> = { existingTask: 'none', role: 'specification', group: 'g1',
-    canvas: 'c1', intent: 'organize', impact: 'high' };
+    canvas: 'c1', place: 'B', gate: 'B', intent: 'organize', impact: 'high' };
   if (id.startsWith('meaning_')) {
     const dates = body.state.dateCandidates as Array<{ passage: string }>;
     preferred[id] = /expires/.test(dates[Number(id.slice(8))].passage) ? 'expiresAt' : 'none';
@@ -166,14 +166,15 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
       document('canvas', block('abstained', { group: undefined })), document('canvas', block('proposed', { group: undefined }))];
     input.canvases[0].groups = [{ id: 'custom:atlas', name: 'Atlas', definition: 'Atlas delivery' }];
     transform = (id, answer, body) => {
-      if (id !== 'group') return answer;
-      const source = (body.state.document ?? body.state.source) as { id: string };
-      return choiceAnswer(body.questions[id], source.id === 'abstained' ? 'none' : 'g0');
+      if (!['group', 'place', 'gate'].includes(id)) return answer;
+      const source = (body.state.document ?? body.state.source) as { id?: string; title: string };
+      const abstained = source.id === 'abstained' || source.title === 'Atlas abstained';
+      return choiceAnswer(body.questions[id], abstained ? 'none' : id === 'group' ? 'g0' : 'A');
     };
     const result = await evaluateJevAction(input, { action: 'file', canvasId: 'canvas' });
     expect(result.result.documents).toEqual({ unchanged: { status: 'no_change', source: input.documents[0].snapshot },
       abstained: { status: 'insufficient_group_evidence', source: input.documents[1].snapshot },
-      proposed: { status: 'proposed', source: input.documents[2].snapshot } });
+      proposed: { calibration: 1, status: 'proposed', source: input.documents[2].snapshot } });
     expect(result.proposals).toHaveLength(1);
     expect(result.proposals[0].mutation).toMatchObject({ blockId: 'proposed', patch: { group: 'custom:atlas' } });
   });
@@ -199,12 +200,16 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
 
   it.each(['file', 'label', 'suggest_home_canvas', 'link', 'flag_duplicate'] as const)('uses the saved threshold for %s semantic decisions', async action => {
     transform = (_id, answer, body) => {
-      if (answer.type === 'noul') return { type: 'noul', noul: 0.75 };
+      if (_id === 'gate' && answer.type === 'choice') return { type: 'choice', choice: 'B', confidence: .1, probabilities: { A: 0, B: .5, none: .5 } };
+      if (action === 'suggest_home_canvas' && _id === 'place' && answer.type === 'choice') return { type: 'choice', choice: 'B', confidence: .1, probabilities: { A: .3, B: .6, none: .1 } };
+      if (answer.type === 'noul') return { type: 'noul', noul: action === 'label' ? .4 : .75 };
+      if (_id.endsWith('overlap')) return { type: 'choice', choice: 'copy', confidence: 0.2, probabilities: { copy: .58, version: 0, distinct: .42 } };
       if (answer.type !== 'choice') return answer;
       const keys = Object.keys(body.questions[_id].type === 'choice' ? (body.questions[_id] as Extract<JevQuestion, { type: 'choice' }>).criteria : {});
       if (_id.toLowerCase().includes('evidence')) return { ...answer, confidence: 0.2 };
+      const fallback = keys.includes('unknown') ? 'unknown' : 'none';
       return { ...answer, confidence: 0.75,
-        probabilities: Object.fromEntries(keys.map(key => [key, key === answer.choice ? 0.75 : key === 'unknown' ? 0.25 : 0])) };
+        probabilities: Object.fromEntries(keys.map(key => [key, key === answer.choice ? 0.75 : key === fallback ? 0.25 : 0])) };
     };
     const results = [];
     for (const threshold of [0.65, 0.85, undefined]) {
@@ -222,7 +227,7 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     expect(results[2].proposals).toEqual(results[0].proposals);
   });
 
-  it.each([0.65, 0.85])('retains uncertain profile, quality and link diagnostics under their action cutoff (%s)', async threshold => {
+  it.each([0.65, 0.85])('retains uncertain profile and link diagnostics under their action cutoff (%s)', async threshold => {
     const input = context(); input.settings.confidenceThresholds = { profile: threshold }; input.confidenceThreshold = threshold;
     transform = (id, answer) => {
       if (answer.type === 'noul') return { type: 'noul', noul: 0.75 };
@@ -234,18 +239,10 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     expect(profile.proposals).toHaveLength(1);
     expect(profile.result.documents).toMatchObject({ primary: { role: threshold < 0.75 ? 'specification' : 'unknown',
       keyPassages: ['Atlas rollout specification.'], keyPassageSelectionConfidence: 0.2 } });
-    const quality = await scoreQuality(input, request('score_quality'));
-    expect(quality.proposals).toHaveLength(1);
-    const rubric = (quality.result.documents as Record<string, { rubric: Record<string, unknown> }>).primary.rubric;
-    expect(rubric.specificity).toEqual(threshold < 0.75 ? { score: 3, confidence: 0.75 }
-      : { score: 3, confidence: 0.75, status: 'uncertain' });
     const links = await recheckLinks(input, request('recheck_links'));
     expect(links.result.edges).toMatchObject([{ status: threshold < 0.75 ? 'fresh' : 'insufficient_evidence', confidence: 0.75 }]);
     expect(links.proposals).toHaveLength(1);
-    const recall = await automaticRecall(input, request('recall'));
-    expect(recall.result.evidenceFound).toBe(threshold < 0.75);
-    expect((recall.result.passages as unknown[]).length).toBeGreaterThan(0);
-    expect((recall.result.conflicts as unknown[]).length > 0).toBe(threshold < 0.75);
+
   });
 
   it.each([0.65, 0.85])('requires the configured negative confidence and exact management before removing links (%s)', async threshold => {
@@ -278,7 +275,7 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     const profile = await evaluateJevAction(input, request('profile'));
     expect(JSON.stringify(profile.result.documents)).toContain('atlas_entity');
     await evaluateJevAction(input, request('file'));
-    expect(JSON.stringify(questionBodies('group').at(-1)?.questions.group)).toContain('Delivery');
+    expect(JSON.stringify(questionBodies('place').at(-1)?.state.groups)).toContain('Delivery');
   });
 
   it('uses native group keys for activated terms and explicit rename and merge migrations', async () => {
@@ -292,7 +289,7 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
       state: 'active', aliases: [], version: 1, members: [] });
     transform = (id, answer, body) => {
       const question = body.questions[id];
-      if (id !== 'group' || question.type !== 'choice') return answer;
+      if (!['group', 'place', 'gate'].includes(id) || question.type !== 'choice') return answer;
       return choiceAnswer(question, Object.keys(question.criteria).find(key => question.criteria[key].includes('Product Delivery')) ?? 'none');
     };
     const filed = await evaluateJevAction(input, request('file'));
@@ -377,7 +374,9 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
   it('requires independent local purpose and subgroup containment even when neighbor candidates are confident', async () => {
     const input = context(); input.documents = input.documents.slice(0, 2); input.vocabulary = []; input.canvases[0].groups = [];
     input.documents.forEach(document => { document.block.group = undefined; document.block.tags = [];
-      document.block.content = '# Atlas\n## Rollout\nAtlas rollout planning belongs to Atlas product delivery.'; });
+      document.block.content = document.block.id === 'primary'
+        ? '# Atlas\n## Rollout\nAtlas rollout planning covers pilot readiness and delivery approval.'
+        : '# Atlas\n## Rollout\nAtlas rollout execution covers staged deployment and recovery checkpoints.'; });
     input.settings.modes.file = 'auto';
     transform = (id, answer, body) => id === 'group' ? choiceAnswer(body.questions[id], 'unknown') : answer;
     expect(await evaluateJevAction(input, request('file'))).toMatchObject({ result: { status: 'insufficient_group_evidence' }, proposals: [] });
@@ -412,10 +411,10 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
       if (id === 'group') return groupAnswer(body.questions[id], 'custom:atlas/rollout');
       return /^purpose(?:_\d+)?$/.test(id) ? { type: 'noul', noul: 0.85 } : answer;
     };
-    expect((await evaluateJevAction(input, request('file'))).proposals[0].decisionConfidences).toEqual([0.97, 0.85, 0.98]);
+    expect((await evaluateJevAction(input, request('file'))).proposals[0].decisionConfidences).toEqual([1, 0.85, 0.98]);
   });
 
-  it.each([0.7, 0.69])('checks local purpose independently when two valid filing passages split their probability (purpose=%s)', async purpose => {
+  it.each([.41, .39])('keeps exact split-passage evidence independent of calibrated root-group gate support %s', async rawGate => {
     const input = context(); input.documents = input.documents.slice(0, 1); input.vocabulary = [];
     const source = input.documents[0]; source.block.group = undefined; source.block.tags = [];
     source.block.title = 'Agent integration';
@@ -424,26 +423,26 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     input.canvases[0].groups = [{ id: 'custom:ai_agents', name: 'AI & agents', definition: 'AI assistants and agent integration' }];
     transform = (id, answer, body) => {
       const question = body.questions[id];
-      if (id === 'group') return groupAnswer(question, 'custom:ai_agents');
-      if (/^purpose(?:_\d+)?$/.test(id)) return { type: 'noul', noul: purpose };
+      if (id === 'place') return choiceAnswer(question, 'A');
+      if (id === 'gate') return { type: 'choice', choice: rawGate < .5 ? 'none' : 'A', confidence: .1, probabilities: { A: rawGate, none: 1 - rawGate } };
+      if (id === 'group') return choiceAnswer(question, 'none');
+      if (/^purpose(?:_\d+)?$/.test(id)) return { type: 'noul', noul: .98 };
       if (id !== 'evidence' || question.type !== 'choice') return answer;
       return { type: 'choice', choice: 'p0', confidence: 0.96,
         probabilities: { ...Object.fromEntries(Object.keys(question.criteria).map(key => [key, 0])), p0: 0.5, p1: 0.44, none: 0.06 } };
     };
     const result = await evaluateJevAction(input, request('file'));
-    const checked = questionBodies('purpose_0');
-    expect(checked.length).toBeGreaterThan(0);
-    expect((checked[0].state.localEvidence as unknown[])[0]).toEqual({
-      start: source.block.content.indexOf('AI &amp; agents · MCP'),
-      end: source.block.content.indexOf('AI &amp; agents · MCP') + 'AI &amp; agents · MCP'.length, quote: 'AI &amp; agents · MCP' });
-    expect(checked[0].questions.purpose_0.instructions).toContain('Use only localEvidence[0]');
-    if (purpose < 0.7) {
-      expect(result.proposals).toEqual([]);
-      return;
-    }
+    if (rawGate < .4) { expect(result.proposals).toEqual([]); return; }
+    expect(questionBodies('purpose_0')).toHaveLength(1);
+    expect(questionStates('purpose_0')[0].selectedGroup).toMatchObject({ key: 'custom:ai_agents' });
+    expect(questionStates('purpose_0')[0].localEvidence).toEqual(expect.arrayContaining([expect.objectContaining({ quote: 'AI &amp; agents · MCP' })]));
+    expect(Object.keys(questionBodies('place')[0].questions)).toEqual(['place', 'gate']);
+    expect(questionStates('evidence')[0].selectedGroup).toMatchObject({ key: 'custom:ai_agents' });
     expect(result.proposals).toHaveLength(1);
     expect(result.proposals[0].mutation).toMatchObject({ blockId: source.block.id, patch: { group: 'custom:ai_agents' } });
-    expect(result.proposals[0].decisionConfidences).toEqual([0.97, 0.7]);
+    expect(result.proposals[0].decisionConfidences).toHaveLength(2);
+    expect(result.proposals[0].decisionConfidences![1]).toBe(.98);
+    expect(result.proposals[0].decisionConfidences![0]).toBeCloseTo(calibrated(rawGate, decisionBoundaries.fileGate));
     expect(source.block.group).toBeUndefined();
   });
 
@@ -480,6 +479,7 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     input.canvases[0].groups = [{ id: 'custom:cuisine', name: 'Cuisine', definition: 'Cooking and recipes' }];
     transform = (id, answer, body) => {
       const question = body.questions[id];
+      if (['place', 'gate'].includes(id)) return choiceAnswer(question, 'A');
       if (id === 'group' && question.type === 'choice') return choiceAnswer(question,
         Object.keys(question.criteria).find(key => question.criteria[key].includes('(custom:engineering)')) ?? Object.keys(question.criteria)[0]);
       if (id === 'evidence' && question.type === 'choice') return choiceAnswer(question,
@@ -488,7 +488,7 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     };
     const result = await evaluateJevAction(input, request('file'));
     expect(result.proposals.find(proposal => proposal.mutation.kind === 'document')?.mutation).toMatchObject({ patch: { group: 'custom:engineering' } });
-    expect(questionStates('purpose_0').some(state => (state.selectedGroup as { key: string }).key === 'custom:cuisine')).toBe(true);
+    expect(questionStates('evidence').some(state => (state.selectedGroup as { key: string }).key === 'custom:cuisine')).toBe(true);
     expect(result.proposals.every(proposal => proposal.decisionConfidences?.every(value => value >= 0.95))).toBe(true);
   });
 
@@ -552,13 +552,9 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     ]);
     requests = [];
     expect((await evaluateJevAction(context(), request('suggest_home_canvas'))).proposals[0].mutation).toMatchObject({ targetCanvasId: 'other' });
-    expect(requests.find(body => body.questions.evidence)!.state.selectedCanvas).toMatchObject({ id: 'other', name: 'Atlas Delivery', description: expect.stringContaining('Atlas Delivery') });
+    expect(requests.find(body => body.questions.evidence)!.state.selectedCanvas).toMatchObject({ id: 'other', name: 'Atlas Delivery', documents: [expect.objectContaining({ title: 'Atlas cross' })] });
     requests = [];
-    const quality = await scoreQuality(context(), request('score_quality'));
-    expect(quality.proposals[0].mutation).toMatchObject({ values: { qualityRubric: { specificity: { score: 2.5 } } } });
-    expect(requests.find(body => body.questions.specificityEvidence)!.state.assessments).toMatchObject({ specificity: {
-      score: 2.5, scale: ['Insufficient evidence', 'Substantial gaps', 'Partly supported', 'Well supported'] } });
-    expect(requests.find(body => body.questions.specificity)!.questions).not.toHaveProperty('specificityEvidence');
+
   });
 
   it('keeps a selected home unchanged when no exact supporting passage is selected', async () => {
@@ -591,6 +587,12 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     for (const [title, content] of topics) members.push(await store.createBlock(canvasId, { title, content, tags: ['manual label'] }));
     transform = (id, answer, body) => {
       const question = body.questions[id]; const source = (body.state.source ?? body.state.document) as { passages: Array<{ id: string; text: string }> };
+      if (['place', 'gate'].includes(id)) {
+        const groups = body.state.groups as Array<{ option: string; key: string }>;
+        const desired = source.passages.some(passage => passage.text.includes('Engineering / Backend')) ? 'custom:engineering/backend'
+          : source.passages.some(passage => passage.text.includes('Engineering / Frontend')) ? 'custom:engineering/frontend' : 'custom:cuisine';
+        return choiceAnswer(question, groups.find(group => group.key === desired)?.option ?? 'none');
+      }
       if (id === 'group' && question.type === 'choice') {
         if (!body.state.proposedGroups) return choiceAnswer(question, 'g0');
         const key = source.passages.some(passage => passage.text.includes('Engineering / Backend')) ? 'custom:engineering/backend' : 'custom:engineering/frontend';
@@ -612,6 +614,13 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
       const finished = result.jobs.find(candidate => candidate.id === job.id);
       expect(finished?.state, JSON.stringify(finished)).toBe('completed');
       const proposals = result.proposals.filter(proposal => proposal.jobId === job.id);
+      expect(proposals.map(proposal => proposal.mutation)).toEqual([
+        expect.objectContaining({ kind: 'vocabulary', term: expect.objectContaining({ groupKey: 'custom:engineering' }) }),
+        expect.objectContaining({ kind: 'vocabulary', term: expect.objectContaining({ groupKey: 'custom:engineering/backend' }) }),
+        expect.objectContaining({ kind: 'vocabulary', term: expect.objectContaining({ groupKey: 'custom:engineering/frontend' }) }),
+        ...members.map((member, index) => expect.objectContaining({ kind: 'document', blockId: member.id,
+          patch: { group: index < 3 ? 'custom:engineering/backend' : 'custom:engineering/frontend' } })),
+      ]);
       expect(proposals).toHaveLength(9); expect(proposals.every(proposal => proposal.state === 'applied')).toBe(true);
       expect(proposals.slice(0, 3).every(proposal => proposal.mutation.kind === 'vocabulary')).toBe(true);
       const saved = await new CanvasStore(directory).getCanvas(canvasId, true);
@@ -668,7 +677,7 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     expect(pinned.result.edges).toMatchObject([{ status: 'unsupported' }, { status: 'unsupported' }]);
     expect(pinned.proposals.find(proposal => proposal.mutation.kind === 'document')?.mutation)
       .toMatchObject({ patch: { links: [], linkTypes: {} } });
-    expect((requests.at(-1)?.state.questionSets as Array<{ hypothesis: string }>).map(pair => pair.hypothesis))
+    expect(questionStates('supported').map(pair => pair.hypothesis))
       .toContain('source implements the explicit requirements or plan in target');
     input.documents[0].block.jevOwnership.pins = [];
     const owned = await recheckLinks(input, request('recheck_links'));
@@ -678,17 +687,6 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     const manual = await recheckLinks(input, request('recheck_links'));
     expect(manual.proposals.every(proposal => proposal.mutation.kind === 'derived')).toBe(true);
     expect(input.documents[0].block.links).toEqual(['secondary']);
-  });
-
-  it('keeps local recall useful when provider fails or processing is disabled', async () => {
-    responseStatus = 503;
-    const input = context();
-    const failed = await automaticRecall(input, request('recall'));
-    expect(failed.result).toMatchObject({ evidenceFound: false, evidenceStatus: 'local_unverified', reranking: 'unavailable_local_fallback' });
-    input.settings.externalProcessing = false;
-    const disabled = await automaticRecall(input, request('recall'));
-    expect(disabled.result).toMatchObject({ evidenceFound: false, evidenceStatus: 'local_unverified', reranking: 'unavailable_local_fallback' });
-    expect(JSON.stringify(disabled)).not.toContain('fixture-only-key');
   });
 
   it.each(['promote', 'rename', 'alias', 'retire', 'restore'])('previews a complete %s vocabulary operation', async operation => {
@@ -737,8 +735,6 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     input.documents[0].block.processingExcluded = true;
     await expect(evaluateJevAction(input, request('profile'))).rejects.toMatchObject({ status: 404 });
     expect(requests).toHaveLength(0);
-    const local = await automaticRecall(input, request('recall'));
-    expect(JSON.stringify(local.result.passages)).toContain('excluded_from_external_processing');
     const privateDocument = document('canvas', block('restricted', { title: 'PRIVATE_TITLE', content: 'PRIVATE_CONTENT' }));
     privateDocument.snapshot.workspaceId = 'another-workspace';
     input.documents[0].block.processingExcluded = false;
@@ -785,11 +781,7 @@ describe('complete Symbi Reflex action programs through the native SDK and HTTP 
     }
   });
 
-  it('keeps quality findings unknown when their supporting passage is missing', async () => {
-    transform = (id, answer, body) => id.toLowerCase().includes('evidence') ? choiceAnswer(body.questions[id], 'none') : answer;
-    const quality = await scoreQuality(context(), request('score_quality'));
-    expect(quality.result.documents).toMatchObject({ primary: { rubric: { specificity: { status: 'insufficient_evidence' } } } });
-  });
+
 });
 
 function choiceAnswer(question: JevQuestion, selected: string): JevAnswer {

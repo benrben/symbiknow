@@ -6,7 +6,7 @@ import { groupingSignalState } from './group-signals.js';
 import { vocabularyGroupKey } from './groups.js';
 import type { JevQuestionSet } from './question-batch.js';
 
-export type GroupAssessmentGroup = { key: string; name: string; definition?: string; origins?: JevPassage[] };
+export type GroupAssessmentGroup = { key: string; name: string; definition?: string; origins?: JevPassage[]; reusableTaxonomy?: boolean };
 
 /** Metadata revisions do not change what an exact source passage says about a group. */
 export function semanticGroupState(group: GroupAssessmentGroup) {
@@ -29,7 +29,7 @@ export function groupAssessmentSet(context: JevEvaluationContext, document: JevI
 function groupAssessmentState(context: JevEvaluationContext, document: JevInputDocument,
   group: GroupAssessmentGroup, bootstrap: boolean, semantic: boolean): JevQuestionSet['state'] {
   const selectedGroup = semanticGroupState(group);
-  if (bootstrap) selectedGroup.definition = (group.origins ?? []).map(passage => passage.quote).join('\n');
+  if (bootstrap && !selectedGroup.definition) selectedGroup.definition = (group.origins ?? []).map(passage => passage.quote).join('\n');
   const state = { source: filingState(document), selectedGroup, organizationSignals: groupingSignalState(context, document) };
   // Evidence choice uses source and selectedGroup. These additional fields belong only to semantic validation.
   if (!semantic) return state;
@@ -40,7 +40,9 @@ function groupAssessmentState(context: JevEvaluationContext, document: JevInputD
 
 function semanticQuestions(group: GroupAssessmentGroup, indices: number[], bootstrap: boolean): Record<string, JevQuestion> {
   const questions: Record<string, JevQuestion> = {};
-  if (bootstrap) questions.coherent = noul('Do the supplied source passages describe a meaningful shared topic matching selectedGroup.name? Judge the topic’s meaning, even if this is a new group. Reject a name combining unrelated subjects or conflicting with an existing definition. For a subgroup, also require the supplied parent-child heading hierarchy.');
+  if (bootstrap) questions.coherent = noul(group.reusableTaxonomy
+    ? 'Does selectedGroup describe a meaningful reusable subject category that can organize the document’s main substantive purpose? A category may currently have one document, but must be useful for other documents about that same subject. Reject per-document identifiers, numbered page titles, one-off checklist folders, administrative section captions, and names combining unrelated subjects or conflicting with an existing definition. A matching heading alone does not establish reusable taxonomy. Neighbor subjects provide context only; require the member’s own substantive passages for its placement. For a subgroup, also require the supplied parent-child heading hierarchy.'
+    : 'Do the supplied source passages describe a meaningful shared topic matching selectedGroup.name? Judge the topic’s meaning, even if this is a new group. Reject a name combining unrelated subjects or conflicting with an existing definition. For a subgroup, also require the supplied parent-child heading hierarchy.');
   for (const index of indices) {
     questions[`purpose_${index}`] = noul(`Use only localEvidence[${index}] as localEvidence for this check. Is this document's main subject within selectedGroup's topical scope, supported by that exact passage? A definition containing quoted member passages gives examples of the category's scope; each document need not repeat all examples. Respect explicit restrictions in the definition. An explicit source category heading supports membership when the surrounding prose fits that category. Reject incidental shared words and neighboring topics.`);
     if (group.key.includes('/')) questions[`containment_${index}`] = noul(`Use only localEvidence[${index}] as localEvidence for this check. Do this document's own passages establish that its subject belongs within both the selected parent topic and subgroup? Require substantive containment; a neighboring heading hierarchy is insufficient.`);
@@ -51,13 +53,20 @@ function semanticQuestions(group: GroupAssessmentGroup, indices: number[], boots
 /** Keep group and passage selection independent of the selected passage's semantic checks. */
 export async function completeGroupAssessment(context: JevEvaluationContext, document: JevInputDocument,
   group: GroupAssessmentGroup, answers: Record<string, JevAnswer>, bootstrap = false): Promise<Record<string, JevAnswer>> {
-  if (!context.selectiveGroupAssessment) return answers;
+  const set = groupAssessmentFollowupSet(context, document, group, answers, bootstrap);
+  if (!set) return answers;
+  const checked = await judge(context, set.state, set.questions);
+  return { ...answers, ...checked };
+}
+/** The same selected-passage semantic checks can be batched across independently assessed members. */
+export function groupAssessmentFollowupSet(context: JevEvaluationContext, document: JevInputDocument,
+  group: GroupAssessmentGroup, answers: Record<string, JevAnswer>, bootstrap = false): JevQuestionSet | undefined {
+  if (!context.selectiveGroupAssessment) return undefined;
   const evidence = filingEvidence(document, answers.evidence);
-  if (!evidence.length) return answers;
+  if (!evidence.length) return undefined;
   const index = filingPassages(document).findIndex(passage => passage.start === evidence[0].start && passage.end === evidence[0].end);
   const state = groupAssessmentState(context, document, group, bootstrap, true);
-  const checked = await judge(context, state, semanticQuestions(group, [index], bootstrap));
-  return { ...answers, ...checked };
+  return { state, questions: semanticQuestions(group, [index], bootstrap) };
 }
 
 export function groupAssessmentDecision(context: JevEvaluationContext, document: JevInputDocument,
@@ -66,10 +75,14 @@ export function groupAssessmentDecision(context: JevEvaluationContext, document:
   const evidence = filingEvidence(document, answers.evidence);
   if (!evidence.length) return undefined;
   const index = filingPassages(document).findIndex(passage => passage.start === evidence[0].start && passage.end === evidence[0].end);
-  const checks = [answers[`purpose_${index}`]];
-  if (group.key.includes('/')) checks.push(answers[`containment_${index}`]);
+  const checks = localAssessmentChecks(group, answers, index);
   if (!checks.every(answer => supported(answer, context))) return undefined;
   return { evidence, confidences: assessmentConfidences(answers, checks, bootstrap) };
+}
+function localAssessmentChecks(group: GroupAssessmentGroup, answers: Record<string, JevAnswer>, index: number) {
+  const checks = [answers[`purpose_${index}`]];
+  if (group.key.includes('/')) checks.push(answers[`containment_${index}`]);
+  return checks;
 }
 
 function assessmentConfidences(answers: Record<string, JevAnswer>, checks: JevAnswer[], bootstrap: boolean) {

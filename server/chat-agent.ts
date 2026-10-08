@@ -1,6 +1,6 @@
 import { ChatOpenAI } from '@langchain/openai';
 import type { BaseMessage } from '@langchain/core/messages';
-import { createDeepAgent } from 'deepagents';
+import { createDeepAgent, FilesystemBackend } from 'deepagents';
 import { toolCallLimitMiddleware } from 'langchain';
 import type { AgentRun, AgentSnapshot, AgentStreamItem, ChatStreamEvent, DeepAgentFactory, ProgressState } from './chat-agent-types.js';
 import { agentFailure } from './chat-agent-failure.js';
@@ -12,7 +12,7 @@ export { finalAnswer, textPieces } from './chat-agent-output.js';
 const defaultBaseUrl = 'https://openrouter.ai/api/v1';
 
 /** Deep Agents with any OpenAI-compatible chat model. Streams both state snapshots and model tokens. */
-export const chatAgent: DeepAgentFactory = (settings, tools, systemPrompt) => {
+export const chatAgent: DeepAgentFactory = (settings, tools, systemPrompt, environment) => {
   const model = new ChatOpenAI({
     model: settings.model, apiKey: settings.apiKey, streamUsage: false, useResponsesApi: false, streaming: true,
     configuration: { baseURL: settings.baseURL ?? defaultBaseUrl, defaultHeaders: settings.headers ?? {
@@ -21,13 +21,12 @@ export const chatAgent: DeepAgentFactory = (settings, tools, systemPrompt) => {
   });
   const agent = createDeepAgent({
     model, tools, systemPrompt,
+    ...(environment ? { backend: new FilesystemBackend({ rootDir: environment.workdir, virtualMode: true }) } : {}),
     middleware: [toolCallLimitMiddleware({ runLimit: 9_999, exitBehavior: 'error' })],
   });
   return (messages, signal) => agent.stream({ messages }, { streamMode: ['values', 'messages'], recursionLimit: 20_001, signal }) as Promise<AsyncIterable<AgentStreamItem>>;
 };
 
-/** @deprecated Use chatAgent; kept for existing callers. */
-export const openRouterAgent = chatAgent;
 
 function handleAgentFailure(error: unknown, signal: AbortSignal, provider: string): void {
   if (!signal.aborted) agentFailure(error, provider);

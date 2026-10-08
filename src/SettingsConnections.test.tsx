@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatSettings } from '../shared/types';
 import { ConnectAgents } from './SettingsConnections';
 
-const settings: ChatSettings = { provider: 'openrouter', model: 'fixture', systemPrompt: '', hasApiKey: false, mcpTokens: [] };
+const settings: ChatSettings = { provider: 'openrouter', model: 'fixture', systemPrompt: '', hasApiKey: false, mcpTokens: [],
+  mcpToolCatalog: [{ name: 'read_doc', access: 'read' }, { name: 'upload_file', access: 'propose' },
+    { name: 'apply_file_proposal', access: 'write', canApprove: true }, { name: 'jev_configure', access: 'write', canConfigure: true }] };
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { resolve, promise }; }
 function fixture(override?: (route: string, init?: RequestInit) => Response | Promise<Response> | undefined) {
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
@@ -111,9 +113,9 @@ describe('workspace agent connections', () => {
     fireEvent.change(screen.getByLabelText('Tool scope'), { target: { value: 'selected' } });
     const read = screen.getByRole('checkbox', { name: 'read_doc' });
     fireEvent.click(read); fireEvent.click(read); fireEvent.click(read);
-    fireEvent.click(screen.getByRole('checkbox', { name: 'edit_doc' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'upload_file' }));
     fireEvent.change(screen.getByLabelText('Token access'), { target: { value: 'read' } });
-    expect(screen.queryByRole('checkbox', { name: 'edit_doc' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'upload_file' })).toBeNull();
     expect((screen.getByRole('checkbox', { name: 'read_doc' }) as HTMLInputElement).checked).toBe(true);
   });
 

@@ -154,7 +154,13 @@ async function bootstrapProposals(): Promise<JevProposal[]> {
 }
 
 it('approves native bootstrap parents before subgroups before individually guarded document memberships', async () => {
-  const pending = await bootstrapProposals(); expect(pending).toHaveLength(4);
+  const pending = await bootstrapProposals();
+  expect(pending.map(item => item.mutation)).toEqual([
+    expect.objectContaining({ kind: 'vocabulary', term: expect.objectContaining({ groupKey: 'custom:product' }) }),
+    expect.objectContaining({ kind: 'vocabulary', term: expect.objectContaining({ groupKey }) }),
+    ...documents.map(blockId => expect.objectContaining({ kind: 'document', blockId, patch: { group: groupKey } })),
+  ]);
+  expect(pending).toHaveLength(4);
   expect(pending.filter(item => item.mutation.kind === 'document').every(item => item.sources.length === 1)).toBe(true);
   expect(pending.filter(item => item.mutation.kind === 'document').every(item => item.evidence.some(passage =>
     passage.quote.startsWith('Product Delivery is the Product subgroup') && passage.source.blockId === item.sources[0].blockId))).toBe(true);

@@ -1,3 +1,7 @@
+import type { JevValues } from '../../../shared/jev-types.js';
+import type { JevInputDocument } from './context.js';
+import { sectionNames } from '../../../shared/document-sections.js';
+export { sectionNames } from '../../../shared/document-sections.js';
 import type { Element, Root, RootContent, Text } from 'hast';
 import { unified } from 'unified';
 import rehypeRaw from 'rehype-raw';
@@ -147,4 +151,15 @@ export function passageCoverage(available: SourcePassage[], analyzed: SourcePass
   const total = available.reduce((length, passage) => length + passage.totalTextLength, 0);
   const checked = analyzed.reduce((length, passage) => length + passage.text.length, 0);
   return Math.min(1, checked / Math.max(1, total));
+}
+
+export function sourceState(document: JevInputDocument): JevValues {
+  const available = sourcePassages(document.block.content);
+  const windows = boundedPassages(available);
+  return { id: document.block.id, title: document.block.title, passages: windows.map((passage, index) => ({
+    id: `p${index}`, text: passage.text,
+  })), coverage: passageCoverage(available, windows) };
+}
+export function outlineState(document: JevInputDocument, limit = 14): JevValues {
+  return { ...sourceState(document), sections: sectionNames(document.block.content, limit) };
 }

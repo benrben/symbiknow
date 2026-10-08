@@ -13,6 +13,11 @@ export function jevPrincipalHeaders(id: string): Record<string, string> {
   return { [proofHeader]: `${id}.${signature}` };
 }
 
+/** Credentials minted only inside the application for its full-access assistant. */
+export function symbiApiHeaders(): Record<string, string> {
+  return { authorization: `Bearer ${internalToken}`, ...jevPrincipalHeaders('symbi'), 'x-symbiknow-actor': 'symbi' };
+}
+
 function proofId(request: IncomingMessage): string {
   const proof = request.headers[proofHeader];
   if (typeof proof !== 'string') throw new ApiError(403, 'An authenticated agent identity is required');
@@ -23,11 +28,18 @@ function proofId(request: IncomingMessage): string {
   return id;
 }
 
+export async function currentMcpIdentity(store: CanvasStore, id: string): Promise<JevPrincipal | null> {
+  try { return await currentIdentity(store, id); }
+  catch (error) { if (error instanceof ApiError && error.status === 403) return null; throw error; }
+}
+
 async function currentIdentity(store: CanvasStore, id: string): Promise<JevPrincipal> {
+  if (id === 'symbi') return { id, kind: 'automation', access: 'write', canApprove: true, canConfigure: true };
+  if (id === 'browser-owner') return { id, kind: 'user', access: 'write', canApprove: true, canConfigure: true };
   const settings = await store.secretSettings();
   const token = settings.mcpTokens?.find(item => item.id === id);
   if (token) return { id, kind: 'token', access: token.access ?? 'write', allowedCanvasIds: token.allowedCanvasIds,
-    tools: token.tools, canConfigure: false, canApprove: false };
+    tools: token.tools, canConfigure: Boolean(token.canConfigure), canApprove: Boolean(token.canApprove) };
   const fixed: Record<string, string | undefined> = {
     'env-token-primary': process.env.SYMBIKNOW_MCP_TOKEN, 'env-token-legacy': process.env.ALLTEAM_MCP_TOKEN,
     'access-token-primary': process.env.SYMBIKNOW_ACCESS_TOKEN, 'access-token-legacy': process.env.ALLTEAM_ACCESS_TOKEN,
@@ -39,9 +51,14 @@ async function currentIdentity(store: CanvasStore, id: string): Promise<JevPrinc
 export async function jevApiPrincipal(store: CanvasStore, request: IncomingMessage, agent: boolean): Promise<JevPrincipal> {
   if (isInternal(request)) return currentIdentity(store, proofId(request));
   const identity = await store.mcpTokenIdentity(bearerToken(request));
-  if (identity) return { ...identity, kind: 'token', canConfigure: false, canApprove: false };
+  if (identity) return { ...identity, kind: 'token', canConfigure: Boolean(identity.canConfigure), canApprove: Boolean(identity.canApprove) };
   requireSessionAccess(request);
   if (agent) return { id: 'local-stdio-agent', kind: 'token', access: 'write', canConfigure: false, canApprove: false };
+  return workspaceOwnerPrincipal(request);
+}
+
+export function workspaceOwnerPrincipal(request: IncomingMessage): JevPrincipal {
+  requireSessionAccess(request);
   requireOwnerOrigin(request);
   return { id: 'workspace-owner', kind: 'user', access: 'write', canConfigure: true, canApprove: true };
 }

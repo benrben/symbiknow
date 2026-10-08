@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { advertisedTool, projectMcpDefinitions } from '../server/mcp-registry';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { EditorView } from 'codemirror';
@@ -62,6 +63,12 @@ function fixture(options: {
     const method = init?.method ?? 'GET';
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
     requests.push({ path: requestPath, method, body });
+    if (requestPath === '/api/mcp/browser' && method === 'GET') return Response.json({ tools: projectMcpDefinitions().map(advertisedTool) });
+    if (requestPath === '/api/mcp/browser' && method === 'POST') {
+      const args = body?.arguments as Record<string, unknown>;
+      const result = await fetchResponse(`/api/canvases/${String(args.canvasId)}/blocks`, { method: 'POST', body: JSON.stringify(args) });
+      return Response.json({ content: [{ type: 'text', text: JSON.stringify(await result.json()) }], isError: !result.ok });
+    }
     if (requestPath === '/api/workspaces' && method === 'GET') {
       if (options.failWorkspaces) return Response.json({ error: 'Workspace unavailable' }, { status: 503 });
       return Response.json(workspaces);
@@ -413,11 +420,11 @@ describe('App composition', () => {
     const dialog = screen.getByRole('dialog', { name: 'Settings' });
     fireEvent.change(within(dialog).getByRole('combobox', { name: /Agent profile/ }), { target: { value: 'planner' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /Plugins & loaders/ }));
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Edit documents/ }));
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Outside MCP servers/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save settings' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Settings' })).toBeNull());
     expect(server.requests.find(request => request.path === '/api/settings' && request.method === 'PUT')?.body)
-      .toMatchObject({ agentProfile: 'planner', agentPlugins: ['document_read', 'external_mcp'] });
+      .toMatchObject({ agentProfile: 'planner', agentPlugins: [] });
   });
 
   it('opens a full-page reader with its own URL, pages through documents, and returns with Back', async () => {
@@ -773,6 +780,9 @@ describe('App composition', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('OpenRouter unavailable');
     const failedRequest = server.requests.filter(request => request.path === '/api/chat/stream').at(-1);
     expect(screen.getByText('What now?')).toBeTruthy();
+    // The failed turn owns its original request even after the visible context changes.
+    fireEvent.click(screen.getByRole('button', { name: 'Choose assistant context' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Whole canvas/ }));
     fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('The roadmap is ready.')).toBeTruthy();
     expect(screen.queryByText('OpenRouter unavailable')).toBeNull();
@@ -1224,9 +1234,9 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(server.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();
-    await waitFor(() => expect(registered.has('create_doc')).toBe(true));
+    await waitFor(() => expect(registered.has('upload_file')).toBe(true));
     const before = server.requests.filter(request => request.path === '/api/canvases/planning').length;
-    await registered.get('create_doc')?.({ title: 'MCP note', content: '# From WebMCP' });
+    await registered.get('upload_file')?.({ mode: 'create', filename: 'note.md', idempotencyKey: 'app-note', title: 'MCP note', content: '# From WebMCP' });
     await waitFor(() => expect(server.requests.filter(request => request.path === '/api/canvases/planning').length).toBe(before + 1));
     expect(server.canvas.blocks[0]).toMatchObject({ title: 'MCP note', content: '# From WebMCP' });
 
@@ -1234,7 +1244,7 @@ describe('App composition', () => {
       if (String(input) === '/api/canvases/planning?summary=1' && !init?.method) return Response.json({ error: 'Canvas unavailable' }, { status: 503 });
       return server.fetchResponse(input, init);
     }));
-    await registered.get('create_doc')?.({ title: 'MCP follow-up', content: '# Follow-up' });
+    await registered.get('upload_file')?.({ mode: 'create', filename: 'followup.md', idempotencyKey: 'app-followup', title: 'MCP follow-up', content: '# Follow-up' });
     expect((await screen.findByRole('alert')).textContent).toContain('Canvas unavailable');
 
     cleanup();
@@ -1242,7 +1252,7 @@ describe('App composition', () => {
     vi.stubGlobal('fetch', vi.fn(empty.fetchResponse));
     render(<App/>);
     expect(await screen.findByRole('heading', { name: 'One infinite canvas for people and AI' })).toBeTruthy();
-    await registered.get('create_doc')?.({ canvasId: 'planning', title: 'Offscreen MCP note', content: '# Offscreen' });
+    await registered.get('upload_file')?.({ mode: 'create', filename: 'offscreen.md', idempotencyKey: 'app-offscreen', canvasId: 'planning', title: 'Offscreen MCP note', content: '# Offscreen' });
     expect(empty.canvas.blocks[0].title).toBe('Offscreen MCP note');
     expect(screen.getByRole('heading', { name: 'One infinite canvas for people and AI' })).toBeTruthy();
   });

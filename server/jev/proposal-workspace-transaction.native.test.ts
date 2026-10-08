@@ -104,7 +104,7 @@ it.each(['missing', 'dismissed', 'paused', 'invalid-values', 'unapproved-user', 
   if (label === 'unapproved-user') { principal = { id: 'unapproved', kind: 'user', access: 'write' }; automatic = false; }
   if (label === 'canvas-scope') principal = { ...automationPrincipal, allowedCanvasIds: [native.otherCanvasId] };
   if (label === 'self-approval') {
-    const token = await native.store.createMcpToken('Native source agent', 'propose', { allowedCanvasIds: [native.canvasId], tools: ['jev_propose'] });
+    const token = await native.store.createMcpToken('Native source agent', 'propose', { allowedCanvasIds: [native.canvasId], tools: ['jev_do'] });
     principal = { ...(await native.store.mcpTokenIdentity(token.token))!, kind: 'token' };
     state.jobs.push({ id: proposal.jobId, request: { action: 'profile' }, state: 'completed', principal } as never);
   }

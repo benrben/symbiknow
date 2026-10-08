@@ -42,7 +42,7 @@ export function BlockForm({ model, onClose }: { model: AppDialogModel; onClose: 
     finally { setImporting(false); }
   }
   return <form ref={form} onSubmit={saveBlock} onKeyDownCapture={onKeyDown} className="modal-form">
-    <div className="form-row"><label>Title<input required value={draftBlock.title} onChange={event => setDraftBlock(current => renamedBlockDraft(current, event.target.value))}/></label>
+    <div className="form-row"><label>Title<input dir="auto" required value={draftBlock.title} onChange={event => setDraftBlock(current => renamedBlockDraft(current, event.target.value))}/></label>
       <label>Loader<select value={draftBlock.kind} onChange={event => {
         const kind = event.target.value as BlockKind;
         setDraftBlock(current => updatedBlockDraft(current, kind));

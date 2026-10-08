@@ -24,6 +24,7 @@ function fixedTokenIdentity(token: string): FixedTokenIdentity | null {
 
 function storedTokenIdentity(stored: NonNullable<PrivateSettings['mcpTokens']>[number]) {
   return { id: stored.id, name: stored.name, access: stored.access ?? 'write',
+    canApprove: Boolean(stored.canApprove), canConfigure: Boolean(stored.canConfigure),
     ...(stored.allowedCanvasIds ? { allowedCanvasIds: stored.allowedCanvasIds } : {}),
     ...(stored.tools ? { tools: stored.tools } : {}) };
 }
@@ -58,7 +59,7 @@ export class StorageSettings {
     });
   }
 
-  async createMcpToken(name: unknown, access: unknown = 'read', scope?: { allowedCanvasIds?: unknown; tools?: unknown }): Promise<{ token: string; settings: ChatSettings }> {
+  async createMcpToken(name: unknown, access: unknown = 'read', scope?: { allowedCanvasIds?: unknown; tools?: unknown; canApprove?: unknown; canConfigure?: unknown }): Promise<{ token: string; settings: ChatSettings }> {
     return this.context.files.serialize(async () => {
       const settings = await this.privateSettings();
       if ((settings.mcpTokens ?? []).length >= 20) throw new ApiError(400, 'Revoke an old token before creating another (limit 20)');
@@ -98,7 +99,7 @@ export class StorageSettings {
 
   /** Returns token identity and effective scope, updating last use for stored tokens. */
   async mcpTokenIdentity(token: string): Promise<{ id: string; name: string; access: 'read' | 'propose' | 'write';
-    allowedCanvasIds?: string[]; tools?: string[] } | null> {
+    allowedCanvasIds?: string[]; tools?: string[]; canApprove?: boolean; canConfigure?: boolean } | null> {
     if (!token) return null;
     const fixed = fixedTokenIdentity(token);
     if (fixed) return fixed;

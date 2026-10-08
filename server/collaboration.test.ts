@@ -1,3 +1,5 @@
+import { projectMcpMetadata } from './mcp-registry.js';
+import { canCallMcpTool } from './mcp-scope.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHmac } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -6,7 +8,7 @@ import path from 'node:path';
 import type { Server } from 'node:http';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { CanvasBlock, ChatSettings } from '../shared/types.js';
+import type { CanvasBlock, CanvasTask, ChatSettings } from '../shared/types.js';
 import { createApiServer } from './index.js';
 
 const opened: Array<{ server: Server; dataDir: string }> = [];
@@ -98,11 +100,8 @@ describe('agent collaboration', () => {
 
     const client = new Client({ name: 'codex-mcp-client', version: '1.0.0' });
     const transport = new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { authorization: `Bearer ${created.data.token}` } } });
-    const retainedTools = ['ask_symbi', 'symbi_reflex', 'list_canvases', 'read_canvas', 'search_docs', 'read_doc', 'create_doc',
-      'edit_doc', 'delete_doc', 'move_block', 'link_blocks', 'unlink_blocks', 'upload_file', 'download_file',
-      'claim_doc', 'release_doc', 'list_versions', 'create_branch', 'switch_branch', 'merge_branch', 'delete_branch',
-      'restore_revision', 'import_documents'];
-    const removedTools = ['analyze_canvas', 'find_duplicates', 'merge_documents', 'undo_merge', 'connect_across_canvases', 'score_documents',
+    const retainedTools = projectMcpMetadata().filter(tool => canCallMcpTool('write', tool.name)).map(tool => tool.name);
+    const removedTools = ['create_doc', 'edit_doc', 'import_documents', 'jev_propose', 'analyze_canvas', 'find_duplicates', 'merge_documents', 'undo_merge', 'connect_across_canvases', 'score_documents',
       'run_workspace_automation', 'regroup_canvas', 'organize_canvas', 'connect_documents', 'label_purposes', 'classify_work_areas', 'assign_reviewers'];
     try {
       await client.connect(transport);
@@ -112,11 +111,25 @@ describe('agent collaboration', () => {
       const names = tools.tools.map(tool => tool.name);
       expect(names.sort()).toEqual([...retainedTools].sort());
       for (const name of removedTools) expect(names).not.toContain(name);
-      const output = await client.callTool({ name: 'upload_file', arguments: { canvasId: 'product-roadmap', filename: 'remote.html', content: '<h1>Remote</h1>' } });
-      const uploaded = JSON.parse((output.content as Array<{ text: string }>)[0].text) as CanvasBlock;
+      const output = await client.callTool({ name: 'upload_file', arguments: { mode: 'create', canvasId: 'product-roadmap', filename: 'remote.html', content: '<h1>Remote</h1>', idempotencyKey: 'remote-html' } });
+      expect(output.isError).not.toBe(true);
+      const receipt = JSON.parse((output.content as Array<{ text: string }>)[0].text) as { blockId: string };
+      const uploaded = (await call<CanvasBlock>(base, `/api/canvases/product-roadmap/blocks/${receipt.blockId}`)).data;
       expect(uploaded.content).toContain('format: html');
       const history = await call<{ commits: Array<{ author: string }> }>(base, `/api/canvases/product-roadmap/blocks/${uploaded.id}/versions`);
-      expect(history.data.commits[0].author).toBe('Codex - laptop');
+      expect(history.data.commits[0].author).toBe(created.data.settings.mcpTokens![0].id);
+      const createdTodo = await client.callTool({ name: 'create_todo', arguments: {
+        canvasId: 'product-roadmap', title: 'Remote task', priority: 'high', size: 's',
+      } });
+      expect(createdTodo.isError).not.toBe(true);
+      const task = JSON.parse((createdTodo.content as Array<{ text: string }>)[0].text) as CanvasTask;
+      expect(task.createdBy).toBe(created.data.settings.mcpTokens![0].id);
+      const completedTodo = await client.callTool({ name: 'set_todo_status', arguments: {
+        canvasId: 'product-roadmap', taskId: task.id, expectedRevision: task.revision, status: 'done',
+      } });
+      expect(completedTodo.isError).not.toBe(true);
+      const tasks = await call<CanvasTask[]>(base, '/api/canvases/product-roadmap/todos');
+      expect(tasks.data).toEqual([expect.objectContaining({ id: task.id, status: 'done', updatedBy: created.data.settings.mcpTokens![0].id })]);
     } finally { await disconnect(base, client, transport); }
 
     const pathClient = new Client({ name: 'claude-ai', version: '1.0.0' });

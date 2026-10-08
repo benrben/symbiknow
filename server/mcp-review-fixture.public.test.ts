@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, it, vi } from 'vitest';
@@ -26,6 +26,12 @@ it('keeps a three-document MCP review fixture scoped, bounded, read-only, and of
     await store.createBlock(privateCanvas.id, { title: 'Private nebula cipher', content: '# Private nebula cipher\nKeep hidden.' });
     const before = await readFile(path.join(root, runbook.file), 'utf8');
     const { token } = await store.createMcpToken('Review reader', 'read', { allowedCanvasIds: [allowed.id] });
+    const fullToken = (await store.createMcpToken('All-canvas review reader', 'read')).token;
+    const emptyToken = (await store.createMcpToken('No-canvas review reader', 'read', { allowedCanvasIds: [allowed.id] })).token;
+    // New grants require a nonempty selection; an already stored empty grant must still fail closed.
+    const savedSettings = await store.secretSettings();
+    savedSettings.mcpTokens!.find(item => item.name === 'No-canvas review reader')!.allowedCanvasIds = [];
+    await writeFile(path.join(root, 'settings.json'), JSON.stringify(savedSettings));
     const provider = vi.fn(async () => { throw new Error('Review fixture must not call a provider'); }) as unknown as typeof fetch;
     api = await createApiServer({ dataDir: root, fetcher: provider });
     await new Promise<void>(resolve => api!.listen(0, '127.0.0.1', resolve));
@@ -62,9 +68,49 @@ it('keeps a three-document MCP review fixture scoped, bounded, read-only, and of
       matchIn: 'title' })] });
     const hiddenSearch = (await call('search_docs', { query: 'nebula cipher', limit: 5 })).value;
     expect(hiddenSearch).toMatchObject({ items: [] });
+    await expect.poll(async () => ((await call('ask_symbi', { question: 'rollback anchor', mode: 'semantic' })).value.coverage as {
+      checkedDocuments: number }).checkedDocuments).toBe(2);
     const semantic = (await call('ask_symbi', { question: 'rollback anchor', mode: 'semantic', canvasId: allowed.id })).value;
     expect(semantic.providerUsage).toMatchObject({ requests: 0 });
     expect((semantic.matches as Array<{ canvasId: string }>).every(item => item.canvasId === allowed.id)).toBe(true);
+    const emptyFilter = (await call('ask_symbi', { question: 'rollback anchor', mode: 'semantic', documentIds: [] })).value;
+    expect(emptyFilter.coverage).toMatchObject({ checkedDocuments: 2, eligibleDocuments: 2, pendingDocuments: 0 });
+    expect(emptyFilter.matches).toEqual(expect.arrayContaining([expect.objectContaining({ canvasId: allowed.id, blockId: runbook.id })]));
+    expect((emptyFilter.matches as Array<{ canvasId: string }>).every(item => item.canvasId === allowed.id)).toBe(true);
+    const sourceFilter = (await call('ask_symbi', { question: 'rollback anchor', mode: 'semantic', documentIds: [runbook.id] })).value;
+    expect(sourceFilter.coverage).toMatchObject({ checkedDocuments: 1, eligibleDocuments: 1 });
+    const unavailable = (await call('ask_symbi', { question: 'rollback anchor', mode: 'semantic', documentIds: ['missing-source'] })).value;
+    expect(unavailable.coverage).toMatchObject({ checkedDocuments: 0, eligibleDocuments: 0 });
+    expect(unavailable.matches).toEqual([]);
+    const direct = await fetch(`http://127.0.0.1:${address.port}/api/symbi/ask`, { method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ question: 'rollback anchor', mode: 'semantic', documentIds: [] }) });
+    expect(direct.status).toBe(200);
+    expect(await direct.json()).toMatchObject({ coverage: { checkedDocuments: 2, eligibleDocuments: 2 }, providerUsage: { requests: 0 } });
+    for (const grant of [{ token: fullToken, canvasIds: undefined }, { token: emptyToken, canvasIds: [] }]) {
+      const scopedServer = createProjectMcpServer(`http://127.0.0.1:${address.port}/api`, fetch,
+        { access: 'read', allowedCanvasIds: grant.canvasIds, headers: { authorization: `Bearer ${grant.token}` } });
+      const scopedClient = new Client({ name: 'empty-filter-scope-check', version: '1' });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      try {
+        await scopedServer.connect(serverTransport); await scopedClient.connect(clientTransport);
+        const scopedAsk = () => scopedClient.callTool({ name: 'ask_symbi', arguments: {
+          question: 'private nebula cipher', mode: 'semantic', documentIds: [] } });
+        await expect.poll(async () => JSON.parse(((await scopedAsk()).content as Array<{ text: string }>)[0].text)
+          .coverage.pendingDocuments).toBe(0);
+        const output = await scopedAsk();
+        expect(output.isError).not.toBe(true);
+        const value = JSON.parse((output.content as Array<{ text: string }>)[0].text);
+        expect(value.providerUsage.requests).toBe(0);
+        if (grant.canvasIds) {
+          expect(value.coverage).toMatchObject({ checkedDocuments: 0, eligibleDocuments: 0 });
+          expect(value.matches).toEqual([]);
+        } else {
+          expect(value.coverage.checkedDocuments).toBeGreaterThan(2);
+          expect(value.matches).toEqual(expect.arrayContaining([expect.objectContaining({ canvasId: privateCanvas.id })]));
+        }
+      } finally { await scopedClient.close(); await scopedServer.close(); }
+    }
     const checked = (await call('symbi_reflex', { claim: 'The runbook says to restore the prior release',
       canvasId: allowed.id, documentIds: [runbook.id] })).value;
     expect(checked.verdict).toBe('insufficient_evidence');

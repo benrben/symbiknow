@@ -10,7 +10,7 @@ export type { OpenActivityHistory } from './connection-types';
 
 export function ConnectAgents({ settings, onSettings, onOpenHistory }: { settings: ChatSettings; onSettings: (settings: ChatSettings) => void; onOpenHistory?: OpenActivityHistory }) {
   const health = useConnectionHealth();
-  const tokens = useConnectionTokens(health.workspaces, onSettings);
+  const tokens = useConnectionTokens(health.workspaces, onSettings, settings.mcpToolCatalog);
   return <>
     <ConnectionEndpoint info={health.info}/>
     <ConnectionTokenPanel model={tokens} settings={settings} workspaces={health.workspaces} workspaceError={health.workspaceError} loadWorkspaces={health.loadWorkspaces}/>

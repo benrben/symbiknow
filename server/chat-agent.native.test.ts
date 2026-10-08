@@ -1,4 +1,3 @@
-import { expectRestoredCanvas } from './tests/restoration.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { HumanMessage } from '@langchain/core/messages';
@@ -135,14 +134,14 @@ describe('installed Deep Agents at a native provider boundary', () => {
       .toBeUndefined();
   });
 
-  it('uses the default installed agent through app HTTP, stages a real document tool and applies only after review', async () => {
+  it('uses the default installed agent through app HTTP with a native working-file backend', async () => {
     const { requests, settings } = await provider((body, _request, response) => {
       begin(response);
       if (!body.messages.some(message => message.role === 'tool')) {
-        chunk(response, { role: 'assistant', tool_calls: [{ index: 0, id: 'edit-1', type: 'function',
-          function: { name: 'edit_doc', arguments: '{"blockId":"launch-checklist","content":"# Native reviewed checklist"}' } }] }, 'tool_calls');
+        chunk(response, { role: 'assistant', tool_calls: [{ index: 0, id: 'download-1', type: 'function',
+          function: { name: 'download_file', arguments: '{"blockId":"launch-checklist"}' } }] }, 'tool_calls');
         response.end('data: [DONE]\n\n');
-      } else { chunk(response, { role: 'assistant', content: 'Review the proposed checklist.' }); finish(response); }
+      } else { chunk(response, { role: 'assistant', content: 'Downloaded the checklist for local editing.' }); finish(response); }
     });
     const root = await mkdtemp(path.join(tmpdir(), 'symbi-native-agent-http-'));
     roots.push(root);
@@ -155,22 +154,13 @@ describe('installed Deep Agents at a native provider boundary', () => {
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('Missing app port');
-    const base = `http://127.0.0.1:${address.port}`;
-    const response = await fetch(`${base}/api/chat/stream`, { method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ canvasId: before.id, messages: [{ role: 'user', content: 'Update the launch checklist.' }] }) });
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/chat/stream`, { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ canvasId: before.id, messages: [{ role: 'user', content: 'Download the launch checklist.' }] }) });
     expect(response.status).toBe(200);
     const stream = await response.text();
-    expect(stream).toContain('"name":"edit_doc","message":"Running edit_doc"');
-    expect(stream).toContain('Review the proposed checklist.');
-    const match = /event: chat_proposal\ndata: ([^\n]+)/.exec(stream)!;
-    expect(match).not.toBeNull();
-    const proposal = JSON.parse(match[1]) as { id: string };
-    expect(await store.getCanvas(before.id)).toEqual(before);
-    expect(requests[1].messages.find(message => message.role === 'tool')?.content).toContain('"saved":false');
-    const apply = await fetch(`${base}/api/chat/proposals/${proposal.id}/apply`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-    expect(apply.status).toBe(200);
-    expect((await new CanvasStore(root).getCanvas(before.id)).blocks.find(block => block.id === 'launch-checklist')?.content).toBe('# Native reviewed checklist');
-    expect((await fetch(`${base}/api/chat/proposals/${proposal.id}/undo`, { method: 'POST' })).status).toBe(200);
-    expectRestoredCanvas(await new CanvasStore(root).getCanvas(before.id), before);
+    expect(stream).toContain('"name":"download_file","message":"Finished download_file"');
+    expect(stream).toContain('Downloaded the checklist for local editing.');
+    expect(await store.getCanvas(before.id)).toMatchObject(before);
+    expect(requests[1].messages.find(message => message.role === 'tool')?.content).toContain('"manifestPath"');
   });
 });

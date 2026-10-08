@@ -3,7 +3,7 @@ import { chmod, readFile, rm, writeFile } from 'node:fs/promises';
 import { request as nativeRequest, type IncomingHttpHeaders } from 'node:http';
 import path from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import type { CanvasBlock, WorkspaceSummary } from '../shared/types.js';
+import type { WorkspaceSummary } from '../shared/types.js';
 import { remoteMcpFixture, sdkClient, toolJson } from './mcp-http.test.fixture.js';
 import { CanvasStore } from './storage.js';
 
@@ -109,21 +109,22 @@ it('preserves origin and access validation order before native body parsing, the
   expect(JSON.parse(sandbox.body)).toEqual({ error: 'Requests from sandboxed documents are not allowed' });
   const unauthenticated = await request(base, '/api/workspaces', { body: '{broken', headers: { authorization: 'Bearer invalid' } });
   expect(unauthenticated.status).toBe(401);
-  expect(JSON.parse(unauthenticated.body)).toEqual({ error: 'Sign in with the workspace access token' });
+  expect(JSON.parse(unauthenticated.body)).toEqual({ error: 'The agent token is no longer authorized' });
   const wrongType = await request(base, '/api/workspaces', { body: '{broken', headers: { 'content-type': 'text/plain' } });
   expect(wrongType.status).toBe(415);
   expect(await readFile(manifest, 'utf8')).toBe(before);
-  const { token } = await store.createMcpToken('HTTP native tools', 'write');
+  const { token, settings } = await store.createMcpToken('HTTP native tools', 'write');
   const { client } = await sdkClient(base, token);
-  const result = await client.callTool({ name: 'create_doc', arguments: {
-    canvasId: 'product-roadmap', title: 'SDK after invalid HTTP', content: '# Native SDK recovery',
+  const result = await client.callTool({ name: 'upload_file', arguments: {
+    mode: 'create', canvasId: 'product-roadmap', filename: 'native-recovery.md', title: 'SDK after invalid HTTP', content: '# Native SDK recovery', idempotencyKey: 'native-recovery',
   } });
   expect(result.isError).not.toBe(true);
-  const document = toolJson<CanvasBlock>(result);
+  const receipt = toolJson<{ blockId: string }>(result);
   const fresh = new CanvasStore(root);
+  const document = await fresh.getCanvasBlock('product-roadmap', receipt.blockId);
   expect((await fresh.getCanvas('product-roadmap')).blocks.find(block => block.id === document.id)?.content).toBe('# Native SDK recovery');
   expect(await readFile(path.join(root, document.file), 'utf8')).toBe('# Native SDK recovery');
-  expect((await fresh.documentHistory('product-roadmap', document.id)).commits[0].author).toBe('Codex - HTTP native tools');
+  expect((await fresh.documentHistory('product-roadmap', document.id)).commits[0].author).toBe(settings.mcpTokens![0].id);
 });
 
 it('serves native static bytes, fallback pages, content types and cache headers without weakening traversal protection', async () => {

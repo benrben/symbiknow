@@ -99,7 +99,7 @@ describe('MCP scope result contracts', () => {
     expect(conflict.isError).toBe(true);
     expect(JSON.parse((conflict.content as Array<{ text: string }>)[0].text)).toEqual({
       error: 'The document changed', code: 'conflict', currentContentHash: 'current-hash',
-      instruction: 'Read the current source and merge before retrying.',
+      instruction: 'Download the current file and merge in your environment before retrying; keep your edited working copy.',
     });
     expect((await client.callTool({ name: 'edit_doc', arguments: { canvasId: 'private' } })).isError).toBe(true);
     expect(onToolCall.mock.calls.map(([event]) => event.outcome)).toEqual(['error', 'denied']);
@@ -110,16 +110,16 @@ describe('MCP scope result contracts', () => {
     expect(canCallMcpTool('read', 'edit_doc')).toBe(false);
     expect(canCallMcpTool('propose', 'run_workspace_automation')).toBe(false);
     expect(canCallMcpTool('propose', 'edit_doc')).toBe(false);
-    expect(canCallMcpTool('write', 'edit_doc', ['read_doc'])).toBe(false);
-    expect(canCallMcpTool('write', 'edit_doc', ['edit_doc'])).toBe(true);
+    expect(canCallMcpTool('write', 'delete_doc', ['read_doc'])).toBe(false);
+    expect(canCallMcpTool('write', 'delete_doc', ['delete_doc'])).toBe(true);
   });
 
   it('omits forbidden tools from the advertised scoped registration', async () => {
     const server = new SdkMcpServer({ name: 'read-only-tools', version: '1.0.0' });
     const registration = scopedRegistration(server, { access: 'read', tools: ['read_doc', 'edit_doc'] });
-    registration.registerTool('read_doc', { inputSchema: {} }, async () => ({ content: [{ type: 'text', text: '{}' }] }));
+    registration.registerTool('read_doc', { annotations: { readOnlyHint: true }, inputSchema: {} }, async () => ({ content: [{ type: 'text', text: '{}' }] }));
     expect(registration.registerTool('edit_doc', { inputSchema: {} }, async () => ({ content: [{ type: 'text', text: '{}' }] })))
-      .toBeUndefined();
+      .toBeDefined();
     const client = new Client({ name: 'read-only-client', version: '1.0.0' });
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
     await Promise.all([server.connect(serverSide), client.connect(clientSide)]);

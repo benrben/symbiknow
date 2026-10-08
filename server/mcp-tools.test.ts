@@ -42,11 +42,10 @@ afterEach(async () => {
 });
 
 describe('public MCP tool request contracts', () => {
-  it('keeps document search, branch reads, and reviewed HTML writes scoped to the requested canvas', async () => {
+  it('keeps search and branch reads scoped and removes direct content mutation tools', async () => {
     const html = '<!doctype html><title>Guide</title>';
-    const { call, requests } = await connect(request => Response.json({
-      ...block, ...request.body,
-      content: request.body?.content ?? (request.path.includes('?branch=') ? `---\nformat: html\n---\n${html}` : block.content),
+    const { client, call, requests } = await connect(request => Response.json({
+      ...block, content: request.path.includes('?branch=') ? `---\nformat: html\n---\n${html}` : block.content,
     }));
     expect((await call('search_docs', { query: 'guide & review', canvasId: 'canvas two', limit: 7, cursor: 'next/page' })).output.isError).not.toBe(true);
     expect((await call('read_canvas', { canvasId: 'canvas two', includeContent: false, limit: 7, cursor: 'next/page' })).output.isError).not.toBe(true);
@@ -54,29 +53,17 @@ describe('public MCP tool request contracts', () => {
       .toMatchObject({ kind: 'html', storageKind: 'markdown' });
     expect((await call('read_doc', { canvasId: 'canvas two', blockId: 'doc' })).value)
       .toMatchObject({ kind: 'markdown', content: block.content });
-    expect((await call('create_doc', { canvasId: 'canvas two', title: 'Guide', kind: 'html', content: html })).value)
-      .toMatchObject({ kind: 'html', storageKind: 'markdown' });
-    const beforeRejectedEdit = requests.length;
-    expect((await call('edit_doc', { canvasId: 'canvas two', blockId: 'doc', content: 'Updated' })).text)
-      .toContain('expectedContentHash from read_doc is required');
-    expect(requests).toHaveLength(beforeRejectedEdit);
-    expect((await call('edit_doc', { canvasId: 'canvas two', blockId: 'doc', branch: 'private/review',
-      expectedContentHash: 'reviewed-hash', kind: 'html', content: html })).value)
-      .toMatchObject({ kind: 'html', storageKind: 'markdown' });
-    expect((await call('edit_doc', { canvasId: 'canvas two', blockId: 'doc', expectedContentHash: 'reviewed-hash',
-      content: '# Updated' })).value).toMatchObject({ kind: 'markdown', content: '# Updated' });
+    const names = (await client.listTools()).tools.map(tool => tool.name);
+    for (const name of ['create_doc', 'edit_doc', 'import_documents']) {
+      expect(names).not.toContain(name);
+      expect((await call(name, { canvasId: 'canvas two', blockId: 'doc', content: 'Updated' })).output.isError).toBe(true);
+    }
     expect(requests.map(request => [request.method, request.path])).toEqual([
       ['GET', '/api/search?q=guide%20%26%20review&canvasId=canvas%20two&limit=7&cursor=next%2Fpage'],
       ['GET', '/api/canvases/canvas%20two?includeContent=false&limit=7&cursor=next%2Fpage'],
       ['GET', '/api/canvases/canvas%20two/blocks/doc?branch=private%2Freview'],
       ['GET', '/api/canvases/canvas%20two/blocks/doc'],
-      ['POST', '/api/canvases/canvas%20two/blocks'],
-      ['PUT', '/api/canvases/canvas%20two/blocks/doc?branch=private%2Freview'],
-      ['PUT', '/api/canvases/canvas%20two/blocks/doc'],
     ]);
-    expect(requests[4].body).toMatchObject({ kind: 'markdown', content: `---\nformat: html\n---\n${html}` });
-    expect(requests[5].body).toMatchObject({ kind: 'markdown', expectedContentHash: 'reviewed-hash' });
-    expect(requests[5].body).not.toHaveProperty('branch');
   });
 
   it('forwards bounded revision pages with opaque cursors', async () => {
@@ -141,78 +128,63 @@ describe('public MCP tool request contracts', () => {
   it('derives actors and auth headers from current, legacy, and client identities', async () => {
     for (const [key, value, actor] of [['CANVAS_API_TOKEN', 'api-token', 'Codex'], ['SYMBIKNOW_ACCESS_TOKEN', 'new-token', 'Codex'], ['ALLTEAM_ACCESS_TOKEN', 'legacy-token', 'Codex']]) {
       vi.stubEnv(key, value);
-      const { call, requests } = await connect(() => Response.json([]), { actorSuffix: 'Reviewer', headers: { custom: 'header' } }, 'codex');
-      await call('list_canvases'); expect(requests[0].headers).toMatchObject({ authorization: `Bearer ${value}`, 'x-symbiknow-actor': `${actor} - Reviewer`, custom: 'header' });
+      const { call, requests } = await connect(request => Response.json(request.path === '/api/mcp/caller'
+        ? { id: 'authenticated-agent', access: 'write' } : request.path === '/api/mcp/calls' ? { ok: true } : []),
+      { actorSuffix: 'Reviewer', headers: { custom: 'header' } }, 'codex');
+      expect((await call('list_canvases')).output.isError).not.toBe(true);
+      expect(requests.find(request => request.path.startsWith('/api/workspaces'))!.headers).toMatchObject({ authorization: `Bearer ${value}`, 'x-symbiknow-actor': 'authenticated-agent', 'x-symbiknow-agent-name': `${actor} - Reviewer`, custom: 'header' });
       vi.stubEnv(key, '');
     }
     const { call, requests } = await connect(() => Response.json([]), {}, '');
-    await call('list_canvases'); expect(requests[0].headers['x-symbiknow-actor']).toBe('MCP agent');
+    await call('list_canvases'); expect(requests[0].headers['x-symbiknow-agent-name']).toBe('MCP agent');
   });
 });
 
 describe('public MCP local and remote file transfer', () => {
-  it('validates upload inputs and enforces file size before reaching the API', async () => {
+  const checkoutId = '12345678-1234-4234-8234-123456789abc';
+  const downloaded = { filename: 'doc.md', content: '# Document', manifest: { checkoutId, canvasId: 'canvas', documentId: 'doc', kind: 'markdown' } };
+  const upload = { mode: 'create', canvasId: 'canvas', idempotencyKey: 'local-upload' };
+  it('validates local upload inputs and size before reaching the API', async () => {
     const root = await temporary(); const file = path.join(root, 'note.md'); await writeFile(file, '# Note');
     const tooLarge = path.join(root, 'large.md'); await writeFile(tooLarge, Buffer.alloc(999_901));
     const { call, requests } = await connect(() => Response.json(block));
-    expect((await call('upload_file', { canvasId: 'canvas', filename: 'note.md', sourcePath: file, content: 'both' })).text).toContain('Provide content or sourcePath, not both.');
-    expect((await call('upload_file', { canvasId: 'canvas', filename: 'note.md' })).text).toContain('Provide the complete file content.');
-    expect((await call('upload_file', { canvasId: 'canvas', content: '# Note' })).text).toContain('filename is required');
-    expect((await call('upload_file', { canvasId: 'canvas', sourcePath: tooLarge })).text).toContain('file is too large');
+    expect((await call('upload_file', { ...upload, filename: 'note.md', sourcePath: file, content: 'both' })).text).toContain('exactly one');
+    expect((await call('upload_file', { ...upload, filename: 'note.md' })).text).toContain('exactly one');
+    expect((await call('upload_file', { ...upload, content: '# Note' })).text).toContain('filename is required');
+    expect((await call('upload_file', { ...upload, sourcePath: tooLarge })).text).toContain('file is too large');
     expect(requests).toEqual([]);
   });
-
-  it('uploads local files and preserves explicit overwrite review metadata', async () => {
+  it('sends local edited bytes and explicit replacement identity through the canonical upload API', async () => {
     const root = await temporary(); const file = path.join(root, 'note.md'); await writeFile(file, '# Local note');
-    const { call, requests } = await connect(request => Response.json({ ...block, ...request.body }));
-    expect((await call('upload_file', { canvasId: 'canvas', sourcePath: file })).value).toMatchObject({ overwritten: false, content: '# Local note' });
-    expect((await call('upload_file', { canvasId: 'canvas', blockId: 'doc', sourcePath: file, filename: 'alternate.md', title: 'Replacement', expectedContentHash: 'hash', message: 'Reviewed' })).value)
-      .toMatchObject({ overwritten: true, title: 'Replacement', content: '# Local note' });
-    expect(requests[1].body).toEqual({ content: '# Local note', kind: 'markdown', title: 'Replacement', expectedContentHash: 'hash', message: 'Reviewed' });
+    const { call, requests } = await connect(request => Response.json(request.body));
+    expect((await call('upload_file', { ...upload, sourcePath: file })).value).toMatchObject({ mode: 'create', filename: 'note.md', content: '# Local note' });
+    await call('upload_file', { ...upload, mode: 'replace', checkoutId, sourcePath: file, title: 'Replacement', message: 'Reviewed' });
+    expect(requests[1]).toMatchObject({ path: '/api/file-uploads', method: 'POST', body: {
+      mode: 'replace', canvasId: 'canvas', checkoutId, content: '# Local note', filename: 'note.md', title: 'Replacement', message: 'Reviewed', idempotencyKey: 'local-upload' } });
+    expect(requests[1].body).not.toHaveProperty('sourcePath');
   });
-
-  it('guards replacement hashes and preserves HTML source and loader identity in upload and download responses', async () => {
-    const html = '<!doctype html><title>Offline page</title>';
-    const { call, requests } = await connect(request => Response.json({ ...block, ...request.body, file: 'docs/page.md',
-      ...(request.method === 'GET' ? { content: `---\nformat: html\n---\n${html}` } : {}) }));
-    expect((await call('upload_file', { canvasId: 'canvas', blockId: 'doc', filename: 'page.html', content: html })).text)
-      .toContain('expectedContentHash from read_doc is required');
-    expect(requests).toEqual([]);
-    const created = await call('upload_file', { canvasId: 'canvas', filename: 'page.html', content: html });
-    expect(created.value).toMatchObject({ kind: 'html', storageKind: 'markdown', overwritten: false });
-    const replaced = await call('upload_file', { canvasId: 'canvas', blockId: 'doc', filename: 'page.html',
-      content: html, expectedContentHash: 'reviewed-hash' });
-    expect(replaced.value).toMatchObject({ kind: 'html', storageKind: 'markdown', overwritten: true });
-    expect(requests[1].body).toEqual({ content: `---\nformat: html\n---\n${html}`, kind: 'markdown', expectedContentHash: 'reviewed-hash' });
-
-    const downloaded = await call('download_file', { canvasId: 'canvas', blockId: 'doc' });
-    expect(downloaded.value).toMatchObject({ kind: 'html', storageKind: 'markdown', filename: 'page.md',
-      content: `---\nformat: html\n---\n${html}` });
-    expect(downloaded.value).not.toHaveProperty('savedTo');
-  });
-
-  it('writes downloads exclusively unless overwrite is requested', async () => {
+  it('writes source and its manifest exclusively and keeps existing edits without overwrite', async () => {
     const root = await temporary(); const destinationPath = path.join(root, 'saved.md');
-    const { call } = await connect(() => Response.json(block));
+    const { call } = await connect(() => Response.json(downloaded));
     expect((await call('download_file', { canvasId: 'canvas', blockId: 'doc', destinationPath })).value).toMatchObject({ savedTo: destinationPath, content: '# Document' });
+    expect(JSON.parse(await readFile(destinationPath + '.symbi.json', 'utf8'))).toEqual(downloaded.manifest);
     await writeFile(destinationPath, 'Keep existing');
     expect((await call('download_file', { canvasId: 'canvas', blockId: 'doc', destinationPath })).output.isError).toBe(true);
     expect(await readFile(destinationPath, 'utf8')).toBe('Keep existing');
-    expect((await call('download_file', { canvasId: 'canvas', blockId: 'doc', destinationPath, overwrite: true })).output.isError).not.toBe(true);
+    await call('download_file', { canvasId: 'canvas', blockId: 'doc', destinationPath, overwrite: true });
     expect(await readFile(destinationPath, 'utf8')).toBe('# Document');
   });
-
   it('does not grant remote clients local path parameters', async () => {
     const root = await temporary(); const file = path.join(root, 'private.md'); await writeFile(file, '# Private');
     const destinationPath = path.join(root, 'remote.md');
-    const { client, call, requests } = await connect(() => Response.json(block), { localFiles: false });
+    const { client, call, requests } = await connect(request => Response.json(request.path === '/api/file-checkouts' ? downloaded : request.body), { localFiles: false });
     const listed = (await client.listTools()).tools;
     expect(listed.find(tool => tool.name === 'upload_file')?.inputSchema.properties).not.toHaveProperty('sourcePath');
     expect(listed.find(tool => tool.name === 'download_file')?.inputSchema.properties).not.toHaveProperty('destinationPath');
-    expect((await call('upload_file', { canvasId: 'canvas', sourcePath: file })).output.isError).toBe(true);
-    await call('upload_file', { canvasId: 'canvas', filename: 'public.md', content: '# Public' });
-    const downloaded = await call('download_file', { canvasId: 'canvas', blockId: 'doc', destinationPath, overwrite: true });
-    expect(downloaded.value).not.toHaveProperty('savedTo');
+    expect((await call('upload_file', { ...upload, sourcePath: file })).output.isError).toBe(true);
+    await call('upload_file', { ...upload, filename: 'public.md', content: '# Public' });
+    const result = await call('download_file', { canvasId: 'canvas', blockId: 'doc', destinationPath, overwrite: true });
+    expect(result.value).not.toHaveProperty('savedTo');
     await expect(readFile(destinationPath)).rejects.toMatchObject({ code: 'ENOENT' });
     expect(requests[0].body).toMatchObject({ content: '# Public' });
   });

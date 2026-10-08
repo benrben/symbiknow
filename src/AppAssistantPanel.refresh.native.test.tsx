@@ -8,8 +8,17 @@ import { CanvasStore } from '../server/storage';
 import { JevWorkspaceFiles } from '../server/jev/workspace';
 import type { CanvasBlock, CanvasDocument } from '../shared/types';
 import type { JevWorkspaceState } from '../shared/jev-types';
+import type { JevQuestion } from '../server/jev';
+import { resolveSharedQuestionSources, resolveSharedQuestionTexts } from '../server/jev/actions/question-state-pool.test.helpers';
 
-installAssistantBrowser();
+installAssistantBrowser(async store => {
+  const canvas = await store.getCanvas('product-roadmap'); workspaceId = canvas.workspaceId;
+  for (const workspace of await store.listWorkspaces()) {
+    for (const summary of workspace.canvases) if (summary.id !== canvas.id) await store.deleteCanvas(summary.id);
+  }
+  for (const block of canvas.blocks) await store.deleteBlock(canvas.id, block.id);
+  original = await store.createBlock(canvas.id, { title: 'Release checklist', content: '# Release operations\nRelease operations require reviewing the deployment checklist before releasing the service.' });
+});
 
 let fixture: Awaited<ReturnType<typeof assistantFixture>>;
 let original: CanvasBlock;
@@ -42,21 +51,42 @@ async function toggleDetails(scope: HTMLElement, title: string) {
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
 }
 
+type RefreshDecisionState = { logicalTopicCandidates?: Array<{ name: string }>; labelCandidates?: Array<{ name: string }>;
+  selectedGroup?: { name: string }; document?: { passages: Array<{ id: string; text: string }> }; source?: { passages: Array<{ id: string; text: string }> } };
+function refreshQuestionState(id: string, wire: Record<string, unknown>) {
+  let state = wire; let prefix: RegExpExecArray | null;
+  while ((prefix = /^(\d+)__(.+)$/.exec(id))) { state = (state.questionSets as Record<string, unknown>[])[Number(prefix[1])]; id = prefix[2]; }
+  return { id, state: resolveSharedQuestionSources(state, wire.sourceStates) as RefreshDecisionState };
+}
+async function refreshProvider(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const request = JSON.parse(String(init?.body)) as { state: Record<string, unknown>; questions: Record<string, JevQuestion> };
+  const response = await acceptanceReflexProvider(input, init);
+  const result = await response.json() as { answers: Record<string, unknown> };
+  const questions = resolveSharedQuestionTexts(request.questions, request.state.questionTexts);
+  for (const [wireId, question] of Object.entries(questions)) {
+    const { id, state } = refreshQuestionState(wireId, request.state);
+    const candidate = /^logicalTopic/.test(id) ? state.logicalTopicCandidates?.[Number(id.split('_')[1])]
+      : /^label_/.test(id) ? state.labelCandidates?.[Number(id.split('_')[1])] : state.selectedGroup;
+    if (question.type === 'noul' && candidate) result.answers[wireId] = { type: 'noul', noul: candidate.name === 'Release operations' ? .99 : .01 };
+    if (question.type !== 'choice') continue;
+    let selected: string | undefined;
+    if (id === 'group') selected = Object.keys(question.criteria).find(key => question.criteria[key].startsWith('Release operations (')) ?? 'none';
+    if (/^logicalTopicEvidence_|^evidence(?:_|$)|^keyPassage$/.test(id)) selected = Object.keys(question.criteria)
+      .find(key => question.criteria[key].startsWith('Release operations require reviewing')) ?? 'none';
+    if (selected) result.answers[wireId] = { type: 'choice', choice: selected, confidence: .99,
+      probabilities: Object.fromEntries(Object.keys(question.criteria).map(key => [key, Number(key === selected)])) };
+  }
+  return Response.json(result);
+}
+
 beforeEach(async () => {
   vi.stubEnv('TYPESAFE_API_KEY', '');
   providerCalls = 0; calls.length = 0; stateGate = undefined;
   const providerHeld = new Promise<void>(done => { releaseProvider = done; });
-  fixture = await assistantFixture(network, false, async (request, root) => {
-    const store = new CanvasStore(root);
-    const canvas = await store.getCanvas('product-roadmap'); workspaceId = canvas.workspaceId;
-    for (const workspace of await store.listWorkspaces()) {
-      for (const summary of workspace.canvases) if (summary.id !== canvas.id) await store.deleteCanvas(summary.id);
-    }
-    for (const block of canvas.blocks) await store.deleteBlock(canvas.id, block.id);
-    original = await store.createBlock(canvas.id, { title: 'Release checklist', content: '# Release operations\nRelease operations require reviewing the deployment checklist before releasing the service.' });
+  fixture = await assistantFixture(network, false, async request => {
     const ready = await request(`/api/workspaces/${workspaceId}/jev/settings`, { ...jsonBody({}), method: 'PUT' });
     expect(ready.ok).toBe(true);
-  }, { fetcher: async (input, init) => { providerCalls++; await providerHeld; return acceptanceReflexProvider(input, init); } });
+  }, { fetcher: async (input, init) => { providerCalls++; await providerHeld; return refreshProvider(input, init); } });
 });
 afterEach(() => { releaseProvider(); });
 

@@ -15,7 +15,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('native chat stream preparation boundaries', () => {
 
-  it('keeps document retrieval disabled over native HTTP and restores local sources after the plugin is enabled', async () => {
+  it('keeps canonical document tools available to full-access Symbi regardless of old plugin switches', async () => {
     const setup = await fixture();
     await setup.store.updateSettings({ agentPlugins: [] });
     const base = await setup.app();
@@ -25,14 +25,14 @@ describe('native chat stream preparation boundaries', () => {
     expect(response.status).toBe(200);
     const text = await response.text();
     expect(text).toContain('The release ');
-    expect(text).not.toContain('event: answer_canvas');
-    expect(text).not.toContain('event: research_canvas_patch');
+    expect(text).toContain('event: answer_canvas');
+    expect(text).toContain('event: research_canvas_patch');
     const names = setup.model.requests[0].body.tools.map(tool => tool.function.name);
     expect(names).not.toContain('create_task');
-    for (const name of ['read_doc', 'search_docs', 'draw_research_canvas']) expect(names).not.toContain(name);
+    for (const name of ['read_doc', 'search_docs', 'download_file', 'upload_file', 'ask_symbi', 'jev_do', 'draw_research_canvas']) expect(names).toContain(name);
     expect((await new CanvasStore(setup.root).getSettings()).agentPlugins).toEqual([]);
     expect((await fetch(`${base}/api/settings`, { method: 'PUT', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ agentPlugins: ['document_read'] }) })).status).toBe(200);
+      body: JSON.stringify({ agentPlugins: ['external_mcp'] }) })).status).toBe(200);
     const recovered = await post();
     expect(recovered.status).toBe(200);
     const recoveredText = await recovered.text();
@@ -148,7 +148,7 @@ describe('native chat stream preparation boundaries', () => {
     await writeFile(manifest, '{broken workspace manifest');
     remote.release.resolve();
     const fallback = await pending;
-    expect(warning).toHaveBeenCalledWith('Local chat source retrieval unavailable; continuing with document tools.', 'SyntaxError');
+    expect(warning).toHaveBeenCalledWith('Local chat source retrieval unavailable; continuing with document tools.', 'Error');
     await writeFile(manifest, original);
     const result = await events(fallback);
     expect(result.some(event => event.kind === 'answer_canvas')).toBe(false);
@@ -196,7 +196,7 @@ describe('native chat stream preparation boundaries', () => {
     const stop = new AbortController();
     const reason = new Error('Preparation was canceled before entry');
     stop.abort(reason);
-    await expect(preparedChatStream(setup.store, request, config, chatAgent, stop.signal)).rejects.toBe(reason);
+    await expect(preparedChatStream(setup.store, request, config, chatAgent, { signal: stop.signal })).rejects.toBe(reason);
     expect(setup.model.requests).toEqual([]);
     const recovered = await preparedChatStream(setup.store, request, config, chatAgent);
     expect((await tokens(recovered)).join('')).toBe('The release requires QA approval.');

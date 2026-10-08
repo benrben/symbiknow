@@ -40,7 +40,8 @@ describe('HTTP search and chat roots', () => {
       yield { messages: [...messages, new AIMessage('Read via HTTP tool.')] };
     });
     const { base, root, store } = await chatHttpFixture({ agentFactory: factory });
-    await store.updateSettings({ agentPlugins: ['document_read'] });
+    await store.updateSettings({ agentPlugins: ['external_mcp'] });
+    await store.ensureJevStamps('product-roadmap');
     const before = await store.getCanvas('product-roadmap');
     const body = { canvasId: before.id, messages: [{ role: 'user', content: 'Earlier question' },
       { role: 'assistant', content: 'Earlier answer' }, { role: 'user', content: 'Read the launch checklist' }] };

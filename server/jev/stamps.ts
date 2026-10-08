@@ -3,6 +3,7 @@ import type { CanvasBlock } from '../../shared/types.js';
 import type { JevSourceSnapshot } from '../../shared/jev-types.js';
 import { ApiError } from '../errors.js';
 import { contentHash } from '../storage-shapes.js';
+import { automaticGroupingAllowed } from './group-ownership.js';
 
 export interface JevWriteOrigin { mutationId: string; managed?: boolean; canvasId?: string }
 const managedFields = ['group', 'tags', 'headline', 'freshness', 'links', 'crossLinks'];
@@ -28,7 +29,10 @@ function managedOwnership(previous: CanvasBlock, updated: CanvasBlock, origin: J
   const previousCross = new Set((previous.crossLinks ?? []).map(link => `${link.canvasId}:${link.blockId}`));
   added.push(...(updated.crossLinks ?? []).filter(link => !previousCross.has(`${link.canvasId}:${link.blockId}`))
     .map(link => `link:${link.canvasId}:${link.blockId}`));
-  return { ...old, managed: [...new Set([...old.managed, ...added])] };
+  return { ...old, managed: [...new Set([...old.managed, ...added, ...acquiredGroup(previous, updated)])] };
+}
+function acquiredGroup(previous: CanvasBlock, updated: CanvasBlock): string[] {
+  return !previous.group && updated.group && automaticGroupingAllowed(previous) ? ['group'] : [];
 }
 function manualOwnership(previous: CanvasBlock, updated: CanvasBlock, fields: string[]) {
   const old = initializeJevStamp(previous).jevOwnership!;

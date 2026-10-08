@@ -1,0 +1,750 @@
+{
+  "measuredAt": "2026-10-07",
+  "model": "jev-1.13.0",
+  "questionVersion": "symbi-reflex-13",
+  "organizationVersion": "automatic-knowledge-14",
+  "corpus": "Frozen Project Atlas documentation only",
+  "heldoutStatus": "Synthetic home and filing transmission approved 2026-10-07. After billing was restored, both repeats per action exited 0: home 10/10 with zero wrong moves; supplied-group filing 12/12 with zero off-topic existing-group errors in four cases. Sequential group discovery is not measured by these heldout runners.",
+  "sourceHashes": {
+    "README.md": "b23f8398d74bd9452235456e06a7d96b8f6961f03b65442260572fef3dd3fbea",
+    "architecture.md": "749f310f744d1f9592a132ac69802a00737cf8c0a6787456f59e28baf2546acb",
+    "assistant-and-research.md": "b8dcc29ac8ff2d4cd3a9ee3a5321243fec680d9943b58559b9adb21c91a3398c",
+    "brand-and-ui.md": "d58aa215405563b2d24b992dc1c5926cf60b604a626e6e8abc15154add6c17e5",
+    "canvas-ui.md": "2d26270d6749c9a8eed6ffea898e74d091d153a22f7d92da26b086a566d873b1",
+    "chat-internals.md": "3da706955b9ec3376c62dc3a98b4d12a94dffce97f822c70afb3cf5a1be11abe",
+    "data-model.md": "a988e8022ceccf8dcad5e4220e9c58e8e6045114a788f33b708c4e96a9490d56",
+    "document-operations.md": "adb01d18e9ae0ea05cb160fa989093dc2ac6cdfe9b86b7fed0e74beefa187b33",
+    "errors.md": "2f926eb5d74ba1b633cc56d02730c84524cc773c09541317d5b0a93001eaa3af",
+    "history.md": "b9aef5320296312cd7dce333b29ae6a2a54bd926779ff8f96ebfd6749b7751b0",
+    "mcp-and-api.md": "186afa814627b5304fd4a7f000e0be6d1cfd33738ab58b95f24e0d6ec8bd0389",
+    "operations.md": "5a1effbb1ec1f0b36d0ac61f14370644c7d70a8c599301df516cd61f64d627f7",
+    "plan-status.md": "321952040f559c3bf4132aa4aa53e31337910d43e37f9a47dae5c79d78abe4ca",
+    "reflex-internals.md": "4c74aa771f8f54e9473431f331effaf03408d3959a2b0bea492793329205ea01",
+    "safe-collaboration.md": "a7ff1f42f33acbb8f77db978bc96c0e684fe55516ddecf48a0aaef96abd1bc45",
+    "sdk-and-webmcp.md": "e01f4abe1a4b4af19313f346fa74dc93da21532a456b4919a9b97b0971042956",
+    "search-and-brain-tools.md": "76badabdb4f370b8bd6c65dc7b8c2c25729034abd36a8fcc0ec7bc671a2be7d9",
+    "security-and-access.md": "7778c22b145f8c43a24d55a02612636aa0642c10916e6fcf83812073f83c58eb",
+    "symbi-reflex.md": "f1cbb1523b8ccd9c7c1f113c641de3c133009b07200129d9fb666e9c568ccbcf",
+    "system-map.html": "a133816f03ffe4ced08155484df89a5a26f407814a5b41a59c47f96e28791c6b",
+    "tasks-board.md": "08e900b58f3f06d1b17999552d961b301e27231f6744569330683c59a204d75f",
+    "testing.md": "651fa76d2906682ca45038c9de2a885b72f0667d91965284f487afb0473f391a"
+  },
+  "runs": [
+    {
+      "report": "scripts/jev-bench/out/dup3-baseline.json",
+      "sha256": "529ef53713d082e87ddda06974eebf84ccff98c15ffd36ed90d7ec0cdfe463cb",
+      "action": "duplicate",
+      "correct": 15,
+      "cases": 21,
+      "failures": [
+        "older:operations",
+        "older:data-model",
+        "older:safe-collaboration",
+        "older:canvas-ui",
+        "older:assistant-and-research",
+        "older:security-and-access"
+      ]
+    },
+    {
+      "report": "scripts/jev-bench/out/dup3-final-r1.json",
+      "sha256": "08f2a309264a2bc6f5a1bdca2fb26a243f9b04776b4a22a6b27899ce7fc8c65b",
+      "action": "duplicate",
+      "correct": 21,
+      "cases": 21,
+      "failures": []
+    },
+    {
+      "report": "scripts/jev-bench/out/dup3-final-r2.json",
+      "sha256": "59f6eac8857a138de266681797a30043fc662fe913ba4ebafbdb0948f295ff2a",
+      "action": "duplicate",
+      "correct": 21,
+      "cases": 21,
+      "failures": []
+    },
+    {
+      "report": "scripts/jev-bench/out/link-baseline.json",
+      "sha256": "7e245de08542f329445da0480de65911f0bb94dd96fff9f1bfa58de4cf8b3c3b",
+      "action": "automatic-link",
+      "positives": 8,
+      "found": 1,
+      "negatives": 14,
+      "wrongLinks": 0
+    },
+    {
+      "report": "scripts/jev-bench/out/link-r1.json",
+      "sha256": "e576c34d475ac6b984c30f59632e9aeae0954e2a1e119af429a10523ea886d8e",
+      "action": "automatic-link",
+      "positives": 8,
+      "found": 7,
+      "negatives": 14,
+      "wrongLinks": 0
+    },
+    {
+      "report": "scripts/jev-bench/out/link-r2.json",
+      "sha256": "b66af737e6d54294565092c3d5da935b6209a7959dda896d151e58f37b93a436",
+      "action": "automatic-link",
+      "positives": 8,
+      "found": 7,
+      "negatives": 14,
+      "wrongLinks": 0
+    },
+    {
+      "report": "scripts/jev-bench/out/profile-baseline-profile-r1.json",
+      "sha256": "c04167264a66a661fcd916089ddf076db234c51b67e2c8093a99e02701170c78",
+      "action": "profile-and-label",
+      "suites": [
+        {
+          "suite": "atlas",
+          "documents": 13,
+          "cases": 64,
+          "profileCorrect": 59,
+          "failures": [
+            {
+              "topic": "Typography",
+              "truth": true,
+              "hard": false,
+              "raw": 0.34,
+              "calibrated": null,
+              "profileAccepted": false,
+              "labelAccepted": false
+            },
+            {
+              "topic": "Secrets management",
+              "truth": true,
+              "hard": false,
+              "raw": 0.34,
+              "calibrated": null,
+              "profileAccepted": false,
+              "labelAccepted": false
+            },
+            {
+              "topic": "Streaming responses",
+              "truth": true,
+              "hard": false,
+              "raw": 0.63,
+              "calibrated": null,
+              "profileAccepted": false,
+              "labelAccepted": false
+            },
+            {
+              "topic": "Document import",
+              "truth": true,
+              "hard": false,
+              "raw": 0.36,
+              "calibrated": null,
+              "profileAccepted": false,
+              "labelAccepted": false
+            },
+            {
+              "topic": "Git version history",
+              "truth": true,
+              "hard": false,
+              "raw": 0.6,
+              "calibrated": null,
+              "profileAccepted": false,
+              "labelAccepted": false
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "calls": 13,
+        "input": 49311
+      }
+    },
+    {
+      "report": "scripts/jev-bench/out/profile-fresh-label-r1.json",
+      "sha256": "66c19506c1c590cfda7c3bb0bcb76de88820e7fa100409f7424b7b31ee7cc0ee",
+      "action": "profile-and-label",
+      "suites": [
+        {
+          "suite": "atlas",
+          "documents": 13,
+          "cases": 64,
+          "profileCorrect": 63,
+          "labelCorrect": 63,
+          "labelCalls": 0,
+          "failures": [
+            {
+              "doc": "safe-collaboration",
+              "topic": "Rollback",
+              "truth": false,
+              "hard": true,
+              "raw": 0.38,
+              "calibrated": 0.7342857142857142,
+              "profileAccepted": true,
+              "labelAccepted": true
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "calls": 13,
+        "input": 50814
+      }
+    },
+    {
+      "report": "scripts/jev-bench/out/profile-fresh-label-r2.json",
+      "sha256": "4d8a31a937aeb8840e94f0d3a749eef7ebbba16b6bcbd8f925f372c40e964fdb",
+      "action": "profile-and-label",
+      "suites": [
+        {
+          "suite": "atlas",
+          "documents": 13,
+          "cases": 64,
+          "profileCorrect": 63,
+          "labelCorrect": 63,
+          "labelCalls": 0,
+          "failures": [
+            {
+              "doc": "safe-collaboration",
+              "topic": "Rollback",
+              "truth": false,
+              "hard": true,
+              "raw": 0.39,
+              "calibrated": 0.7385714285714285,
+              "profileAccepted": true,
+              "labelAccepted": true
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "calls": 13,
+        "input": 50814
+      }
+    },
+    {
+      "report": "scripts/jev-bench/out/file-baseline-atlas-r1.json",
+      "sha256": "502d3c3deda53702f10db2f1196c9518c63efa21f2af36efc46cafa994ffd1fb",
+      "action": "file",
+      "run": "baseline-atlas-r1",
+      "right": "11/19",
+      "usage": {
+        "calls": 85,
+        "input": 930783
+      },
+      "failedDocuments": [
+        "search-and-brain-tools",
+        "symbi-reflex",
+        "reflex-internals",
+        "sdk-and-webmcp",
+        "chat-internals",
+        "data-model",
+        "mcp-and-api",
+        "plan-status"
+      ]
+    },
+    {
+      "report": "scripts/jev-bench/out/file-shipped-atlas-r1.json",
+      "sha256": "8e9e672c43cc6a6920d8f59fa3c261966db0bb47604ded1d0fd95a3ba41a62c1",
+      "action": "file",
+      "run": "shipped-atlas-r1",
+      "right": "19/19",
+      "usage": {
+        "calls": 38,
+        "input": 69095
+      },
+      "failedDocuments": []
+    },
+    {
+      "report": "scripts/jev-bench/out/file-shipped-atlas-r2.json",
+      "sha256": "a6dbc9ea8523decebd89465c7b6434da9df23cc376c4c8250ad57d548ff35c30",
+      "action": "file",
+      "run": "shipped-atlas-r2",
+      "right": "19/19",
+      "usage": {
+        "calls": 38,
+        "input": 69092
+      },
+      "failedDocuments": []
+    },
+    {
+      "report": "scripts/jev-bench/out/home-production-expanded-evidence-r1.json",
+      "sha256": "48b87c69871f80daeb6b16316b297feb4778173da4e550f9f1d1ab70aa89ec51",
+      "action": "home",
+      "run": "expanded-evidence-r1",
+      "corpus": "atlas-only",
+      "right": "18/19",
+      "wrongMoves": 0,
+      "usage": {
+        "calls": 27,
+        "input": 58647
+      },
+      "failedDocuments": [
+        "chat-internals"
+      ],
+      "certification": "Target not met; experimental state versions differ. These are not two passing runs of the final implementation."
+    },
+    {
+      "report": "scripts/jev-bench/out/home-production-expanded-evidence-r2.json",
+      "sha256": "321c25d1de69ed2ce9ab0541281b7cbec5b91ec5860c32a3b06162ea1aa11023",
+      "action": "home",
+      "run": "expanded-evidence-r2",
+      "corpus": "atlas-only",
+      "right": "16/19",
+      "wrongMoves": 1,
+      "usage": {
+        "calls": 27,
+        "input": 58972
+      },
+      "failedDocuments": [
+        "chat-internals",
+        "document-operations",
+        "errors"
+      ],
+      "certification": "Target not met; experimental state versions differ. These are not two passing runs of the final implementation."
+    },
+    {
+      "report": "scripts/jev-bench/out/home-production-main-subject-evidence-r1-recorded.json",
+      "sha256": "579ab72633abd3e52b92d568ee3574a2c3d62b317d3aa957703c6d11b8ff547a",
+      "action": "home",
+      "run": "main-subject-evidence-r1-recorded",
+      "corpus": "atlas-only",
+      "right": "17/19",
+      "wrongMoves": 0,
+      "usage": {
+        "calls": 27,
+        "input": 58583
+      },
+      "stateBytes": {
+        "total": 106430,
+        "maximum": 4810
+      },
+      "failedDocuments": [
+        "chat-internals",
+        "canvas-ui"
+      ],
+      "certification": "Target not met; experimental state versions differ. These are not two passing runs of the final implementation."
+    },
+    {
+      "report": "scripts/jev-bench/out/home-production-final-atlas-r1.json",
+      "sha256": "c03be382fb7f2633411edf1facb7c531a8aea938f40e2705257e2751e21bb069",
+      "action": "home",
+      "run": "final-atlas-r1",
+      "corpus": "atlas-only",
+      "right": "18/19",
+      "wrongMoves": 0,
+      "usage": {
+        "calls": 27,
+        "input": 58583
+      },
+      "stateBytes": {
+        "total": 106430,
+        "maximum": 4810
+      },
+      "failedDocuments": [
+        "chat-internals"
+      ],
+      "certification": "Final implementation, target not met. Synthetic off-topic cases not sent pending separate approval."
+    },
+    {
+      "report": "scripts/jev-bench/out/home-production-final-atlas-r2.json",
+      "sha256": "a5086423396f1dcbbf56acb801a5ca1648b749d8c8dbf137ad0e7da20dc9c6cd",
+      "action": "home",
+      "run": "final-atlas-r2",
+      "corpus": "atlas-only",
+      "right": "16/19",
+      "wrongMoves": 1,
+      "usage": {
+        "calls": 28,
+        "input": 60949
+      },
+      "stateBytes": {
+        "total": 110180,
+        "maximum": 4810
+      },
+      "failedDocuments": [
+        "chat-internals",
+        "canvas-ui",
+        "errors"
+      ],
+      "certification": "Final implementation, target not met. Synthetic off-topic cases not sent pending separate approval."
+    },
+    {
+      "action": "suggest_home_canvas",
+      "run": "home-leading-none-r1",
+      "report": "scripts/jev-bench/out/home-production-home-leading-none-r1.json",
+      "reportSha256": "9c7605274e38f7eeb97fa2c42ba4ee44125df6509663b10f9cd1f1c4f62c19f3",
+      "summary": {
+        "action": "home",
+        "run": "home-leading-none-r1",
+        "corpus": "atlas-only",
+        "right": "17/19",
+        "wrongMoves": 0,
+        "failed": [
+          {
+            "doc": "chat-internals",
+            "current": "4b8d1e77-eng",
+            "acceptable": [
+              "6f1c2a90-search"
+            ],
+            "moveTo": null,
+            "reason": "Current home or insufficient destination support"
+          },
+          {
+            "doc": "architecture",
+            "current": "6f1c2a90-search",
+            "acceptable": [
+              "4b8d1e77-eng",
+              "8d3e5b11-collab"
+            ],
+            "moveTo": null,
+            "reason": "Current home or insufficient destination support"
+          }
+        ],
+        "usage": {
+          "calls": 26,
+          "input": 56402
+        },
+        "stateBytes": {
+          "total": 103384,
+          "maximum": 4810
+        }
+      },
+      "ruleChange": "Stay when place.none leads or ties every canvas; existing gate and margin thresholds unchanged.",
+      "certification": "Zero wrong moves on this frozen run; accuracy target still not met. Synthetic off-topic cases remain unsent pending separate approval."
+    },
+    {
+      "action": "suggest_home_canvas",
+      "run": "home-leading-none-r2",
+      "report": "scripts/jev-bench/out/home-production-home-leading-none-r2.json",
+      "reportSha256": "730faa531c88f4a51eec1d5b52558a6cb606c67bbfa72915df924c6ee8430eb7",
+      "summary": {
+        "action": "home",
+        "run": "home-leading-none-r2",
+        "corpus": "atlas-only",
+        "right": "17/19",
+        "wrongMoves": 0,
+        "failed": [
+          {
+            "doc": "chat-internals",
+            "current": "4b8d1e77-eng",
+            "acceptable": [
+              "6f1c2a90-search"
+            ],
+            "moveTo": null,
+            "reason": "Current home or insufficient destination support"
+          },
+          {
+            "doc": "architecture",
+            "current": "6f1c2a90-search",
+            "acceptable": [
+              "4b8d1e77-eng",
+              "8d3e5b11-collab"
+            ],
+            "moveTo": null,
+            "reason": "Current home or insufficient destination support"
+          }
+        ],
+        "usage": {
+          "calls": 26,
+          "input": 56402
+        },
+        "stateBytes": {
+          "total": 103384,
+          "maximum": 4810
+        }
+      },
+      "ruleChange": "Stay when place.none leads or ties every canvas; existing gate and margin thresholds unchanged.",
+      "certification": "Zero wrong moves on this frozen run; accuracy target still not met. Synthetic off-topic cases remain unsent pending separate approval."
+    },
+    {
+      "action": "file",
+      "run": "atlas-root-purpose-r1",
+      "report": "scripts/jev-bench/out/file-atlas-root-purpose-r1.json",
+      "reportSha256": "b62a2ccb5d2cfd955a5d134e53a1d182a2fc3e37a172289bc2e5e47972d5127f",
+      "summary": {
+        "action": "file",
+        "run": "atlas-root-purpose-r1",
+        "right": "19/19",
+        "failed": [],
+        "usage": {
+          "calls": 57,
+          "input": 111552
+        }
+      },
+      "ruleChange": "Existing root groups now require the same exact-passage main-purpose check as subgroups; filing and semantic cutoffs unchanged.",
+      "certification": "19/19 with seven existing supplied groups; this measures existing taxonomy placement and does not establish discovery from Engineering."
+    },
+    {
+      "action": "file",
+      "run": "atlas-root-purpose-r2",
+      "report": "scripts/jev-bench/out/file-atlas-root-purpose-r2.json",
+      "reportSha256": "47b4ceeaca5cce54e6b2d724906ba5a774d593afc543ff078c70af6145a88dbc",
+      "summary": {
+        "action": "file",
+        "run": "atlas-root-purpose-r2",
+        "right": "19/19",
+        "failed": [],
+        "usage": {
+          "calls": 57,
+          "input": 111552
+        }
+      },
+      "ruleChange": "Existing root groups now require the same exact-passage main-purpose check as subgroups; filing and semantic cutoffs unchanged.",
+      "certification": "19/19 with seven existing supplied groups; this measures existing taxonomy placement and does not establish discovery from Engineering."
+    },
+    {
+      "action": "suggest_home_canvas",
+      "report": "scripts/jev-bench/out/home-production-review2-r1.json",
+      "run": "review2-r1",
+      "reportSha256": "ec4259aed09e0204618be94d07f52b70072f78ba7d041e65ee3770ee2068ee26",
+      "summary": {
+        "action": "home",
+        "run": "review2-r1",
+        "corpus": "atlas-only",
+        "right": "16/19",
+        "wrongMoves": 0,
+        "failed": [
+          {
+            "doc": "chat-internals",
+            "current": "4b8d1e77-eng",
+            "acceptable": [
+              "6f1c2a90-search"
+            ],
+            "moveTo": null,
+            "reason": "Current home or insufficient destination support"
+          },
+          {
+            "doc": "canvas-ui",
+            "current": "6f1c2a90-search",
+            "acceptable": [
+              "2a7f9c33-ui"
+            ],
+            "moveTo": null,
+            "reason": "No exact source passage supports destination"
+          },
+          {
+            "doc": "architecture",
+            "current": "6f1c2a90-search",
+            "acceptable": [
+              "4b8d1e77-eng",
+              "8d3e5b11-collab"
+            ],
+            "moveTo": null,
+            "reason": "Current home or insufficient destination support"
+          }
+        ],
+        "usage": {
+          "calls": 26,
+          "input": 56402
+        },
+        "stateBytes": {
+          "total": 103384,
+          "maximum": 4810
+        }
+      },
+      "certification": "Latest frozen Atlas repeat: 16/19 with zero wrong moves; accuracy target remains unmet."
+    },
+    {
+      "action": "suggest_home_canvas",
+      "report": "scripts/jev-bench/out/home-production-review2-r2.json",
+      "run": "review2-r2",
+      "reportSha256": "c6e320bd5318bedb357ca94844d30afdd2b15e3f5da7790873766be761896c7f",
+      "summary": {
+        "action": "home",
+        "run": "review2-r2",
+        "corpus": "atlas-only",
+        "right": "16/19",
+        "wrongMoves": 0,
+        "failed": [
+          {
+            "doc": "chat-internals",
+            "current": "4b8d1e77-eng",
+            "acceptable": [
+              "6f1c2a90-search"
+            ],
+            "moveTo": null,
+            "reason": "Current home or insufficient destination support"
+          },
+          {
+            "doc": "canvas-ui",
+            "current": "6f1c2a90-search",
+            "acceptable": [
+              "2a7f9c33-ui"
+            ],
+            "moveTo": null,
+            "reason": "No exact source passage supports destination"
+          },
+          {
+            "doc": "architecture",
+            "current": "6f1c2a90-search",
+            "acceptable": [
+              "4b8d1e77-eng",
+              "8d3e5b11-collab"
+            ],
+            "moveTo": null,
+            "reason": "Current home or insufficient destination support"
+          }
+        ],
+        "usage": {
+          "calls": 26,
+          "input": 56402
+        },
+        "stateBytes": {
+          "total": 103384,
+          "maximum": 4810
+        }
+      },
+      "certification": "Latest frozen Atlas repeat: 16/19 with zero wrong moves; accuracy target remains unmet."
+    }
+  ],
+  "latestOrganizationVersion": "automatic-knowledge-21",
+  "heldoutAttempts": [
+    {
+      "action": "home-production",
+      "run": "heldout-r1",
+      "command": "npm run jev:bench -- home-production heldout-r1 heldout-only",
+      "exitCode": 1,
+      "status": "blocked",
+      "reason": "TypeSafe HTTP 402 billing error",
+      "accuracy": null,
+      "providerFailedCases": 10,
+      "evaluatedCases": 0
+    },
+    {
+      "action": "home-production",
+      "run": "heldout-r2",
+      "command": "npm run jev:bench -- home-production heldout-r2 heldout-only",
+      "exitCode": 1,
+      "status": "blocked",
+      "reason": "TypeSafe HTTP 402 billing error",
+      "accuracy": null,
+      "providerFailedCases": 10,
+      "evaluatedCases": 0
+    },
+    {
+      "action": "filing-heldout",
+      "run": "heldout-r1",
+      "command": "npm run jev:bench -- filing-heldout heldout-r1",
+      "exitCode": 1,
+      "status": "blocked",
+      "reason": "TypeSafe HTTP 402 billing error",
+      "accuracy": null
+    },
+    {
+      "action": "filing-heldout",
+      "run": "heldout-r2",
+      "command": "npm run jev:bench -- filing-heldout heldout-r2",
+      "exitCode": 1,
+      "status": "blocked",
+      "reason": "TypeSafe HTTP 402 billing error",
+      "accuracy": null
+    }
+  ],
+  "heldoutRuns": [
+    {
+      "action": "home-production",
+      "run": "heldout-r1",
+      "report": "scripts/jev-bench/out/home-production-heldout-r1.json",
+      "reportSha256": "088ba5bc175aa85a6129faa2d3ded3fa4cb991fae75266871a1aaa52f13e93cc",
+      "exitCode": 0,
+      "summary": {
+        "action": "home",
+        "run": "heldout-r1",
+        "corpus": "heldout-only",
+        "right": "10/10",
+        "wrongMoves": 0,
+        "heldout": {
+          "right": "10/10",
+          "wrongMoves": 0
+        },
+        "failed": [],
+        "usage": {
+          "calls": 18,
+          "input": 24752
+        },
+        "stateBytes": {
+          "total": 35126,
+          "maximum": 2468
+        }
+      },
+      "scope": "Home placement"
+    },
+    {
+      "action": "home-production",
+      "run": "heldout-r2",
+      "report": "scripts/jev-bench/out/home-production-heldout-r2.json",
+      "reportSha256": "a45cf5bbcf8025b956435c5724572604ce19efdb734284292369b6cc675f9e9b",
+      "exitCode": 0,
+      "summary": {
+        "action": "home",
+        "run": "heldout-r2",
+        "corpus": "heldout-only",
+        "right": "10/10",
+        "wrongMoves": 0,
+        "heldout": {
+          "right": "10/10",
+          "wrongMoves": 0
+        },
+        "failed": [],
+        "usage": {
+          "calls": 18,
+          "input": 24752
+        },
+        "stateBytes": {
+          "total": 35126,
+          "maximum": 2468
+        }
+      },
+      "scope": "Home placement"
+    },
+    {
+      "action": "filing-heldout",
+      "run": "heldout-r1",
+      "report": "scripts/jev-bench/out/filing-heldout-heldout-r1.json",
+      "reportSha256": "ff06980a161efe8589c6df35803610d247b354b4bc55da31895883b1e253c68f",
+      "exitCode": 0,
+      "summary": {
+        "variant": "shipped file()",
+        "model": "jev-1.13.0",
+        "run": "heldout-r1",
+        "fixtureSha256": "f86ec62a4c345468414a1d60ed101c4e5cfcb7d66786768ed399e86d110f53ef",
+        "placements": "12/12",
+        "offTopicExistingGroupErrors": "0/4",
+        "bootstrapCases": [
+          "unrelated-train-trip",
+          "unrelated-film-club",
+          "unrelated-word-puzzles",
+          "unrelated-family-album"
+        ],
+        "documentMutationsDuringEvaluation": [],
+        "failed": [],
+        "usage": {
+          "calls": 44,
+          "input": 55591
+        }
+      },
+      "scope": "Supplied-group placement and off-topic existing-group rejection; not sequential group discovery"
+    },
+    {
+      "action": "filing-heldout",
+      "run": "heldout-r2",
+      "report": "scripts/jev-bench/out/filing-heldout-heldout-r2.json",
+      "reportSha256": "5ef822835d85e82dca0f206b6a578a4bc01f27512c287ab868a5ab1a43e88360",
+      "exitCode": 0,
+      "summary": {
+        "variant": "shipped file()",
+        "model": "jev-1.13.0",
+        "run": "heldout-r2",
+        "fixtureSha256": "f86ec62a4c345468414a1d60ed101c4e5cfcb7d66786768ed399e86d110f53ef",
+        "placements": "12/12",
+        "offTopicExistingGroupErrors": "0/4",
+        "bootstrapCases": [
+          "unrelated-train-trip",
+          "unrelated-film-club",
+          "unrelated-word-puzzles",
+          "unrelated-family-album"
+        ],
+        "documentMutationsDuringEvaluation": [],
+        "failed": [],
+        "usage": {
+          "calls": 44,
+          "input": 55591
+        }
+      },
+      "scope": "Supplied-group placement and off-topic existing-group rejection; not sequential group discovery"
+    }
+  ]
+}

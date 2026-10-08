@@ -1,13 +1,11 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { createHash } from 'node:crypto';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { DynamicStructuredTool, type StructuredToolInterface } from '@langchain/core/tools';
 import type { ExternalMcpServer } from '../shared/types.js';
 import { ApiError } from './errors.js';
 import { resolvedHeaders } from './settings.js';
-
-const maxToolsPerServer = 40;
+import { discoverMcpTools } from './mcp-client-tools.js';
 
 async function closeClient(client: Client): Promise<void> {
   try { await client.close(); }
@@ -35,7 +33,7 @@ async function withTimeout<T>(work: Promise<T>, ms: number, message: string, sig
   }
 }
 
-/** Connect over Streamable HTTP, falling back to the older SSE transport. */
+/** Connect using the canonical Streamable HTTP transport. */
 export async function connectExternal(server: ExternalMcpServer, secrets: Record<string, string>, timeoutMs = 8000,
   signal?: AbortSignal): Promise<Client> {
   signal?.throwIfAborted();
@@ -45,23 +43,8 @@ export async function connectExternal(server: ExternalMcpServer, secrets: Record
   try {
     await withTimeout(streamable.connect(new StreamableHTTPClientTransport(url, { requestInit: { headers } })), timeoutMs, 'timed out', signal);
     return streamable;
-  } catch {
-    await closeClient(streamable);
-    signal?.throwIfAborted();
-  }
-  return connectSse(server, url, headers, timeoutMs, signal);
-}
-
-async function connectSse(server: ExternalMcpServer, url: URL, headers: Record<string, string>, timeoutMs: number,
-  signal?: AbortSignal): Promise<Client> {
-  const sse = new Client({ name: 'symbiknow', version: '0.2.0' });
-  try {
-    await withTimeout(sse.connect(new SSEClientTransport(url, { requestInit: { headers },
-      eventSourceInit: { fetch: (input, init) => fetch(input, { ...init, headers: { ...(init?.headers as Record<string, string>), ...headers } }) } })),
-    timeoutMs, 'timed out', signal);
-    return sse;
   } catch (error) {
-    await closeClient(sse);
+    await closeClient(streamable);
     signal?.throwIfAborted();
     throw new ApiError(502, `Could not connect to ${server.name}: ${error instanceof Error ? error.message : 'connection failed'}`);
   }
@@ -70,7 +53,7 @@ async function connectSse(server: ExternalMcpServer, url: URL, headers: Record<s
 export async function testExternal(server: ExternalMcpServer, secrets: Record<string, string>) {
   const client = await connectExternal(server, secrets);
   try {
-    const { tools } = await withTimeout(client.listTools(), 8000, 'listing tools timed out');
+    const tools = await withTimeout(discoverMcpTools(client), 8000, 'listing tools timed out');
     return { ok: true, server: client.getServerVersion()?.name ?? server.name,
       tools: tools.map(item => ({ name: item.name, description: item.description ?? '' })) };
   } finally { await closeClient(client); }
@@ -87,7 +70,7 @@ function toolName(server: ExternalMcpServer, name: string): string {
 function textOutput(content: unknown): string {
   if (!Array.isArray(content)) return JSON.stringify(content ?? '');
   return content.map(part => part && typeof part === 'object' && (part as { type?: string }).type === 'text'
-    ? String((part as { text?: unknown }).text ?? '') : JSON.stringify(part)).join('\n').slice(0, 60_000);
+    ? String((part as { text?: unknown }).text ?? '') : JSON.stringify(part)).join('\n');
 }
 
 /** Load tools from every enabled outside MCP server. Servers that fail are reported and skipped. */
@@ -96,24 +79,29 @@ export async function externalTools(servers: ExternalMcpServer[], secrets: Recor
   signal?.throwIfAborted();
   const clients: Client[] = [];
   const loaded = await Promise.allSettled(servers.filter(server => server.enabled).map(async server => {
+    let client: Client | undefined;
     try {
-      const client = await connectExternal(server, secrets, 6000, signal);
+      client = await connectExternal(server, secrets, 6000, signal);
       clients.push(client);
-      const { tools } = await withTimeout(client.listTools(undefined, { signal }), 6000, 'listing tools timed out', signal);
-      return tools.slice(0, maxToolsPerServer).map(item => new DynamicStructuredTool({
+      const tools = await withTimeout(discoverMcpTools(client, signal), 6000, 'listing tools timed out', signal);
+      return tools.map(item => new DynamicStructuredTool({
         name: toolName(server, item.name),
-        description: `[${server.name}] ${item.description ?? item.name}`.slice(0, 1000),
+        description: `[${server.name}] ${item.description ?? item.name}`,
         schema: (item.inputSchema ?? { type: 'object', properties: {} }) as Record<string, unknown>,
         func: async (args: Record<string, unknown>, _manager, config) => {
           const signals = [signal, config?.signal].filter((value): value is AbortSignal => Boolean(value));
           const currentSignal = signals.length ? AbortSignal.any(signals) : undefined;
           currentSignal?.throwIfAborted();
-          const output = await client.callTool({ name: item.name, arguments: args }, undefined, { signal: currentSignal });
+          const output = await client!.callTool({ name: item.name, arguments: args }, undefined, { signal: currentSignal });
           const text = textOutput(output.content);
           return output.isError ? `Error from ${server.name}: ${text}` : text;
         },
       }) as StructuredToolInterface);
     } catch (error) {
+      if (client) {
+        clients.splice(clients.indexOf(client), 1);
+        await closeClient(client);
+      }
       if (signal?.aborted) throw error;
       onWarning(`${server.name} is unavailable: ${error instanceof Error ? error.message : 'connection failed'}`);
       return [];

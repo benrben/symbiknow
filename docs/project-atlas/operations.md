@@ -39,8 +39,7 @@ The first run creates the example workspace *Acme Team*. The app does not load `
 | `SYMBIKNOW_ACCESS_TOKEN` | Protects the workspace; browsers get an HTTP-only `symbiknow_session` cookie |
 | `SYMBIKNOW_MCP_TOKEN` | Fixed MCP token for automation |
 | `SYMBIKNOW_AGENT_NAME` | Author name for a local stdio agent |
-| `SYMBIKNOW_LEGACY_BRAIN_TOOLS=1` | Re-register the nine legacy Jev MCP tools |
-| `SYMBI_MODEL_ROOT` | Folder containing `Xenova/all-MiniLM-L6-v2/model_int8.onnx` for offline embeddings |
+| `SYMBI_MODEL_ROOT` | Override for the offline model folder; defaults to `<DATA_DIR>/models`, containing `Xenova/all-MiniLM-L6-v2/model_int8.onnx` |
 | `TYPESAFE_API_KEY`, `TYPESAFE_MODEL` | Symbi Reflex provider key and model (default `jev-1.13.0`) |
 | `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | Fallbacks for chat provider keys saved in Settings |
 | `CANVAS_API_URL`, `CANVAS_API_TOKEN` | Where the stdio MCP server sends API calls |
@@ -52,7 +51,7 @@ The first run creates the example workspace *Acme Team*. The app does not load `
 2. Set `SYMBIKNOW_ACCESS_TOKEN` and `PUBLIC_URL`.
 3. Put `DATA_DIR` on persistent storage and back it up.
 4. Optional: install MkDocs (`uv pip install -r requirements-site.txt`), Hugo, or Docusaurus for website blocks.
-5. Optional: put the MiniLM model under `SYMBI_MODEL_ROOT` for semantic search.
+5. For offline semantic search, install the pinned MiniLM artifacts under `<DATA_DIR>/models` or the `SYMBI_MODEL_ROOT` override. This checkout already has the verified artifacts in `data/models`.
 
 ## Checks before a change
 

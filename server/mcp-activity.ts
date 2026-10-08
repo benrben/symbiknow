@@ -30,13 +30,14 @@ function ids(values: unknown[]): string[] {
 }
 
 /** Reads only known ID fields. Arguments can contain complete documents and token-like strings. */
+function arrayField(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
 export function mcpActivityRefs(args: unknown): { canvasIds: string[]; documentIds: string[] } {
   if (!args || typeof args !== 'object' || Array.isArray(args)) return { canvasIds: [], documentIds: [] };
   const input = args as Record<string, unknown>;
   return {
-    canvasIds: ids([input.canvasId, input.sourceCanvasId, input.targetCanvasId]),
+    canvasIds: ids([input.canvasId, input.sourceCanvasId, input.targetCanvasId, ...arrayField(input.canvasIds)]),
     documentIds: ids([input.blockId, input.fromBlockId, input.toBlockId, input.keepBlockId,
-      ...(Array.isArray(input.blockIds) ? input.blockIds : []), ...(Array.isArray(input.mergeBlockIds) ? input.mergeBlockIds : [])]),
+      ...arrayField(input.blockIds), ...arrayField(input.mergeBlockIds)]),
   };
 }
 
@@ -47,6 +48,16 @@ function matchingString(value: unknown, pattern: RegExp): string | undefined {
 function firstRevision(commits: Array<{ id?: unknown }> | undefined): string | undefined {
   return matchingString(commits?.[0]?.id, revisionPattern);
 }
+function returnedIds(value: Record<string, unknown>): { documentId?: string; revision?: string } {
+  const manifest = value.manifest as { documentId?: unknown; baseRevision?: unknown } | undefined;
+  return { documentId: matchingString(value.blockId ?? manifest?.documentId ?? value.id, idPattern),
+    revision: matchingString(value.revision ?? manifest?.baseRevision, revisionPattern) ?? returnedHistoryRevision(value) };
+}
+function returnedHistoryRevision(value: Record<string, unknown>) {
+  const status = value.status as { commits?: Array<{ id?: unknown }> } | undefined;
+  const commits = value.commits as Array<{ id?: unknown }> | undefined;
+  return firstRevision(status?.commits) ?? firstRevision(commits);
+}
 
 export function mcpResultIds(result: unknown): { documentId?: string; revision?: string } {
   if (!result || typeof result !== 'object') return {};
@@ -54,12 +65,18 @@ export function mcpResultIds(result: unknown): { documentId?: string; revision?:
   const text = content?.[0]?.text;
   if (typeof text !== 'string') return {};
   try {
-    const value = JSON.parse(text) as Record<string, unknown>;
-    const status = value.status as { commits?: Array<{ id?: unknown }> } | undefined;
-    const commits = value.commits as Array<{ id?: unknown }> | undefined;
-    return { documentId: matchingString(value.id, idPattern),
-      revision: firstRevision(status?.commits) ?? firstRevision(commits) };
+    return returnedIds(JSON.parse(text) as Record<string, unknown>);
   } catch { return {}; }
+}
+
+/** Only identifiers and revisions cross the audit boundary; source text stays local. */
+export function safeMcpToolEvent(event: { tool: string; args: unknown; startedAt: string; endedAt: string;
+  outcome: 'success' | 'error' | 'denied'; result?: unknown }) {
+  const { canvasIds, documentIds } = mcpActivityRefs(event.args);
+  const { documentId, revision } = mcpResultIds(event.result);
+  return { tool: event.tool, startedAt: event.startedAt, endedAt: event.endedAt, outcome: event.outcome,
+    args: { canvasIds, blockIds: documentIds },
+    ...(documentId || revision ? { result: { content: [{ type: 'text', text: JSON.stringify({ blockId: documentId, revision }) }] } } : {}) };
 }
 
 export function safeMcpError(outcome: 'error' | 'denied', reason?: unknown): string {

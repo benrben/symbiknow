@@ -5,7 +5,8 @@ import type { ChatSettings } from '../shared/types';
 import { SettingsPage } from './SettingsPage';
 
 const base: ChatSettings = { provider: 'openrouter', model: 'openai/gpt-4o-mini', systemPrompt: '', hasApiKey: true,
-  providerKeys: { openrouter: true }, secretNames: ['GITHUB_TOKEN'], mcpServers: [], mcpTokens: [] };
+  providerKeys: { openrouter: true }, secretNames: ['GITHUB_TOKEN'], mcpServers: [], mcpTokens: [],
+  mcpToolCatalog: [{ name: 'read_doc', access: 'read' }, { name: 'search_docs', access: 'read' }, { name: 'upload_file', access: 'propose' }] };
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
@@ -111,7 +112,7 @@ describe('settings page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create token' }));
     await screen.findByText('atm_secretvalue');
     const call = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input) === '/api/mcp/tokens' && init?.method === 'POST');
-    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ name: 'Scoped agent', access: 'propose', allowedCanvasIds: ['planning'], tools: ['read_doc', 'search_docs'] });
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ name: 'Scoped agent', access: 'propose', canApprove: false, canConfigure: false, allowedCanvasIds: ['planning'], tools: ['read_doc', 'search_docs'] });
   });
 
   it('shows a stored token’s effective canvas and tool limits', async () => {

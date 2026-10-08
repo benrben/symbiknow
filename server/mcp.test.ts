@@ -96,10 +96,8 @@ describe('project MCP', () => {
     }
     expect(requests).toEqual([]);
   });
-  it('shares the HTTP canvas with agents and supports full file transfer and branches', async () => {
+  it('shares canonical file checkouts, uploads and private branches over MCP', async () => {
     vi.stubEnv('SYMBIKNOW_ACCESS_TOKEN', 'local-access');
-    vi.stubEnv('ALLTEAM_AGENT_NAME', 'Legacy agent');
-    vi.stubEnv('SYMBIKNOW_AGENT_NAME', 'SymbiKnow agent');
     const dataDir = await mkdtemp(path.join(os.tmpdir(), 'symbiknow-mcp-'));
     const http = await createApiServer({ dataDir });
     opened.push({ http, dataDir });
@@ -110,49 +108,32 @@ describe('project MCP', () => {
     const client = new Client({ name: 'test-agent', version: '0.1.0' });
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
     await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
-    expect(client.getServerVersion()?.name).toBe('symbiknow');
-    expect(client.getInstructions()).toContain('people and AI organize ideas and build knowledge together');
     const call = async <T>(name: string, args: Record<string, unknown> = {}): Promise<T> => {
       const output = await client.callTool({ name, arguments: args });
       if (output.isError) throw new Error(JSON.stringify(output.content));
       return JSON.parse(((output.content as Array<{ text: string }>)[0]).text) as T;
     };
     try {
-      const tools = await client.listTools();
-      expect(tools.tools.map(tool => tool.name)).toEqual(expect.arrayContaining([
-        'read_canvas', 'upload_file', 'download_file', 'create_branch', 'switch_branch', 'merge_branch', 'restore_revision', 'search_docs', 'create_doc', 'edit_doc',
-      ]));
-      const page = await call<{ id: string; kind: string; content: string }>('create_doc', { canvasId: 'product-roadmap', title: 'Page', kind: 'html', content: '<h1>Page</h1>' });
-      expect(page).toMatchObject({ kind: 'html', content: '---\nformat: html\n---\n<h1>Page</h1>' });
-      expect((await call<{ commits: Array<{ author: string }> }>('list_versions', { canvasId: 'product-roadmap', blockId: page.id })).commits[0].author).toBe('SymbiKnow agent');
-      vi.stubEnv('SYMBIKNOW_AGENT_NAME', '');
-      const legacyPage = await call<{ id: string }>('create_doc', { canvasId: 'product-roadmap', title: 'Legacy agent page' });
-      expect((await call<{ commits: Array<{ author: string }> }>('list_versions', { canvasId: 'product-roadmap', blockId: legacyPage.id })).commits[0].author).toBe('Legacy agent');
-      const created = await call<{ id: string; content: string }>('upload_file', { canvasId: 'product-roadmap', filename: 'agent.html', content: '<h1>Agent page</h1>' });
-      expect(created.content).toContain('format: html');
-      const createdHash = (await call<{ contentHash: string }>('read_doc', { canvasId: 'product-roadmap', blockId: created.id })).contentHash;
-      const replaced = await call<{ content: string; overwritten: boolean; contentHash: string }>('upload_file', { canvasId: 'product-roadmap', blockId: created.id,
-        filename: 'agent.md', content: '# Whole replacement', expectedContentHash: createdHash });
-      expect(replaced).toMatchObject({ content: '# Whole replacement', overwritten: true });
-      const downloaded = await call<{ content: string }>('download_file', { canvasId: 'product-roadmap', blockId: created.id });
-      expect(downloaded.content).toBe('# Whole replacement');
-      expect(await readFile(path.join(dataDir, 'docs', `${created.id}.md`), 'utf8')).toBe(downloaded.content);
-      await call('create_branch', { canvasId: 'product-roadmap', blockId: created.id, name: 'agents/draft' });
-      await call('switch_branch', { canvasId: 'product-roadmap', blockId: created.id, name: 'agents/draft' });
-      await call('edit_doc', { canvasId: 'product-roadmap', blockId: created.id, content: '# Branch edit', expectedContentHash: replaced.contentHash });
-      await call('switch_branch', { canvasId: 'product-roadmap', blockId: created.id, name: 'main' });
-      expect((await call<{ content: string }>('read_doc', { canvasId: 'product-roadmap', blockId: created.id })).content).toBe('# Whole replacement');
-      await call('merge_branch', { canvasId: 'product-roadmap', blockId: created.id, name: 'agents/draft' });
-      expect((await call<{ content: string }>('read_doc', { canvasId: 'product-roadmap', blockId: created.id })).content).toBe('# Branch edit');
-      expect(tools.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['ask_symbi', 'symbi_reflex', 'delete_branch']));
-      expect(tools.tools.map(tool => tool.name).filter(name => name.includes('task'))).toEqual([]);
-      expect(tools.tools.map(tool => tool.name)).not.toContain('jev_do');
-      expect(client.getInstructions()).not.toContain('Jev');
-      for (const name of ['recall', 'analyze_canvas', 'regroup_canvas', 'find_duplicates', 'merge_documents', 'undo_merge',
-        'connect_across_canvases', 'score_documents', 'run_workspace_automation']) {
-        expect(tools.tools.some(tool => tool.name === name)).toBe(false);
-        expect((await client.callTool({ name, arguments: {} })).isError).toBe(true);
-      }
+      const names = (await client.listTools()).tools.map(tool => tool.name);
+      expect(names).toEqual(expect.arrayContaining(['download_file', 'upload_file', 'create_branch', 'merge_branch', 'restore_revision', 'search_docs', 'ask_symbi', 'jev_do']));
+      expect(names).not.toEqual(expect.arrayContaining(['create_doc', 'edit_doc', 'import_documents']));
+      const created = await call<{ blockId: string; kind: string }>('upload_file', { mode: 'create', canvasId: 'product-roadmap',
+        filename: 'agent.mdx', content: '# Agent document\n<Component />', idempotencyKey: 'create-agent' });
+      expect(created.kind).toBe('mdx');
+      const working = await call<{ content: string; manifest: { checkoutId: string } }>('download_file', { canvasId: 'product-roadmap', blockId: created.blockId });
+      const replaced = await call<{ contentHash: string; revision: string }>('upload_file', { mode: 'replace', canvasId: 'product-roadmap',
+        checkoutId: working.manifest.checkoutId, filename: 'agent.md', content: '# Whole replacement', idempotencyKey: 'replace-agent' });
+      expect(replaced.revision).toEqual(expect.any(String));
+      expect((await call<{ content: string; kind: string }>('read_doc', { canvasId: 'product-roadmap', blockId: created.blockId })))
+        .toMatchObject({ content: '# Whole replacement', kind: 'mdx' });
+      expect(await readFile(path.join(dataDir, 'docs', `${created.blockId}.md`), 'utf8')).toBe('# Whole replacement');
+      await call('create_branch', { canvasId: 'product-roadmap', blockId: created.blockId, name: 'agents/draft' });
+      const draft = await call<{ manifest: { checkoutId: string } }>('download_file', { canvasId: 'product-roadmap', blockId: created.blockId, branch: 'agents/draft' });
+      await call('upload_file', { mode: 'replace', canvasId: 'product-roadmap', checkoutId: draft.manifest.checkoutId,
+        filename: 'agent.mdx', content: '# Branch edit', idempotencyKey: 'branch-agent' });
+      expect((await call<{ content: string }>('read_doc', { canvasId: 'product-roadmap', blockId: created.blockId })).content).toBe('# Whole replacement');
+      await call('merge_branch', { canvasId: 'product-roadmap', blockId: created.blockId, name: 'agents/draft' });
+      expect((await call<{ content: string }>('read_doc', { canvasId: 'product-roadmap', blockId: created.blockId })).content).toBe('# Branch edit');
     } finally { await client.close(); await server.close(); }
   });
 });

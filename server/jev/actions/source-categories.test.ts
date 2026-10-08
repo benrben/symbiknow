@@ -69,3 +69,36 @@ it('names a Markdown field caption by its readable value, not its source syntax'
   const categories = sharedSourceCategories([source, document('two', caption('edit_doc'))], source);
   expect(categories.map(category => category.name)).toEqual(['Documents']);
 });
+
+it('nominates repeated category headings across distinct document titles before any profile exists', () => {
+  const source = document('sso', '# SSO security review\n\n## Security\n\nSSO enforcement requires a passing security test.');
+  const pen = document('pen', '# Pen test\n\n## Security\n\nRetest SAML audience validation before approving security.');
+  const pricing = document('pricing', '# Pricing decision\n\n## Pricing\n\nApproved enterprise pricing.');
+  const categories = sharedSourceCategories([source, pen, pricing], source);
+  expect(categories.map(category => category.name)).toEqual(['Security']);
+  expect(categories[0].origins.map(origin => origin.quote)).toEqual(['## Security', '## Security']);
+  const runbook = document('runbook', '# Rollback runbook\n\n## Release\n\nRestore the prior deployment.');
+  const copy = document('copy', runbook.block.content);
+  const blockers = document('blockers', '# Launch blockers\n\n## Release\n\nRehearse rollback before launch.');
+  expect(sharedSourceCategories([runbook, copy, blockers], runbook).map(category => category.name)).toEqual(['Release']);
+});
+
+it('keeps shared parent hierarchies and manually supplied label categories instead of flattening them', () => {
+  const source = document('one', '# Engineering\n\n## Backend\n\nBuild checked APIs.');
+  const reference = document('two', '# Engineering\n\n## Backend\n\nPersist backend contracts.');
+  expect(sharedSourceCategories([source, reference], source)).toEqual([]);
+  const tagged = document('tagged', '# Architecture\n\n## Storage\n\nAtlas architecture records persistence.'); tagged.block.tags = ['Atlas'];
+  const other = document('other', '# API\n\n## Storage\n\nAtlas API records persistence.'); other.block.tags = ['Atlas'];
+  expect(sharedSourceCategories([tagged, other], tagged)).toEqual([]);
+});
+it('distinguishes managed labels from owner-pinned categories when nominating repeated headings', () => {
+  const source = document('one', '# Architecture\n\n## Storage\n\nPersistence uses durable records.');
+  const reference = document('two', '# API\n\n## Storage\n\nPersistence exposes checked interfaces.');
+  for (const item of [source, reference]) {
+    item.block.tags = ['Technical'];
+    item.block.jevOwnership = { managed: ['tags'], pins: [], removedLabels: [], removedLinks: [] };
+  }
+  expect(sharedSourceCategories([source, reference], source).map(group => group.name)).toEqual(['Storage']);
+  source.block.jevOwnership!.pins = ['tags'];
+  expect(sharedSourceCategories([source, reference], source)).toEqual([]);
+});

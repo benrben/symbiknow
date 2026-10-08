@@ -520,12 +520,11 @@ When('the assistant asks to delete {string} and I reply {string}', async functio
     ] }) });
   const stream = await response.text();
   assert.equal(response.status, 200, stream);
-  assert.match(stream, /Chat cannot delete Temporary Note directly/);
-  assert.match(stream, /use Delete in its editor/);
+  assert.match(stream, /Deleted Temporary Note through MCP/);
   assert.doesNotMatch(stream, /event: chat_proposal/);
 });
 
-Then('{string} remains until I use its document controls', async function (title) {
+Then('{string} is deleted through the canonical MCP tool', async function (title) {
   const canvas = (await request(this, `/api/canvases/${this.canvasId}`)).body;
-  assert.equal(canvas.blocks.some(block => block.title === title), true);
+  assert.equal(canvas.blocks.some(block => block.title === title), false);
 });

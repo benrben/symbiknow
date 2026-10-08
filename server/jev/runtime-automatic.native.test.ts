@@ -7,12 +7,15 @@ import { jevActions, type JevPrincipal } from '../../shared/jev-types.js';
 import type { JevAnswer, JevQuestion } from '../jev.js';
 import { CanvasStore } from '../storage.js';
 import { JevRuntime } from './runtime.js';
+import { JevWorkspaceFiles } from './workspace.js';
 import { resolveSharedQuestionSources, resolveSharedQuestionTexts } from './actions/question-state-pool.test.helpers.js';
 
 const owner: JevPrincipal = { id: 'owner', kind: 'user', access: 'write', canApprove: true, canConfigure: true };
+const atlasSource = '# Atlas\nOwner: Alice\nAtlas coordinate specification: every northern star entry records right ascension and declination.';
 let root: string; let store: CanvasStore; let runtime: JevRuntime; let provider: Server;
 let workspaceId: string; let canvasId: string; let origin: string; let calls: number; let unavailable: boolean;
 let supported: boolean; let moveToSecond: boolean;
+let failedQuestions: string[][];
 
 function questionInput(id: string, state: Record<string, unknown>) {
   const pool = state.sourceStates;
@@ -32,7 +35,8 @@ function decision(key: string, submitted: JevQuestion, state: Record<string, unk
     probabilities: Object.fromEntries(question.criteria.map((_, index) => [String(index), index === 2 ? 1 : 0])) };
   const keys = Object.keys(question.criteria);
   const choices: Record<string, string> = { parent: 'none', pair: 'none', role: 'specification',
-    canvas: moveToSecond ? 'c1' : 'c0', evidence: 'assignment' in local ? 'p1' : keys[0] };
+    ...('canvases' in local ? { place: moveToSecond ? 'B' : 'A', gate: moveToSecond ? 'B' : 'A' } : {}),
+    evidence: 'assignment' in local ? 'p1' : keys[0] };
   const selected = /^evidence_\d+$/.test(id) && 'assignment' in local ? 'p1' : choices[id] ?? keys[0];
   return { type: 'choice', choice: selected, confidence: 0.98,
     probabilities: Object.fromEntries(keys.map(key => [key, key === selected ? 1 : 0])) };
@@ -40,12 +44,15 @@ function decision(key: string, submitted: JevQuestion, state: Record<string, unk
 
 beforeEach(async () => {
   vi.stubEnv('TYPESAFE_API_KEY', '');
-  calls = 0; unavailable = false; supported = true; moveToSecond = false;
+  calls = 0; unavailable = false; supported = true; moveToSecond = false; failedQuestions = [];
   provider = createServer(async (request, response) => {
     calls += 1;
-    if (unavailable) { response.statusCode = 503; response.end('Provider unavailable'); return; }
     let raw = ''; for await (const chunk of request) raw += chunk;
     const body = JSON.parse(raw) as { state: Record<string, unknown>; questions: Record<string, JevQuestion> };
+    if (unavailable) {
+      failedQuestions.push(Object.keys(body.questions).map(id => questionInput(id, body.state).id));
+      response.statusCode = 503; response.end('Provider unavailable'); return;
+    }
     response.setHeader('content-type', 'application/json');
     response.end(JSON.stringify({ model: 'jev-native-automatic', answers: Object.fromEntries(
       Object.entries(body.questions).map(([id, question]) => [id, decision(id, question, body.state)])) }));
@@ -76,7 +83,7 @@ it('runs all retained actions after an ordinary save with no action configuratio
   const task = await store.createTask(canvasId, { title: 'Atlas release', detail: 'Carry out Atlas release requirements.' }, 'Browser');
   const review = await store.createTask(canvasId, { title: 'Atlas release checkpoint', detail: 'Carry out Atlas release requirements at the checkpoint.' }, 'Browser');
   await runtime.idle();
-  const source = await store.createBlock(canvasId, { title: 'Atlas', content: '# Atlas\nOwner: Alice\nAtlas release requirements.' });
+  const source = await store.createBlock(canvasId, { title: 'Atlas', content: atlasSource });
   await runtime.idle();
   const state = await runtime.read(workspaceId, owner);
   expect(new Set(state.jobs.map(job => job.request.action))).toEqual(new Set(jevActions));
@@ -96,7 +103,7 @@ it('runs all retained actions after an ordinary save with no action configuratio
 });
 
 it('preserves task attachments after ordinary task saves and stops repeating work when the context is unchanged', async () => {
-  await store.createBlock(canvasId, { title: 'Atlas', content: '# Atlas\nOwner: Alice\nAtlas release requirements.' });
+  await store.createBlock(canvasId, { title: 'Atlas', content: atlasSource });
   await runtime.idle();
   const initial = await runtime.read(workspaceId, owner);
   const firstCalls = calls;
@@ -117,9 +124,9 @@ it('preserves task attachments after ordinary task saves and stops repeating wor
 });
 
 it('refreshes derived evidence after ordinary source edits and persists the current source revision across reload', async () => {
-  const source = await store.createBlock(canvasId, { title: 'Atlas', content: '# Atlas\nOwner: Alice\nAtlas release requirements.' });
+  const source = await store.createBlock(canvasId, { title: 'Atlas', content: atlasSource });
   await runtime.idle();
-  const edited = await store.updateBlock(canvasId, source.id, { content: '# Atlas\nOwner: Bob\nAtlas updated release requirements.' }, 'Browser');
+  const edited = await store.updateBlock(canvasId, source.id, { content: '# Atlas\nOwner: Bob\nAtlas updated coordinates identify southern stars by right ascension and declination.' }, 'Browser');
   await runtime.idle();
   const changed = await runtime.read(workspaceId, owner);
   expect(changed.profiles[`${canvasId}:${source.id}`].source).toMatchObject({ sourceGeneration: edited.sourceGeneration, contentHash: edited.contentHash });
@@ -134,7 +141,7 @@ it('refreshes derived evidence after ordinary source edits and persists the curr
 });
 
 it('preserves explicit manual membership and owner corrections without opening proposals that need a user decision', async () => {
-  const source = await store.createBlock(canvasId, { title: 'Atlas', content: '# Atlas\nOwner: Alice\nAtlas release requirements.' });
+  const source = await store.createBlock(canvasId, { title: 'Atlas', content: atlasSource });
   await runtime.idle();
   const manual = await store.updateBlock(canvasId, source.id, { group: 'custom:human', tags: ['Human'] }, 'Browser');
   const task = await store.createTask(canvasId, { title: 'Atlas release', detail: 'Carry out Atlas release requirements.', assignee: 'human-owner' }, 'Browser');
@@ -193,7 +200,12 @@ it('bounds an unavailable provider and resumes automatically after its cooldown 
   await runtime.idle();
   const failed = await runtime.read(workspaceId, owner);
   expect(failed.jobs.filter(job => job.state === 'failed')).toHaveLength(1);
-  expect(calls).toBeLessThanOrEqual(2);
+  const durable = await new JevWorkspaceFiles(root).read(workspaceId);
+  expect(durable.jobs.find(job => job.state === 'failed')).toMatchObject({ attempts: 2 });
+  expect(failedQuestions.flat().filter(id => id === 'role'), JSON.stringify(failedQuestions)).toHaveLength(2);
+  expect(failedQuestions.every(names => names.includes('role') || names.includes('place'))).toBe(true);
+  // The primary has two attempts; optional prefetch reads can fail independently in the same budget.
+  expect(calls).toBeLessThanOrEqual(4);
   const failedCalls = calls;
   await runtime.tick(); await runtime.idle();
   expect((await runtime.read(workspaceId, owner)).jobs).toEqual(failed.jobs);

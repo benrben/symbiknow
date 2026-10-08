@@ -7,6 +7,7 @@ import { AIMessage } from '@langchain/core/messages';
 import { createApiServer } from './index.js';
 import { CanvasStore } from './storage.js';
 import type { DeepAgentFactory } from './chat-stream.js';
+import { expectRestoredCanvas } from './tests/restoration.js';
 
 const opened: Array<{ server: Server; root: string }> = [];
 async function fixture(factory: DeepAgentFactory) {
@@ -23,14 +24,14 @@ describe('HTTP chat input integration', () => {
   it('normalizes multipart input and current-view scope before constructing the agent, with no document writes', async () => {
     const factory: DeepAgentFactory = vi.fn<DeepAgentFactory>((_settings, tools, prompt) => async function* (messages) {
       expect(messages.map(message => message.content)).toEqual(['Earlier answer', 'First paragraph\nSecond paragraph']);
-      expect(tools.map(tool => tool.name)).not.toContain('create_doc'); expect(tools.map(tool => tool.name)).not.toContain('read_doc');
+      expect(tools.map(tool => tool.name)).not.toContain('create_doc'); expect(tools.map(tool => tool.name)).toContain('read_doc'); expect(tools.map(tool => tool.name)).toContain('upload_file');
       expect(prompt).toContain('"selectedDocuments":["Launch checklist"]'); expect(prompt).toContain('"visibleDocuments":["Launch checklist"]'); expect(prompt).toContain('"editingDocument":"Launch checklist"'); expect(prompt).not.toContain('"openDocument":');
       expect(prompt).toContain('"editorDraft":{"title":"My unfinished plan","kind":"markdown","content":"Unsaved checklist","truncated":false}'); expect(prompt).toContain('"focusedSourceId":"other-canvas:qa"');
       yield { messages: [...messages, new AIMessage('Parsed safely')] };
     });
     const { base, store } = await fixture(factory); const before = await store.getCanvas(request.canvasId);
     const reply = await post(base, '/api/chat', { canvasId: '  product-roadmap  ', messages: [{ role: 'system', content: 'Ignored system message' }, { role: 'assistant', content: 'Earlier answer' }, { role: 'user', content: [{ type: 'text', text: 'First paragraph' }, { type: 'image_url', image_url: 'unused.png' }, { type: 'text', text: 'Second paragraph' }] }], viewContext: { selectedBlockIds: ['launch-checklist', 'foreign'], visibleBlockIds: ['launch-checklist'], readerBlockId: 'foreign', editingBlockId: 'launch-checklist', editorHasUnsavedChanges: true, editorDraft: { title: 'My unfinished plan', kind: 'markdown', content: 'Unsaved checklist' }, answerFocus: { level: 'sources', focusedSourceId: 'other-canvas:qa' } } });
-    expect(reply.status, await reply.clone().text()).toBe(200); expect(await reply.json()).toEqual({ message: 'Parsed safely', changed: false }); expect(factory).toHaveBeenCalledOnce(); expect(await new CanvasStore(store.root).getCanvas(request.canvasId)).toEqual(before);
+    expect(reply.status, await reply.clone().text()).toBe(200); expect(await reply.json()).toEqual({ message: 'Parsed safely', changed: false }); expect(factory).toHaveBeenCalledOnce(); expectRestoredCanvas(await new CanvasStore(store.root).getCanvas(request.canvasId), before);
   });
 
   it.each(['/api/chat', '/api/chat/stream'])('rejects malformed messages and canvas scopes before creating an agent on %s', async route => {

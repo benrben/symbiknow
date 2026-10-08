@@ -119,7 +119,9 @@ export class JevRuntime {
   async configure(workspaceId: string, patch: Partial<JevSettings>, supplied: JevPrincipal): Promise<JevWorkspaceState> {
     await this.ready;
     const principal = await currentPrincipal(this.store, supplied);
-    if (!principal.canConfigure || principal.kind !== 'user') throw new ApiError(403, 'Workspace owner authorization is required');
+    if (!principal.canConfigure || principal.access !== 'write') throw new ApiError(403, 'Workspace configuration permission is required');
+    requireTool(principal, ['jev_configure']);
+    await this.requireConfigurationScope(workspaceId, principal);
     await this.requireWorkspace(workspaceId);
     const result = await this.files.serial(workspaceId, async () => {
       const state = await this.files.read(workspaceId);
@@ -132,6 +134,12 @@ export class JevRuntime {
     });
     if (result.settings.externalProcessing && !result.settings.paused) await this.reconcile(workspaceId);
     return result;
+  }
+
+  private async requireConfigurationScope(workspaceId: string, principal: JevPrincipal): Promise<void> {
+    if (!principal.allowedCanvasIds) return;
+    const workspace = (await this.store.listWorkspaces()).find(item => item.id === workspaceId);
+    if (workspace?.canvases.some(canvas => !principal.allowedCanvasIds!.includes(canvas.id))) throw new ApiError(403, 'Configuration requires access to every canvas in this workspace');
   }
 
   async reset(workspaceId: string, supplied: JevPrincipal): Promise<JevWorkspaceState> {
@@ -387,7 +395,7 @@ export class JevRuntime {
   async cancel(workspaceId: string, jobId: string, supplied: JevPrincipal): Promise<void> {
     await this.ready;
     const principal = await currentPrincipal(this.store, supplied);
-    requireTool(principal, ['jev_do', 'jev_propose']);
+    requireTool(principal, ['jev_do']);
     await this.files.serial(workspaceId, async () => {
       const state = await this.files.read(workspaceId);
       const job = state.jobs.find(item => item.id === jobId) as StoredJob | undefined;
@@ -402,7 +410,7 @@ export class JevRuntime {
     await this.ready;
     return this.files.serial(workspaceId, async () => {
       const proposal = (await this.files.read(workspaceId)).proposals.find(item => item.id === proposalId);
-      if (proposal) await rejectRetiredTaskMutation(this.store, principal, proposal.mutation, ['jev_resolve', 'undo_jev', 'set_metadata']);
+      if (proposal) await rejectRetiredTaskMutation(this.store, principal, proposal.mutation, ['jev_resolve', 'jev_undo', 'set_metadata']);
       await this.executor.recoverInside(workspaceId);
       return publicJevReceipt(await this.executor.applyInside(workspaceId, proposalId, principal));
     });
@@ -412,7 +420,7 @@ export class JevRuntime {
     await this.ready;
     return this.files.serial(workspaceId, async () => {
       const receipt = (await this.files.read(workspaceId)).receipts.find(item => item.id === receiptId);
-      if (receipt) await rejectRetiredTaskMutation(this.store, principal, receipt.after, ['jev_resolve', 'undo_jev']);
+      if (receipt) await rejectRetiredTaskMutation(this.store, principal, receipt.after, ['jev_resolve', 'jev_undo']);
       await this.executor.recoverInside(workspaceId);
       return publicJevReceipt(await this.executor.undoInside(workspaceId, receiptId, principal));
     });

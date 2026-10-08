@@ -5,6 +5,7 @@ import { recoverQuestionBundle } from './question-batch-recovery.js';
 import { compileSharedQuestionStates } from './question-state-pool.js';
 import { compileSharedQuestionTexts } from './question-text-pool.js';
 import { questionRequestFits } from './question-request-budget.js';
+import { sourceScopedQuestionGroups, type SourceScopedQuestionGroup } from './question-source-scope.js';
 import { isQuestionSetCollector, questionSetCollector, type JevQuestionSet } from './question-set-collector.js';
 
 export type { JevQuestionSet } from './question-set-collector.js';
@@ -49,12 +50,25 @@ function chunks(sets: JevQuestionSet[], shared: boolean): JevQuestionSet[][] {
     if (current.length && !fits([...current, set], shared)) { result.push(current); current = []; }
     current.push(set);
   }
-  if (current.length) result.push(current);
+  result.push(current);
   return result;
 }
-function questionGroups(sets: JevQuestionSet[], shared: boolean): JevQuestionSet[][] {
-  if (sets.length && fits(sets, shared)) return [sets];
-  return chunks(sets, shared);
+function questionGroups(sets: JevQuestionSet[], shared: boolean): SourceScopedQuestionGroup[] {
+  return sourceScopedQuestionGroups(sets).flatMap(scope => {
+    const bounded = fits(scope.sets, shared) ? [scope.sets] : chunks(scope.sets, shared);
+    let offset = 0;
+    return bounded.map(group => {
+      const indices = scope.indices.slice(offset, offset + group.length); offset += group.length;
+      return { sets: group, indices };
+    });
+  });
+}
+function orderedAnswers(groups: SourceScopedQuestionGroup[], results: Array<Array<Record<string, JevAnswer>>>) {
+  const answers: Array<Record<string, JevAnswer>> = [];
+  groups.forEach((group, index) => group.indices.forEach((original, position) => {
+    answers[original] = results[index][position];
+  }));
+  return answers;
 }
 async function originalChunk(context: JevEvaluationContext, sets: JevQuestionSet[], request: typeof judge): Promise<Array<Record<string, JevAnswer>>> {
   if (sets.length === 1) return [await request(context, sets[0].state, sets[0].questions)];
@@ -83,18 +97,19 @@ async function requestedSets(context: JevEvaluationContext, sets: JevQuestionSet
   const groups = questionGroups(sets, context.shareQuestionSources === true);
   // Preserve judge's credential/budget/abort ordering and its local empty-question path.
   if (groups.length === 1 || context.signal?.aborted) {
-    const results: Array<Record<string, JevAnswer>> = [];
-    for (const group of groups) results.push(...await judgeChunk(context, group, request));
-    return results;
+    const results: Array<Array<Record<string, JevAnswer>>> = [];
+    for (const group of groups) results.push(await judgeChunk(context, group.sets, request));
+    return orderedAnswers(groups, results);
   }
-  return (await runQuestionChunks(groups, group => judgeChunk(context, group, request), context.signal)).flat();
+  const results = await runQuestionChunks(groups, group => judgeChunk(context, group.sets, request), context.signal);
+  return orderedAnswers(groups, results);
 }
 /** Private collector transport; each originating judge and cache validates its complete original answer set. */
 export function collectedQuestionSets(context: JevEvaluationContext, sets: JevQuestionSet[]): Promise<Array<Record<string, JevAnswer>>> {
   if (isQuestionSetCollector(context.decider)) return settledSets(context, sets, requestQuestionAnswers);
   return requestedSets(context, sets, requestQuestionAnswers);
 }
-/** Independent judgments share one bounded request; each answer keeps its original source and question. */
+/** Judgments share bounded requests only when their exact source evidence matches. */
 export async function judgeQuestionSets(context: JevEvaluationContext, sets: JevQuestionSet[]): Promise<Array<Record<string, JevAnswer>>> {
   if (context.wrapDecider) return cachedSets(context, sets);
   if (isQuestionSetCollector(context.decider)) return settledSets(context, sets, judge);

@@ -74,9 +74,9 @@ function hasSubstantiveKeywordMatch(passage: IndexedPassage, tokens: string[]): 
 }
 
 function hasRetrievalEvidence(passage: IndexedPassage, tokens: string[], keywordRank: number | undefined,
-  semanticScore: number | undefined, mode: 'semantic' | 'keyword' | 'hybrid'): boolean {
+  semanticScore: number | undefined, mode: 'semantic' | 'keyword' | 'hybrid', minimumSimilarity: number): boolean {
   if (mode === 'keyword') return keywordRank !== undefined;
-  if (semanticScore !== undefined && semanticScore >= minimumSemanticSimilarity) return true;
+  if (semanticScore !== undefined && semanticScore >= minimumSimilarity) return true;
   return keywordRank !== undefined && hasSubstantiveKeywordMatch(passage, tokens);
 }
 
@@ -106,20 +106,22 @@ export function rankPassages(options: {
   keywordRanks: Map<number, number>;
   limit: number;
   mode?: 'semantic' | 'keyword' | 'hybrid';
-}): SymbiPassage[] {
-  const { passages, query, queryVector, keywordRanks, limit, mode = 'hybrid' } = options;
+} & SymbiRankingLimits): SymbiPassage[] {
+  const { passages, query, queryVector, keywordRanks, limit, mode = 'hybrid',
+    minimumSimilarity = minimumSemanticSimilarity, passagesPerDocument = 3, passageOrder = 'score' } = options;
   const tokens = queryTokens(query);
   if (!tokens.length) return [];
   const semantic = semanticRanks(passages, queryVector, mode);
   const scored = passages.map((passage) => scorePassage(passage, tokens, keywordRanks.get(passage.rowid),
-    semantic.get(passage.rowid), mode));
+    semantic.get(passage.rowid), { mode, minimumSimilarity }));
   const matchedDocuments = new Set(scored.filter((entry) => entry.score > 0.003)
     .map((entry) => entry.passage.blockId));
   const sorted = scored.map((entry) => ({ ...entry,
     score: entry.score + (entry.passage.links.some((id) => matchedDocuments.has(id)) ? 0.0015 : 0),
   })).filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score || compareLocation(a.passage, b.passage));
-  return selectPassages(sorted, limit).map(({ passage, score }) => ({
+  const ordered = passageOrder === 'similarity' ? documentsBySimilarity(sorted, semantic) : sorted;
+  return selectPassages(ordered, limit, passagesPerDocument).map(({ passage, score }) => ({
     canvasId: passage.canvasId, blockId: passage.blockId, contentHash: passage.contentHash,
     startOffset: passage.startOffset, endOffset: passage.endOffset, excerpt: passage.excerpt, score,
   }));
@@ -143,23 +145,35 @@ function semanticRanks(passages: IndexedPassage[], queryVector: number[] | undef
 
 function scorePassage(passage: IndexedPassage, tokens: string[], keywordRank: number | undefined,
   semanticRank: { rank: number; score: number } | undefined,
-  mode: 'semantic' | 'keyword' | 'hybrid'): ScoredPassage {
-  if (!hasRetrievalEvidence(passage, tokens, keywordRank, semanticRank?.score, mode)) return { passage, score: 0 };
+  { mode, minimumSimilarity }: { mode: 'semantic' | 'keyword' | 'hybrid'; minimumSimilarity: number }): ScoredPassage {
+  if (!hasRetrievalEvidence(passage, tokens, keywordRank, semanticRank?.score, mode, minimumSimilarity)) return { passage, score: 0 };
   const keywordWeight = mode === 'semantic' ? 0.35 : 1;
   const keywordScore = keywordRank === undefined ? 0 : keywordWeight / (60 + keywordRank);
-  const semanticScore = semanticRank && semanticRank.score >= minimumSemanticSimilarity ? 1 / (60 + semanticRank.rank) : 0;
+  const semanticScore = semanticRank && semanticRank.score >= minimumSimilarity ? 1 / (60 + semanticRank.rank) : 0;
   return { passage, score: keywordScore + semanticScore + metadataScore(passage, tokens) * 0.008 };
 }
 
-function selectPassages(sorted: ScoredPassage[], limit: number): ScoredPassage[] {
+/** Keep documents in score order, and list each document's passages by semantic similarity. */
+function documentsBySimilarity(sorted: ScoredPassage[], semantic: Map<number, { score: number }>): ScoredPassage[] {
+  const byDocument = new Map<string, ScoredPassage[]>();
+  for (const entry of sorted) {
+    const key = `${entry.passage.canvasId}\0${entry.passage.blockId}`;
+    byDocument.set(key, [...(byDocument.get(key) ?? []), entry]);
+  }
+  const similarity = (entry: ScoredPassage) => semantic.get(entry.passage.rowid)?.score ?? -Infinity;
+  return [...byDocument.values()].flatMap(entries => [...entries].sort((a, b) => similarity(b) - similarity(a)));
+}
+
+function selectPassages(sorted: ScoredPassage[], limit: number, passagesPerDocument: number): ScoredPassage[] {
   const selected: ScoredPassage[] = [];
   const perDocument = new Map<string, number>();
   let excerptChars = 0;
   for (const entry of sorted) {
     const key = `${entry.passage.canvasId}\0${entry.passage.blockId}`;
-    if ((perDocument.get(key) ?? 0) >= 3 || excerptChars + entry.passage.excerpt.length > 20_000) continue;
+    const count = perDocument.get(key) ?? 0;
+    if (count >= passagesPerDocument || excerptChars + entry.passage.excerpt.length > 20_000) continue;
     selected.push(entry);
-    perDocument.set(key, (perDocument.get(key) ?? 0) + 1);
+    perDocument.set(key, count + 1);
     excerptChars += entry.passage.excerpt.length;
     if (selected.length >= limit) break;
   }
@@ -172,7 +186,17 @@ export function validateIndexDocument(doc: SymbiIndexDocument): void {
   }
 }
 
-export interface SymbiSearchRequest extends SymbiRetrievalRequest {
+/** Retrieval limits a caller may widen when it judges relevance itself. */
+export interface SymbiRankingLimits {
+  /** Cosine similarity below which a passage is not semantic evidence; defaults to 0.30. */
+  minimumSimilarity?: number;
+  /** Most passages returned for one document; defaults to 3. */
+  passagesPerDocument?: number;
+  /** 'similarity' groups passages by document (best document first) and orders each group by semantic similarity. */
+  passageOrder?: 'score' | 'similarity';
+}
+
+export interface SymbiSearchRequest extends SymbiRetrievalRequest, SymbiRankingLimits {
   mode?: 'semantic' | 'keyword' | 'hybrid';
   /** Optional document ACL filter, computed by the authorized API boundary. */
   allowedDocumentIds?: string[];

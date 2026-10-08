@@ -8,8 +8,10 @@ import { CanvasStore } from './storage.js';
 import { chatAgent, type ChatStreamEvent } from './chat-agent.js';
 import type { AgentStreamItem } from './chat-agent-types.js';
 import { createChatSession, type SessionContext } from './chat-session.js';
-import { ChatProposalDraft } from './chat-proposals.js';
-import { canvasTools } from './chat-tools.js';
+import { symbiMcpTools } from './symbi-mcp-client.js';
+import { conversationWorkspace } from './agent-workspace.js';
+import { createStoreApiFetcher } from './api-inprocess.js';
+import { symbiApiHeaders } from './jev-api-principal.js';
 import { createApiServer } from './index.js';
 
 export type ModelRequest = { model: string; stream: boolean; messages: Array<{ role: string; content: unknown; tool_call_id?: string }>;
@@ -97,26 +99,27 @@ export async function fixture() {
   const canvas = await store.getCanvas('product-roadmap');
 
   async function sessionContext(overrides: Partial<SessionContext> = {}) {
-    const draft = new ChatProposalDraft(store, canvas.id, canvas);
+    const workdir = await conversationWorkspace(root, 'native-session');
     const file = await open(path.join(root, `session-cleanup-${completion++}`), 'w');
     const cleanup = { closed: 0, file };
     const context: SessionContext = { model: settings.model, providerName: 'Local provider', messages: [new HumanMessage('Review the release.')],
-      runAgent: chatAgent(settings, [], 'Answer using actual sources'), proposalDraft: draft,
-      toolContext: { query: 'Review the release.', draft, navigationRequests: [], selectedSources: [], researchPatches: [] }, store, canvasId: canvas.id,
+      runAgent: chatAgent(settings, [], 'Answer using actual sources'), toolContext: { store, canvasId: canvas.id, workdir, query: 'Review the release.', navigationRequests: [], researchPatches: [] }, store, canvasId: canvas.id,
       context: { latest: 'Review the release.', previousAssistant: '', previousUser: '' }, answerCanvas: null,
       canvasEnabled: false, warnings: [], navigationRequests: [], researchPatches: [],
       close: async () => { cleanup.closed++; await file.close(); }, ...overrides };
-    context.toolContext = { query: context.context.latest, draft: context.proposalDraft,
-      navigationRequests: context.navigationRequests, selectedSources: context.answerCanvas?.sources ?? [],
-      researchPatches: context.researchPatches, signal: context.preparationSignal };
+    context.toolContext = { store, canvasId: canvas.id, workdir, query: context.context.latest,
+      navigationRequests: context.navigationRequests, researchPatches: context.researchPatches, signal: context.preparationSignal };
     return { context, cleanup, session: createChatSession(context) };
   }
 
   async function toolSession(overrides: Partial<SessionContext> = {}) {
     const prepared = await sessionContext(overrides);
     const context = prepared.context;
-    const tools = canvasTools(store, canvas.id, context.toolContext);
-    context.runAgent = chatAgent(settings, tools, 'Use the requested canvas tools then answer.');
+    const canonical = await symbiMcpTools(context.toolContext, { mcpApiBase: 'http://symbi.internal/api',
+      mcpFetcher: createStoreApiFetcher(store), mcpHeaders: symbiApiHeaders() });
+    const close = context.close;
+    context.close = async () => { await canonical.close(); await close(); };
+    context.runAgent = chatAgent(settings, canonical.tools, 'Use the requested MCP tools then answer.', { workdir: context.toolContext.workdir });
     return prepared;
   }
 
@@ -146,3 +149,22 @@ afterEach(async () => {
   }
   await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true })));
 });
+
+/** A native model response sequence exercising MCP download, local editing, upload and read-back. */
+export function fileEditResponse(request: ModelRequest, response: ServerResponse, replacement: string, finalText = 'Saved the edited checklist.', mode: 'replace' | 'propose' = 'replace') {
+  const results = request.messages.filter(message => message.role === 'tool');
+  if (!results.length) { toolCalls(response, [{ name: 'download_file', args: { blockId: 'launch-checklist' } }], 'Preliminary thought that must be reset. '); return; }
+  const downloaded = results.find(message => typeof message.content === 'string' && message.content.includes('"manifestPath"'));
+  if (!downloaded) throw new Error('Missing native working file download result');
+  const file = JSON.parse(String(downloaded.content)) as { savedTo: string };
+  if (results.length === 1) { toolCalls(response, [{ name: 'read_file', args: { file_path: file.savedTo } }]); return; }
+  if (results.length === 2) {
+    const read = results[1].content;
+    const text = Array.isArray(read) ? read.map((part: { text?: string }) => part.text ?? '').join('') : String(read);
+    const source = text.replace(/^@@[^\n]*@@\n/u, '') + '\n';
+    toolCalls(response, [{ name: 'edit_file', args: { file_path: file.savedTo, old_string: source, new_string: replacement } }]); return;
+  }
+  if (results.length === 3) { toolCalls(response, [{ name: 'upload_file', args: { sourcePath: file.savedTo, mode } }]); return; }
+  if (results.length === 4) { toolCalls(response, [{ name: mode === 'propose' ? 'show_doc_on_canvas' : 'read_doc', args: { blockId: 'launch-checklist' } }]); return; }
+  answer(response, [finalText]);
+}

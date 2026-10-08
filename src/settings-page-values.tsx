@@ -29,8 +29,6 @@ export const builtInProfiles: AgentProfile[] = [
 ];
 
 export const pluginInfo: Array<{ id: AgentPlugin; title: string; detail: string }> = [
-  { id: 'document_read', title: 'Read documents', detail: 'Search and read canvas files.' },
-  { id: 'document_write', title: 'Edit documents', detail: 'Create, edit, move, link, and delete files when requested.' },
   { id: 'external_mcp', title: 'Outside MCP servers', detail: 'Use tools from the MCP servers you connect below.' },
 ];
 

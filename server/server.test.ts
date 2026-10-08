@@ -7,6 +7,7 @@ import type { CanvasBlock, CanvasDocument, WorkspaceSummary } from '../shared/ty
 import { createApiServer } from './index.js';
 import { AIMessage } from '@langchain/core/messages';
 import type { DeepAgentFactory } from './chat-stream.js';
+import { uploadLocalEdit } from './chat-file-tools.test.fixture.js';
 
 const opened: Array<{ server: Server; dataDir: string }> = [];
 
@@ -74,10 +75,9 @@ describe('canvas HTTP API', () => {
   });
 
   it('uses the selected provider and saves a model edit only after proposal review', async () => {
-    const factory: DeepAgentFactory = (settings, tools) => async function* (messages, signal) {
+    const factory: DeepAgentFactory = (settings, tools, _prompt, environment) => async function* (messages, signal) {
       expect(settings.apiKey).toBe('test-key');
-      await tools.find(tool => tool.name === 'edit_doc')!.invoke({ blockId: 'launch-checklist',
-        content: '# Launch checklist\n- [x] Beta tested\n' }, { signal });
+      await uploadLocalEdit(tools, environment!.workdir, 'launch-checklist', '# Launch checklist\n- [x] Beta tested\n', signal);
       yield { messages: [...messages, new AIMessage('Review the launch checklist edit.')] };
     };
     const { base } = await app(factory);

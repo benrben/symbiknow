@@ -12,6 +12,7 @@ import { JevRuntime } from './runtime.js';
 import { JevWorkspaceFiles } from './workspace.js';
 
 const owner: JevPrincipal = { id: 'owner', kind: 'user', access: 'write', canApprove: true, canConfigure: true };
+const atlasSource = '# Atlas\nOwner: Alice\nAtlas coordinate specification: every northern star entry records right ascension and declination.';
 let root: string; let store: CanvasStore; let runtime: JevRuntime; let files: JevWorkspaceFiles;
 let workspaceId: string; let canvasId: string; let blockId: string; let evaluate: JevEvaluator;
 beforeEach(async () => {
@@ -20,7 +21,7 @@ beforeEach(async () => {
   store = new CanvasStore(root); await store.init(); await store.deleteWorkspace('acme-team');
   workspaceId = (await store.createWorkspace({ name: 'Reset runtime' })).id;
   canvasId = (await store.createCanvas(workspaceId, { name: 'Atlas' })).id;
-  blockId = (await store.createBlock(canvasId, { title: 'Atlas', content: '# Atlas\nOwner: Alice\nAtlas release requirements.', x: 123, y: 456 })).id;
+  blockId = (await store.createBlock(canvasId, { title: 'Atlas', content: atlasSource, x: 123, y: 456 })).id;
   files = new JevWorkspaceFiles(root); evaluate = evaluateJevAction;
   runtime = new JevRuntime(store, { apiKey: '', startTimer: false, fetcher: acceptanceReflexProvider,
     evaluate: (context, request) => evaluate(context, request) });
@@ -53,22 +54,23 @@ it('returns saved thresholds while startup and a workspace mutation are still wa
   }
 });
 
-it('rejects non-owner and canvas-limited callers and unavailable processing before modifying saved results', async () => {
+it('rejects callers without full configuration permission and unavailable processing before modifying saved results', async () => {
   const state = await files.read(workspaceId); state.profiles[`${canvasId}:${blockId}`] = { role: 'Previous analysis' };
   await files.write(workspaceId, state); const baseline = await files.read(workspaceId);
   for (const principal of [
-    { ...owner, kind: 'automation' as const }, { ...owner, canConfigure: false },
+    { ...owner, canConfigure: false },
     { ...owner, access: 'read' as const }, { ...owner, allowedCanvasIds: [canvasId] },
   ]) await expect(runtime.reset(workspaceId, principal)).rejects.toMatchObject({ status: 403 });
   await expect(runtime.reset('missing-workspace', owner)).rejects.toMatchObject({ status: 404 });
   await expect(runtime.reset(workspaceId, owner)).rejects.toMatchObject({ status: 503, message: 'Connect a processing provider before resetting Jev' });
+  await expect(runtime.reset(workspaceId, { ...owner, kind: 'automation' })).rejects.toMatchObject({ status: 503, message: 'Connect a processing provider before resetting Jev' });
   expect(await files.read(workspaceId)).toEqual(baseline);
   runtime.useTransport({ apiKey: 'native-reset-provider' });
   await runtime.configure(workspaceId, { externalProcessing: false }, owner);
   const disabled = await files.read(workspaceId);
   await expect(runtime.reset(workspaceId, owner)).rejects.toMatchObject({ status: 503, message: 'Enable automatic processing before resetting Jev' });
   expect(await files.read(workspaceId)).toEqual(disabled);
-  expect((await store.getCanvasBlock(canvasId, blockId)).content).toBe('# Atlas\nOwner: Alice\nAtlas release requirements.');
+  expect((await store.getCanvasBlock(canvasId, blockId)).content).toBe(atlasSource);
 });
 
 it('pauses explicit checks and reset for the session without changing saved state', async () => {
@@ -134,5 +136,5 @@ it('recovers a persisted reset before startup backfill and preserves current man
   expect(await files.read(workspaceId)).not.toHaveProperty('resetJournal');
   expect(JSON.stringify(recovered.profiles)).not.toContain('Previous analysis');
   expect(await store.getCanvasBlock(canvasId, blockId)).toMatchObject({ group: 'custom:manual', tags: ['Manual'], x: 123, y: 456,
-    content: '# Atlas\nOwner: Alice\nAtlas release requirements.' });
+    content: atlasSource });
 });

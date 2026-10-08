@@ -221,7 +221,7 @@ it('ignores removed historical modes without asking their questions', async () =
   expect(result.result.prefetchDeferredActions).toBeUndefined();
 });
 
-it('prefetches labels only from existing checked vocabulary without creating speculative terms', async () => {
+it('defers enabled labels until the new profile is available without classifying old vocabulary', async () => {
   const value = context();
   for (const action of jevActions) value.settings.modes[action] = 'off';
   value.settings.modes.profile = 'auto'; value.settings.modes.label = 'auto';
@@ -233,7 +233,7 @@ it('prefetches labels only from existing checked vocabulary without creating spe
     return answers(questions);
   };
   const result = await evaluateWithQuestionPrefetch(value, request, new QuestionAnswerCache(), 'existing-label');
-  expect(observed).toContain('label_0');
+  expect(observed).toEqual(['role', 'keyPassage', 'logicalTopic_0', 'logicalTopicEvidence_0']);
   expect(value.vocabulary).toEqual(before);
   expect(result.proposals.map(proposal => proposal.action)).toEqual(['profile']);
 });

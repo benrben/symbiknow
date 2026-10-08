@@ -1,11 +1,11 @@
 feature: Ordinary workflows remain available with Symbi Reflex off
 scenarios:
-  - name: Tasks are absent from the app and API
+  - name: The retired Tasks view and API remain unavailable
     steps:
       - given: a fresh workspace
       - when: I open the current canvas in a browser
       - then: the retired Tasks view and API are unavailable
-  - name: Canvas chat and settings remain available without a Tasks tab
+  - name: Canvas chat and settings remain available without an assistant Tasks tab
     steps:
       - given: a fresh workspace
       - when: I add a Markdown block called "Ordinary Note" containing "# Native canvas document"

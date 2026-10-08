@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { modelSetupMessage } from './chat-agent-configuration.js';
 import { CanvasStore } from './storage.js';
-import { asksForSources, chatContext, conversationMessages, findBlock, messageContent, modelSettings, pluginAllows, profileText, requiredString, viewContext, viewDescription } from './chat-input.js';
+import { asksForSources, chatContext, conversationMessages, findBlock, messageContent, modelSettings, profileText, requiredString, viewContext, viewDescription } from './chat-input.js';
 import type { CanvasBlock, CanvasDocument } from '../shared/types.js';
 
 const roots: string[] = [];
@@ -104,21 +104,6 @@ describe('agent configuration and capabilities', () => {
     expect(profileText({ ...settings, agentProfile: 'research' })).toContain('cite document titles'); expect(profileText({ ...settings, agentProfile: 'planner' })).toContain('ordered steps'); expect(profileText({ ...settings, agentProfile: 'builder' })).toContain('Verify saved changes');
     await store.updateSettings({ customProfiles: [{ id: 'custom-review', name: 'Review', instructions: 'Check the evidence.' }], agentProfile: 'custom-review' }); expect(profileText(await new CanvasStore(store.root).getSettings())).toBe('Check the evidence.');
     expect(profileText({ ...settings, agentProfile: 'missing', customProfiles: undefined })).toBe(fallback); expect(profileText({ ...settings, agentProfile: 'constructor' })).toBe(fallback); expect(profileText({ ...settings, agentProfile: 'toString' })).toBe(fallback); expect(profileText({ ...settings, agentProfile: 'missing', customProfiles: [{ id: 'custom-other', name: 'Other', instructions: 'Other instructions' }] })).toBe(fallback);
-  });
-
-  it('gates generic tools by configured capabilities without exposing removed action tools', () => {
-    expect(pluginAllows('draw_research_canvas', [])).toBe(true);
-    for (const name of ['merge_documents', 'score_documents', 'analyze_canvas', 'organize_canvas']) {
-      expect(pluginAllows(name, ['document_read', 'document_write'])).toBe(false);
-    }
-    for (const [name, plugin] of [['search_docs', 'document_read'], ['read_doc', 'document_read'],
-      ['show_doc_on_canvas', 'document_read'], ['create_doc', 'document_write']]) {
-      expect(pluginAllows(name, [plugin])).toBe(true);
-      expect(pluginAllows(name, [])).toBe(false);
-    }
-    for (const name of ['list_tasks', 'create_task', 'update_task', 'delete_task']) {
-      expect(pluginAllows(name, ['document_read', 'document_write'])).toBe(false);
-    }
   });
 
   it('distinguishes navigation requests from evidence questions', () => {

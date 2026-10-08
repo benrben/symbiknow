@@ -76,14 +76,14 @@ describe('private and public settings', () => {
   });
 
   it('updates editable text, grouping, plugins, and agent profiles', () => {
-    expect(update({ model: ' model ', systemPrompt: ' prompt ', groupBy: 'purpose', agentPlugins: ['document_read', 'document_read'],
-      agentProfile: 'planner' })).toMatchObject({ model: 'model', systemPrompt: 'prompt', groupBy: 'purpose', agentPlugins: ['document_read'], agentProfile: 'planner' });
+    expect(update({ model: ' model ', systemPrompt: ' prompt ', groupBy: 'purpose', agentPlugins: ['external_mcp', 'external_mcp'],
+      agentProfile: 'planner' })).toMatchObject({ model: 'model', systemPrompt: 'prompt', groupBy: 'purpose', agentPlugins: ['external_mcp'], agentProfile: 'planner' });
   });
 
   it('filters retired task plugins from previously saved settings', () => {
-    const legacy = settings({ agentPlugins: ['document_read', 'tasks'] as PrivateSettings['agentPlugins'] });
-    expect(publicSettings(legacy).agentPlugins).toEqual(['document_read']);
-    expect(update({}, legacy).agentPlugins).toEqual(['document_read']);
+    const legacy = settings({ agentPlugins: ['external_mcp', 'tasks'] as PrivateSettings['agentPlugins'] });
+    expect(publicSettings(legacy).agentPlugins).toEqual(['external_mcp']);
+    expect(update({}, legacy).agentPlugins).toEqual(['external_mcp']);
   });
 });
 
@@ -148,7 +148,7 @@ describe('scoped MCP tokens', () => {
     expect(result.stored.hash).not.toContain(result.token);
     expect(newMcpToken('Scoped', 'propose', { allowedCanvasIds: ['canvas-one'], tools: ['list_versions', 'read_doc'] }).stored)
       .toMatchObject({ allowedCanvasIds: ['canvas-one'], tools: ['list_versions', 'read_doc'] });
-    expect(newMcpToken('Writer', 'write', { tools: ['edit_doc'] }).stored.tools).toEqual(['edit_doc']);
+    expect(newMcpToken('Writer', 'write', { tools: ['delete_doc'] }).stored.tools).toEqual(['delete_doc']);
   });
 
   it.each([[], 'canvas', [2], ['bad/id'], ['same', 'same'], Array.from({ length: 101 }, (_, i) => `c-${i}`)])
@@ -159,7 +159,7 @@ describe('scoped MCP tokens', () => {
     expect(() => newMcpToken('Old task scope', 'write', { tools: ['list_tasks'] })).toThrow();
   });
   it.each(['read', 'propose'])('rejects write tools for %s tokens', access => {
-    expect(() => newMcpToken('Token', access, { tools: ['edit_doc'] })).toThrow('exceed this token access level');
+    expect(() => newMcpToken('Token', access, { tools: ['delete_doc'] })).toThrow('exceed this token access level');
   });
   it('rejects unknown access and removed feature tools', () => {
     expect(() => newMcpToken('Token', 'admin')).toThrow('access must be');

@@ -1,19 +1,23 @@
-export type ProjectMcpOptions = {
-  /** stdio agents run on the agent's machine, so they may read and write local files. Remote HTTP agents may not. */
-  localFiles?: boolean;
-  /** During migration, register legacy Jev diagnostics and proposal tools in discovery. */
-  legacyBrainTools?: boolean;
-  /** Extra API headers, such as authorization. */
-  headers?: Record<string, string>;
-  /** Suffix added to the connecting client's name, such as the MCP token name. */
-  actorSuffix?: string;
-  /** Remote token capability. Existing stdio clients retain full access. */
+export type McpPermissions = {
   access?: 'read' | 'propose' | 'write';
-  /** Limits a remote token to these canvases. Omitted means every canvas. */
   allowedCanvasIds?: string[];
-  /** Limits a remote token to these named MCP tools. Omitted means its access-level default. */
   tools?: string[];
-  /** Observes the actual remote tool handler without storing its arguments or result. */
+  canApprove?: boolean;
+  canConfigure?: boolean;
+};
+
+export type ProjectMcpOptions = McpPermissions & {
+  /** The transport may materialize files only in the agent's own environment. */
+  localFiles?: boolean;
+  headers?: Record<string, string>;
+  actorSuffix?: string;
+  /** Stable trusted caller identity, independent of its display name. */
+  callerId?: string;
+  /** CLI hosts resolve local and bearer authority from the authenticated API. */
+  authoritativeApi?: boolean;
+  /** Re-read grants at discovery and execution. null means the caller was revoked. */
+  resolvePermissions?: () => Promise<McpPermissions | null> | McpPermissions | null;
+  /** All transports publish the same execution event. */
   onToolCall?: (event: { tool: string; args: unknown; startedAt: string; endedAt: string;
     outcome: 'success' | 'error' | 'denied'; result?: unknown }) => Promise<void> | void;
 };

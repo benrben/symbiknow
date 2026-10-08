@@ -3,6 +3,8 @@
 - [Architecture and feature atlas](project-atlas/README.md): repository map, system behavior, and operations.
 - [Symbi Reflex and SDK](jev/README.md): engine behavior and integration contracts.
 - [Research canvas](research-canvas.md): research workflow.
+- [Canvas tasks](todos.md): list and board views, automatic Archive, and MCP tools.
+- [Shared memory acceptance checklist](shared-memory-acceptance.md): the eleven-scene launch story, required evidence, and recovery checks.
 - [Historical Symbi engine plan](plans/symbi-engine.md): the earlier implementation goals, including the retired Tasks feature.
 
 Source code lives in `src/` (React client), `server/` (API and storage), and `shared/` (cross-boundary types). Acceptance scenarios and browser steps live in `features/`; focused tests sit beside the code they exercise. `brand/` contains design sources, `public/` contains served assets, and `vendor/` contains the pinned local WebMCP dependency.

@@ -1,0 +1,2091 @@
+{
+  "date": "2026-10-07",
+  "corpus": "Only frozen Project Atlas Markdown documents; no live application documents",
+  "initialPlacement": "All 20 documents in broad Engineering, managed and unpinned",
+  "prerequisites": "Actual production profile and cached label actions, using default nominations; no curated group definitions injected",
+  "scoring": "Frozen nineteen answer keys unchanged; raw names require semantic review, not string equality or automatic score fitting",
+  "runs": [
+    {
+      "run": "atlas-broad-r1",
+      "report": "scripts/jev-bench/out/file-broad-start-execute-atlas-broad-r1-managed.json",
+      "reportSha256": "e2da41dc36b648322b18a9dedf90c6cf8cbc0fce9f212b18f97cd0aaeace5636",
+      "corpusSha256": "499a4156ef74db897a56de090fe81d1bdc691645049008dd05744591e82b622d",
+      "providerUsage": {
+        "calls": 80,
+        "input": 462774
+      },
+      "outboundCalls": 80,
+      "summary": {
+        "documents": 20,
+        "scoredFamilyKeys": 19,
+        "refined": 19,
+        "retainedEngineering": 1,
+        "singletonGroups": [
+          {
+            "key": "custom:symbiknow_project_atlas",
+            "members": [
+              "README"
+            ]
+          },
+          {
+            "key": "custom:architecture",
+            "members": [
+              "architecture"
+            ]
+          },
+          {
+            "key": "custom:assistant_and_research_canvas",
+            "members": [
+              "assistant-and-research"
+            ]
+          },
+          {
+            "key": "custom:brand_theme_and_ui_system",
+            "members": [
+              "brand-and-ui"
+            ]
+          },
+          {
+            "key": "custom:canvas_ui",
+            "members": [
+              "canvas-ui"
+            ]
+          },
+          {
+            "key": "custom:chat_internals",
+            "members": [
+              "chat-internals"
+            ]
+          },
+          {
+            "key": "custom:data_model",
+            "members": [
+              "data-model"
+            ]
+          },
+          {
+            "key": "custom:document_operations",
+            "members": [
+              "document-operations"
+            ]
+          },
+          {
+            "key": "custom:errors_and_status_codes",
+            "members": [
+              "errors"
+            ]
+          },
+          {
+            "key": "custom:project_history_and_the_refactor",
+            "members": [
+              "history"
+            ]
+          },
+          {
+            "key": "custom:mcp_and_api",
+            "members": [
+              "mcp-and-api"
+            ]
+          },
+          {
+            "key": "custom:run_and_test",
+            "members": [
+              "operations"
+            ]
+          },
+          {
+            "key": "custom:engineering",
+            "members": [
+              "plan-status"
+            ]
+          },
+          {
+            "key": "custom:symbi_reflex_internals",
+            "members": [
+              "reflex-internals"
+            ]
+          },
+          {
+            "key": "custom:safe_collaboration",
+            "members": [
+              "safe-collaboration"
+            ]
+          },
+          {
+            "key": "custom:jev_sdk_and_webmcp",
+            "members": [
+              "sdk-and-webmcp"
+            ]
+          },
+          {
+            "key": "custom:search_and_brain_tools",
+            "members": [
+              "search-and-brain-tools"
+            ]
+          },
+          {
+            "key": "custom:security_and_access",
+            "members": [
+              "security-and-access"
+            ]
+          },
+          {
+            "key": "custom:symbi_reflex_jev",
+            "members": [
+              "symbi-reflex"
+            ]
+          },
+          {
+            "key": "custom:testing_and_ci",
+            "members": [
+              "testing"
+            ]
+          }
+        ],
+        "exactEvidence": true,
+        "definitionsBeforeMembership": true,
+        "manualOrPinned": [],
+        "projectionOnly": true,
+        "canonicalWrites": 0,
+        "semanticCorrectness": "Requires review of raw placements and exact source evidence against frozen family keys"
+      },
+      "projectedGroups": [
+        {
+          "key": "custom:symbiknow_project_atlas",
+          "members": [
+            "README"
+          ]
+        },
+        {
+          "key": "custom:architecture",
+          "members": [
+            "architecture"
+          ]
+        },
+        {
+          "key": "custom:assistant_and_research_canvas",
+          "members": [
+            "assistant-and-research"
+          ]
+        },
+        {
+          "key": "custom:brand_theme_and_ui_system",
+          "members": [
+            "brand-and-ui"
+          ]
+        },
+        {
+          "key": "custom:canvas_ui",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:chat_internals",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:data_model",
+          "members": [
+            "data-model"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:project_history_and_the_refactor",
+          "members": [
+            "history"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations"
+          ]
+        },
+        {
+          "key": "custom:engineering",
+          "members": [
+            "plan-status"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex_internals",
+          "members": [
+            "reflex-internals"
+          ]
+        },
+        {
+          "key": "custom:safe_collaboration",
+          "members": [
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:jev_sdk_and_webmcp",
+          "members": [
+            "sdk-and-webmcp"
+          ]
+        },
+        {
+          "key": "custom:search_and_brain_tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        },
+        {
+          "key": "custom:security_and_access",
+          "members": [
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex_jev",
+          "members": [
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:testing_and_ci",
+          "members": [
+            "testing"
+          ]
+        }
+      ],
+      "certification": "Rejected intermediate result: creates a separate folder for nearly every document; family discovery is not yet correct."
+    },
+    {
+      "run": "atlas-broad-r2",
+      "report": "scripts/jev-bench/out/file-broad-start-execute-atlas-broad-r2-managed.json",
+      "reportSha256": "9c1690bff059281f91bad0fe814b752d9b7c48a7fb1d10add3aa1e43371bc230",
+      "corpusSha256": "499a4156ef74db897a56de090fe81d1bdc691645049008dd05744591e82b622d",
+      "providerUsage": {
+        "calls": 79,
+        "input": 463348
+      },
+      "outboundCalls": 79,
+      "summary": {
+        "documents": 20,
+        "scoredFamilyKeys": 19,
+        "refined": 17,
+        "retainedEngineering": 3,
+        "singletonGroups": [
+          {
+            "key": "custom:architecture",
+            "members": [
+              "architecture"
+            ]
+          },
+          {
+            "key": "custom:assistant_and_research_canvas",
+            "members": [
+              "assistant-and-research"
+            ]
+          },
+          {
+            "key": "custom:brand_theme_and_ui_system",
+            "members": [
+              "brand-and-ui"
+            ]
+          },
+          {
+            "key": "custom:chat_internals",
+            "members": [
+              "chat-internals"
+            ]
+          },
+          {
+            "key": "custom:data_model",
+            "members": [
+              "data-model"
+            ]
+          },
+          {
+            "key": "custom:document_operations",
+            "members": [
+              "document-operations"
+            ]
+          },
+          {
+            "key": "custom:errors_and_status_codes",
+            "members": [
+              "errors"
+            ]
+          },
+          {
+            "key": "custom:project_history_and_the_refactor",
+            "members": [
+              "history"
+            ]
+          },
+          {
+            "key": "custom:mcp_and_api",
+            "members": [
+              "mcp-and-api"
+            ]
+          },
+          {
+            "key": "custom:run_and_test",
+            "members": [
+              "operations"
+            ]
+          },
+          {
+            "key": "custom:symbi_reflex_internals",
+            "members": [
+              "reflex-internals"
+            ]
+          },
+          {
+            "key": "custom:safe_collaboration",
+            "members": [
+              "safe-collaboration"
+            ]
+          },
+          {
+            "key": "custom:jev_sdk_and_webmcp",
+            "members": [
+              "sdk-and-webmcp"
+            ]
+          },
+          {
+            "key": "custom:search_and_brain_tools",
+            "members": [
+              "search-and-brain-tools"
+            ]
+          },
+          {
+            "key": "custom:security_and_access",
+            "members": [
+              "security-and-access"
+            ]
+          },
+          {
+            "key": "custom:symbi_reflex_jev",
+            "members": [
+              "symbi-reflex"
+            ]
+          },
+          {
+            "key": "custom:testing_and_ci",
+            "members": [
+              "testing"
+            ]
+          }
+        ],
+        "exactEvidence": true,
+        "definitionsBeforeMembership": true,
+        "manualOrPinned": [],
+        "projectionOnly": true,
+        "canonicalWrites": 0,
+        "semanticCorrectness": "Requires review of raw placements and exact source evidence against frozen family keys"
+      },
+      "projectedGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "canvas-ui",
+            "plan-status"
+          ]
+        },
+        {
+          "key": "custom:architecture",
+          "members": [
+            "architecture"
+          ]
+        },
+        {
+          "key": "custom:assistant_and_research_canvas",
+          "members": [
+            "assistant-and-research"
+          ]
+        },
+        {
+          "key": "custom:brand_theme_and_ui_system",
+          "members": [
+            "brand-and-ui"
+          ]
+        },
+        {
+          "key": "custom:chat_internals",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:data_model",
+          "members": [
+            "data-model"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:project_history_and_the_refactor",
+          "members": [
+            "history"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex_internals",
+          "members": [
+            "reflex-internals"
+          ]
+        },
+        {
+          "key": "custom:safe_collaboration",
+          "members": [
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:jev_sdk_and_webmcp",
+          "members": [
+            "sdk-and-webmcp"
+          ]
+        },
+        {
+          "key": "custom:search_and_brain_tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        },
+        {
+          "key": "custom:security_and_access",
+          "members": [
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex_jev",
+          "members": [
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:testing_and_ci",
+          "members": [
+            "testing"
+          ]
+        }
+      ],
+      "certification": "Rejected intermediate result: creates a separate folder for nearly every document; family discovery is not yet correct."
+    },
+    {
+      "run": "atlas-family-r1",
+      "report": "scripts/jev-bench/out/file-broad-start-failed-atlas-family-r1-managed.json",
+      "reportSha256": "e581a2035019b4a8b3092d5bcd58e1e69bca6a98be73a90f0e98737747ddcd32",
+      "complete": false,
+      "phase": "file",
+      "providerUsage": {
+        "calls": 21,
+        "input": 197450
+      },
+      "outboundCalls": 21,
+      "error": "Symbi Reflex decision exceeds the application token budget",
+      "certification": "Rejected intermediate result: comparative candidate payload exceeds the existing application budget; no oversized request was sent."
+    },
+    {
+      "run": "atlas-family-r2",
+      "report": "scripts/jev-bench/out/file-broad-start-failed-atlas-family-r2-managed.json",
+      "reportSha256": "3de81ca7b4db0dd86727d396134df4ec1c89b31f56238f984a8d6e5e6d2262a4",
+      "complete": false,
+      "phase": "file",
+      "providerUsage": {
+        "calls": 21,
+        "input": 197450
+      },
+      "outboundCalls": 21,
+      "error": "Symbi Reflex decision exceeds the application token budget",
+      "certification": "Rejected intermediate result: comparative candidate payload exceeds the existing application budget; no oversized request was sent."
+    },
+    {
+      "run": "atlas-family-bounded-r1",
+      "report": "scripts/jev-bench/out/file-broad-start-failed-atlas-family-bounded-r1-managed.json",
+      "reportSha256": "11deb36cd3859d58e1a17af7dea551e6e5e521fcdc89fcd32a53d1f0a4c6a7a9",
+      "corpusSha256": "a9d123a12dfbd2cca0e28e4e56c87d204d59e8a50f476486b93644f85fd6cc17",
+      "providerUsage": {
+        "calls": 144,
+        "input": 892794
+      },
+      "outboundCalls": 144,
+      "complete": false,
+      "acceptedAsGroupDiscovery": false,
+      "error": "Jev selected a non-leading choice",
+      "interpretation": "Strict SDK validation rejected a non-leading Choice; the result is not normalized or scored as a completed run."
+    },
+    {
+      "run": "atlas-family-bounded-r2",
+      "report": "scripts/jev-bench/out/file-broad-start-failed-atlas-family-bounded-r2-managed.json",
+      "reportSha256": "170533d30f570b477ca28c38e80e44a51d72af321189fa694add14b39e5b32dd",
+      "corpusSha256": "a9d123a12dfbd2cca0e28e4e56c87d204d59e8a50f476486b93644f85fd6cc17",
+      "providerUsage": {
+        "calls": 19,
+        "input": 184970
+      },
+      "outboundCalls": 19,
+      "complete": false,
+      "acceptedAsGroupDiscovery": false,
+      "error": "Jev selected a non-leading choice",
+      "interpretation": "Strict SDK validation rejected a non-leading Choice; the result is not normalized or scored as a completed run."
+    },
+    {
+      "run": "atlas-family-perdoc-r1",
+      "report": "scripts/jev-bench/out/file-broad-start-execute-atlas-family-perdoc-r1-managed.json",
+      "reportSha256": "8daca86722c57f4f9ee85dbb46ab3e20810f44662ce1c6d2cd228699fdcc8462",
+      "corpusSha256": "a9d123a12dfbd2cca0e28e4e56c87d204d59e8a50f476486b93644f85fd6cc17",
+      "providerUsage": {
+        "calls": 117,
+        "input": 663976
+      },
+      "outboundCalls": 117,
+      "complete": false,
+      "acceptedAsGroupDiscovery": false,
+      "summary": {
+        "documents": 20,
+        "scoredFamilyKeys": 19,
+        "refined": 5,
+        "retainedEngineering": 15,
+        "singletonGroups": [
+          {
+            "key": "custom:design",
+            "members": [
+              "brand-and-ui"
+            ]
+          },
+          {
+            "key": "custom:document",
+            "members": [
+              "canvas-ui"
+            ]
+          },
+          {
+            "key": "custom:agent",
+            "members": [
+              "mcp-and-api"
+            ]
+          }
+        ],
+        "exactEvidence": true,
+        "definitionsBeforeMembership": true,
+        "manualOrPinned": [],
+        "projectionOnly": true,
+        "canonicalWrites": 0,
+        "semanticCorrectness": "Requires review of raw placements and exact source evidence against frozen family keys"
+      },
+      "projectedGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "assistant-and-research",
+            "chat-internals",
+            "data-model",
+            "document-operations",
+            "errors",
+            "history",
+            "operations",
+            "plan-status",
+            "safe-collaboration",
+            "sdk-and-webmcp",
+            "search-and-brain-tools",
+            "security-and-access",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:design",
+          "members": [
+            "brand-and-ui"
+          ]
+        },
+        {
+          "key": "custom:document",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:agent",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        }
+      ],
+      "failedDocuments": [
+        {
+          "document": "sdk-and-webmcp",
+          "expectedFamilies": [
+            "custom:reflex",
+            "custom:security"
+          ],
+          "scored": true,
+          "current": "custom:engineering",
+          "proposed": null,
+          "projected": "custom:engineering",
+          "refined": false,
+          "decision": {
+            "status": "failed",
+            "phase": "file",
+            "error": "Jev selected a non-leading choice"
+          },
+          "evidence": [],
+          "sourceGuards": [],
+          "decisionConfidences": []
+        }
+      ],
+      "interpretation": "Intermediate failure: most documents retained the broad group, with generic proposed categories and missing useful shared families. Fresh source-subject peer validation is required before acceptance."
+    },
+    {
+      "run": "atlas-family-perdoc-r2",
+      "report": "scripts/jev-bench/out/file-broad-start-execute-atlas-family-perdoc-r2-managed.json",
+      "reportSha256": "1d38715fcdfc4aa865c5b40d6371a67cfd0795b2cd4bc18f93e15b8adfaa332e",
+      "corpusSha256": "a9d123a12dfbd2cca0e28e4e56c87d204d59e8a50f476486b93644f85fd6cc17",
+      "providerUsage": {
+        "calls": 116,
+        "input": 636715
+      },
+      "outboundCalls": 116,
+      "complete": true,
+      "acceptedAsGroupDiscovery": false,
+      "summary": {
+        "documents": 20,
+        "scoredFamilyKeys": 19,
+        "refined": 6,
+        "retainedEngineering": 14,
+        "singletonGroups": [
+          {
+            "key": "custom:design",
+            "members": [
+              "brand-and-ui"
+            ]
+          },
+          {
+            "key": "custom:document",
+            "members": [
+              "canvas-ui"
+            ]
+          },
+          {
+            "key": "custom:agent",
+            "members": [
+              "mcp-and-api"
+            ]
+          },
+          {
+            "key": "custom:test",
+            "members": [
+              "testing"
+            ]
+          }
+        ],
+        "exactEvidence": true,
+        "definitionsBeforeMembership": true,
+        "manualOrPinned": [],
+        "projectionOnly": true,
+        "canonicalWrites": 0,
+        "semanticCorrectness": "Requires review of raw placements and exact source evidence against frozen family keys"
+      },
+      "projectedGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "assistant-and-research",
+            "chat-internals",
+            "data-model",
+            "document-operations",
+            "errors",
+            "history",
+            "operations",
+            "plan-status",
+            "safe-collaboration",
+            "sdk-and-webmcp",
+            "search-and-brain-tools",
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:design",
+          "members": [
+            "brand-and-ui"
+          ]
+        },
+        {
+          "key": "custom:document",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:agent",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:test",
+          "members": [
+            "testing"
+          ]
+        }
+      ],
+      "failedDocuments": [],
+      "interpretation": "Intermediate failure: most documents retained the broad group, with generic proposed categories and missing useful shared families. Fresh source-subject peer validation is required before acceptance."
+    },
+    {
+      "run": "atlas-shared-proof-r1",
+      "report": "scripts/jev-bench/out/file-broad-start-execute-atlas-shared-proof-r1-managed.json",
+      "reportSha256": "abb15c69f3972611380a7f14bf6fee575614a2bf50ff73a422bc176fb75321b3",
+      "corpusSha256": "a9d123a12dfbd2cca0e28e4e56c87d204d59e8a50f476486b93644f85fd6cc17",
+      "complete": true,
+      "providerUsage": {
+        "calls": 195,
+        "input": 1022993
+      },
+      "outboundCalls": 195,
+      "summary": {
+        "documents": 20,
+        "scoredFamilyKeys": 19,
+        "refined": 7,
+        "retainedEngineering": 13,
+        "singletonGroups": [
+          {
+            "key": "custom:agent",
+            "members": [
+              "assistant-and-research"
+            ]
+          },
+          {
+            "key": "custom:design",
+            "members": [
+              "brand-and-ui"
+            ]
+          },
+          {
+            "key": "custom:canvas",
+            "members": [
+              "canvas-ui"
+            ]
+          },
+          {
+            "key": "custom:reflex",
+            "members": [
+              "history"
+            ]
+          },
+          {
+            "key": "custom:mcp_and_api",
+            "members": [
+              "mcp-and-api"
+            ]
+          }
+        ],
+        "exactEvidence": true,
+        "definitionsBeforeMembership": true,
+        "manualOrPinned": [],
+        "projectionOnly": true,
+        "canonicalWrites": 0,
+        "semanticCorrectness": "Requires review of raw placements and exact source evidence against frozen family keys"
+      },
+      "projectedGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "chat-internals",
+            "data-model",
+            "document-operations",
+            "errors",
+            "operations",
+            "plan-status",
+            "safe-collaboration",
+            "sdk-and-webmcp",
+            "search-and-brain-tools",
+            "security-and-access",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:agent",
+          "members": [
+            "assistant-and-research"
+          ]
+        },
+        {
+          "key": "custom:design",
+          "members": [
+            "brand-and-ui"
+          ]
+        },
+        {
+          "key": "custom:canvas",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:reflex",
+          "members": [
+            "history"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        }
+      ],
+      "failedDocuments": [],
+      "acceptedAsGroupDiscovery": false,
+      "interpretation": "Evidence-safe and within request budget, but useful taxonomy discovery remains inadequate; common incidental terms crowd the family nominations. Rejected intermediate outcome, not a gold score."
+    },
+    {
+      "run": "atlas-shared-proof-r2",
+      "report": "scripts/jev-bench/out/file-broad-start-execute-atlas-shared-proof-r2-managed.json",
+      "reportSha256": "1b054d8a0e3a890737f0d010d4c14573adf61db9268b9e9b4b7df61759a62542",
+      "corpusSha256": "a9d123a12dfbd2cca0e28e4e56c87d204d59e8a50f476486b93644f85fd6cc17",
+      "complete": true,
+      "providerUsage": {
+        "calls": 163,
+        "input": 847070
+      },
+      "outboundCalls": 163,
+      "summary": {
+        "documents": 20,
+        "scoredFamilyKeys": 19,
+        "refined": 6,
+        "retainedEngineering": 14,
+        "singletonGroups": [
+          {
+            "key": "custom:agent",
+            "members": [
+              "assistant-and-research"
+            ]
+          },
+          {
+            "key": "custom:design",
+            "members": [
+              "brand-and-ui"
+            ]
+          },
+          {
+            "key": "custom:errors_and_status_codes",
+            "members": [
+              "errors"
+            ]
+          },
+          {
+            "key": "custom:mcp_and_api",
+            "members": [
+              "mcp-and-api"
+            ]
+          }
+        ],
+        "exactEvidence": true,
+        "definitionsBeforeMembership": true,
+        "manualOrPinned": [],
+        "projectionOnly": true,
+        "canonicalWrites": 0,
+        "semanticCorrectness": "Requires review of raw placements and exact source evidence against frozen family keys"
+      },
+      "projectedGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "canvas-ui",
+            "chat-internals",
+            "data-model",
+            "document-operations",
+            "history",
+            "operations",
+            "plan-status",
+            "safe-collaboration",
+            "sdk-and-webmcp",
+            "search-and-brain-tools",
+            "security-and-access",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:agent",
+          "members": [
+            "assistant-and-research"
+          ]
+        },
+        {
+          "key": "custom:design",
+          "members": [
+            "brand-and-ui"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        }
+      ],
+      "failedDocuments": [],
+      "acceptedAsGroupDiscovery": false,
+      "interpretation": "Evidence-safe and within request budget, but useful taxonomy discovery remains inadequate; common incidental terms crowd the family nominations. Rejected intermediate outcome, not a gold score."
+    },
+    {
+      "run": "atlas-relevant-scope-r1",
+      "report": "scripts/jev-bench/out/file-broad-start-execute-atlas-relevant-scope-r1-managed.json",
+      "reportSha256": "c9f810fa47c2cc6637dc513218698abbab4c8c73c8b5a006804e2d13879f7d8e",
+      "corpusSha256": "a9d123a12dfbd2cca0e28e4e56c87d204d59e8a50f476486b93644f85fd6cc17",
+      "complete": false,
+      "providerUsage": {
+        "calls": 181,
+        "input": 933098
+      },
+      "outboundCalls": 181,
+      "summary": {
+        "documents": 20,
+        "scoredFamilyKeys": 19,
+        "refined": 12,
+        "retainedEngineering": 8,
+        "singletonGroups": [
+          {
+            "key": "custom:symbiknow",
+            "members": [
+              "README"
+            ]
+          },
+          {
+            "key": "custom:architecture",
+            "members": [
+              "architecture"
+            ]
+          },
+          {
+            "key": "custom:canvas",
+            "members": [
+              "assistant-and-research"
+            ]
+          },
+          {
+            "key": "custom:design",
+            "members": [
+              "brand-and-ui"
+            ]
+          },
+          {
+            "key": "custom:ui",
+            "members": [
+              "canvas-ui"
+            ]
+          },
+          {
+            "key": "custom:chat",
+            "members": [
+              "chat-internals"
+            ]
+          },
+          {
+            "key": "custom:errors_and_status_codes",
+            "members": [
+              "errors"
+            ]
+          },
+          {
+            "key": "custom:mcp_and_api",
+            "members": [
+              "mcp-and-api"
+            ]
+          },
+          {
+            "key": "custom:run_and_test",
+            "members": [
+              "operations"
+            ]
+          },
+          {
+            "key": "custom:tools",
+            "members": [
+              "search-and-brain-tools"
+            ]
+          }
+        ],
+        "exactEvidence": true,
+        "definitionsBeforeMembership": true,
+        "manualOrPinned": [],
+        "projectionOnly": true,
+        "canonicalWrites": 0,
+        "semanticCorrectness": "Requires review of raw placements and exact source evidence against frozen family keys"
+      },
+      "projectedGroups": [
+        {
+          "key": "custom:symbiknow",
+          "members": [
+            "README"
+          ]
+        },
+        {
+          "key": "custom:architecture",
+          "members": [
+            "architecture"
+          ]
+        },
+        {
+          "key": "custom:canvas",
+          "members": [
+            "assistant-and-research"
+          ]
+        },
+        {
+          "key": "custom:design",
+          "members": [
+            "brand-and-ui"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:chat",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:engineering",
+          "members": [
+            "data-model",
+            "document-operations",
+            "history",
+            "plan-status",
+            "safe-collaboration",
+            "sdk-and-webmcp",
+            "security-and-access",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        }
+      ],
+      "failedDocuments": [
+        {
+          "document": "data-model",
+          "expectedFamilies": [
+            "custom:documents"
+          ],
+          "scored": true,
+          "current": "custom:engineering",
+          "proposed": null,
+          "projected": "custom:engineering",
+          "refined": false,
+          "decision": {
+            "status": "failed",
+            "phase": "file",
+            "error": "Jev selected a non-leading choice"
+          },
+          "evidence": [],
+          "sourceGuards": [],
+          "decisionConfidences": []
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "interpretation": "Member-relevant nominations and consistent scope improve refinement, but first-wave proposals against unchanged broad placement still yield many singleton target names. This is not a replay of canonical sequential queue receipts or a passing nineteen-family score. One first-run provider Choice failed strict validation and remains visible."
+    },
+    {
+      "run": "atlas-relevant-scope-r2",
+      "report": "scripts/jev-bench/out/file-broad-start-execute-atlas-relevant-scope-r2-managed.json",
+      "reportSha256": "547923b7a2cc8c564f9e0bd1c2ded876d9400c6afa7378f7cdcbcac2b5f688c6",
+      "corpusSha256": "a9d123a12dfbd2cca0e28e4e56c87d204d59e8a50f476486b93644f85fd6cc17",
+      "complete": true,
+      "providerUsage": {
+        "calls": 187,
+        "input": 963500
+      },
+      "outboundCalls": 187,
+      "summary": {
+        "documents": 20,
+        "scoredFamilyKeys": 19,
+        "refined": 11,
+        "retainedEngineering": 9,
+        "singletonGroups": [
+          {
+            "key": "custom:symbiknow",
+            "members": [
+              "README"
+            ]
+          },
+          {
+            "key": "custom:architecture",
+            "members": [
+              "architecture"
+            ]
+          },
+          {
+            "key": "custom:design",
+            "members": [
+              "brand-and-ui"
+            ]
+          },
+          {
+            "key": "custom:ui",
+            "members": [
+              "canvas-ui"
+            ]
+          },
+          {
+            "key": "custom:chat",
+            "members": [
+              "chat-internals"
+            ]
+          },
+          {
+            "key": "custom:document_operations",
+            "members": [
+              "document-operations"
+            ]
+          },
+          {
+            "key": "custom:mcp_and_api",
+            "members": [
+              "mcp-and-api"
+            ]
+          },
+          {
+            "key": "custom:run_and_test",
+            "members": [
+              "operations"
+            ]
+          },
+          {
+            "key": "custom:tools",
+            "members": [
+              "search-and-brain-tools"
+            ]
+          }
+        ],
+        "exactEvidence": true,
+        "definitionsBeforeMembership": true,
+        "manualOrPinned": [],
+        "projectionOnly": true,
+        "canonicalWrites": 0,
+        "semanticCorrectness": "Requires review of raw placements and exact source evidence against frozen family keys"
+      },
+      "projectedGroups": [
+        {
+          "key": "custom:symbiknow",
+          "members": [
+            "README"
+          ]
+        },
+        {
+          "key": "custom:architecture",
+          "members": [
+            "architecture"
+          ]
+        },
+        {
+          "key": "custom:engineering",
+          "members": [
+            "assistant-and-research",
+            "data-model",
+            "errors",
+            "history",
+            "plan-status",
+            "safe-collaboration",
+            "sdk-and-webmcp",
+            "security-and-access",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:design",
+          "members": [
+            "brand-and-ui"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:chat",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        }
+      ],
+      "failedDocuments": [],
+      "acceptedAsGroupDiscovery": false,
+      "interpretation": "Member-relevant nominations and consistent scope improve refinement, but first-wave proposals against unchanged broad placement still yield many singleton target names. This is not a replay of canonical sequential queue receipts or a passing nineteen-family score. One first-run provider Choice failed strict validation and remains visible."
+    },
+    {
+      "run": "atlas-canonical-r1",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-canonical-r1.json",
+      "reportSha256": "c7ecd10b18b5dabd5850925ab8f5753dbe817a41165696eb9da4b29b381df4cc",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 140,
+        "input": 818296
+      },
+      "outboundCalls": 140,
+      "complete": true,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 57,
+      "failures": [],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "assistant-and-research",
+            "brand-and-ui",
+            "data-model",
+            "errors",
+            "history",
+            "plan-status",
+            "search-and-brain-tools"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:chat",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations",
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api",
+            "sdk-and-webmcp",
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "certification": "Rejected intermediate result: sequential canonical writes and reload succeed, but the two runs yield different families and retain nine documents in Engineering. The second run also accepts incidental Canvas mentions; root filing purpose validation is under repair."
+    },
+    {
+      "run": "atlas-canonical-r2",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-canonical-r2.json",
+      "reportSha256": "aca54984a57622054f612ec792132d4aabde1d92fc1ec2a5863a7c98d5122f82",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 101,
+        "input": 560109
+      },
+      "outboundCalls": 101,
+      "complete": true,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 54,
+      "failures": [],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "brand-and-ui",
+            "data-model",
+            "history",
+            "operations",
+            "plan-status",
+            "security-and-access",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:canvas",
+          "members": [
+            "assistant-and-research",
+            "canvas-ui",
+            "chat-internals",
+            "document-operations",
+            "mcp-and-api",
+            "safe-collaboration",
+            "search-and-brain-tools"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "sdk-and-webmcp",
+            "symbi-reflex"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "certification": "Rejected intermediate result: sequential canonical writes and reload succeed, but the two runs yield different families and retain nine documents in Engineering. The second run also accepts incidental Canvas mentions; root filing purpose validation is under repair."
+    },
+    {
+      "run": "atlas-root-purpose-r1",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-root-purpose-r1.json",
+      "reportSha256": "dcc5c2c914cfd812d1b1926e50ed94ba890a0d049761606fa00ea4f142586938",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 158,
+        "input": 914844
+      },
+      "outboundCalls": 158,
+      "complete": false,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 56,
+      "failures": [
+        {
+          "document": "assistant-and-research",
+          "phase": "profile",
+          "error": "Jev selected a non-leading choice"
+        }
+      ],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "assistant-and-research",
+            "brand-and-ui",
+            "chat-internals",
+            "data-model",
+            "history",
+            "plan-status",
+            "sdk-and-webmcp",
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations",
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "certification": "Rejected intermediate result: strict SDK validation rejects a non-leading profile answer and holds that document. Existing-root main-purpose proof is now enforced, but ten documents remain in broad Engineering and family discovery is not certified."
+    },
+    {
+      "run": "atlas-root-purpose-r2",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-root-purpose-r2.json",
+      "reportSha256": "d9bfa92dd62a547b8eb548e5703b5b87d9194bc1622cde77c744585435de6d71",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 145,
+        "input": 848458
+      },
+      "outboundCalls": 145,
+      "complete": true,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 56,
+      "failures": [],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "assistant-and-research",
+            "brand-and-ui",
+            "data-model",
+            "errors",
+            "history",
+            "operations",
+            "plan-status",
+            "sdk-and-webmcp",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:chat",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations",
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api",
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "certification": "Sequential canonical writes and reload succeed with existing-root main-purpose proof. Eleven documents remain in broad Engineering; group-discovery quality remains uncertified."
+    },
+    {
+      "run": "atlas-admission-r1",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-admission-r1.json",
+      "reportSha256": "91572c794c5d8141caaa51d52b17361d19797cf0c9f70fcf4d448ad3bff8fd09",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 153,
+        "input": 861472
+      },
+      "outboundCalls": 153,
+      "complete": true,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 61,
+      "failures": [],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "assistant-and-research",
+            "data-model",
+            "history",
+            "plan-status",
+            "sdk-and-webmcp"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "brand-and-ui",
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:chat",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations",
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api",
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "ruleChange": "Initial none, rejected existing-root proof, and first filing now use the same fresh source-backed family comparison; no fabricated baseline, thresholds unchanged.",
+      "certification": "Native writes and reloads succeed with no failed profiles/jobs. UI, document operations, MCP/API, and Reflex families are discovered; seven documents remain in Engineering and other placements differ between runs. Automatic discovery quality is not certified."
+    },
+    {
+      "run": "atlas-admission-r2",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-admission-r2.json",
+      "reportSha256": "9d2b62061894dfc3558a9e1b4b9c24c4cf527884f5ace985697fb25affa1b252",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 147,
+        "input": 817332
+      },
+      "outboundCalls": 147,
+      "complete": true,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 60,
+      "failures": [],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "history",
+            "operations",
+            "plan-status",
+            "sdk-and-webmcp",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:canvas",
+          "members": [
+            "assistant-and-research",
+            "chat-internals",
+            "data-model"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "brand-and-ui",
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:document",
+          "members": [
+            "document-operations",
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api",
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "ruleChange": "Initial none, rejected existing-root proof, and first filing now use the same fresh source-backed family comparison; no fabricated baseline, thresholds unchanged.",
+      "certification": "Native writes and reloads succeed with no failed profiles/jobs. UI, document operations, MCP/API, and Reflex families are discovered; seven documents remain in Engineering and other placements differ between runs. Automatic discovery quality is not certified."
+    },
+    {
+      "run": "atlas-scope-preserved-r1",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-scope-preserved-r1.json",
+      "reportSha256": "44ab7730c34a02c2eaccb1e464c9e042a87f43b25470f53fc69031b79edba1a0",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 131,
+        "input": 703082
+      },
+      "outboundCalls": 131,
+      "complete": false,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 54,
+      "failures": [
+        {
+          "document": "plan-status",
+          "phase": "profile",
+          "error": "Jev selected a non-leading choice"
+        }
+      ],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:symbiknow",
+          "members": [
+            "README",
+            "data-model",
+            "document-operations",
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:engineering",
+          "members": [
+            "architecture",
+            "errors",
+            "history",
+            "operations",
+            "plan-status",
+            "sdk-and-webmcp",
+            "security-and-access",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:canvas",
+          "members": [
+            "assistant-and-research",
+            "chat-internals",
+            "mcp-and-api",
+            "search-and-brain-tools"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "brand-and-ui",
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "certification": "Rejected intermediate source snapshot before the combined presence guard was finalized: strict SDK rejects a non-leading profile answer; generic product and canvas groupings remain."
+    },
+    {
+      "run": "atlas-final-r1",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-final-r1.json",
+      "reportSha256": "40177274fcf0e96b2f32cfd5d440ddc225ed139fda27da35fc82e6933edd19c3",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 165,
+        "input": 941139
+      },
+      "outboundCalls": 165,
+      "complete": true,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 60,
+      "failures": [],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "assistant-and-research",
+            "data-model",
+            "history",
+            "plan-status",
+            "sdk-and-webmcp",
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:ui",
+          "members": [
+            "brand-and-ui",
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:chat",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations",
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "certification": "Final coupled hierarchy/scope code: native writes and reloads succeed with no failed jobs. Both runs retain eight documents in Engineering, with different UI/Canvas placements. Group discovery remains uncertified."
+    },
+    {
+      "run": "atlas-final-r2",
+      "report": "scripts/jev-bench/out/file-canonical-queue-execute-atlas-final-r2.json",
+      "reportSha256": "5af1f17cd8e3a8c18d43eb168e56a105e745501d0ba3f9911d4d36e68e93694b",
+      "corpusSha256": "0eede2816e8113e3013299c2c292219be679a158d422a1715a12fb80dec4cf89",
+      "providerUsage": {
+        "calls": 185,
+        "input": 1028881
+      },
+      "outboundCalls": 185,
+      "complete": true,
+      "projectionOnly": false,
+      "automaticDocumentPipeline": false,
+      "finalReloadVerified": true,
+      "sourceBodiesUnchanged": true,
+      "receipts": 60,
+      "failures": [],
+      "rawFinalNativeGroups": [
+        {
+          "key": "custom:engineering",
+          "members": [
+            "README",
+            "architecture",
+            "brand-and-ui",
+            "data-model",
+            "history",
+            "plan-status",
+            "sdk-and-webmcp",
+            "security-and-access"
+          ]
+        },
+        {
+          "key": "custom:canvas",
+          "members": [
+            "assistant-and-research",
+            "canvas-ui"
+          ]
+        },
+        {
+          "key": "custom:chat",
+          "members": [
+            "chat-internals"
+          ]
+        },
+        {
+          "key": "custom:document_operations",
+          "members": [
+            "document-operations",
+            "safe-collaboration"
+          ]
+        },
+        {
+          "key": "custom:errors_and_status_codes",
+          "members": [
+            "errors"
+          ]
+        },
+        {
+          "key": "custom:mcp_and_api",
+          "members": [
+            "mcp-and-api"
+          ]
+        },
+        {
+          "key": "custom:run_and_test",
+          "members": [
+            "operations",
+            "testing"
+          ]
+        },
+        {
+          "key": "custom:symbi_reflex",
+          "members": [
+            "reflex-internals",
+            "symbi-reflex"
+          ]
+        },
+        {
+          "key": "custom:tools",
+          "members": [
+            "search-and-brain-tools"
+          ]
+        }
+      ],
+      "acceptedAsGroupDiscovery": false,
+      "certification": "Final coupled hierarchy/scope code: native writes and reloads succeed with no failed jobs. Both runs retain eight documents in Engineering, with different UI/Canvas placements. Group discovery remains uncertified."
+    }
+  ],
+  "latestOrganizationVersion": "automatic-knowledge-21",
+  "heldoutScope": "The approved filing heldout repeats measure supplied-group placement (12/12 twice) and off-topic existing-group rejection (zero errors in four cases twice). They do not measure sequential discovery; the final Atlas discovery runs still retain 8/20 documents in Engineering and remain uncertified."
+}

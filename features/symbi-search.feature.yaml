@@ -1,0 +1,19 @@
+feature: Symbi search asks Jev once to judge the candidate documents
+scenarios:
+  - name: Combined search shows the judged document first and reports nothing found when no document answers
+    steps:
+      - given: a fresh workspace
+      - and: a search canvas with a saved provider key and an agent token
+      - when: a sectioned rollback runbook and an unrelated brand guide are saved through the ordinary API
+      - and: an agent asks Symbi "how do I restore the previous deployment" in combined mode
+      - then: Symbi shows the rollback runbook first with the snippets Jev judged
+      - and: one provider request judged the candidates with a rank and a gate question
+      - when: an agent asks Symbi "is there an ipad deployment" in combined mode
+      - then: Symbi reports that nothing answers the question
+  - name: Empty requested document selection searches the permitted canvas
+    steps:
+      - given: a fresh workspace
+      - and: a search canvas with a saved provider key and an agent token
+      - when: a sectioned rollback runbook and an unrelated brand guide are saved through the ordinary API
+      - and: an agent asks Symbi about restoring deployment with an empty document selection
+      - then: local Symbi search checks permitted documents and finds the rollback runbook without a provider request

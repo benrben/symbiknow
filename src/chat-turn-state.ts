@@ -14,12 +14,12 @@ export function restoredTurns(): DisplayTurn[] {
   } catch { return []; }
 }
 
-const searchTools = new Set(['search_docs', 'search_canvas']);
-const readingTools = new Set(['read_doc', 'read_block', 'read_file']);
+const searchTools = new Set(['search_docs', 'ask_symbi', 'find_by', 'related']);
+const readingTools = new Set(['read_doc', 'read_canvas', 'read_file', 'download_file', 'jev_profile', 'memory_map', 'jev_activity', 'brain_inbox']);
 const navigationTools = new Set(['show_doc_on_canvas', 'show_group_on_canvas', 'move_block']);
-const writingTools = new Set(['create_doc', 'edit_doc', 'delete_doc']);
-const connectingTools = new Set(['link_blocks']);
-const organizingTools = new Set(['draw_research_canvas']);
+const writingTools = new Set(['upload_file', 'edit_file', 'write_file', 'delete_doc', 'apply_file_proposal', 'undo_file_proposal', 'restore_revision']);
+const connectingTools = new Set(['link_blocks', 'unlink_blocks']);
+const organizingTools = new Set(['draw_research_canvas', 'jev_do', 'jev_resolve', 'jev_undo', 'jev_configure', 'symbi_reflex']);
 const toolStates: Array<[ReadonlySet<string>, SymbiState]> = [
   [searchTools, 'searching'],
   [readingTools, 'reading'], [navigationTools, 'moving'], [writingTools, 'writing'],

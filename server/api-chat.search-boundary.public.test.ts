@@ -1,4 +1,5 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -9,6 +10,8 @@ import { searchAndChat } from './api-chat.js';
 import { sendJson } from './api-http.js';
 import { ApiError } from './errors.js';
 import { CanvasStore } from './storage.js';
+import { contentHash, storedBlock } from './storage-shapes.js';
+import { initializeJevStamp } from './jev/stamps.js';
 
 const roots: string[] = [];
 const servers: Server[] = [];
@@ -129,10 +132,21 @@ it('keeps lexical fallback scoped and reports invalid paging and unexpected sour
 
 it('stops lexical fallback after forty current indexed hits while retaining the bounded response', async () => {
   const f = await fixture();
-  const indexed: Array<typeof f.body> = [];
-  for (let index = 0; index < 40; index++) indexed.push(await f.store.createBlock(f.canvas.id, {
-    title: `Indexedbulk ${index}`, content: `# Indexedbulk ${index}\nCurrent indexed evidence ${index}.`,
-  }));
+  const current = await f.store.getCanvas(f.canvas.id, true, false);
+  const corpus = Array.from({ length: 40 }, (_, index) => {
+    const id = randomUUID();
+    const content = `# Indexedbulk ${index}\nCurrent indexed evidence ${index}.`;
+    return initializeJevStamp({ id, title: `Indexedbulk ${index}`, content,
+      file: path.join(path.dirname(f.body.file), id + '.md'), kind: 'markdown',
+      x: 0, y: index * 20, width: 400, height: 300, links: [], contentHash: contentHash(content) });
+  });
+  // Seed the search corpus as canonical files; this boundary tests retrieval rather than forty Git history writes.
+  await Promise.all(corpus.map(block => writeFile(path.join(f.root, block.file), block.content)));
+  await writeFile(path.join(f.root, 'canvases', f.canvas.id + '.json'),
+    JSON.stringify({ ...current, blocks: [...current.blocks, ...corpus].map(storedBlock) }));
+  const corpusIds = new Set(corpus.map(block => block.id));
+  const indexed = (await f.store.getCanvas(f.canvas.id, true, false)).blocks.filter(block => corpusIds.has(block.id));
+  expect(indexed.map(block => block.contentHash)).toEqual(corpus.map(block => block.contentHash));
   const lexicalOnly = await f.store.createBlock(f.canvas.id, { title: 'Indexedbulk lexical-only',
     content: '# Indexedbulk lexical-only\nNot in the index response.' });
   const get = await route(f, { expectedDocumentIds: async () => indexed.map(block => block.id),

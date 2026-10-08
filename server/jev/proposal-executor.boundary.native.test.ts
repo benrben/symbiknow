@@ -60,12 +60,12 @@ it('checks missing, dismissed, and paused proposals, and treats an already-appli
   await runtime.undo(workspaceId, receipt.id, owner);
   expect((await runtime.undo(workspaceId, receipt.id, owner)).id).toBe(receipt.id);
 });
-it('refuses token self-approval even at the trusted automatic executor boundary', async () => {
-  const credential = await store.createMcpToken('Scoped agent', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_propose'] });
+it('refuses approval without the explicit reviewer grant at the trusted automatic executor boundary', async () => {
+  const credential = await store.createMcpToken('Scoped agent', 'propose', { allowedCanvasIds: [canvasId], tools: ['jev_do'] });
   const principal: JevPrincipal = { ...(await store.mcpTokenIdentity(credential.token))!, kind: 'token' };
   const job = await runtime.run(workspaceId, { action: 'file', canvasId, blockIds: [blockId] }, principal); await runtime.idle();
   const proposal = (await runtime.read(workspaceId, owner)).proposals.find(item => item.jobId === job.id)!;
-  await expect(executor.applyInside(workspaceId, proposal.id, principal, true)).rejects.toMatchObject({ status: 403, message: 'An agent cannot approve its own proposal' });
+  await expect(executor.applyInside(workspaceId, proposal.id, principal, true)).rejects.toMatchObject({ status: 403, message: 'Approval permission is required' });
   expect((await store.getCanvasBlock(canvasId, blockId)).group).toBeUndefined();
 });
 it('preflights a child definition against an explicit projected parent, then checks actual definitions before committing', async () => {

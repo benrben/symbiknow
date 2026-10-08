@@ -124,7 +124,7 @@
 .page-reader__content .loader-markdown { padding: 0; color: var(--sk-text); font-size: inherit; line-height: inherit; }
 .page-reader__content .loader-markdown :is(p, li) { line-height: 1.72; }
 .page-reader__content .loader-markdown :is(h2, h3) { margin-top: 32px; font-size: 1.4em; }
-.page-reader__content .loader-markdown blockquote { padding: 10px 18px; border-left-color: var(--sk-action-bg); border-radius: 6px; background: var(--sk-surface-soft); color: var(--sk-text); }
+.page-reader__content .loader-markdown blockquote { padding: 10px 18px; border-inline-start-color: var(--sk-action-bg); border-radius: 6px; background: var(--sk-surface-soft); color: var(--sk-text); }
 .page-reader__content .loader-markdown code { background: var(--sk-surface-soft); color: var(--sk-text); }
 .page-reader__actions :is(.secondary-button, .primary-button) { min-height: 40px; padding: 8px 12px; font-size: 12px; }
 .page-reader__footer button { background: var(--sk-surface); border-color: var(--sk-border); }

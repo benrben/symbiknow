@@ -38,6 +38,7 @@ describe('MCP factory and host lifecycle', () => {
     await runProjectMcpCli(moduleUrl, ['node'], notStarted);
     await runProjectMcpCli(moduleUrl, ['node', fileURLToPath(import.meta.url)], notStarted);
     expect(notStarted).not.toHaveBeenCalled();
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ id: 'local-stdio-agent', access: 'write' })));
     const client = new Client({ name: 'host-client', version: '1.0.0' });
     clients.push(client);
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
@@ -77,7 +78,9 @@ describe('MCP factory and host lifecycle', () => {
       await clientSide.send({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'list_canvases', arguments: {} } });
       expect(await response).toMatchObject({ id: 1, result: { content: [{ type: 'text', text: '[]' }] } });
       expect(requests).toEqual([{ url: 'http://127.0.0.1:9898/custom-api/workspaces?stats=1', headers: {
-        'x-symbiknow-actor': 'MCP agent',
+        'x-symbiknow-actor': 'local-stdio-agent',
+        'x-symbiknow-agent-name': 'MCP agent',
+        'x-symbiknow-mcp-tool': 'list_canvases',
         'x-symbiknow-agent-transport': 'mcp',
       } }]);
     } finally { await clientSide.close(); }

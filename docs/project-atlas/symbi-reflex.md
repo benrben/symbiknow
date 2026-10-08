@@ -100,7 +100,7 @@ Key pieces in `server/jev/`:
 
 ## Thresholds and ownership
 
-- One confidence threshold per action, 0.5–1.0, default 0.7, set in the Reflex tab. Raising a threshold makes that action more selective. Below-threshold conclusions are saved as uncertain, never applied.
+- One confidence threshold per action, 0.5–1.0, default 0.7, set in the Reflex tab. Raising a threshold makes that action more selective. Below-threshold conclusions are saved as uncertain, never applied. The slider uses calibrated decision confidence: topic/synonym raw 0.30, duplicate overlap 0.50, filing gate 0.40, home gate 0.30 and home margin 0.20 map to 0.70. New results carry `calibration: 1`; a current calibrated profile supplies labels without another Jev call. The implementation and dated measurements are in [Reflex internals](reflex-internals.md#calibrated-confidence).
 - Confidence alone never authorizes a write. Exact passages, current revisions, and ownership must also pass.
 - Manual metadata always wins. `jevOwnership` records pins, removed labels, removed links, and managed fields.
 - Missing provider access is shown as a status; ordinary work keeps going.
@@ -142,6 +142,8 @@ Under `/api/workspaces/:workspaceId/jev` and `/api/canvases/:canvasId/jev`:
 | POST | `/groups/approve` | Approve a reviewed group definition and memberships |
 | GET/POST | `/drafts/:blockId` · `/drafts/:blockId/cancel` | Staged edits (canvas endpoint) |
 | POST | `/undo-parent` | Causal Undo (canvas endpoint) |
+
+The latest frozen Atlas measurements are 16/19 for home placement in both review2 runs (zero wrong moves), 19/19 for filing with supplied groups, and 63/64 for profile and fresh labels. Sequential group discovery still retains 8/20 documents in Engineering in both final runs and remains uncertified. Both approved synthetic home repeats score 10/10 with zero wrong moves; both supplied-group filing repeats score 12/12 with zero incorrect existing-group placements in four off-topic cases. All four runs exit 0. These heldout results do not measure sequential group discovery.
 
 ## Further reading
 

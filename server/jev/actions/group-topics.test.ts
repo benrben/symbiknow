@@ -287,6 +287,54 @@ it('offers an independently checked shared logical topic instead of unique headi
   indexTopics(input, member, ['Operational recovery', 'Restore checklist']); indexTopics(input, peer, ['Operational recovery', 'Backup policy']);
   expect(canvasTopicCatalog(input, member).map(group => group.name)).toEqual(['Operational recovery']);
 });
+
+it('keeps a checked broad definition on a single source and ignores malformed or empty definitions', () => {
+  const member = document('member', 'Restore checklist', '# Restore checklist\n\nRestore service from a tested snapshot after an outage.');
+  const input = context([member]);
+  indexTopics(input, member, ['Operational recovery']);
+  const topics = input.indexes!['canvas:member'].topics as Array<Record<string, never>>;
+  Object.assign(topics[0], { definition: 'Recovering running services after an outage.' });
+  expect(canvasTopicCatalog(input, member)).toEqual([{ name: 'Operational recovery', key: 'custom:operational_recovery',
+    definition: 'Recovering running services after an outage.', origins: [filingPassages(member)[1]] }]);
+  for (const definition of ['', 42]) {
+    Object.assign(topics[0], { definition });
+    const candidate = canvasTopicCatalog(input, member).find(group => group.name === 'Operational recovery');
+    expect(candidate).toBeDefined(); expect(candidate!.definition).toBeUndefined();
+  }
+});
+it.each(['source_subject', 'source_family'] as const)('preserves the checked scope when a %s nomination supplements the same key', nomination => {
+  const member = document('member', 'Restore note', '# Restore note\n\nRecover service using an authorized tested snapshot after an outage.');
+  const peer = document('peer', 'Backup reference', '# Backup reference\n\nRecover service using an authorized tested snapshot after an outage.');
+  const input = context(nomination === 'source_family' ? [member, peer] : [member]);
+  const definition = 'Operational recovery covers service restoration from authorized snapshots; it excludes financial recovery and account restoration.';
+  input.indexes = {};
+  for (const source of input.documents) input.indexes[`canvas:${source.block.id}`] = { version: 1, calibration: 1,
+    source: { ...source.snapshot }, topics: [{ name: 'Operational recovery', definition, confidence: .99,
+      evidence: JSON.parse(JSON.stringify([filingPassages(source)[1]])) }] };
+  const before = structuredClone(input);
+  expect(canvasTopicCatalog(input, member).find(group => group.key === 'custom:operational_recovery')?.definition).toBe(definition);
+  const group = canvasTopicCatalog(input, member, { sourceSubjects: true }).find(group => group.key === 'custom:operational_recovery')!;
+  expect(group.nomination).toBe(nomination);
+  expect(group.definition).toBe(definition);
+  expect(group.origins).toEqual([filingPassages(member)[1]]);
+  expect(group.candidatePeers).toEqual(nomination === 'source_family' ? [peer.snapshot] : []);
+  expect(input).toEqual(before);
+});
+it('retains a same-key native parent restriction while supplementing fresh member evidence', () => {
+  const member = document('member', 'Storage note', '# Platform\n\n## Storage\n\nPlatform Storage (custom:platform/storage) retains only authorized service snapshots.');
+  const peer = document('peer', 'Platform guide', '# Platform\n\nPlatform Storage (custom:platform/storage) retains service snapshots.');
+  const input = context([member, peer]);
+  const evidence = filingPassages(member).at(-1)!;
+  const definition = 'Storage retains authorized service snapshots within Platform; no independent financial archives.';
+  input.indexes = { 'canvas:member': { version: 1, calibration: 1, source: { ...member.snapshot },
+    topics: [{ name: 'custom:platform/storage', definition, confidence: .99,
+      evidence: JSON.parse(JSON.stringify([evidence])) }] } };
+  expect(canvasTopicCatalog(input, member).find(group => group.key === 'custom:platform/storage'))
+    .toMatchObject({ definition, parent: { name: 'Platform', key: 'custom:platform' } });
+  const group = canvasTopicCatalog(input, member, { sourceSubjects: true }).find(group => group.key === 'custom:platform/storage')!;
+  expect(group).toMatchObject({ nomination: 'source_subject', definition, parent: { name: 'Platform', key: 'custom:platform' } });
+  expect(group.origins).toEqual([evidence]);
+});
 it('retains manually named groups while excluding old automatically created singleton competitors', () => {
   const { member, peer, input } = sharedCategoryFixture();
   peer.block.group = 'custom:snapshot_policy';

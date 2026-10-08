@@ -1,10 +1,6 @@
-import { expectRestoredCanvas } from './tests/restoration.js';
 import { describe, expect, it, vi } from 'vitest';
-import { rm, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { CanvasStore } from './storage.js';
-import { applyChatProposal, getChatProposal, undoChatProposal } from './chat-proposals.js';
-import { answer, begin, chunk, events, fixture, nextRequest, tokens, toolCalls } from './chat-session.test.fixture.js';
+import { answer, begin, chunk, events, fixture, nextRequest, tokens } from './chat-session.test.fixture.js';
 
 describe('native chat session cancellation and recovery', () => {
   it.each(['tokens', 'events'] as const)('closes an already stopped %s session without contacting either provider', async surface => {
@@ -75,30 +71,6 @@ describe('native chat session cancellation and recovery', () => {
     expect(recovered.cleanup.closed).toBe(1);
   });
 
-  it('reports a real proposal journal write failure, closes the session and allows a newly reviewed proposal after repair', async () => {
-    const setup = await fixture();
-    setup.model.handle = (request, response) => {
-      if (request.messages.some(message => message.role === 'tool')) { answer(response); return; }
-      toolCalls(response, [{ name: 'edit_doc', args: { blockId: 'launch-checklist', content: '# Repaired journal proposal' } }]);
-    };
-    const journal = path.join(setup.root, 'chat-proposals');
-    await writeFile(journal, 'A real file blocks the journal directory');
-    const prepared = await setup.toolSession({});
-    await expect(events(prepared.session)).rejects.toMatchObject({ code: 'EEXIST' });
-    expect(prepared.cleanup.closed).toBe(1);
-    expect(await new CanvasStore(setup.root).getCanvas(setup.canvas.id)).toEqual(setup.canvas);
-    await rm(journal);
-    const result = await events((await setup.toolSession({})).session);
-    const proposal = result.find(event => event.kind === 'proposal');
-    expect(proposal).toBeDefined();
-    if (proposal?.kind !== 'proposal') throw new Error('Missing recovered proposal');
-    expect(getChatProposal(new CanvasStore(setup.root), proposal.proposal.id)).toEqual(proposal.proposal);
-    await applyChatProposal(new CanvasStore(setup.root), proposal.proposal.id);
-    expect((await new CanvasStore(setup.root).getCanvas(setup.canvas.id)).blocks.find(block => block.id === 'launch-checklist')?.content)
-      .toBe('# Repaired journal proposal');
-    await undoChatProposal(new CanvasStore(setup.root), proposal.proposal.id);
-    expectRestoredCanvas(await new CanvasStore(setup.root).getCanvas(setup.canvas.id), setup.canvas);
-  });
   it('stops publishing collected native token pieces after the user aborts between pieces', async () => {
     const setup = await fixture();
     const answerText = 'A native answer that spans multiple token pieces. '.repeat(20);

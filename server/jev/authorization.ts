@@ -27,7 +27,7 @@ export function requireCanvas(principal: JevPrincipal, canvasId: string): void {
 }
 
 export function requireResetOwner(principal: JevPrincipal): void {
-  if (principal.kind !== 'user' || !principal.canConfigure || principal.access !== 'write' || principal.allowedCanvasIds !== undefined)
+  if (!principal.canConfigure || principal.access !== 'write' || principal.allowedCanvasIds !== undefined)
     throw new ApiError(403, 'Workspace owner authorization is required to reset all Jev results');
 }
 
@@ -38,7 +38,7 @@ export async function currentPrincipal(store: CanvasStore, principal: JevPrincip
   if (!token) return fixedPrincipal(principal);
   // getSettings normalizes the access field of legacy persisted tokens.
   return { id: token.id, kind: 'token', access: token.access!, allowedCanvasIds: token.allowedCanvasIds,
-    tools: token.tools, canApprove: false, canConfigure: false };
+    tools: token.tools, canApprove: Boolean(token.canApprove), canConfigure: Boolean(token.canConfigure) };
 }
 
 function fixedPrincipal(principal: JevPrincipal): JevPrincipal {
@@ -56,7 +56,7 @@ export function requireWrite(principal: JevPrincipal): void {
 
 export function requireApprove(principal: JevPrincipal): void {
   requireWrite(principal);
-  if (!principal.canApprove || principal.kind !== 'user') throw new ApiError(403, 'An authorized reviewer must approve the proposal');
+  if (!principal.canApprove) throw new ApiError(403, 'An authorized reviewer must approve the proposal');
 }
 
 export async function rejectRetiredTaskMutation(store: CanvasStore, supplied: JevPrincipal,
@@ -110,5 +110,5 @@ export function publicJevReceipt(receipt: JevReceipt): JevReceipt {
 }
 
 export function runToolNames(request: JevActionRequest): string[] {
-  return ['jev_do', 'jev_propose', request.action, `jev_${request.action}`];
+  return ['jev_do', request.action, `jev_${request.action}`];
 }

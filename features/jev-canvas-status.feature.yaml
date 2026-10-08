@@ -1,0 +1,17 @@
+feature: Visible Reflex provenance and checked duplicate findings on document cards
+scenarios:
+  - name: Automatic organization highlights mounted cards and preserves checked duplicate references
+    steps:
+      - given: an isolated automatic Reflex workspace without a provider key
+      - when: I save two identical release runbooks through the ordinary API
+      - and: I open the current canvas in a browser
+      - and: I observe the runbook cards with Reflex before automatic processing starts
+      - then: the untouched runbooks have no Reflex markers or duplicate badges
+      - when: I enable the acceptance provider through ordinary secret settings
+      - then: both mounted runbook cards briefly report a real applied Jev change
+      - and: both runbooks show checked duplicate references and durable Reflex markers
+      - and: saved Reflex results identify Reflex and their recorded time
+      - when: I reload the automatically organized runbook canvas
+      - then: the saved runbooks retain their source text provenance and duplicate badges
+      - when: I open the related runbook from its duplicate badge
+      - then: the exact related document opens without browser errors

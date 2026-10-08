@@ -18,7 +18,7 @@ function unsupported(question: JevQuestion): JevAnswer {
   if (question.type === 'score') return { type: 'score', score: 2.5, confidence: .99,
     probabilities: { 0: 0, 1: 0, 2: .5, 3: .5 } };
   const keys = Object.keys(question.criteria);
-  const selected = keys.find(key => question.criteria[key].startsWith('Atlas destination'))
+  const selected = keys.find(key => question.criteria[key].includes('"Atlas destination"'))
     ?? ('none' in question.criteria ? 'none' : keys[0]);
   const probabilities = Object.fromEntries(keys.map(key => [key, key === selected ? 1 : 0]));
   return { type: 'choice', choice: selected, confidence: 0.99, probabilities };

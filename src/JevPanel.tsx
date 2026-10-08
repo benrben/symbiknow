@@ -148,6 +148,7 @@ function SavedActivity({ jobs, receipts, onShowCanvas }: { jobs: JevJob[]; recei
 function SavedResult({ receipt, onShowCanvas }: { receipt: JevReceipt; onShowCanvas: PanelProps['onShowCanvas'] }) {
   const source = receipt.sourcesAfter[0];
   return <article className="jev-card" data-receipt-id={receipt.id}><strong>{jevActionLabels[receipt.action]} · saved</strong>
+    <p className="jev-saved-attribution"><span title={receipt.actor}>{receipt.automatic ? 'Reflex' : receipt.actor}</span> · <time dateTime={receipt.createdAt}>{new Date(receipt.createdAt).toLocaleString()}</time></p>
     <LazyDetails title="View saved result">{() => <JevMutationSummary mutation={receipt.after}/>}</LazyDetails>
     {source && <button type="button" onClick={() => onShowCanvas(source.canvasId, source.blockId)}>Show on canvas</button>}
   </article>;

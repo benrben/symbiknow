@@ -32,6 +32,21 @@ afterEach(async () => {
 });
 
 describe('HTTP route dispatch', () => {
+  it.each(['default', 'override'] as const)('loads offline embeddings from the %s model folder and reports missing artifacts without provider calls', async mode => {
+    if (mode === 'override') vi.stubEnv('SYMBI_MODEL_ROOT', path.join(os.tmpdir(), 'symbiknow-explicit-model-root-missing'));
+    const { base, dataDir } = await serverFixture();
+    const expectedRoot = mode === 'override' ? process.env.SYMBI_MODEL_ROOT! : path.join(dataDir, 'models');
+    let result: { coverage: { status: string; reason?: string }; providerUsage: { requests: number } } | undefined;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const response = await request(base, '/api/symbi/ask', 'POST', { question: 'product roadmap', mode: 'semantic',
+        canvasId: 'product-roadmap', documentIds: ['roadmap-overview'], limit: 1 });
+      expect(response.status).toBe(200); result = await response.json() as typeof result;
+      if (result?.coverage.reason?.includes(expectedRoot)) break;
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    expect(result?.coverage).toMatchObject({ status: 'degraded', reason: expect.stringContaining(expectedRoot) });
+    expect(result?.providerUsage.requests).toBe(0);
+  });
   it('previews, switches, merges, and restores document versions through HTTP', async () => {
     const { base } = await serverFixture();
     const blockRoute = '/api/canvases/product-roadmap/blocks/roadmap-overview';

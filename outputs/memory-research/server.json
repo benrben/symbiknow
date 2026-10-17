@@ -1,0 +1,14 @@
+[
+  {
+    "stage": "python",
+    "mode": "server",
+    "peak_rss_mib": 18.421875,
+    "physical_footprint_mib": 9.062911987304688
+  },
+  {
+    "stage": "server_imports",
+    "mode": "server",
+    "peak_rss_mib": 177.4375,
+    "physical_footprint_mib": 126.45404052734375
+  }
+]

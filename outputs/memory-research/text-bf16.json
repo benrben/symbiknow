@@ -1,0 +1,53 @@
+[
+  {
+    "stage": "python",
+    "mode": "text-bf16",
+    "peak_rss_mib": 18.40625,
+    "physical_footprint_mib": 9.047286987304688
+  },
+  {
+    "stage": "ml_imports",
+    "mode": "text-bf16",
+    "peak_rss_mib": 466.40625,
+    "mps_available": true,
+    "physical_footprint_mib": 379.2042236328125,
+    "mps_tensor_mib": 0.0,
+    "mps_driver_mib": 0.4375
+  },
+  {
+    "stage": "loaded",
+    "mode": "text-bf16",
+    "peak_rss_mib": 1268.3125,
+    "seconds": 1.901506291993428,
+    "parameter_mib": 516.896484375,
+    "physical_footprint_mib": 1835.50146484375,
+    "mps_tensor_mib": 516.905517578125,
+    "mps_driver_mib": 1120.453125
+  },
+  {
+    "stage": "text_encoded",
+    "mode": "text-bf16",
+    "peak_rss_mib": 1268.3125,
+    "seconds": 1.5780909160384908,
+    "finite": true,
+    "physical_footprint_mib": 1913.9235000610352,
+    "mps_tensor_mib": 516.905517578125,
+    "mps_driver_mib": 1122.703125
+  },
+  {
+    "stage": "empty_cache_model_live",
+    "mode": "text-bf16",
+    "peak_rss_mib": 1268.3125,
+    "physical_footprint_mib": 1913.9235000610352,
+    "mps_tensor_mib": 516.905517578125,
+    "mps_driver_mib": 1122.6875
+  },
+  {
+    "stage": "models_released",
+    "mode": "text-bf16",
+    "peak_rss_mib": 1268.3125,
+    "physical_footprint_mib": 1765.7203521728516,
+    "mps_tensor_mib": 0.0,
+    "mps_driver_mib": 2.6875
+  }
+]

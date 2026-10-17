@@ -1,0 +1,71 @@
+{
+  "isolated": true,
+  "real_models": true,
+  "queries": [
+    {
+      "seconds": 0.3174291249597445,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.08028375002322719,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.08176162501331419,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.10206683399155736,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.08823250001296401,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.08296129194786772,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.08532933302922174,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.08926766598597169,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.08665433299029246,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.0859922919771634,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.08015233394689858,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.07926124997902662,
+      "ingestion_in_progress": true
+    }
+  ],
+  "image_status": "indexed",
+  "model": {
+    "loaded": false,
+    "vision": false,
+    "loads": 2,
+    "idle_seconds": 60.0,
+    "mlx": {
+      "active_bytes": 1060,
+      "cache_bytes": 0,
+      "peak_bytes": 1544436860
+    },
+    "mps": {
+      "active_bytes": 0,
+      "driver_bytes": 1900544
+    }
+  },
+  "visual_search_has_photo": true
+}

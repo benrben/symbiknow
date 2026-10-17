@@ -1,0 +1,25 @@
+{
+  "synthetic_only": true,
+  "thresholds": {
+    "min_cosine": 0.995,
+    "allowed_top1_regressions": 1,
+    "image_top1": 12
+  },
+  "runtimes": {
+    "torch": {
+      "top1": 40,
+      "image_top1": 12,
+      "text_full_max_difference": 0.0,
+      "seconds": 18.66480833303649
+    },
+    "mlx": {
+      "top1": 40,
+      "image_top1": 12,
+      "text_full_max_difference": 0.0,
+      "seconds": 6.570921832986642
+    }
+  },
+  "min_query_cosine": 0.9986652135848999,
+  "mlx_query_on_float32_top1": 41,
+  "passed_synthetic_regression": true
+}

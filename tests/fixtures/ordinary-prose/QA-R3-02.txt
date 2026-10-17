@@ -1,0 +1,1 @@
+At Vela Labs, a duplicate invoice is corrected by issuing a credit note against the original invoice. The billing team verifies the receipt before refunding the duplicate charge. Record the credit note number in the invoice ledger. This is a fictional test procedure.

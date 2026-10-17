@@ -1,0 +1,1 @@
+When a Vela Labs employee leaves, IT disables the company account on the departure date, revokes project access and collects the hardware security key. The manager confirms the offboarding checklist. This is a fictional test procedure.

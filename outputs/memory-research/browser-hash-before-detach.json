@@ -1,0 +1,894 @@
+{
+  "bytes": 67108864,
+  "reports": [
+    {
+      "mode": "old",
+      "ms": 192,
+      "digest": "e1661cf5aac673b640e08b5fc32606dd946d5dab5c92ec92e1eff43c69a689fe",
+      "samples": [
+        {
+          "stage": "before",
+          "native": [
+            {
+              "pid": 84587,
+              "physical_bytes": 72255024,
+              "rss_bytes": 233668608
+            },
+            {
+              "pid": 84641,
+              "physical_bytes": 26068144,
+              "rss_bytes": 100515840
+            },
+            {
+              "pid": 84642,
+              "physical_bytes": 88426008,
+              "rss_bytes": 236994560
+            },
+            {
+              "pid": 84637,
+              "physical_bytes": 62653856,
+              "rss_bytes": 186941440
+            },
+            {
+              "pid": 84613,
+              "physical_bytes": 312771712,
+              "rss_bytes": 154025984
+            },
+            {
+              "pid": 84614,
+              "physical_bytes": 29262856,
+              "rss_bytes": 111296512
+            },
+            {
+              "pid": 84619,
+              "physical_bytes": 20104200,
+              "rss_bytes": 81330176
+            }
+          ],
+          "heap": {
+            "usedSize": 16311944,
+            "totalSize": 21495808,
+            "embedderHeapUsedSize": 4001592,
+            "backingStorageSize": 4067504
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84587,
+              "physical_bytes": 72353328,
+              "rss_bytes": 234504192
+            },
+            {
+              "pid": 84641,
+              "physical_bytes": 26068144,
+              "rss_bytes": 100515840
+            },
+            {
+              "pid": 84642,
+              "physical_bytes": 155829880,
+              "rss_bytes": 307462144
+            },
+            {
+              "pid": 84637,
+              "physical_bytes": 62653856,
+              "rss_bytes": 186941440
+            },
+            {
+              "pid": 84613,
+              "physical_bytes": 307872896,
+              "rss_bytes": 154025984
+            },
+            {
+              "pid": 84614,
+              "physical_bytes": 29426696,
+              "rss_bytes": 111738880
+            },
+            {
+              "pid": 84619,
+              "physical_bytes": 20104200,
+              "rss_bytes": 81330176
+            }
+          ],
+          "heap": {
+            "usedSize": 11055456,
+            "totalSize": 22282240,
+            "embedderHeapUsedSize": 1887704,
+            "backingStorageSize": 71171482
+          }
+        },
+        {
+          "stage": "after",
+          "native": [
+            {
+              "pid": 84587,
+              "physical_bytes": 72353328,
+              "rss_bytes": 234504192
+            },
+            {
+              "pid": 84641,
+              "physical_bytes": 26068144,
+              "rss_bytes": 100515840
+            },
+            {
+              "pid": 84642,
+              "physical_bytes": 155879032,
+              "rss_bytes": 307511296
+            },
+            {
+              "pid": 84637,
+              "physical_bytes": 62653856,
+              "rss_bytes": 186941440
+            },
+            {
+              "pid": 84613,
+              "physical_bytes": 307872896,
+              "rss_bytes": 154025984
+            },
+            {
+              "pid": 84614,
+              "physical_bytes": 29426696,
+              "rss_bytes": 111738880
+            },
+            {
+              "pid": 84619,
+              "physical_bytes": 20104200,
+              "rss_bytes": 81330176
+            }
+          ],
+          "heap": {
+            "usedSize": 11251812,
+            "totalSize": 22282240,
+            "embedderHeapUsedSize": 1956936,
+            "backingStorageSize": 71171797
+          }
+        }
+      ]
+    },
+    {
+      "mode": "worker",
+      "ms": 1616,
+      "digest": "e1661cf5aac673b640e08b5fc32606dd946d5dab5c92ec92e1eff43c69a689fe",
+      "samples": [
+        {
+          "stage": "before",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 71976472,
+              "rss_bytes": 234127360
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 87344568,
+              "rss_bytes": 236847104
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63587720,
+              "rss_bytes": 187465728
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 302220440,
+              "rss_bytes": 151076864
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29328392,
+              "rss_bytes": 111411200
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16332380,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067505
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72336920,
+              "rss_bytes": 235667456
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 100664880,
+              "rss_bytes": 250347520
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63587720,
+              "rss_bytes": 187465728
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 301941912,
+              "rss_bytes": 151076864
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72369688,
+              "rss_bytes": 235683840
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 106055216,
+              "rss_bytes": 255868928
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63587720,
+              "rss_bytes": 187465728
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 301941912,
+              "rss_bytes": 151076864
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72402456,
+              "rss_bytes": 235716608
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 111412808,
+              "rss_bytes": 261210112
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63587720,
+              "rss_bytes": 187482112
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 301941912,
+              "rss_bytes": 151076864
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72402456,
+              "rss_bytes": 236503040
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 116753992,
+              "rss_bytes": 266649600
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63587720,
+              "rss_bytes": 187514880
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 301925528,
+              "rss_bytes": 151240704
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72451608,
+              "rss_bytes": 235765760
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 122095176,
+              "rss_bytes": 271990784
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187940864
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 324191384,
+              "rss_bytes": 151470080
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72484376,
+              "rss_bytes": 235798528
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 127436384,
+              "rss_bytes": 277315584
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187940864
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 324191384,
+              "rss_bytes": 151470080
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72517144,
+              "rss_bytes": 235831296
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 132777568,
+              "rss_bytes": 283852800
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187940864
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 324191384,
+              "rss_bytes": 151470080
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 73303576,
+              "rss_bytes": 235831296
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 138167928,
+              "rss_bytes": 289865728
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187940864
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 324191384,
+              "rss_bytes": 151486464
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72533528,
+              "rss_bytes": 235847680
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 142427768,
+              "rss_bytes": 294535168
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187940864
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 324191384,
+              "rss_bytes": 151486464
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72566296,
+              "rss_bytes": 236732416
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 146720400,
+              "rss_bytes": 296681472
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187940864
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 252888216,
+              "rss_bytes": 151486464
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72566296,
+              "rss_bytes": 235880448
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 150996624,
+              "rss_bytes": 300957696
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187940864
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 248087704,
+              "rss_bytes": 151486464
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 111951872
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 72631832,
+              "rss_bytes": 236748800
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 156337832,
+              "rss_bytes": 306282496
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187940864
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 248005784,
+              "rss_bytes": 151404544
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29475848,
+              "rss_bytes": 112050176
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16564704,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 74319384,
+              "rss_bytes": 240140288
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100548608
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 96208528,
+              "rss_bytes": 244154368
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63784328,
+              "rss_bytes": 187973632
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 247907480,
+              "rss_bytes": 151404544
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29508616,
+              "rss_bytes": 112082944
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16567364,
+            "totalSize": 22020096,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "hashing",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 74253848,
+              "rss_bytes": 240287744
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100761600
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 91129344,
+              "rss_bytes": 244367360
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63980936,
+              "rss_bytes": 188186624
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 250692760,
+              "rss_bytes": 151437312
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29541384,
+              "rss_bytes": 112230400
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16736140,
+            "totalSize": 22282240,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        },
+        {
+          "stage": "after",
+          "native": [
+            {
+              "pid": 84748,
+              "physical_bytes": 74253848,
+              "rss_bytes": 240713728
+            },
+            {
+              "pid": 84795,
+              "physical_bytes": 26100888,
+              "rss_bytes": 100761600
+            },
+            {
+              "pid": 84796,
+              "physical_bytes": 91129344,
+              "rss_bytes": 244367360
+            },
+            {
+              "pid": 84790,
+              "physical_bytes": 63980936,
+              "rss_bytes": 188186624
+            },
+            {
+              "pid": 84767,
+              "physical_bytes": 250692760,
+              "rss_bytes": 151437312
+            },
+            {
+              "pid": 84768,
+              "physical_bytes": 29541384,
+              "rss_bytes": 112279552
+            },
+            {
+              "pid": 84773,
+              "physical_bytes": 20071384,
+              "rss_bytes": 81379328
+            }
+          ],
+          "heap": {
+            "usedSize": 16736140,
+            "totalSize": 22282240,
+            "embedderHeapUsedSize": 3999096,
+            "backingStorageSize": 4067618
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": "Matched hash workload in fresh Chrome processes. Old buffer remains live as during its subsequent chunk upload. This is hashing, not end-to-end upload. Native samples include worker memory; GPU and process footprint must not be added."
+}

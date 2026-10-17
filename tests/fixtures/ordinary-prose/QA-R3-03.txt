@@ -1,0 +1,1 @@
+New Vela Labs employees receive a company account only after a manager approves the access request. Enrollment requires a hardware security key. The IT team grants project access by role and records the approver. This is a fictional test policy.

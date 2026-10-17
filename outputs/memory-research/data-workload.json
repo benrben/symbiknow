@@ -1,0 +1,41 @@
+{
+  "old_evidence": {
+    "seconds": 1.0381527919671498,
+    "python_peak_bytes": 3545059
+  },
+  "new_evidence": {
+    "seconds": 0.03704383299918845,
+    "python_peak_bytes": 155003
+  },
+  "old_ledger_read": {
+    "seconds": 0.797681666968856,
+    "python_peak_bytes": 17082780
+  },
+  "new_ledger_read": {
+    "seconds": 0.0031900409958325326,
+    "python_peak_bytes": 4689
+  },
+  "old_receipt": {
+    "seconds": 0.9562471249955706,
+    "python_peak_bytes": 108755
+  },
+  "new_receipt": {
+    "seconds": 0.08970354194752872,
+    "python_peak_bytes": 92227
+  },
+  "library_page_20": {
+    "seconds": 0.22696091700345278,
+    "python_peak_bytes": 151957
+  },
+  "progress_20": {
+    "seconds": 0.015765167016070336,
+    "python_peak_bytes": 17469
+  },
+  "rebuild_journal_200": {
+    "seconds": 0.08543474995531142,
+    "python_peak_bytes": 28446
+  },
+  "rebuild_journal_bytes": 40182,
+  "base_job_bytes": 178052,
+  "limitations": "Synthetic scale probes; Python allocation excludes native Arrow/Lance allocations. Timings are local samples, not production quality evidence."
+}

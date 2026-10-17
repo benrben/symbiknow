@@ -1,0 +1,22 @@
+{
+  "library_total": 89,
+  "processing_states": {
+    "indexed": 89
+  },
+  "processing": false,
+  "runtime": {
+    "pid": 99507,
+    "runtime": "torch",
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 1,
+      "idle_seconds": 60.0,
+      "mps": {
+        "active_bytes": 0,
+        "driver_bytes": 720896
+      }
+    },
+    "accounting": "GPU allocator values overlap process physical footprint; do not add them."
+  }
+}

@@ -1,0 +1,21 @@
+
+> symbiknow-ui@0.1.0 build
+> tsc -b && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 2087 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.41 kB │ gzip:   0.30 kB
+dist/assets/hash.worker-_bT8WtSE.js       4.66 kB
+dist/assets/LibraryCanvas-BnuhLJ6X.css   15.87 kB │ gzip:   2.67 kB
+dist/assets/index-C8qDCvvd.css           43.77 kB │ gzip:   8.72 kB
+dist/assets/LibraryCanvas-6DDMdIvQ.js   201.17 kB │ gzip:  66.29 kB
+dist/assets/index-B1f3xO87.js           602.37 kB │ gzip: 192.21 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.83s

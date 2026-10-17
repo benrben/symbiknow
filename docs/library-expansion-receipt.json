@@ -1,0 +1,1502 @@
+{
+  "date": "2026-10-12",
+  "endpoint": "http://127.0.0.1:8765/mcp",
+  "transport": "official MCP SDK Streamable HTTP; existing owner",
+  "tools": [
+    "upload",
+    "download",
+    "search"
+  ],
+  "status": "complete",
+  "before": [
+    {
+      "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+      "filename": "Symbiknow README.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/README.md",
+      "request_id": "274baffd-8e52-437a-be8c-94ea77f05b59",
+      "sha256": "e90f889236e07b121ccb1c76777aee34916ed9f1a4996de0c530b45be7563f4d",
+      "size": 13478,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:57.618891+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "filename": "Symbiknow README.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/README.md",
+          "request_id": "274baffd-8e52-437a-be8c-94ea77f05b59",
+          "sha256": "e90f889236e07b121ccb1c76777aee34916ed9f1a4996de0c530b45be7563f4d",
+          "size": 13478,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:57.618891+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "31bc791f-5b1b-50e5-9768-b3082c615c7b",
+      "filename": "Symbiknow UI guide.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/UI.md",
+      "request_id": "b9dc1396-3720-4dd0-b08d-4a313388a6fd",
+      "sha256": "2bc1eb4f2917cc2f483fcc3b987fbcf1f283aa08092b0edae8c73fee0fe4f664",
+      "size": 10880,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:57.788048+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "31bc791f-5b1b-50e5-9768-b3082c615c7b",
+          "filename": "Symbiknow UI guide.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/UI.md",
+          "request_id": "b9dc1396-3720-4dd0-b08d-4a313388a6fd",
+          "sha256": "2bc1eb4f2917cc2f483fcc3b987fbcf1f283aa08092b0edae8c73fee0fe4f664",
+          "size": 10880,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:57.788048+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+      "filename": "Symbiknow validation record.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/VALIDATION.md",
+      "request_id": "fe8dc576-bd82-45cc-b339-54954b9edfbe",
+      "sha256": "598cd54284aa027b2faf612273077e6838f0184c35224c611ea466005e3dd6a9",
+      "size": 18016,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:57.960256+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+          "filename": "Symbiknow validation record.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/VALIDATION.md",
+          "request_id": "fe8dc576-bd82-45cc-b339-54954b9edfbe",
+          "sha256": "598cd54284aa027b2faf612273077e6838f0184c35224c611ea466005e3dd6a9",
+          "size": 18016,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:57.960256+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "46588cb6-595f-5da6-8259-dae15ca79917",
+      "filename": "Symbiknow architecture.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/docs/architecture.md",
+      "request_id": "d8dd4c63-8466-4d7a-94b2-9dfda97204e5",
+      "sha256": "ac03e9455492c3a2eeb81c51b21a25143ed59f2b4f05fa06c2350efaf1ab9c00",
+      "size": 5362,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:58.157092+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "46588cb6-595f-5da6-8259-dae15ca79917",
+          "filename": "Symbiknow architecture.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/docs/architecture.md",
+          "request_id": "d8dd4c63-8466-4d7a-94b2-9dfda97204e5",
+          "sha256": "ac03e9455492c3a2eeb81c51b21a25143ed59f2b4f05fa06c2350efaf1ab9c00",
+          "size": 5362,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:58.157092+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "dea9634d-637b-5433-b3c1-efa088f4b121",
+      "filename": "Symbiknow MCP reference.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/docs/mcp-reference.md",
+      "request_id": "11fbc8a8-3215-4beb-86aa-e6845d3ffa37",
+      "sha256": "27788601986b92e2edb73548d669e43da3131fcaed45750378c7cdc3df6eb2e9",
+      "size": 4568,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:58.334344+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "dea9634d-637b-5433-b3c1-efa088f4b121",
+          "filename": "Symbiknow MCP reference.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/docs/mcp-reference.md",
+          "request_id": "11fbc8a8-3215-4beb-86aa-e6845d3ffa37",
+          "sha256": "27788601986b92e2edb73548d669e43da3131fcaed45750378c7cdc3df6eb2e9",
+          "size": 4568,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:58.334344+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "8ec3d14b-432b-52b3-adc2-a146afc401a8",
+      "filename": "Symbiknow operations.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/docs/operations.md",
+      "request_id": "00f7e9e2-cced-41e5-958c-22343bd325c5",
+      "sha256": "5348ef0ecb4f29e380cfc48c6b50e26875eeece538f9d706279a897c1cdc61d7",
+      "size": 4811,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:58.513088+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "8ec3d14b-432b-52b3-adc2-a146afc401a8",
+          "filename": "Symbiknow operations.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/docs/operations.md",
+          "request_id": "00f7e9e2-cced-41e5-958c-22343bd325c5",
+          "sha256": "5348ef0ecb4f29e380cfc48c6b50e26875eeece538f9d706279a897c1cdc61d7",
+          "size": 4811,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:58.513088+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "4ff880aa-a94f-51fa-a94c-6dfc3e3128e9",
+      "filename": "Symbiknow current development status.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/docs/current-status.md",
+      "request_id": "28cf2931-9100-48f9-939b-bfe161a5137d",
+      "sha256": "f8091ba1705f42082b70dcd374977d84ecbe47ee901d40734f92cfdc5acbdb84",
+      "size": 5126,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:58.680724+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "4ff880aa-a94f-51fa-a94c-6dfc3e3128e9",
+          "filename": "Symbiknow current development status.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/docs/current-status.md",
+          "request_id": "28cf2931-9100-48f9-939b-bfe161a5137d",
+          "sha256": "f8091ba1705f42082b70dcd374977d84ecbe47ee901d40734f92cfdc5acbdb84",
+          "size": 5126,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:58.680724+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "f6e78625-e907-50d0-a39b-1e4973917dba",
+      "filename": "Symbiknow performance evidence.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/docs/performance-evidence.md",
+      "request_id": "591d2653-fa0f-46bd-b7a4-c565dc14fdde",
+      "sha256": "5bdd608bc1fa584ae467eda7fc071ba2a234090f6071f4b13353d1b537db6787",
+      "size": 6694,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:58.884010+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "f6e78625-e907-50d0-a39b-1e4973917dba",
+          "filename": "Symbiknow performance evidence.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/docs/performance-evidence.md",
+          "request_id": "591d2653-fa0f-46bd-b7a4-c565dc14fdde",
+          "sha256": "5bdd608bc1fa584ae467eda7fc071ba2a234090f6071f4b13353d1b537db6787",
+          "size": 6694,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:58.884010+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "8d74f345-bf1e-554d-a3d5-d1162b765b56",
+      "filename": "Symbiknow project documentation.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/docs/project-library.md",
+      "request_id": "a77a2723-8c17-4dc7-8534-7121137bcd6b",
+      "sha256": "e8624f3280bb0dffbee04883566bf3a3d9ba7a7d5a22daddbab237ffaea4e6e4",
+      "size": 3404,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:59.095180+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "8d74f345-bf1e-554d-a3d5-d1162b765b56",
+          "filename": "Symbiknow project documentation.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/docs/project-library.md",
+          "request_id": "a77a2723-8c17-4dc7-8534-7121137bcd6b",
+          "sha256": "e8624f3280bb0dffbee04883566bf3a3d9ba7a7d5a22daddbab237ffaea4e6e4",
+          "size": 3404,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:59.095180+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "d792433a-8d19-5964-b1f6-072f67b6d69e",
+      "filename": "Symbiknow original build checklist.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/docs/original-build-plan.md",
+      "request_id": "3f7a3abb-55b7-49ad-952b-eb90954bab63",
+      "sha256": "1f290c0079eb915d5d023f7e2904b09783c39ca0719a2179205b199f786c6bac",
+      "size": 6065,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:59.253223+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "d792433a-8d19-5964-b1f6-072f67b6d69e",
+          "filename": "Symbiknow original build checklist.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/docs/original-build-plan.md",
+          "request_id": "3f7a3abb-55b7-49ad-952b-eb90954bab63",
+          "sha256": "1f290c0079eb915d5d023f7e2904b09783c39ca0719a2179205b199f786c6bac",
+          "size": 6065,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:59.253223+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "8a3d351a-8f10-5c92-b5f1-72f833794912",
+      "filename": "OCFL 1.1 specification.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/data/files/ocfl_1.1.md",
+      "request_id": "850d8714-32ef-407f-b50f-8c251e5f3496",
+      "sha256": "f445d56038c2834ab1860108385627365ba5a479887459055488ac59d2d4c5cc",
+      "size": 73705,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:59.413736+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "8a3d351a-8f10-5c92-b5f1-72f833794912",
+          "filename": "OCFL 1.1 specification.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/data/files/ocfl_1.1.md",
+          "request_id": "850d8714-32ef-407f-b50f-8c251e5f3496",
+          "sha256": "f445d56038c2834ab1860108385627365ba5a479887459055488ac59d2d4c5cc",
+          "size": 73705,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:59.413736+00:00"
+        }
+      ]
+    },
+    {
+      "document_id": "cd6b918c-5165-52ff-ba50-e143fc0fc2c6",
+      "filename": "OCFL hashed n tuple storage layout.md",
+      "mime_type": "text/markdown",
+      "source": "/Users/benreich/Projects/symbiknow/data/files/0004-hashed-n-tuple-storage-layout.md",
+      "request_id": "06b35e75-3ab9-4bb7-a474-f7f9eee41e3b",
+      "sha256": "887b9eafb4b2f84de877fbcb95694d1e52433f490ccc2a0d4d705bac7781cfc3",
+      "size": 11533,
+      "version": "v1",
+      "created_at": "2026-10-12T15:09:59.583157+00:00",
+      "stored": true,
+      "current_version": "v1",
+      "searchable": true,
+      "indexing_status": "indexed",
+      "searchable_text": true,
+      "searchable_visual": false,
+      "offset": 0,
+      "returned_bytes": 1,
+      "eof": false,
+      "versions": [
+        {
+          "document_id": "cd6b918c-5165-52ff-ba50-e143fc0fc2c6",
+          "filename": "OCFL hashed n tuple storage layout.md",
+          "mime_type": "text/markdown",
+          "source": "/Users/benreich/Projects/symbiknow/data/files/0004-hashed-n-tuple-storage-layout.md",
+          "request_id": "06b35e75-3ab9-4bb7-a474-f7f9eee41e3b",
+          "sha256": "887b9eafb4b2f84de877fbcb95694d1e52433f490ccc2a0d4d705bac7781cfc3",
+          "size": 11533,
+          "version": "v1",
+          "created_at": "2026-10-12T15:09:59.583157+00:00"
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "path": "/Users/benreich/Projects/symbiknow/README.md",
+      "filename": "Symbiknow README.md",
+      "sha256": "c7723b57f4376b97e2db008e5689b7c67a112c9ad1535f460628bd339b9cbd3a",
+      "size": 13488,
+      "operation": "updated",
+      "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+      "expected_version": "v1",
+      "request_id": "c7b04043-cb34-4c91-9596-0d39c6e549c7",
+      "stored": true,
+      "version": "v2",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/UI.md",
+      "filename": "Symbiknow UI guide.md",
+      "sha256": "7d165c821a8718f3a3f8411a6f9cc33f046c38ae51eb87fe801e07b9f2640e59",
+      "size": 13922,
+      "operation": "updated",
+      "document_id": "31bc791f-5b1b-50e5-9768-b3082c615c7b",
+      "expected_version": "v1",
+      "request_id": "9000ffe4-6344-4f54-a2fe-ce2cbb756ffc",
+      "stored": true,
+      "version": "v2",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/VALIDATION.md",
+      "filename": "Symbiknow validation record.md",
+      "sha256": "6eeaf4b32eaeb856c7b3c2e3ae92d746b9238956d054e2ab439a991252744a9e",
+      "size": 26236,
+      "operation": "updated",
+      "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+      "expected_version": "v1",
+      "request_id": "c3babc24-5b63-4cdb-93b4-2d5308ada07a",
+      "stored": true,
+      "version": "v2",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/architecture.md",
+      "filename": "Symbiknow architecture.md",
+      "sha256": "925c2efbce874e9b2cb74bc290f8154a9cc167434605556a5c8b2928110772d8",
+      "size": 5677,
+      "operation": "updated",
+      "document_id": "46588cb6-595f-5da6-8259-dae15ca79917",
+      "expected_version": "v1",
+      "request_id": "bb149c19-4a31-4414-a63b-29e6c9521e9f",
+      "stored": true,
+      "version": "v2",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/mcp-reference.md",
+      "filename": "Symbiknow MCP reference.md",
+      "sha256": "638af9c0dbeb721c4e5cd868db1bf74d19f3b3142ceabe7738a60cc8ee3d3fdb",
+      "size": 4579,
+      "operation": "updated",
+      "document_id": "dea9634d-637b-5433-b3c1-efa088f4b121",
+      "expected_version": "v1",
+      "request_id": "9b87ad93-c571-4d63-aeee-fab2499f0d43",
+      "stored": true,
+      "version": "v2",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/operations.md",
+      "filename": "Symbiknow operations.md",
+      "sha256": "6285b9f84ac364dc5d572642767bf696fcfbb8fd453997fe0d842a4b9afea04c",
+      "size": 5189,
+      "operation": "updated",
+      "document_id": "8ec3d14b-432b-52b3-adc2-a146afc401a8",
+      "expected_version": "v1",
+      "request_id": "359717d9-ff13-49d9-913d-5a2f71d0eec2",
+      "stored": true,
+      "version": "v2",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/current-status.md",
+      "filename": "Symbiknow current development status.md",
+      "sha256": "ebf32d1e9c9ef3d2d1e9ac6f290a64061b7a0d5332bd6d2dd65b6ce48d9f69bb",
+      "size": 7244,
+      "operation": "updated",
+      "document_id": "4ff880aa-a94f-51fa-a94c-6dfc3e3128e9",
+      "expected_version": "v1",
+      "request_id": "d534feda-0123-46cd-9c0e-5f197114aa73",
+      "stored": true,
+      "version": "v2",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/performance-evidence.md",
+      "filename": "Symbiknow performance evidence.md",
+      "sha256": "5bdd608bc1fa584ae467eda7fc071ba2a234090f6071f4b13353d1b537db6787",
+      "size": 6694,
+      "operation": "unchanged",
+      "document_id": "f6e78625-e907-50d0-a39b-1e4973917dba",
+      "expected_version": "v1",
+      "request_id": "443ff215-1ab4-4ef6-a0c5-094eae4052a7",
+      "stored": true,
+      "version": "v1",
+      "download_verified": true,
+      "indexing_status": "indexed",
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/project-library.md",
+      "filename": "Symbiknow project documentation.md",
+      "sha256": "786c5c52e143deca7145012fcec72bed44ca45fe8f6ff1a08a2b0c1fd99d2e0a",
+      "size": 8144,
+      "operation": "updated",
+      "document_id": "8d74f345-bf1e-554d-a3d5-d1162b765b56",
+      "expected_version": "v1",
+      "request_id": "8a9b1b92-a06a-4c27-a2a6-2b732ed6db50",
+      "stored": true,
+      "version": "v2",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/original-build-plan.md",
+      "filename": "Symbiknow original build checklist.md",
+      "sha256": "1f290c0079eb915d5d023f7e2904b09783c39ca0719a2179205b199f786c6bac",
+      "size": 6065,
+      "operation": "unchanged",
+      "document_id": "d792433a-8d19-5964-b1f6-072f67b6d69e",
+      "expected_version": "v1",
+      "request_id": "500bf73f-b7f8-4308-89d3-372cbb34741d",
+      "stored": true,
+      "version": "v1",
+      "download_verified": true,
+      "indexing_status": "indexed",
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/data/files/ocfl_1.1.md",
+      "filename": "OCFL 1.1 specification.md",
+      "sha256": "f445d56038c2834ab1860108385627365ba5a479887459055488ac59d2d4c5cc",
+      "size": 73705,
+      "operation": "unchanged",
+      "document_id": "8a3d351a-8f10-5c92-b5f1-72f833794912",
+      "expected_version": "v1",
+      "request_id": "a6580d94-89c3-428a-8c10-0e79573390a7",
+      "stored": true,
+      "version": "v1",
+      "download_verified": true,
+      "indexing_status": "indexed",
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/data/files/0004-hashed-n-tuple-storage-layout.md",
+      "filename": "OCFL hashed n tuple storage layout.md",
+      "sha256": "887b9eafb4b2f84de877fbcb95694d1e52433f490ccc2a0d4d705bac7781cfc3",
+      "size": 11533,
+      "operation": "unchanged",
+      "document_id": "cd6b918c-5165-52ff-ba50-e143fc0fc2c6",
+      "expected_version": "v1",
+      "request_id": "64ed4085-df50-401d-aa7f-3df95287f6e8",
+      "stored": true,
+      "version": "v1",
+      "download_verified": true,
+      "indexing_status": "indexed",
+      "searchable": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/data-ownership-and-system-flow.md",
+      "filename": "Symbiknow Data ownership and system flow.md",
+      "subject": "Architecture",
+      "sha256": "92b927d3433b194485131b7dd404c369d92f9bff1873125e526a1c0ad14395df",
+      "size": 1923,
+      "operation": "created",
+      "request_id": "e4fab018-7a87-4802-994f-b5757c73a2d1",
+      "stored": true,
+      "document_id": "6986c7b8-6c44-5d96-bac0-a0b464bb7825",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/repository-module-map.md",
+      "filename": "Symbiknow Repository module map.md",
+      "subject": "Architecture",
+      "sha256": "140c548725c0ee2c6e4736a4dc45fa87a35b4da74fa8d348b0f139736c74d049",
+      "size": 2208,
+      "operation": "created",
+      "request_id": "f5d53ec7-fffd-4c36-92fa-5da0cb70440b",
+      "stored": true,
+      "document_id": "6c14d772-b41f-512b-b6a9-42b4efb321c9",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/ingestion-lifecycle-and-processing-states.md",
+      "filename": "Symbiknow Ingestion lifecycle and processing states.md",
+      "subject": "Architecture",
+      "sha256": "313f74fa15fc6fca6241365cb0439b60d12139d1e3cead7c19ac9a6bd4b39fba",
+      "size": 2064,
+      "operation": "created",
+      "request_id": "02242c8c-7888-4a45-956f-ade08fdc8558",
+      "stored": true,
+      "document_id": "896ff49a-aff9-520d-9f97-a2ca950e1312",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/concurrency-and-safe-publication.md",
+      "filename": "Symbiknow Concurrency and safe publication.md",
+      "subject": "Architecture",
+      "sha256": "d1c7cb6308805adacf48f6dd2a093881ad8e2795b83aeadf94e8395464f2c0a2",
+      "size": 2080,
+      "operation": "created",
+      "request_id": "c0f8c974-e3e7-44e3-9584-5b2cff12420a",
+      "stored": true,
+      "document_id": "f2113702-6497-50f9-900f-2ac8681657cd",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/original-bytes-and-version-history.md",
+      "filename": "Symbiknow Original bytes and version history.md",
+      "subject": "Storage",
+      "sha256": "13dc3256d68c07a1438d8693589cd6026790755b8345cb543aa413f40ec10cae",
+      "size": 1880,
+      "operation": "created",
+      "request_id": "6fed5f99-11ef-4861-a781-3a1727068dba",
+      "stored": true,
+      "document_id": "00292c89-b087-591d-b42f-986a2170eb3a",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/mcp-transfer-batching-chunks-and-retries.md",
+      "filename": "Symbiknow MCP transfer batching chunks and retries.md",
+      "subject": "Storage",
+      "sha256": "1077bc360b7f2c85e77c2be960014ca180912939aa7996c4ab82f2d78fc0ba18",
+      "size": 1898,
+      "operation": "created",
+      "request_id": "3a3a3d2c-7271-4be2-b6a1-4aa251eb8b67",
+      "stored": true,
+      "document_id": "ebf61add-958e-5faa-a833-8720526f59b5",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/safe-document-updates-and-conflict-handling.md",
+      "filename": "Symbiknow Safe document updates and conflict handling.md",
+      "subject": "Storage",
+      "sha256": "d09b49032a03cbc4f62740dbf809b7fb53885693b19eaad9ef3115932e88cbe2",
+      "size": 1987,
+      "operation": "created",
+      "request_id": "77e409e8-41f6-4612-bd8f-a4da1c0babb0",
+      "stored": true,
+      "document_id": "838bf0f9-3b2b-507b-95b3-9af84e2d513d",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/deletion-boundaries-backup-and-restore.md",
+      "filename": "Symbiknow Deletion boundaries backup and restore.md",
+      "subject": "Storage",
+      "sha256": "2c7a13ac5a19442929011e707e43d320db60c8ab214f04fbd9d3f669b594d69d",
+      "size": 2016,
+      "operation": "created",
+      "request_id": "a5a917f6-540d-4a90-90d4-22aef7f61c92",
+      "stored": true,
+      "document_id": "084f74c8-f317-5250-9f6f-848d548cf8f2",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/retrieval-modes-ranking-and-scopes.md",
+      "filename": "Symbiknow Retrieval modes ranking and scopes.md",
+      "subject": "Search",
+      "sha256": "80cfecbfa90f6d1911f9d021370f8c94c7efa5d7acb0a397fe6b0dc29c115829",
+      "size": 1976,
+      "operation": "created",
+      "request_id": "274dfd7e-1061-4061-a78e-8afcd1f468f6",
+      "stored": true,
+      "document_id": "ad1a6094-0a00-5753-a493-b22fbeb55096",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/evidence-ids-provenance-and-current-head-rules.md",
+      "filename": "Symbiknow Evidence IDs provenance and current head rules.md",
+      "subject": "Search",
+      "sha256": "434107b80b218a20020995a4b42a436cc8b105349dbc048ff09a553198c30ee1",
+      "size": 1843,
+      "operation": "created",
+      "request_id": "eea78757-f546-4b02-8d13-89247ceaa6da",
+      "stored": true,
+      "document_id": "2ef64303-46b3-5857-a2ba-1f5f6b8e1c93",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/embedding-runtime-and-vector-compatibility.md",
+      "filename": "Symbiknow Embedding runtime and vector compatibility.md",
+      "subject": "Search",
+      "sha256": "5586af3f260f7e9dd2fdcfcc756eb72b9530b677336823fd3f47648e76b95edc",
+      "size": 1847,
+      "operation": "created",
+      "request_id": "942cf01c-f1ce-4f39-8423-417bbb71db38",
+      "stored": true,
+      "document_id": "ac182422-04cc-541f-8bf5-a597bb2c0daa",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/text-pdf-image-and-ocr-ingestion.md",
+      "filename": "Symbiknow Text PDF image and OCR ingestion.md",
+      "subject": "Search",
+      "sha256": "cf076e7d4e24feabe3fae26b8867085a2d8b7d3b67910e635bce49d0ed08ae87",
+      "size": 1901,
+      "operation": "created",
+      "request_id": "6e457e60-ad26-4737-af63-e480a2798481",
+      "stored": true,
+      "document_id": "e770a05f-c196-5e00-bfd6-fc65a1809708",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/project-subject-taxonomy-and-candidate-cohesion.md",
+      "filename": "Symbiknow Project subject taxonomy and candidate cohesion.md",
+      "subject": "Organization",
+      "sha256": "60290a2f54ddb450d3934afa321d63c18b0dfaece00b6d840aa6199ae262be56",
+      "size": 2036,
+      "operation": "created",
+      "request_id": "05820761-9e0f-4fba-8a9a-f17cfc86dc75",
+      "stored": true,
+      "document_id": "500744a5-c3d8-5209-8830-42bc7cfa661b",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/manual-folder-corrections-and-durable-overrides.md",
+      "filename": "Symbiknow Manual folder corrections and durable overrides.md",
+      "subject": "Organization",
+      "sha256": "1f9152ba4fc863c30c3405a3412c34a28fecb91f4366c66a90f5076545b7419d",
+      "size": 1928,
+      "operation": "created",
+      "request_id": "4f457bd9-50ff-40c1-8aab-116c19ea5e4f",
+      "stored": true,
+      "document_id": "56a227f5-5fdb-5b89-be01-3b20c83c042d",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/full-selective-reset-and-recovery-contract.md",
+      "filename": "Symbiknow Full selective reset and recovery contract.md",
+      "subject": "Organization",
+      "sha256": "96ef65598ec452caa33e04c564bc895846dd155530d1d523483a59fad80715ad",
+      "size": 2022,
+      "operation": "created",
+      "request_id": "a0dbc5ba-7b0d-44fe-a1a3-a58699ad1315",
+      "stored": true,
+      "document_id": "b899bec2-d281-5dbe-a50a-19dcf3c61428",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/relationships-deduplication-and-link-evidence.md",
+      "filename": "Symbiknow Relationships deduplication and link evidence.md",
+      "subject": "Organization",
+      "sha256": "a374662d6fed85390129244af2804dd34d2d8bac802db1f04baee1f2ae014270",
+      "size": 2035,
+      "operation": "created",
+      "request_id": "0de74512-012c-43bb-abf9-5ccc466940ca",
+      "stored": true,
+      "document_id": "7425cdf0-f06b-5c3c-a2d8-d8457caeb694",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/jev-answerability-labels-and-safeguards.md",
+      "filename": "Symbiknow Jev answerability labels and safeguards.md",
+      "subject": "Organization",
+      "sha256": "3e7ec141d090c611ae91d699f75f45685e0621313fb73c68c26d00dc861f860b",
+      "size": 2110,
+      "operation": "created",
+      "request_id": "52a53af8-b8d2-4a58-9ed6-d2c674398557",
+      "stored": true,
+      "document_id": "2ea55fdc-1083-54f6-b31e-49135b91b39c",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/bounded-taxonomy-preparation-and-scale-limits.md",
+      "filename": "Symbiknow Bounded taxonomy preparation and scale limits.md",
+      "subject": "Organization",
+      "sha256": "5f836b4856301d89f798771adb59f197da09a00218aa0927278f3440ae979089",
+      "size": 2072,
+      "operation": "created",
+      "request_id": "a7b3215a-66f1-4534-8993-26757c106359",
+      "stored": true,
+      "document_id": "419deed2-4c15-5cc2-842b-09c39be6cee4",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/files-folders-filtering-and-sorting.md",
+      "filename": "Symbiknow Files folders filtering and sorting.md",
+      "subject": "Interface",
+      "sha256": "93d3744ee9212f26e7b610170c21bbf3bb5df5fab9394b32fe2268d71f2deb49",
+      "size": 1963,
+      "operation": "created",
+      "request_id": "a76d8514-5014-4001-9246-41edad299da7",
+      "stored": true,
+      "document_id": "fa07c293-75d2-5af4-bb09-e3b59937d492",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/canvas-overview-reading-and-saved-positions.md",
+      "filename": "Symbiknow Canvas overview reading and saved positions.md",
+      "subject": "Interface",
+      "sha256": "2b35339a45a181a72685267033728a53044899bd75b47ce435cd4eca242b615e",
+      "size": 1991,
+      "operation": "created",
+      "request_id": "6ba540c4-7466-4f07-b45b-39cdfbfc3794",
+      "stored": true,
+      "document_id": "95ef2045-1038-5209-a215-46fc8cdd3b9c",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/preview-history-gfm-and-pdf-behavior.md",
+      "filename": "Symbiknow Preview history GFM and PDF behavior.md",
+      "subject": "Interface",
+      "sha256": "07b0df50aa3ab14236207c13b309bc35a80956dcfdc87ee8b031882064bc2a77",
+      "size": 1985,
+      "operation": "created",
+      "request_id": "50a2c844-1597-4d61-a096-1cc8b987580c",
+      "stored": true,
+      "document_id": "8f866964-eae1-596e-a6ca-b81e97f445de",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/keyboard-shortcuts-focus-and-accessibility.md",
+      "filename": "Symbiknow Keyboard shortcuts focus and accessibility.md",
+      "subject": "Interface",
+      "sha256": "8e32fdb974f24882ddbfedc2fa7eaf09405430418576c40e393fdca14a7dea50",
+      "size": 2006,
+      "operation": "created",
+      "request_id": "ae88e717-923a-4156-9c2d-b41d478be9fb",
+      "stored": true,
+      "document_id": "19809952-0dcf-5ee4-9067-875fbd129fe7",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/shared-search-state-and-presentation-invalidation.md",
+      "filename": "Symbiknow Shared search state and presentation invalidation.md",
+      "subject": "Interface",
+      "sha256": "9a5d086ef231c803c03591a77f34fd34c57cebaf2b67010996580fe7a26ea91b",
+      "size": 2099,
+      "operation": "created",
+      "request_id": "36dc8e91-3b7e-4047-95cd-d70c6ba7eadd",
+      "stored": true,
+      "document_id": "83c7c2c1-9daf-5c5d-8361-65698de637e9",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/launch-modes-and-single-owner-checklist.md",
+      "filename": "Symbiknow Launch modes and single owner checklist.md",
+      "subject": "Operations",
+      "sha256": "2ead10b4d184766443bc11bfdd26ef4e8f5b0d4d91843d13c49b0accd1d34f45",
+      "size": 1815,
+      "operation": "created",
+      "request_id": "10b31f6b-2058-41aa-bac2-5fffbb68f5c8",
+      "stored": true,
+      "document_id": "1c878fe1-fef4-5308-9901-4ba5e366f0f3",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/configuration-dependency-and-secret-boundaries.md",
+      "filename": "Symbiknow Configuration dependency and secret boundaries.md",
+      "subject": "Operations",
+      "sha256": "5dcacf5e55bfd9522af57c51ba75dacf02b90c04486f6c032e81e5f7540df693",
+      "size": 2002,
+      "operation": "created",
+      "request_id": "8602679e-2506-4cdf-bed4-81c5f2ea0456",
+      "stored": true,
+      "document_id": "582411e2-0c86-5bdd-8a9a-ffcd1ca9c14a",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/startup-reconciliation-and-recovery-runbook.md",
+      "filename": "Symbiknow Startup reconciliation and recovery runbook.md",
+      "subject": "Operations",
+      "sha256": "d002d7f1e021b1b93fdca433c49d69f05509b45e8caf6a956efe618be28c0925",
+      "size": 2014,
+      "operation": "created",
+      "request_id": "85596011-3c95-46ba-847f-d091b6f818d9",
+      "stored": true,
+      "document_id": "19e389ad-6f12-5e8d-8ede-3085aee06857",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/local-security-and-content-rendering-boundaries.md",
+      "filename": "Symbiknow Local security and content rendering boundaries.md",
+      "subject": "Operations",
+      "sha256": "c779c877f217231fc594aa1069ba3cf9192586ce8fed2238a54c5222e28e2756",
+      "size": 2041,
+      "operation": "created",
+      "request_id": "fb4a69ab-9af8-474d-827c-a7b9b267bbee",
+      "stored": true,
+      "document_id": "777ceaab-7068-584d-9af2-59ba780563fa",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/regression-test-map-and-current-evidence.md",
+      "filename": "Symbiknow Regression test map and current evidence.md",
+      "subject": "Operations",
+      "sha256": "28b94151270f76eec5f0f7691b99ad39fc90244f1c4311d3ec980740734ae988",
+      "size": 2127,
+      "operation": "created",
+      "request_id": "06c6a947-45c8-4413-8d43-abd0d646b203",
+      "stored": true,
+      "document_id": "f2dc8950-66b7-5bec-8735-66e61228a33b",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/knowledge-library/capacity-and-independent-quality-evaluation-plan.md",
+      "filename": "Symbiknow Capacity and independent quality evaluation plan.md",
+      "subject": "Operations",
+      "sha256": "f06c0e5fe89974188bef285d60cb906ec97fc2f6f0eb465f67ad9fb85e327288",
+      "size": 2186,
+      "operation": "created",
+      "request_id": "03d430f6-1bb3-452a-b175-fd752d190b0b",
+      "stored": true,
+      "document_id": "7c2dbd30-ee29-5a12-851f-2a395a4f4125",
+      "version": "v1",
+      "indexing_status": "indexed",
+      "download_verified": true,
+      "searchable": true,
+      "retrieval_verified": true
+    }
+  ],
+  "search_checks": [
+    {
+      "query": "\"Data ownership and system flow\"",
+      "mode": "keyword",
+      "expected_document_id": "6986c7b8-6c44-5d96-bac0-a0b464bb7825",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Repository module map\"",
+      "mode": "keyword",
+      "expected_document_id": "6c14d772-b41f-512b-b6a9-42b4efb321c9",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Ingestion lifecycle and processing states\"",
+      "mode": "keyword",
+      "expected_document_id": "896ff49a-aff9-520d-9f97-a2ca950e1312",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Concurrency and safe publication\"",
+      "mode": "keyword",
+      "expected_document_id": "f2113702-6497-50f9-900f-2ac8681657cd",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Original bytes and version history\"",
+      "mode": "keyword",
+      "expected_document_id": "00292c89-b087-591d-b42f-986a2170eb3a",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"MCP transfer batching chunks and retries\"",
+      "mode": "keyword",
+      "expected_document_id": "ebf61add-958e-5faa-a833-8720526f59b5",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Safe document updates and conflict handling\"",
+      "mode": "keyword",
+      "expected_document_id": "838bf0f9-3b2b-507b-95b3-9af84e2d513d",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Deletion boundaries backup and restore\"",
+      "mode": "keyword",
+      "expected_document_id": "084f74c8-f317-5250-9f6f-848d548cf8f2",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Retrieval modes ranking and scopes\"",
+      "mode": "keyword",
+      "expected_document_id": "ad1a6094-0a00-5753-a493-b22fbeb55096",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Evidence IDs provenance and current head rules\"",
+      "mode": "keyword",
+      "expected_document_id": "2ef64303-46b3-5857-a2ba-1f5f6b8e1c93",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Embedding runtime and vector compatibility\"",
+      "mode": "keyword",
+      "expected_document_id": "ac182422-04cc-541f-8bf5-a597bb2c0daa",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Text PDF image and OCR ingestion\"",
+      "mode": "keyword",
+      "expected_document_id": "e770a05f-c196-5e00-bfd6-fc65a1809708",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Project subject taxonomy and candidate cohesion\"",
+      "mode": "keyword",
+      "expected_document_id": "500744a5-c3d8-5209-8830-42bc7cfa661b",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Manual folder corrections and durable overrides\"",
+      "mode": "keyword",
+      "expected_document_id": "56a227f5-5fdb-5b89-be01-3b20c83c042d",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Full selective reset and recovery contract\"",
+      "mode": "keyword",
+      "expected_document_id": "b899bec2-d281-5dbe-a50a-19dcf3c61428",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Relationships deduplication and link evidence\"",
+      "mode": "keyword",
+      "expected_document_id": "7425cdf0-f06b-5c3c-a2d8-d8457caeb694",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Jev answerability labels and safeguards\"",
+      "mode": "keyword",
+      "expected_document_id": "2ea55fdc-1083-54f6-b31e-49135b91b39c",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Bounded taxonomy preparation and scale limits\"",
+      "mode": "keyword",
+      "expected_document_id": "419deed2-4c15-5cc2-842b-09c39be6cee4",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Files folders filtering and sorting\"",
+      "mode": "keyword",
+      "expected_document_id": "fa07c293-75d2-5af4-bb09-e3b59937d492",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Canvas overview reading and saved positions\"",
+      "mode": "keyword",
+      "expected_document_id": "95ef2045-1038-5209-a215-46fc8cdd3b9c",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Preview history GFM and PDF behavior\"",
+      "mode": "keyword",
+      "expected_document_id": "8f866964-eae1-596e-a6ca-b81e97f445de",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Keyboard shortcuts focus and accessibility\"",
+      "mode": "keyword",
+      "expected_document_id": "19809952-0dcf-5ee4-9067-875fbd129fe7",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Shared search state and presentation invalidation\"",
+      "mode": "keyword",
+      "expected_document_id": "83c7c2c1-9daf-5c5d-8361-65698de637e9",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Launch modes and single owner checklist\"",
+      "mode": "keyword",
+      "expected_document_id": "1c878fe1-fef4-5308-9901-4ba5e366f0f3",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Configuration dependency and secret boundaries\"",
+      "mode": "keyword",
+      "expected_document_id": "582411e2-0c86-5bdd-8a9a-ffcd1ca9c14a",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Startup reconciliation and recovery runbook\"",
+      "mode": "keyword",
+      "expected_document_id": "19e389ad-6f12-5e8d-8ede-3085aee06857",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Local security and content rendering boundaries\"",
+      "mode": "keyword",
+      "expected_document_id": "777ceaab-7068-584d-9af2-59ba780563fa",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Regression test map and current evidence\"",
+      "mode": "keyword",
+      "expected_document_id": "f2dc8950-66b7-5bec-8735-66e61228a33b",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "\"Capacity and independent quality evaluation plan\"",
+      "mode": "keyword",
+      "expected_document_id": "7c2dbd30-ee29-5a12-851f-2a395a4f4125",
+      "found_current_version": true,
+      "returned_documents": 2
+    },
+    {
+      "query": "original versions organization reset",
+      "mode": "keyword",
+      "matches": [
+        {
+          "document_id": "31bc791f-5b1b-50e5-9768-b3082c615c7b",
+          "filename": "Symbiknow UI guide.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "19e389ad-6f12-5e8d-8ede-3085aee06857",
+          "filename": "Symbiknow Startup reconciliation and recovery runbook.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "6986c7b8-6c44-5d96-bac0-a0b464bb7825",
+          "filename": "Symbiknow Data ownership and system flow.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "b899bec2-d281-5dbe-a50a-19dcf3c61428",
+          "filename": "Symbiknow Full selective reset and recovery contract.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+          "filename": "Symbiknow validation record.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "4ff880aa-a94f-51fa-a94c-6dfc3e3128e9",
+          "filename": "Symbiknow current development status.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "8ec3d14b-432b-52b3-adc2-a146afc401a8",
+          "filename": "Symbiknow operations.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "8f866964-eae1-596e-a6ca-b81e97f445de",
+          "filename": "Symbiknow Preview history GFM and PDF behavior.md",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "query": "MCP upload chunk size request identity",
+      "mode": "hybrid",
+      "matches": [
+        {
+          "document_id": "dea9634d-637b-5433-b3c1-efa088f4b121",
+          "filename": "Symbiknow MCP reference.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "ebf61add-958e-5faa-a833-8720526f59b5",
+          "filename": "Symbiknow MCP transfer batching chunks and retries.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "filename": "Symbiknow README.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "838bf0f9-3b2b-507b-95b3-9af84e2d513d",
+          "filename": "Symbiknow Safe document updates and conflict handling.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "8d74f345-bf1e-554d-a3d5-d1162b765b56",
+          "filename": "Symbiknow project documentation.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "31bc791f-5b1b-50e5-9768-b3082c615c7b",
+          "filename": "Symbiknow UI guide.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "00292c89-b087-591d-b42f-986a2170eb3a",
+          "filename": "Symbiknow Original bytes and version history.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+          "filename": "Symbiknow validation record.md",
+          "version": "v2"
+        }
+      ]
+    },
+    {
+      "query": "Space Quick Look canvas pan",
+      "mode": "hybrid",
+      "matches": [
+        {
+          "document_id": "19809952-0dcf-5ee4-9067-875fbd129fe7",
+          "filename": "Symbiknow Keyboard shortcuts focus and accessibility.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "95ef2045-1038-5209-a215-46fc8cdd3b9c",
+          "filename": "Symbiknow Canvas overview reading and saved positions.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "31bc791f-5b1b-50e5-9768-b3082c615c7b",
+          "filename": "Symbiknow UI guide.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "4ff880aa-a94f-51fa-a94c-6dfc3e3128e9",
+          "filename": "Symbiknow current development status.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+          "filename": "Symbiknow validation record.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "2ef64303-46b3-5857-a2ba-1f5f6b8e1c93",
+          "filename": "Symbiknow Evidence IDs provenance and current head rules.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "83c7c2c1-9daf-5c5d-8361-65698de637e9",
+          "filename": "Symbiknow Shared search state and presentation invalidation.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "8d74f345-bf1e-554d-a3d5-d1162b765b56",
+          "filename": "Symbiknow project documentation.md",
+          "version": "v2"
+        }
+      ]
+    },
+    {
+      "query": "partial unrelated Jev evidence",
+      "mode": "hybrid",
+      "matches": [
+        {
+          "document_id": "2ea55fdc-1083-54f6-b31e-49135b91b39c",
+          "filename": "Symbiknow Jev answerability labels and safeguards.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "2ef64303-46b3-5857-a2ba-1f5f6b8e1c93",
+          "filename": "Symbiknow Evidence IDs provenance and current head rules.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "dea9634d-637b-5433-b3c1-efa088f4b121",
+          "filename": "Symbiknow MCP reference.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "f6e78625-e907-50d0-a39b-1e4973917dba",
+          "filename": "Symbiknow performance evidence.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "7425cdf0-f06b-5c3c-a2d8-d8457caeb694",
+          "filename": "Symbiknow Relationships deduplication and link evidence.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "filename": "Symbiknow README.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+          "filename": "Symbiknow validation record.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "f2dc8950-66b7-5bec-8735-66e61228a33b",
+          "filename": "Symbiknow Regression test map and current evidence.md",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "query": "100000 documents 16 GB capacity qualification",
+      "mode": "hybrid",
+      "matches": [
+        {
+          "document_id": "7c2dbd30-ee29-5a12-851f-2a395a4f4125",
+          "filename": "Symbiknow Capacity and independent quality evaluation plan.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "filename": "Symbiknow README.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "419deed2-4c15-5cc2-842b-09c39be6cee4",
+          "filename": "Symbiknow Bounded taxonomy preparation and scale limits.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+          "filename": "Symbiknow validation record.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "4ff880aa-a94f-51fa-a94c-6dfc3e3128e9",
+          "filename": "Symbiknow current development status.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "31bc791f-5b1b-50e5-9768-b3082c615c7b",
+          "filename": "Symbiknow UI guide.md",
+          "version": "v2"
+        },
+        {
+          "document_id": "f6e78625-e907-50d0-a39b-1e4973917dba",
+          "filename": "Symbiknow performance evidence.md",
+          "version": "v1"
+        },
+        {
+          "document_id": "777ceaab-7068-584d-9af2-59ba780563fa",
+          "filename": "Symbiknow Local security and content rendering boundaries.md",
+          "version": "v1"
+        }
+      ]
+    }
+  ],
+  "previous_version_hashes_verified": true,
+  "searchable_documents": 41,
+  "new_guides_retrieved": 29,
+  "final_document_count": 41,
+  "current_version_downloads_verified": 41,
+  "created_documents": 29,
+  "updated_documents": 8,
+  "unchanged_documents": 4,
+  "organization_summary": {
+    "evaluated": 22,
+    "reset_pending": 19
+  }
+}

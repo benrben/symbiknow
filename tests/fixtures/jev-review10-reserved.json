@@ -1,0 +1,218 @@
+{
+  "provenance": {
+    "annotator": "Codex, self-authored before final provider run",
+    "split": "new-reserved",
+    "independent": false,
+    "reserved_contract": "Frozen after development criteria selection; do not tune against final results.",
+    "notes": "Existing cases frozen before v8/v9; neighbor-isolation case added before final v10 run. None used to tune against reserved outcomes."
+  },
+  "answerability": [
+    {
+      "id": "compatible-methods",
+      "question": "Which Git repository keeps Cedar previous document versions?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "compatible-methods",
+          "version": "v1",
+          "filename": "policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "compatible-methods:v1:t0",
+              "text": "Cedar stores document version history in its Git repository. Cedar also writes preservation copies to OCFL storage. Both mechanisms are used together.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ]
+    },
+    {
+      "id": "different-task",
+      "question": "Which cloud service stores Birch backups?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "different-task",
+          "version": "v1",
+          "filename": "policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "different-task:v1:t0",
+              "text": "Birch stores its database metadata on a local disk. Birch backups are stored in the S3 cloud service.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ]
+    },
+    {
+      "id": "wrong-project",
+      "question": "Which Git server stores Cedar previous files?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "wrong-project",
+          "version": "v1",
+          "filename": "policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "wrong-project:v1:t0",
+              "text": "NovaPay keeps file histories in OCFL without Git.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false
+        }
+      ]
+    },
+    {
+      "id": "silence",
+      "question": "Which Git server stores Harbor previous files?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "silence",
+          "version": "v1",
+          "filename": "policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "silence:v1:t0",
+              "text": "Harbor is a documentation tool. This passage gives its user interface colors only.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false
+        }
+      ]
+    },
+    {
+      "id": "current-rejected",
+      "question": "Which Git server stores Cedar previous files?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "current-rejected",
+          "version": "v1",
+          "filename": "policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "current-rejected:v1:t0",
+              "text": "Rejected Cedar proposal: migrate retained document histories from Git to OCFL. This proposal was not adopted.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false
+        }
+      ]
+    },
+    {
+      "id": "proposal-requested",
+      "question": "What did the rejected Cedar history-storage proposal suggest?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "proposal-requested",
+          "version": "v1",
+          "filename": "policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "proposal-requested:v1:t0",
+              "text": "Rejected Cedar proposal: migrate retained document histories from Git to OCFL. This proposal was not adopted.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ]
+    },
+    {
+      "id": "alternative-mechanism",
+      "question": "Which SQL database holds Arbor archive originals?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "alternative-mechanism",
+          "version": "v1",
+          "filename": "policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "alternative-mechanism:v1:t0",
+              "text": "Arbor does not store archive originals in a SQL database. Arbor preserves originals in independent filesystem objects. SQL stores derived search metadata only.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": true
+        }
+      ]
+    },
+    {
+      "id": "neutral-negative",
+      "question": "Is Git necessary to restore an earlier Harbor file?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "neutral-negative",
+          "version": "v1",
+          "filename": "policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "neutral-negative:v1:t0",
+              "text": "Harbor stores independent file histories in OCFL without Git. Earlier versions are downloadable directly.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ]
+    },
+    {
+      "id": "neighbor-denial-isolation",
+      "question": "Which Git server hosts retained files in Cedar?",
+      "split": "new-reserved",
+      "core": true,
+      "documents": [
+        {
+          "document_id": "neighbor",
+          "version": "v1",
+          "filename": "Cedar policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "neighbor:v1:t0",
+              "text": "Cedar preserves original files and every prior version in OCFL without Git.",
+              "basis": "text"
+            },
+            {
+              "evidence_id": "neighbor:v1:footer",
+              "text": "Cedar interface colors are blue and grey. Copyright 2026.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": true,
+          "expected_correcting_ids": [
+            "neighbor:v1:t0"
+          ]
+        }
+      ]
+    }
+  ],
+  "grouping": []
+}

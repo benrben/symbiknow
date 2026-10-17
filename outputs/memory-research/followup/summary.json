@@ -1,0 +1,1143 @@
+{
+  "selected_runtime": "torch",
+  "quantization": "torchao-0.17.0-int8-group16/float32-text/bfloat16-vision",
+  "completed_tasks": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "task1_revised_scope": "User selected 8-bit PyTorch without MLX.",
+  "tests": {
+    "full_backend": {
+      "exit_code": 0,
+      "passed": 273
+    },
+    "related_browser": "21 passed",
+    "resource_recovery": "23 passed",
+    "repeat_drag_undo_log": "drag-repeated.log",
+    "build": "production-build.log",
+    "lint": "ruff-final.log"
+  },
+  "matched_5_document_workload": {
+    "float32_before_preconversion_unload": {
+      "source": "server-none-bench.json",
+      "peak_simultaneous_physical_bytes": 6510450808,
+      "warm_search_median_seconds": 0.17714399995747954,
+      "reload_after_idle_seconds": 0.40786966698942706,
+      "idle_simultaneous_physical_bytes": 866471128,
+      "workloads": [
+        {
+          "name": "english.txt",
+          "seconds": 3.656597374996636,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "hebrew.txt",
+          "seconds": 0.7400994159979746,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "large.bin",
+          "seconds": 0.9074869999894872,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "cat.png",
+          "seconds": 7.230212416965514,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "pdf10",
+          "seconds": 8.417554833984468,
+          "original_sha256_verified": true
+        }
+      ]
+    },
+    "float32_after_preconversion_unload": {
+      "source": "server-none-matched10-bench.json",
+      "peak_simultaneous_physical_bytes": 4821307424,
+      "warm_search_median_seconds": 0.18587670900160447,
+      "reload_after_idle_seconds": 0.41744095797184855,
+      "idle_simultaneous_physical_bytes": 902384832,
+      "workloads": [
+        {
+          "name": "english.txt",
+          "seconds": 3.5030581669998355,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "hebrew.txt",
+          "seconds": 0.7403494580066763,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "large.bin",
+          "seconds": 0.9020011670072563,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "cat.png",
+          "seconds": 7.183183624991216,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "pdf10",
+          "seconds": 8.889669375028461,
+          "original_sha256_verified": true
+        }
+      ]
+    },
+    "int8_after_preconversion_unload": {
+      "source": "server-int8-matched10-bench.json",
+      "peak_simultaneous_physical_bytes": 4273674096,
+      "warm_search_median_seconds": 0.17353304201969877,
+      "reload_after_idle_seconds": 0.6405550829949789,
+      "idle_simultaneous_physical_bytes": 955583488,
+      "workloads": [
+        {
+          "name": "english.txt",
+          "seconds": 4.073231833986938,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "hebrew.txt",
+          "seconds": 0.6995338330161758,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "large.bin",
+          "seconds": 0.8997812499874271,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "cat.png",
+          "seconds": 7.554940624977462,
+          "original_sha256_verified": true
+        },
+        {
+          "name": "pdf10",
+          "seconds": 7.862193417036906,
+          "original_sha256_verified": true
+        }
+      ]
+    }
+  },
+  "long_pdf_sweep_before_preconversion_unload": {
+    "source": "server-int8-bench.json",
+    "peak_simultaneous_physical_bytes": 5521577912,
+    "warm_search_median_seconds": 0.44099016697146,
+    "reload_after_idle_seconds": 0.6591443750075996,
+    "idle_simultaneous_physical_bytes": 849136544,
+    "workloads": [
+      {
+        "name": "english.txt",
+        "seconds": 4.255079000024125,
+        "original_sha256_verified": true
+      },
+      {
+        "name": "hebrew.txt",
+        "seconds": 0.7485489159589633,
+        "original_sha256_verified": true
+      },
+      {
+        "name": "large.bin",
+        "seconds": 0.9045002500060946,
+        "original_sha256_verified": true
+      },
+      {
+        "name": "cat.png",
+        "seconds": 8.685724291019142,
+        "original_sha256_verified": true
+      },
+      {
+        "name": "pdf10",
+        "seconds": 12.10812916699797,
+        "original_sha256_verified": true
+      },
+      {
+        "name": "pdf100",
+        "seconds": 41.64516191597795,
+        "original_sha256_verified": true
+      },
+      {
+        "name": "pdf250",
+        "seconds": 116.05942766700173,
+        "original_sha256_verified": true
+      }
+    ]
+  },
+  "dense_scanned_pdf": {
+    "checks": {
+      "passed": true,
+      "found": {
+        "ATLAS": true,
+        "Team": true,
+        "Security": true,
+        "Review": true,
+        "July": true,
+        "Original": true
+      },
+      "text_pages": [
+        1,
+        2
+      ],
+      "visual_pages": [
+        1,
+        2
+      ],
+      "bilingual_top1": {
+        "en": true,
+        "he": true
+      },
+      "original_sha256_verified": true,
+      "runtime": {
+        "model": "google/embeddinggemma-2",
+        "revision": "2c791de4ddbe5cabd592cc93692f7acb67e52555",
+        "runtime": "torch",
+        "torch_version": "2.14.1",
+        "transformers_version": "5.19.0",
+        "quantization": "torchao-0.17.0-int8-group16/float32-text/bfloat16-vision",
+        "dimensions": 768,
+        "query_prefix": "task: search result | query: ",
+        "document_prefix": "title: {title} | text: {text}",
+        "pooling": "masked-mean",
+        "normalize": true,
+        "audio": false,
+        "max_tokens": 2048,
+        "mlx": "0.32.3",
+        "mlx_vlm": "3d87e88402f307efbf68e568971aa887ee7d9ed0"
+      },
+      "limitation": "Generated scanned table mechanics test, not production OCR certification."
+    },
+    "memory": {
+      "exit_code": 0,
+      "simultaneous_physical_peak_bytes": 5365504888,
+      "gpu": [
+        {
+          "pid": 51982,
+          "role": "conversion",
+          "mps_active_peak_bytes": 224333568,
+          "mps_driver_peak_bytes": 1302085632
+        },
+        {
+          "pid": 51918,
+          "role": "owner",
+          "mps_active_peak_bytes": 708301056,
+          "mps_driver_peak_bytes": 1635483648
+        }
+      ],
+      "accounting": "Per-process GPU maxima overlap physical footprint and each other. Never sum with physical charge or call independent maxima simultaneous."
+    }
+  },
+  "overlapping_search_ingestion": {
+    "isolated": true,
+    "real_models": true,
+    "queries": [
+      {
+        "seconds": 0.44415883399778977,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.8143520419835113,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.10493599995970726,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.07037554099224508,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.06902583298506215,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.06953737500589341,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.07103133300552145,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.06614004197763279,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.0717860420118086,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.06656120897969231,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.06839566596318036,
+        "ingestion_in_progress": true
+      },
+      {
+        "seconds": 0.06602925003971905,
+        "ingestion_in_progress": true
+      }
+    ],
+    "image_status": "indexed",
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 3,
+      "idle_seconds": 60.0,
+      "torch_quantization": "int8",
+      "mps": {
+        "active_bytes": 0,
+        "driver_bytes": 8060928
+      }
+    },
+    "visual_search_has_photo": true
+  },
+  "model_only_idle_cycles": {
+    "none": {
+      "precision": "none",
+      "model_process_only": true,
+      "idle_timeout_seconds": 2,
+      "samples": [
+        {
+          "stage": "imports",
+          "physical_bytes": 23658928,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 0,
+            "idle_seconds": 2,
+            "torch_quantization": "none"
+          }
+        },
+        {
+          "stage": "cycle0_text_loaded",
+          "physical_bytes": 2945189808,
+          "model": {
+            "loaded": true,
+            "vision": false,
+            "loads": 1,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 1084019968,
+              "driver_bytes": 2158739456
+            }
+          }
+        },
+        {
+          "stage": "cycle0_image_boundary",
+          "physical_bytes": 4498770560,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 2,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle0_after_0.25s_more",
+          "physical_bytes": 1663388288,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 2,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle0_after_0.75s_more",
+          "physical_bytes": 1663388288,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 2,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle0_after_4s_more",
+          "physical_bytes": 1589873280,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 2,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 1769472
+            }
+          }
+        },
+        {
+          "stage": "cycle0_text_idle",
+          "physical_bytes": 1251264936,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 3,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 3866624
+            }
+          }
+        },
+        {
+          "stage": "cycle1_text_loaded",
+          "physical_bytes": 3524561296,
+          "model": {
+            "loaded": true,
+            "vision": false,
+            "loads": 4,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 1084019968,
+              "driver_bytes": 2159771648
+            }
+          }
+        },
+        {
+          "stage": "cycle1_image_boundary",
+          "physical_bytes": 4212820416,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 5,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle1_after_0.25s_more",
+          "physical_bytes": 2340555200,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 5,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle1_after_0.75s_more",
+          "physical_bytes": 1306134976,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 5,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle1_after_4s_more",
+          "physical_bytes": 1303972288,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 5,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 1769472
+            }
+          }
+        },
+        {
+          "stage": "cycle1_text_idle",
+          "physical_bytes": 1322846656,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 6,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 3866624
+            }
+          }
+        },
+        {
+          "stage": "cycle2_text_loaded",
+          "physical_bytes": 3552512472,
+          "model": {
+            "loaded": true,
+            "vision": false,
+            "loads": 7,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 1084019968,
+              "driver_bytes": 2159771648
+            }
+          }
+        },
+        {
+          "stage": "cycle2_image_boundary",
+          "physical_bytes": 4234889664,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 8,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle2_after_0.25s_more",
+          "physical_bytes": 1399507392,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 8,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle2_after_0.75s_more",
+          "physical_bytes": 1399507392,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 8,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle2_after_4s_more",
+          "physical_bytes": 1326041536,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 8,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 1769472
+            }
+          }
+        },
+        {
+          "stage": "cycle2_text_idle",
+          "physical_bytes": 1329203672,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 9,
+            "idle_seconds": 2,
+            "torch_quantization": "none",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 3866624
+            }
+          }
+        }
+      ],
+      "timings": [
+        {
+          "cycle": 0,
+          "cold_seconds": 3.189859790960327,
+          "warm_median_seconds": 0.016471646027639508
+        },
+        {
+          "cycle": 1,
+          "cold_seconds": 0.25774962501600385,
+          "warm_median_seconds": 0.01451852050377056
+        },
+        {
+          "cycle": 2,
+          "cold_seconds": 0.2765049999579787,
+          "warm_median_seconds": 0.015055208001285791
+        }
+      ],
+      "limitations": [
+        "No OCR, database, server or browser; do not call these whole-app totals.",
+        "GPU accounting overlaps physical footprint; do not add it.",
+        "No vmmap, malloc pressure relief or forced unload in this probe."
+      ]
+    },
+    "int8": {
+      "precision": "int8",
+      "model_process_only": true,
+      "idle_timeout_seconds": 2,
+      "samples": [
+        {
+          "stage": "imports",
+          "physical_bytes": 23675312,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 0,
+            "idle_seconds": 2,
+            "torch_quantization": "int8"
+          }
+        },
+        {
+          "stage": "cycle0_text_loaded",
+          "physical_bytes": 2038564688,
+          "model": {
+            "loaded": true,
+            "vision": false,
+            "loads": 1,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 338973952,
+              "driver_bytes": 1252753408
+            }
+          }
+        },
+        {
+          "stage": "cycle0_image_boundary",
+          "physical_bytes": 2463156264,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 2,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle0_after_0.25s_more",
+          "physical_bytes": 852494352,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 2,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle0_after_0.75s_more",
+          "physical_bytes": 781191184,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 2,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle0_after_4s_more",
+          "physical_bytes": 775637008,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 2,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 1769472
+            }
+          }
+        },
+        {
+          "stage": "cycle0_text_idle",
+          "physical_bytes": 1110968432,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 3,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 3866624
+            }
+          }
+        },
+        {
+          "stage": "cycle1_text_loaded",
+          "physical_bytes": 2434238600,
+          "model": {
+            "loaded": true,
+            "vision": false,
+            "loads": 4,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 338973952,
+              "driver_bytes": 1253801984
+            }
+          }
+        },
+        {
+          "stage": "cycle1_image_boundary",
+          "physical_bytes": 2787690656,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 5,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle1_after_0.25s_more",
+          "physical_bytes": 1193805960,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 5,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle1_after_0.75s_more",
+          "physical_bytes": 1193805960,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 5,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle1_after_4s_more",
+          "physical_bytes": 1116719240,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 5,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 1769472
+            }
+          }
+        },
+        {
+          "stage": "cycle1_text_idle",
+          "physical_bytes": 1116735624,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 6,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 3866624
+            }
+          }
+        },
+        {
+          "stage": "cycle2_text_loaded",
+          "physical_bytes": 2440415392,
+          "model": {
+            "loaded": true,
+            "vision": false,
+            "loads": 7,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 338973952,
+              "driver_bytes": 1253801984
+            }
+          }
+        },
+        {
+          "stage": "cycle2_image_boundary",
+          "physical_bytes": 2789804192,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 8,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle2_after_0.25s_more",
+          "physical_bytes": 1195919496,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 8,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle2_after_0.75s_more",
+          "physical_bytes": 1195919496,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 8,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 5963776
+            }
+          }
+        },
+        {
+          "stage": "cycle2_after_4s_more",
+          "physical_bytes": 1119324296,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 8,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 1769472
+            }
+          }
+        },
+        {
+          "stage": "cycle2_text_idle",
+          "physical_bytes": 1119324296,
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 9,
+            "idle_seconds": 2,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 3866624
+            }
+          }
+        }
+      ],
+      "timings": [
+        {
+          "cycle": 0,
+          "cold_seconds": 3.3895334159606136,
+          "warm_median_seconds": 0.020902333490084857
+        },
+        {
+          "cycle": 1,
+          "cold_seconds": 0.4625374579918571,
+          "warm_median_seconds": 0.020745124988025054
+        },
+        {
+          "cycle": 2,
+          "cold_seconds": 0.4691059170290828,
+          "warm_median_seconds": 0.020892458473099396
+        }
+      ],
+      "limitations": [
+        "No OCR, database, server or browser; do not call these whole-app totals.",
+        "GPU accounting overlaps physical footprint; do not add it.",
+        "No vmmap, malloc pressure relief or forced unload in this probe."
+      ]
+    }
+  },
+  "existing_index_validation": {
+    "production_expected_top1_losses": 0,
+    "production_expected_top3_losses": 0,
+    "image_top1_correct": 10,
+    "image_total": 10,
+    "resource_checks_passed": true,
+    "original_byte_checks_passed": true,
+    "validation_artifacts": {
+      "full-tests-result.json": "1df9cbf3711f5d4daaed4d23ec0b65c5aa95ff8010ef4bbd08502b4c42059b46",
+      "production-guide-torch-int8.json": "b1b2701f193f5e447637c280afed347e2460d3b821dae1360401e7979f45232a",
+      "torch-int8-production-adapter.json": "ace274591601532b0f18900a7303be000526cced013a5adb2c9cd26bbee92edb",
+      "server-int8-bench.json": "7339623756052d1ef728771f81a3b5a1645b8b6c0c10a440deb44e7bb185177d",
+      "server-int8-matched10-bench.json": "177fb492f642560e0ba4872fdf267e2bef290da35019c6ab1c671734870202b2",
+      "torch-int8-image-compatibility.json": "20ce3eea551afd031b8c79062e94bd0ae2782e88f43d8b5e9f0bb0e0f235eef2",
+      "torch-int8-real-pdf.json": "3f18f0df6a2f32dfd3ef870fbac9fee5a0c8854a9d28e32ae1e352ec4129ecfa",
+      "torch-int8-overlap.json": "956f4c8fc1b509541a300d698706131c020c533a9f4302479bb067b227f0a15e",
+      "torch-cycles-int8.json": "3f76175508c351948ae53dd2e30d944d331d8d679b983951344c6ae0ec40e3ac"
+    },
+    "existing_index_queries": 80,
+    "minimum_query_cosine": 0.9997367858886719,
+    "existing_index_top1_agreement": 1.0,
+    "existing_index_top3_overlap": 0.9875,
+    "existing_index_expected_top1_losses": 0,
+    "existing_index_expected_top3_losses": 0
+  },
+  "live": {
+    "before": {
+      "pid": 54272,
+      "native": {
+        "pid": 54272,
+        "physical_bytes": 154338312,
+        "rss_bytes": 237060096
+      },
+      "library_total": 89,
+      "processing_states": {
+        "indexed": 89
+      },
+      "inventories": {
+        "inventory_files": 272,
+        "aggregate_sha256": "e60287b26f8e800998f14ad4b4d703349737e02bbabe62e57cf9bd776aad6b66"
+      }
+    },
+    "samples": [
+      {
+        "stage": "startup_idle",
+        "native": {
+          "pid": 54272,
+          "physical_bytes": 154338312,
+          "rss_bytes": 237060096
+        },
+        "runtime": {
+          "pid": 54272,
+          "runtime": "torch",
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 0,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8"
+          },
+          "accounting": "GPU allocator values overlap process physical footprint; do not add them."
+        }
+      },
+      {
+        "stage": "cycle0_after_searches",
+        "native": {
+          "pid": 54272,
+          "physical_bytes": 2156284136,
+          "rss_bytes": 1298677760
+        },
+        "runtime": {
+          "pid": 54272,
+          "runtime": "torch",
+          "model": {
+            "loaded": true,
+            "vision": false,
+            "loads": 1,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 338973952,
+              "driver_bytes": 1252786176
+            }
+          },
+          "accounting": "GPU allocator values overlap process physical footprint; do not add them."
+        }
+      },
+      {
+        "stage": "cycle0_idle_66s",
+        "native": {
+          "pid": 54272,
+          "physical_bytes": 755337376,
+          "rss_bytes": 1249050624
+        },
+        "runtime": {
+          "pid": 54272,
+          "runtime": "torch",
+          "model": {
+            "loaded": false,
+            "vision": false,
+            "loads": 1,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 0,
+              "driver_bytes": 720896
+            }
+          },
+          "accounting": "GPU allocator values overlap process physical footprint; do not add them."
+        }
+      }
+    ],
+    "searches": [
+      {
+        "cycle": 0,
+        "cold_s": 4.463468667003326,
+        "warm_median_s": 0.3857868330087513,
+        "warm_p95_s": 0.40101187501568347,
+        "warm_sample_count": 7,
+        "all_searches_have_matches": true
+      }
+    ],
+    "limitations": [
+      "Live pre-restart server has an unknown prior workload; comparison is not a matched isolated benchmark.",
+      "GPU allocator numbers overlap physical footprint and must not be added.",
+      "Other applications and validation jobs were running; timings are local observations."
+    ],
+    "restarted": false,
+    "after_pid": 54272,
+    "after": {
+      "library_total": 89,
+      "processing_states": {
+        "indexed": 89
+      },
+      "inventories": {
+        "inventory_files": 272,
+        "aggregate_sha256": "e60287b26f8e800998f14ad4b4d703349737e02bbabe62e57cf9bd776aad6b66"
+      }
+    },
+    "inventories_unchanged": true,
+    "observed_server_peak_physical_bytes": 2759870816,
+    "observed_server_peak_rss_bytes": 1606483968
+  },
+  "quality": {
+    "semantic": {
+      "en": {
+        "top1": 37,
+        "top3": 40,
+        "total": 40
+      },
+      "he": {
+        "top1": 17,
+        "top3": 28,
+        "total": 40
+      }
+    },
+    "hybrid": {
+      "en": {
+        "top1": 35,
+        "top3": 39,
+        "total": 40
+      },
+      "he": {
+        "top1": 16,
+        "top3": 28,
+        "total": 40
+      }
+    }
+  },
+  "fallback_quality": {
+    "semantic": {
+      "en": {
+        "top1": 37,
+        "top3": 40,
+        "total": 40
+      },
+      "he": {
+        "top1": 17,
+        "top3": 28,
+        "total": 40
+      }
+    },
+    "hybrid": {
+      "en": {
+        "top1": 35,
+        "top3": 39,
+        "total": 40
+      },
+      "he": {
+        "top1": 16,
+        "top3": 28,
+        "total": 40
+      }
+    }
+  },
+  "limitations": [
+    "Generated bilingual labels are not independent production certification.",
+    "The baseline also misses the historical absolute 90% top-three gate; precision-preservation checks passed.",
+    "Hebrew queries over English guides remain less accurate than English queries.",
+    "GPU counters overlap process physical footprint and must not be added.",
+    "3.98 GiB is a matched workload observation, not an OCR ceiling; dense OCR reached about 5.00 GiB.",
+    "Idle is about 1 GiB; eight-bit storage does not make every active workload fit in 1 GiB.",
+    "Other applications ran concurrently; observations do not establish capacity or a whole-system ceiling.",
+    "8-bit execution was tested on Apple M5 Pro MPS; CPU/CUDA use the explicit unquantized fallback."
+  ]
+}

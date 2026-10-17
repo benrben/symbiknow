@@ -1,0 +1,1 @@
+Beacon Studio processes a returned product by checking its order number and warehouse inspection. The commerce team verifies delivery was within seven days and that the item was unused before refunding the original payment.

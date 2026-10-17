@@ -1,0 +1,1 @@
+Nacre provisions employee accounts after the hiring manager approves a role. Staff register a passkey before signing in. The identity team grants the minimum permissions and records the approval in an access register.

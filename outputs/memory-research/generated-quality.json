@@ -1,0 +1,1491 @@
+{
+  "provenance": {
+    "annotator": "Codex generated; user requested generation",
+    "split": "generated_regression",
+    "independent": false,
+    "source": "actual repository guides, October 12 snapshot; not authoritative current behavior"
+  },
+  "thresholds_chosen_before_run": {
+    "minimum_query_cosine": 0.995,
+    "allowed_top1_regressions": 1,
+    "allowed_top3_regressions": 0,
+    "required_photo_top1": 10,
+    "minimum_text_top3_fraction": 0.9
+  },
+  "fixture_sha256": "4acae174cc9e2be42eafa7743aa61ae612966baa6cc569d519a5df94a7308073",
+  "passage_count": 141,
+  "question_count": 80,
+  "results": {
+    "torch": {
+      "seconds": 36.8890510420315,
+      "photo_top1": 10,
+      "top1": 56,
+      "top3": 62,
+      "details": [
+        {
+          "language": "en",
+          "source": "ranged-download-integrity-procedure.md",
+          "rank": 1,
+          "first": "ranged-download-integrity-procedure.md"
+        },
+        {
+          "language": "he",
+          "source": "ranged-download-integrity-procedure.md",
+          "rank": 2,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "en",
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "rank": 1,
+          "first": "request-identities-and-idempotent-version-commits.md"
+        },
+        {
+          "language": "he",
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "rank": 8,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "en",
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "rank": 1,
+          "first": "safe-document-updates-and-conflict-handling.md"
+        },
+        {
+          "language": "he",
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "rank": 1,
+          "first": "safe-document-updates-and-conflict-handling.md"
+        },
+        {
+          "language": "en",
+          "source": "resumable-upload-state-machine.md",
+          "rank": 1,
+          "first": "resumable-upload-state-machine.md"
+        },
+        {
+          "language": "he",
+          "source": "resumable-upload-state-machine.md",
+          "rank": 3,
+          "first": "shared-search-state-and-presentation-invalidation.md"
+        },
+        {
+          "language": "en",
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "rank": 1,
+          "first": "bulk-zip-exact-versions-and-filename-collisions.md"
+        },
+        {
+          "language": "he",
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "rank": 1,
+          "first": "bulk-zip-exact-versions-and-filename-collisions.md"
+        },
+        {
+          "language": "en",
+          "source": "original-bytes-and-version-history.md",
+          "rank": 1,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "he",
+          "source": "original-bytes-and-version-history.md",
+          "rank": 11,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "en",
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "rank": 1,
+          "first": "deletion-boundaries-backup-and-restore.md"
+        },
+        {
+          "language": "he",
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "rank": 5,
+          "first": "manual-folder-corrections-and-durable-overrides.md"
+        },
+        {
+          "language": "en",
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "rank": 1,
+          "first": "startup-reconciliation-and-recovery-runbook.md"
+        },
+        {
+          "language": "he",
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "rank": 4,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "rank": 1,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "he",
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "rank": 1,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "en",
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "rank": 1,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "he",
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "rank": 3,
+          "first": "folder-revisions-and-layout-key-migration.md"
+        },
+        {
+          "language": "en",
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "rank": 1,
+          "first": "full-selective-reset-and-recovery-contract.md"
+        },
+        {
+          "language": "he",
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "rank": 42,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "rank": 1,
+          "first": "manual-folder-corrections-and-durable-overrides.md"
+        },
+        {
+          "language": "he",
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "rank": 10,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "concurrency-and-safe-publication.md",
+          "rank": 2,
+          "first": "ingestion-lifecycle-and-processing-states.md"
+        },
+        {
+          "language": "he",
+          "source": "concurrency-and-safe-publication.md",
+          "rank": 23,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "rank": 2,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "he",
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "rank": 7,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "rank": 1,
+          "first": "evidence-ids-provenance-and-current-head-rules.md"
+        },
+        {
+          "language": "he",
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "rank": 6,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "en",
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "rank": 1,
+          "first": "relationship-acceptance-and-stale-evidence-checklist.md"
+        },
+        {
+          "language": "he",
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "rank": 6,
+          "first": "regression-test-map-and-current-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "rank": 1,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "he",
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "rank": 1,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "rank": 1,
+          "first": "neighbor-discovery-budgets-and-link-coverage.md"
+        },
+        {
+          "language": "he",
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "rank": 1,
+          "first": "neighbor-discovery-budgets-and-link-coverage.md"
+        },
+        {
+          "language": "en",
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "rank": 1,
+          "first": "project-subject-taxonomy-and-candidate-cohesion.md"
+        },
+        {
+          "language": "he",
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "rank": 1,
+          "first": "project-subject-taxonomy-and-candidate-cohesion.md"
+        },
+        {
+          "language": "en",
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "rank": 1,
+          "first": "ocr-aliases-and-project-identity-policy.md"
+        },
+        {
+          "language": "he",
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "rank": 1,
+          "first": "ocr-aliases-and-project-identity-policy.md"
+        },
+        {
+          "language": "en",
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "rank": 1,
+          "first": "bounded-taxonomy-preparation-and-scale-limits.md"
+        },
+        {
+          "language": "he",
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "rank": 1,
+          "first": "bounded-taxonomy-preparation-and-scale-limits.md"
+        },
+        {
+          "language": "en",
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "rank": 1,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "he",
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "rank": 1,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "en",
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "rank": 1,
+          "first": "ingestion-lifecycle-and-processing-states.md"
+        },
+        {
+          "language": "he",
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "rank": 6,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "en",
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "rank": 1,
+          "first": "embedding-runtime-and-vector-compatibility.md"
+        },
+        {
+          "language": "he",
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "rank": 1,
+          "first": "embedding-runtime-and-vector-compatibility.md"
+        },
+        {
+          "language": "en",
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "rank": 1,
+          "first": "index-maintenance-vector-dimensions-and-migration.md"
+        },
+        {
+          "language": "he",
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "rank": 1,
+          "first": "index-maintenance-vector-dimensions-and-migration.md"
+        },
+        {
+          "language": "en",
+          "source": "lancedb-document-and-chunk-schema.md",
+          "rank": 1,
+          "first": "lancedb-document-and-chunk-schema.md"
+        },
+        {
+          "language": "he",
+          "source": "lancedb-document-and-chunk-schema.md",
+          "rank": 13,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "en",
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "rank": 1,
+          "first": "retrieval-modes-ranking-and-scopes.md"
+        },
+        {
+          "language": "he",
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "rank": 1,
+          "first": "retrieval-modes-ranking-and-scopes.md"
+        },
+        {
+          "language": "en",
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "rank": 1,
+          "first": "visual-similarity-versus-textual-answer-support.md"
+        },
+        {
+          "language": "he",
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "rank": 1,
+          "first": "visual-similarity-versus-textual-answer-support.md"
+        },
+        {
+          "language": "en",
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "rank": 1,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "he",
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "rank": 1,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "rank": 1,
+          "first": "quality-corpus-json-schema-and-offline-scoring.md"
+        },
+        {
+          "language": "he",
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "rank": 6,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "rank": 1,
+          "first": "capacity-and-independent-quality-evaluation-plan.md"
+        },
+        {
+          "language": "he",
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "rank": 33,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "rank": 1,
+          "first": "performance-measurement-exclusions-and-reproducibility.md"
+        },
+        {
+          "language": "he",
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "rank": 1,
+          "first": "performance-measurement-exclusions-and-reproducibility.md"
+        },
+        {
+          "language": "en",
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "rank": 7,
+          "first": "concurrency-and-safe-publication.md"
+        },
+        {
+          "language": "he",
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "rank": 31,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "en",
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "rank": 1,
+          "first": "local-security-and-content-rendering-boundaries.md"
+        },
+        {
+          "language": "he",
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "rank": 6,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        },
+        {
+          "language": "en",
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "rank": 1,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "he",
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "rank": 1,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "en",
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "rank": 1,
+          "first": "lazy-content-cards-cache-and-text-budgets.md"
+        },
+        {
+          "language": "he",
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "rank": 1,
+          "first": "lazy-content-cards-cache-and-text-budgets.md"
+        },
+        {
+          "language": "en",
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "rank": 1,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "he",
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "rank": 2,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "rank": 1,
+          "first": "keyboard-shortcuts-focus-and-accessibility.md"
+        },
+        {
+          "language": "he",
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "rank": 1,
+          "first": "keyboard-shortcuts-focus-and-accessibility.md"
+        },
+        {
+          "language": "en",
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "rank": 1,
+          "first": "shared-search-state-and-presentation-invalidation.md"
+        },
+        {
+          "language": "he",
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "rank": 6,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "rank": 1,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        },
+        {
+          "language": "he",
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "rank": 1,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        }
+      ]
+    },
+    "mlx": {
+      "seconds": 12.653206625021994,
+      "photo_top1": 10,
+      "top1": 55,
+      "top3": 62,
+      "details": [
+        {
+          "language": "en",
+          "source": "ranged-download-integrity-procedure.md",
+          "rank": 1,
+          "first": "ranged-download-integrity-procedure.md"
+        },
+        {
+          "language": "he",
+          "source": "ranged-download-integrity-procedure.md",
+          "rank": 2,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "en",
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "rank": 1,
+          "first": "request-identities-and-idempotent-version-commits.md"
+        },
+        {
+          "language": "he",
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "rank": 9,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "en",
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "rank": 1,
+          "first": "safe-document-updates-and-conflict-handling.md"
+        },
+        {
+          "language": "he",
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "rank": 1,
+          "first": "safe-document-updates-and-conflict-handling.md"
+        },
+        {
+          "language": "en",
+          "source": "resumable-upload-state-machine.md",
+          "rank": 1,
+          "first": "resumable-upload-state-machine.md"
+        },
+        {
+          "language": "he",
+          "source": "resumable-upload-state-machine.md",
+          "rank": 3,
+          "first": "shared-search-state-and-presentation-invalidation.md"
+        },
+        {
+          "language": "en",
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "rank": 1,
+          "first": "bulk-zip-exact-versions-and-filename-collisions.md"
+        },
+        {
+          "language": "he",
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "rank": 1,
+          "first": "bulk-zip-exact-versions-and-filename-collisions.md"
+        },
+        {
+          "language": "en",
+          "source": "original-bytes-and-version-history.md",
+          "rank": 1,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "he",
+          "source": "original-bytes-and-version-history.md",
+          "rank": 11,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "en",
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "rank": 1,
+          "first": "deletion-boundaries-backup-and-restore.md"
+        },
+        {
+          "language": "he",
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "rank": 4,
+          "first": "manual-folder-corrections-and-durable-overrides.md"
+        },
+        {
+          "language": "en",
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "rank": 1,
+          "first": "startup-reconciliation-and-recovery-runbook.md"
+        },
+        {
+          "language": "he",
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "rank": 4,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "rank": 1,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "he",
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "rank": 1,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "en",
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "rank": 1,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "he",
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "rank": 3,
+          "first": "folder-revisions-and-layout-key-migration.md"
+        },
+        {
+          "language": "en",
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "rank": 1,
+          "first": "full-selective-reset-and-recovery-contract.md"
+        },
+        {
+          "language": "he",
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "rank": 42,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "rank": 1,
+          "first": "manual-folder-corrections-and-durable-overrides.md"
+        },
+        {
+          "language": "he",
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "rank": 10,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "concurrency-and-safe-publication.md",
+          "rank": 2,
+          "first": "ingestion-lifecycle-and-processing-states.md"
+        },
+        {
+          "language": "he",
+          "source": "concurrency-and-safe-publication.md",
+          "rank": 23,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "rank": 2,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "he",
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "rank": 8,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "rank": 1,
+          "first": "evidence-ids-provenance-and-current-head-rules.md"
+        },
+        {
+          "language": "he",
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "rank": 5,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "en",
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "rank": 1,
+          "first": "relationship-acceptance-and-stale-evidence-checklist.md"
+        },
+        {
+          "language": "he",
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "rank": 7,
+          "first": "regression-test-map-and-current-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "rank": 1,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "he",
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "rank": 1,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "rank": 1,
+          "first": "neighbor-discovery-budgets-and-link-coverage.md"
+        },
+        {
+          "language": "he",
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "rank": 1,
+          "first": "neighbor-discovery-budgets-and-link-coverage.md"
+        },
+        {
+          "language": "en",
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "rank": 1,
+          "first": "project-subject-taxonomy-and-candidate-cohesion.md"
+        },
+        {
+          "language": "he",
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "rank": 1,
+          "first": "project-subject-taxonomy-and-candidate-cohesion.md"
+        },
+        {
+          "language": "en",
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "rank": 1,
+          "first": "ocr-aliases-and-project-identity-policy.md"
+        },
+        {
+          "language": "he",
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "rank": 1,
+          "first": "ocr-aliases-and-project-identity-policy.md"
+        },
+        {
+          "language": "en",
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "rank": 1,
+          "first": "bounded-taxonomy-preparation-and-scale-limits.md"
+        },
+        {
+          "language": "he",
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "rank": 1,
+          "first": "bounded-taxonomy-preparation-and-scale-limits.md"
+        },
+        {
+          "language": "en",
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "rank": 1,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "he",
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "rank": 1,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "en",
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "rank": 1,
+          "first": "ingestion-lifecycle-and-processing-states.md"
+        },
+        {
+          "language": "he",
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "rank": 6,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "en",
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "rank": 1,
+          "first": "embedding-runtime-and-vector-compatibility.md"
+        },
+        {
+          "language": "he",
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "rank": 2,
+          "first": "deletion-boundaries-backup-and-restore.md"
+        },
+        {
+          "language": "en",
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "rank": 1,
+          "first": "index-maintenance-vector-dimensions-and-migration.md"
+        },
+        {
+          "language": "he",
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "rank": 1,
+          "first": "index-maintenance-vector-dimensions-and-migration.md"
+        },
+        {
+          "language": "en",
+          "source": "lancedb-document-and-chunk-schema.md",
+          "rank": 1,
+          "first": "lancedb-document-and-chunk-schema.md"
+        },
+        {
+          "language": "he",
+          "source": "lancedb-document-and-chunk-schema.md",
+          "rank": 12,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "en",
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "rank": 1,
+          "first": "retrieval-modes-ranking-and-scopes.md"
+        },
+        {
+          "language": "he",
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "rank": 1,
+          "first": "retrieval-modes-ranking-and-scopes.md"
+        },
+        {
+          "language": "en",
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "rank": 1,
+          "first": "visual-similarity-versus-textual-answer-support.md"
+        },
+        {
+          "language": "he",
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "rank": 1,
+          "first": "visual-similarity-versus-textual-answer-support.md"
+        },
+        {
+          "language": "en",
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "rank": 1,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "he",
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "rank": 1,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "rank": 1,
+          "first": "quality-corpus-json-schema-and-offline-scoring.md"
+        },
+        {
+          "language": "he",
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "rank": 6,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "rank": 1,
+          "first": "capacity-and-independent-quality-evaluation-plan.md"
+        },
+        {
+          "language": "he",
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "rank": 32,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "rank": 1,
+          "first": "performance-measurement-exclusions-and-reproducibility.md"
+        },
+        {
+          "language": "he",
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "rank": 1,
+          "first": "performance-measurement-exclusions-and-reproducibility.md"
+        },
+        {
+          "language": "en",
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "rank": 7,
+          "first": "concurrency-and-safe-publication.md"
+        },
+        {
+          "language": "he",
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "rank": 32,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "en",
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "rank": 1,
+          "first": "local-security-and-content-rendering-boundaries.md"
+        },
+        {
+          "language": "he",
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "rank": 6,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        },
+        {
+          "language": "en",
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "rank": 1,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "he",
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "rank": 1,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "en",
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "rank": 1,
+          "first": "lazy-content-cards-cache-and-text-budgets.md"
+        },
+        {
+          "language": "he",
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "rank": 1,
+          "first": "lazy-content-cards-cache-and-text-budgets.md"
+        },
+        {
+          "language": "en",
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "rank": 1,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "he",
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "rank": 2,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "rank": 1,
+          "first": "keyboard-shortcuts-focus-and-accessibility.md"
+        },
+        {
+          "language": "he",
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "rank": 1,
+          "first": "keyboard-shortcuts-focus-and-accessibility.md"
+        },
+        {
+          "language": "en",
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "rank": 1,
+          "first": "shared-search-state-and-presentation-invalidation.md"
+        },
+        {
+          "language": "he",
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "rank": 5,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "rank": 1,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        },
+        {
+          "language": "he",
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "rank": 1,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        }
+      ]
+    },
+    "mlx_query_float32": {
+      "top1": 56,
+      "top3": 62,
+      "details": [
+        {
+          "language": "en",
+          "source": "ranged-download-integrity-procedure.md",
+          "rank": 1,
+          "first": "ranged-download-integrity-procedure.md"
+        },
+        {
+          "language": "he",
+          "source": "ranged-download-integrity-procedure.md",
+          "rank": 2,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "en",
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "rank": 1,
+          "first": "request-identities-and-idempotent-version-commits.md"
+        },
+        {
+          "language": "he",
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "rank": 8,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "en",
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "rank": 1,
+          "first": "safe-document-updates-and-conflict-handling.md"
+        },
+        {
+          "language": "he",
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "rank": 1,
+          "first": "safe-document-updates-and-conflict-handling.md"
+        },
+        {
+          "language": "en",
+          "source": "resumable-upload-state-machine.md",
+          "rank": 1,
+          "first": "resumable-upload-state-machine.md"
+        },
+        {
+          "language": "he",
+          "source": "resumable-upload-state-machine.md",
+          "rank": 3,
+          "first": "shared-search-state-and-presentation-invalidation.md"
+        },
+        {
+          "language": "en",
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "rank": 1,
+          "first": "bulk-zip-exact-versions-and-filename-collisions.md"
+        },
+        {
+          "language": "he",
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "rank": 1,
+          "first": "bulk-zip-exact-versions-and-filename-collisions.md"
+        },
+        {
+          "language": "en",
+          "source": "original-bytes-and-version-history.md",
+          "rank": 1,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "he",
+          "source": "original-bytes-and-version-history.md",
+          "rank": 10,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "en",
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "rank": 1,
+          "first": "deletion-boundaries-backup-and-restore.md"
+        },
+        {
+          "language": "he",
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "rank": 4,
+          "first": "manual-folder-corrections-and-durable-overrides.md"
+        },
+        {
+          "language": "en",
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "rank": 1,
+          "first": "startup-reconciliation-and-recovery-runbook.md"
+        },
+        {
+          "language": "he",
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "rank": 4,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "rank": 1,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "he",
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "rank": 1,
+          "first": "atomic-metadata-transactions-failure-matrix.md"
+        },
+        {
+          "language": "en",
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "rank": 1,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "he",
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "rank": 3,
+          "first": "folder-revisions-and-layout-key-migration.md"
+        },
+        {
+          "language": "en",
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "rank": 1,
+          "first": "full-selective-reset-and-recovery-contract.md"
+        },
+        {
+          "language": "he",
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "rank": 41,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "rank": 1,
+          "first": "manual-folder-corrections-and-durable-overrides.md"
+        },
+        {
+          "language": "he",
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "rank": 10,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "concurrency-and-safe-publication.md",
+          "rank": 2,
+          "first": "ingestion-lifecycle-and-processing-states.md"
+        },
+        {
+          "language": "he",
+          "source": "concurrency-and-safe-publication.md",
+          "rank": 23,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "rank": 2,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "he",
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "rank": 7,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "rank": 1,
+          "first": "evidence-ids-provenance-and-current-head-rules.md"
+        },
+        {
+          "language": "he",
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "rank": 6,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "en",
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "rank": 1,
+          "first": "relationship-acceptance-and-stale-evidence-checklist.md"
+        },
+        {
+          "language": "he",
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "rank": 6,
+          "first": "regression-test-map-and-current-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "rank": 1,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "he",
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "rank": 1,
+          "first": "relationships-deduplication-and-link-evidence.md"
+        },
+        {
+          "language": "en",
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "rank": 1,
+          "first": "neighbor-discovery-budgets-and-link-coverage.md"
+        },
+        {
+          "language": "he",
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "rank": 1,
+          "first": "neighbor-discovery-budgets-and-link-coverage.md"
+        },
+        {
+          "language": "en",
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "rank": 1,
+          "first": "project-subject-taxonomy-and-candidate-cohesion.md"
+        },
+        {
+          "language": "he",
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "rank": 1,
+          "first": "project-subject-taxonomy-and-candidate-cohesion.md"
+        },
+        {
+          "language": "en",
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "rank": 1,
+          "first": "ocr-aliases-and-project-identity-policy.md"
+        },
+        {
+          "language": "he",
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "rank": 1,
+          "first": "ocr-aliases-and-project-identity-policy.md"
+        },
+        {
+          "language": "en",
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "rank": 1,
+          "first": "bounded-taxonomy-preparation-and-scale-limits.md"
+        },
+        {
+          "language": "he",
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "rank": 1,
+          "first": "bounded-taxonomy-preparation-and-scale-limits.md"
+        },
+        {
+          "language": "en",
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "rank": 1,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "he",
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "rank": 1,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "en",
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "rank": 1,
+          "first": "ingestion-lifecycle-and-processing-states.md"
+        },
+        {
+          "language": "he",
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "rank": 6,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "en",
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "rank": 1,
+          "first": "embedding-runtime-and-vector-compatibility.md"
+        },
+        {
+          "language": "he",
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "rank": 1,
+          "first": "embedding-runtime-and-vector-compatibility.md"
+        },
+        {
+          "language": "en",
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "rank": 1,
+          "first": "index-maintenance-vector-dimensions-and-migration.md"
+        },
+        {
+          "language": "he",
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "rank": 1,
+          "first": "index-maintenance-vector-dimensions-and-migration.md"
+        },
+        {
+          "language": "en",
+          "source": "lancedb-document-and-chunk-schema.md",
+          "rank": 1,
+          "first": "lancedb-document-and-chunk-schema.md"
+        },
+        {
+          "language": "he",
+          "source": "lancedb-document-and-chunk-schema.md",
+          "rank": 12,
+          "first": "text-pdf-image-and-ocr-ingestion.md"
+        },
+        {
+          "language": "en",
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "rank": 1,
+          "first": "retrieval-modes-ranking-and-scopes.md"
+        },
+        {
+          "language": "he",
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "rank": 1,
+          "first": "retrieval-modes-ranking-and-scopes.md"
+        },
+        {
+          "language": "en",
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "rank": 1,
+          "first": "visual-similarity-versus-textual-answer-support.md"
+        },
+        {
+          "language": "he",
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "rank": 1,
+          "first": "visual-similarity-versus-textual-answer-support.md"
+        },
+        {
+          "language": "en",
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "rank": 1,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "he",
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "rank": 1,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "rank": 1,
+          "first": "quality-corpus-json-schema-and-offline-scoring.md"
+        },
+        {
+          "language": "he",
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "rank": 6,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "rank": 1,
+          "first": "capacity-and-independent-quality-evaluation-plan.md"
+        },
+        {
+          "language": "he",
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "rank": 30,
+          "first": "jev-answerability-labels-and-safeguards.md"
+        },
+        {
+          "language": "en",
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "rank": 1,
+          "first": "performance-measurement-exclusions-and-reproducibility.md"
+        },
+        {
+          "language": "he",
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "rank": 1,
+          "first": "performance-measurement-exclusions-and-reproducibility.md"
+        },
+        {
+          "language": "en",
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "rank": 7,
+          "first": "concurrency-and-safe-publication.md"
+        },
+        {
+          "language": "he",
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "rank": 31,
+          "first": "original-bytes-and-version-history.md"
+        },
+        {
+          "language": "en",
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "rank": 1,
+          "first": "local-security-and-content-rendering-boundaries.md"
+        },
+        {
+          "language": "he",
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "rank": 6,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        },
+        {
+          "language": "en",
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "rank": 1,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "he",
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "rank": 1,
+          "first": "configuration-dependency-and-secret-boundaries.md"
+        },
+        {
+          "language": "en",
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "rank": 1,
+          "first": "lazy-content-cards-cache-and-text-budgets.md"
+        },
+        {
+          "language": "he",
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "rank": 1,
+          "first": "lazy-content-cards-cache-and-text-budgets.md"
+        },
+        {
+          "language": "en",
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "rank": 1,
+          "first": "canvas-overview-reading-and-saved-positions.md"
+        },
+        {
+          "language": "he",
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "rank": 2,
+          "first": "rebuild-checkpoints-and-interruption-replay-trace.md"
+        },
+        {
+          "language": "en",
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "rank": 1,
+          "first": "keyboard-shortcuts-focus-and-accessibility.md"
+        },
+        {
+          "language": "he",
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "rank": 1,
+          "first": "keyboard-shortcuts-focus-and-accessibility.md"
+        },
+        {
+          "language": "en",
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "rank": 1,
+          "first": "shared-search-state-and-presentation-invalidation.md"
+        },
+        {
+          "language": "he",
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "rank": 5,
+          "first": "keyword-search-diagnostics-for-imported-guides.md"
+        },
+        {
+          "language": "en",
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "rank": 1,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        },
+        {
+          "language": "he",
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "rank": 1,
+          "first": "preview-history-gfm-and-pdf-behavior.md"
+        }
+      ]
+    }
+  },
+  "minimum_query_cosine": 0.9991878867149353,
+  "minimum_document_cosine": 0.9994519948959351,
+  "passed_generated_regression": false,
+  "limitations": [
+    "Generated questions are not an independent user-labeled held-out production evaluation.",
+    "Document ranking after aggregating 1200-character passages, not end-to-end production hybrid search.",
+    "Photo test uses five public sample photographs, not a representative photo library.",
+    "This run never reads or modifies the live index."
+  ]
+}

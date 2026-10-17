@@ -1,0 +1,19 @@
+{
+  "full": {
+    "seconds": 0.31938295799773186,
+    "json_bytes": 6173,
+    "metadata_reads": 23,
+    "version_records": 20,
+    "uncontended_storage_lock_wait_s": 3.4580007195472717e-06,
+    "storage_lock_hold_s": 0.02014941704692319
+  },
+  "summary": {
+    "seconds": 0.050656417035497725,
+    "json_bytes": 1130,
+    "metadata_reads": 3,
+    "version_records": 1,
+    "uncontended_storage_lock_wait_s": 8.25000461190939e-06,
+    "storage_lock_hold_s": 0.019668332999572158
+  },
+  "limitations": "One local 20-version sample; full mode reproduces previous eager detail work. Lock wait is uncontended, not a concurrent-upload latency claim."
+}

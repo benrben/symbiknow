@@ -1,198 +1,315 @@
-# SymbiKnow
+# Symbiknow
 
-**Make knowledge together.** SymbiKnow is an infinite canvas where people and AI organize ideas and build knowledge together. Spread documents across the canvas, connect related work, and see who contributed and what changed. People work in the browser; AI agents join through the assistant or MCP.
+One Python application for local agent file memory. Original bytes and independent
+document histories live in an OCFL repository managed by **rocfl 1.7.0**, without
+Git. LanceDB holds two derived tables. Docling converts and chunks supported files;
+**EmbeddingGemma 2** embeds text and native images. Hosted **TypeSafe Jev** judges
+evidence and selects logical folders, groups, and versioned relationships.
 
+The MCP server exposes exactly **upload**, **download**, and **search**. Files travel
+as base64 bytes through the official Python MCP SDK, including historical versions.
+An upload can be stored successfully while indexing is pending or has failed.
 
+## Setup
 
-https://github.com/user-attachments/assets/5ee3e2dc-f1d4-4a9a-8868-2f70ed5c20d2
-
-
-*One minute: teams and their agents share documents, and every change stays named and restorable.*
-
-This is the source repository for [SymbiKnow](https://github.com/benrben/symbiknow). It is public for viewing; the original source and brand assets are [all rights reserved](LICENSE). Third-party packages and fonts keep their own licenses.
-
-Each card keeps its source in a separate `.md` file. The canvas stores positions, sizes, groups, and links, while each document has reviewable Git history. The browser renders Markdown, Mermaid, code, slides, media, MDX, and websites. Both light and dark mode are supported.
-
-The [brand guide](brand/symbiknow-brand-guide.md) explains the identity, voice, and product promise. [Light](brand/symbiknow-identity-board.png) and [dark](brand/symbiknow-identity-board-dark.png) identity boards show the visual direction.
-
-## Loaders and libraries
-
-| Content in a block | Library or tool |
-| --- | --- |
-| Markdown, tables, task lists, links, and safe inline HTML | `react-markdown`, `remark-gfm`, `rehype-raw`, `rehype-sanitize` |
-| Syntax highlighted code fences | `shiki` |
-| Mermaid diagrams | `mermaid` |
-| Slide decks in Markdown | `@marp-team/marp-core` |
-| Direct `.mp4`, `.webm`, and `.ogg` links | Native HTML `<video>` |
-| YouTube and Vimeo links | `react-player` |
-| Checkboxes saved to their `.md` file | `unified`, `remark-parse`, `remark-gfm`, `remark-stringify` |
-| Live MDX components | `@mdx-js/mdx` with the React JSX runtime; `@mdx-js/react` is available for provider based components |
-| Full documentation websites | MkDocs, Hugo, or Docusaurus, installed separately for the selected site |
-| Infinite canvas and connections | `@xyflow/react` |
-| WebMCP tools | Pinned `@jason.today/webmcp@0.1.13` client from webmcp.dev |
-
-MDX blocks allow the included `Calculator` and `Chart` components. Imports, arbitrary JavaScript expressions, and unknown components are rejected. The included chart uses CSS bars. Website blocks point to a source folder and use the named generator; their canvas previews are static, while **Open site** serves the complete generated website.
-
-**Upload files** accepts `.md`, `.mdx`, and `.html`. A full HTML file is saved as a Markdown document with `format: html` frontmatter. It runs as an interactive page (scripts, forms, and popups work) inside a sandbox without `allow-same-origin`, so it cannot read the app's cookies, storage, or API responses, and the server rejects writes from it. Three self-contained HTML examples are in [`examples/html`](examples/html).
-
-The document editor uses CodeMirror with Markdown or HTML highlighting. The **Source / Split / Preview** switch (⌘E / Ctrl+E) renders unsaved changes. **Download .md** gets the source, and **Upload edited file** replaces it after local editing. If another person or agent changed the file since you opened it, saving is refused instead of overwriting their edit.
-
-Use the **↗ Open full page** button on any canvas card to read the complete document; uploaded HTML grows to its full height. Each open document has its own URL (`?canvas=…&doc=…`), so it can be linked, and the browser **Back** button, **← Back to canvas**, and Esc all return to the same canvas view. The previous/next buttons, the document list, the ← and → keys, and the links at the end of the page move through the canvas in reading order.
-
-Markdown documents support Hebrew, Arabic, and mixed RTL/LTR text automatically in canvas cards, the full-page reader, search previews, and the source editor. Each paragraph, heading, list, and table cell chooses its own direction. Code stays left-to-right. Explicit HTML `dir="rtl"` or `dir="ltr"` sections in Markdown are respected.
-
-Each canvas also has a **Tasks** view. Add work, switch between list and board layouts, and sort by priority, due date, size, or newest. Completing a task moves it to **Archive** automatically; restore it to reopen the work. MCP agents can use `list_todos`, `create_todo`, `update_todo`, and `set_todo_status` to manage the same saved tasks. See the [task guide](docs/todos.md).
-
-## Run locally
-
-Use Node.js 20.19+ or 22.12+ and npm. The tested release environment uses Node.js 24.
+Requires macOS Apple Silicon or Linux, Python 3.12, `uv`, and a native rocfl binary.
+The checked-in `uv.lock` pins the complete dependency graph. Model weights and
+Docling OCR/layout assets download on first use; internet access is needed then.
 
 ```sh
-npm ci
-npm run dev
+uv sync --locked
+sh scripts/install-rocfl.sh
 ```
 
-Open `http://127.0.0.1:5173`. For a production build:
+The installer builds rocfl from its pinned upstream release with filesystem support.
+It uses a workspace-local Rust toolchain and writes only `.tools/`. The upstream
+macOS release binary is Intel-only and failed on this ARM machine without Rosetta.
+If you already have a native **rocfl 1.7.0**, set `ROCFL_BIN` to its absolute path.
+The application rejects other CLI versions because their command contract is untested.
+
+The local `.env` exists and is ignored by `.gitignore`; set your hosted Jev token:
+
+```dotenv
+TYPESAFE_API_KEY=your_secret_token
+```
+
+Use `.env.example` for other settings. Do not commit `.env`. The server loads the
+project's `.env` without overriding exported environment variables. Jev uses
+`jev-1.13.0` by default; `TYPESAFE_DEFAULT_MODEL` can override it. Missing credentials
+or a Jev outage leave ordinary retrieval and byte transfers available. Selected
+text evidence is sent to the hosted Jev API when organization or evaluation runs.
+Pixels are never sent for a claimed Jev image judgment.
 
 ```sh
-npm run build
-npm start
+uv run python scripts/check-runtime.py
+uv run python -m app.server
 ```
 
-The server listens on `PORT` (default `8787`) and stores content under `DATA_DIR` (default `./data`). The app creates an example workspace on first run.
+The runtime check executes the real EmbeddingGemma 2 model on text and a PIL image,
+then a live structured Jev judgment. It never substitutes another model. The model
+checkpoint is `google/embeddinggemma-2` at revision
+`2c791de4ddbe5cabd592cc93692f7acb67e52555`. The default runtime selects MPS on Apple
+Silicon, CUDA when available, or CPU. MPS/CPU use float32; supported CUDA uses bf16.
+The unused audio encoder is disabled. Default output is normalized 768-dimensional
+vectors; optional 128/256/512 dimensions require rebuilding the derived index.
 
-The React client is in `src/`, the API and storage code in `server/`, shared types in `shared/`, and browser acceptance scenarios in `features/`. Start with the [documentation index](docs/README.md) for architecture and operations. `data/`, `dist/`, `node_modules/`, `work/`, and generated quality reports are local artifacts excluded from Git. The old implementation plans in `docs/plans/` describe historical work; use this README and [API.md](API.md) for the current feature set.
+The PyTorch/MPS path was tested on an Apple M5 Pro with 48 GB RAM. The requested
+M4 with 16 GB RAM target, MLX, and L4 CUDA hardware still require validation.
 
-The repository includes [example environment settings](.env.example). Supply them through your shell or deployment platform; the app does not load `.env` automatically. Keep real keys and `DATA_DIR` out of Git. Run `npm run lint`, `npm run typecheck`, `npm test`, and `npx cucumber-js` before committing a change; `npm test` builds the app before testing, and [CI](.github/workflows/ci.yml) runs the same checks on pushes and pull requests.
+## Human UI and shared HTTP MCP
 
-## Self-hosting
+The refined UI includes a folder canvas, Files/Recent browsing, three search modes,
+an independent Jev evaluation switch, version previews/downloads, and selective
+organization rebuild with progress and retry. See [UI.md](UI.md) for behaviors,
+API details, tests, screenshots and limitations.
 
-Run the production server on your host and put it behind HTTPS (a reverse proxy such as Caddy, nginx, or your platform's load balancer):
-
-| Variable | Purpose |
-| --- | --- |
-| `HOST` | Interface to bind. Default `127.0.0.1`; use `0.0.0.0` behind a proxy or in a container. |
-| `PORT`, `DATA_DIR` | Port and content folder. Keep `DATA_DIR` on persistent storage. |
-| `PUBLIC_URL` | The address people and agents use, such as `https://symbiknow.example.com`. Settings shows MCP connection details for this address. |
-| `SYMBIKNOW_ACCESS_TOKEN` | Protects the workspace. Browsers sign in once (HTTP-only session cookie); scripts can send `Authorization: Bearer <token>`. Set this whenever the server is reachable from other machines. |
-| `SYMBIKNOW_MCP_TOKEN` | Optional fixed MCP token for automated deployments. Tokens created in Settings work too. |
-| `SYMBIKNOW_AGENT_NAME` | Optional author name for a local stdio MCP agent. The sample Claude Code and Codex configs set this explicitly. |
-| `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | Optional environment fallbacks for keys saved in Settings. |
-
-The older `ALLTEAM_ACCESS_TOKEN`, `ALLTEAM_MCP_TOKEN`, and `ALLTEAM_AGENT_NAME` names still work. If both access-token names are set, both tokens and their existing browser sessions remain valid; new browser sessions use `SYMBIKNOW_ACCESS_TOKEN`. Both fixed MCP tokens are accepted. The new agent-name variable takes precedence when both are set. New clients use the `symbiknow_session` cookie and `x-symbiknow-actor` header; the older cookie and header still work for existing sessions and integrations. Stored IDs and workspace data are unchanged. Existing MCP config entries named `allteam-canvas` still connect; `symbiknow` is the new example name. The server warns at startup if `HOST` exposes the canvas without an access token. Request bodies must be JSON, which blocks cross-site form posts.
-
-## Revision history and branches
-
-Each document has its own local Git history under `DATA_DIR/.versions/<block-id>`. Saving that document's source creates a revision whose author is whoever made the change: `Browser`, the chat assistant `Symbi`, or an MCP agent such as `Claude Code - <token name>` or `Codex - <token name>`. Existing revision authors keep their original names, including older `Jev` and `SymbiKnow assistant` entries. Open **File history** on a canvas card or in its full-page reader to see authors and commits, create or switch branches, merge another branch, and restore an older revision as a new commit. These actions change only that document file; canvas positions, links, and other documents stay in place. A conflicting merge is aborted and leaves the file unchanged. Deleting a document records who deleted it as a final commit, and the last content stays in that history for recovery. Settings and API credentials are never added to the document repositories.
-
-To remove an entire canvas, use the trash button beside its name in the workspace sidebar and confirm. This permanently deletes that canvas's documents and file histories, removes links to it from other canvases, and opens another canvas in the workspace. If it was the last canvas, create a new one from the empty state.
-
-To remove a workspace, use the trash button beside its name and confirm. This permanently deletes every canvas in that workspace with their documents and file histories. The app opens a surviving workspace, or offers to create one if none remain.
-
-## Symbi, the assistant
-
-The **04 Ribbon** icon is the SymbiKnow project mark, used in the app chrome, favicon, and wordmark. **Symbi** is the chat guide: a living inner companion in a fluid glass bubble. Its 16 poses follow actual activity, with gentle movement even at rest. Chat has one 56px avatar in its header. **Symbi Reflex**, the organizer and planner, uses the same artwork with its own activity state. Both support light and dark themes; motion stops when the user prefers reduced motion.
-
-Open the [interactive Symbi preview](brand/symbi-avatar-demo.html) to try its conversation and motion states. See the [dark](brand/symbi-avatar-preview-dark.png) and [light](brand/symbi-avatar-preview-light.png) captures for a quick look. The preview uses scripted sample answers; the app uses the configured chat model and canvas tools.
-
-Open **Settings** (one page with a section list): **Models**, **Agents**, **Secrets**, **MCP servers**, **MCP connections**, **Plugins & loaders**.
-
-- **Models:** choose OpenRouter, OpenAI, Anthropic (through its OpenAI-compatible endpoint), or any OpenAI-compatible server such as Ollama or vLLM. Each provider keeps its own key. **Browse models** lists the provider's current models with tool-calling and context badges.
-- **Agents:** pick a built-in profile (General, Researcher, Planner, Builder) or add your own profiles with custom instructions.
-- **Secrets:** named values such as `GITHUB_TOKEN`. They stay on the server and are never returned to the browser.
-- **MCP servers:** connect outside Streamable HTTP or SSE MCP servers so the chat agent can use their tools. Authenticate with a saved secret (`Bearer <secret>`) or `${secret:NAME}` in a header, and use **Test** to list a server's tools.
-- **Plugins:** turn tool packs on or off for the chat agent: reading, editing, and outside MCP tools.
-
-The assistant uses [Deep Agents](https://docs.langchain.com/oss/javascript/deepagents/overview) for tools and [AI Elements](https://docs.langchain.com/oss/python/langchain/frontend/integrations/ai-elements) for the chat interface. Answers stream token by token. Text the model writes before calling a tool moves into the collapsible activity list, so the final answer stays clean. **Copy** copies the Markdown answer. **New chat** clears the conversation. Drag the left edge of the chat panel to resize it; the width is saved locally. A run can make up to 9,999 tool calls; cancellation and provider errors still stop it.
-
-## Research canvas and view-aware chat
-
-The assistant knows the canvas, group, document, selection, or research block currently in view. The **Using** control below chat lets you choose **Current view**, **Whole canvas**, **Selected documents**, or **Research canvas** when available. Suggested questions change with that focus. Ask it to open a relevant document or group and it can take you there; the chat keeps a return action, and **Research canvas** in the chat header reopens the session's map after you move elsewhere.
-
-Ask directly to create a temporary research canvas or answer briefly in chat. Source context and layout are selected locally; the configured chat model writes and draws the answer.
-
-The research canvas keeps growing across follow-up questions in the same chat. Its compact two-row header keeps outline and sources in popovers, and the temporary canvas shows documents and connections without group frames or grouping controls. The agent can add connected Markdown, diagrams, tasks, slides, HTML, or supported MDX blocks, and cite selected source documents inside the blocks. Sources are links to the original documents, rather than extra evidence cards. Pick **Roadmap**, **Kanban**, **Architecture**, or **Mind map** under **View & export**. You can pan, zoom, search, read, edit, add, move, connect, upload, and undo in the same canvas UI; its focus and suggested follow-ups change as you zoom or select a block. **Save canvas** creates a regular workspace canvas with its blocks and links; **Export Markdown** downloads a readable copy. Unsaved research is retained in this browser across reloads and is cleared by **New chat**. See the [research canvas guide](docs/research-canvas.md) for the full workflow.
-
-## Symbi Reflex, the automatic organizer
-
-Symbi Reflex runs six actions automatically: understand documents, organize groups, suggest labels, find a home canvas, find connections, and compare duplicates. Saved sources and workspace changes trigger the workflow; no request, mode selection, or approval is required. Removed actions remain readable in historical activity and available for checked Undo.
-
-Open the **Symbi Reflex** tab beside Chat to set one confidence threshold per action and view progress, findings, saved activity, and source evidence. Thresholds save automatically, default to 70%, and accept 50–100%. Raising a threshold makes that action more selective; changing it refreshes the affected automatic checks. A saved or environment `TYPESAFE_API_KEY` starts processing automatically, including existing documents. Add a missing key in ordinary Settings. Chat has separate model credentials.
-
-Workspace owners can use **Reset and rerun Jev** in that tab to clear Jev-generated analysis and organization across every canvas and start all six actions again. Manual metadata, source content, positions, thresholds, and provider credentials remain. Reset resumes automatic processing and requires a connected provider. A durable cleanup journal recovers interrupted resets before processing continues.
-
-Canvas and Reflex loading use lightweight summaries. Source content loads when a document opens; saved analysis loads when its details expand. Background polls share an in-flight request and preserve unchanged canvas objects. Reflex reads do not wait for the processing queue. Progress and queue reads reuse bounded projections, checking the current file's SHA-256 digest to detect outside changes. Jev shares bounded provider requests for the six retained actions, caches parsed source passages within a memory budget, and combines upload bursts into a scan plus a trailing scan. Document plans share context while preserving separate checked results. Group selection and evidence selection precede validation of the selected group. Labels reuse existing tags or label definitions, with source headings and repeated categories as fallback candidates for fresh workspaces; this does not maintain a vocabulary. Shared grouping and relationship changes remain coordinated. Checks that depend on earlier decisions still run in order. Maintenance plans from one ledger and organization snapshot per pass; the next pass reads fresh inputs. Each source guard reads a canvas once per invocation while still checking every selected source. Topic ranks and neighbor query terms are computed once before sorting or scoring. Durable processing history pools repeated source metadata and canvas blocks in saved Undo proofs without discarding results or recovery evidence. Legacy ledgers remain readable; each restored proof owns independent objects and retains its exact saved values.
-
-Source evidence and current revisions guard every save. Manual classifications and assignments remain authoritative; unsupported changes are skipped with a reason. Duplicate assessments are saved findings and do not merge documents. Below-threshold classifications remain unknown. Known people can help identify meaningful mentions in document profiles. Historical findings from removed actions remain readable and undoable.
-
-Organization fingerprints distinguish trusted automatic output from manual inputs, and admission checks pending work inside the workspace queue to prevent duplicate chains. Follow-up metadata saves with the initial job; results without proposals complete in one checked write. Maintenance and cold progress reads avoid expanding discarded history, while canonical execution retains full validation. The requested latency for all six actions is not yet verified; dependent provider calls remain part of the measured latency.
-
-Automatic document profiling shares bounded question rounds across the six actions. Grouping consumes only the selected group's exact-passage purpose and containment checks, plus coherence validation for new groups. Repeated sources and question text share scoped transport references; automatic bundles obey the SDK state-plus-longest-question budget. A private, short-lived cache reuses validated answers for each original set. Keys include exact inputs, provider, authorization, policy, and scoped source identities. Later actions build proposals from current documents and retain source, ownership, and revision checks. Changed inputs require fresh questions; reset, closure, and changed transport clear the cache.
-
-Symbi and MCP agents use the same scoped jobs. Agents cannot approve their own proposals; the workspace background workflow independently performs the enabled automatic work. Historical receipts remain available for checked Undo. The reusable Jev engine and typed SDK are unchanged: `npm run build:sdk` emits `dist/sdk/sdk.js` and its declarations. See the [engine guide](docs/jev/README.md) and [current action contract](docs/jev/decision-contract.md).
-
-## Website blocks
-
-A website block is a Markdown descriptor pointing to a source directory under `DATA_DIR`. Its frontmatter selects `docusaurus`, `hugo`, or `mkdocs` and a source path. The matching generator must be installed for previews. The canvas displays the generated site in the block. The sample workspace uses MkDocs, which can be installed with the commands below. Hugo requires its `hugo` executable, and Docusaurus requires the selected site's own `node_modules/.bin/docusaurus` (or a `docusaurus` executable on `PATH`).
-
-For Docusaurus, configure the site's `baseUrl` to the block's `/api/canvases/<canvas-id>/blocks/<block-id>/site/` path so its generated assets resolve when opened from the canvas. The `--out-dir` build option is supported by the [Docusaurus CLI](https://www.docusaurus.io/docs/cli).
-
-To enable the included MkDocs example:
+Requires Node.js 22.12+ in addition to the Python/rocfl setup above.
 
 ```sh
-uv venv .venv
-uv pip install --python .venv/bin/python -r requirements-site.txt
+npm --prefix frontend ci
+sh scripts/dev.sh
 ```
 
-## Connect agents (MCP)
+Open http://127.0.0.1:5173 for hot reload. For one-command build and a single-port
+server, run `sh scripts/web.sh` and open http://127.0.0.1:8765.
 
-The canvas server is an MCP server at `<your address>/mcp` (Streamable HTTP). Codex, Claude Code, Claude.ai, Cursor, and other MCP clients connect to it directly, so nothing from this repository has to run on their machines. Open **Settings → MCP connections**, create a token for each agent or machine, and copy the ready-made configuration:
+Agents using UI mode connect to `http://127.0.0.1:8765/mcp` through their Streamable
+HTTP configuration. They must not start another stdio owner against the same data
+directory. HTTP sessions and the browser share one worker and exactly three tools.
+Stop the web server before using the legacy stdio alternative below.
 
-- **Claude Code** (`.mcp.json` in your project, with `SYMBIKNOW_MCP_TOKEN` exported in your shell):
+## Alternative: connect a stdio MCP agent
 
-  ```json
-  { "mcpServers": { "symbiknow": { "type": "http", "url": "https://symbiknow.example.com/mcp",
-    "headers": { "Authorization": "Bearer ${SYMBIKNOW_MCP_TOKEN}" } } } }
-  ```
+Use a long-lived stdio session. Substitute your actual absolute project path:
 
-  Or: `claude mcp add --transport http symbiknow https://symbiknow.example.com/mcp --header "Authorization: Bearer <token>"`.
-- **Codex** (`~/.codex/config.toml`):
+```json
+{
+  "mcpServers": {
+    "symbiknow": {
+      "command": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+      "args": ["-m", "app.server"],
+      "cwd": "/Users/benreich/Projects/symbiknow",
+      "env": {
+        "SYMBIKNOW_DATA_DIR": "/Users/benreich/Projects/symbiknow/data"
+      }
+    }
+  }
+}
+```
 
-  ```toml
-  [mcp_servers.symbiknow]
-  url = "https://symbiknow.example.com/mcp"
-  bearer_token_env_var = "SYMBIKNOW_MCP_TOKEN"
-  ```
-- **Claude.ai / Claude Desktop custom connector:** add `https://symbiknow.example.com/mcp/t/<token>`. The token is in the path because connectors cannot send headers, so treat the URL as a secret.
+Only one server may own a data directory. Each MCP client host has its own message
+limits; SDK interoperability does not establish the limits of every agent host.
+Base64 is present in protocol responses. The CLI suppresses it in printed download
+summaries, but the host must control what enters the agent's context.
 
-Tokens are stored hashed, show their last use, and can be revoked in Settings. History and audit identify the authenticated token; its name is display metadata.
+MCP search defaults to `detail="compact"`: a response-wide 32 KiB UTF-8 structured
+JSON budget, short version-pinned excerpts, validated support/conflict references,
+and explicit omission counts. Use `detail="full"` for evaluated text windows and
+raw Jev probabilities. The browser requests full results for its inspector.
+Neither projection represents the entire original: use version-pinned `download`.
+Compact pages preserve the requested result window (at most 100 matches). Repeat
+the same arguments with `page.continuation` to fetch the next page without new
+retrieval or evaluation. Cursors expire after five minutes; changed index,
+organization, authoritative heads, passages or links require restarting the search.
+The separate complete SDK-result budget is 128 KiB, not an HTTP wire-size guarantee.
 
-### Tools and shared work
+Jev records its raw Choice separately from application policy. Choice confidence
+measures concentration across options, not the probability an evidence fact is true.
+“Contains supporting evidence · Coverage not established” retains validated facts
+without claiming a complete answer. Possible conflicts require verification;
+“No accepted conflict” does not prove there is no contradiction. Premise corrections
+are separate from disagreement between applicable sources. Evaluation covers at
+most eight candidates, with one additional bounded comparison of up to two
+applicable windows per candidate; unavailable comparisons remain explicit.
+Search-specific
+support, applicability and conflict thresholds do not change organization/link gates.
 
-The canonical MCP registry owns every shared tool, schema, permission and handler. Symbi, HTTP and stdio coding agents, and browser WebMCP all use it. Search includes `ask_symbi`, `symbi_reflex`, `search_docs`, `find_by`, and `related`; history, todos, navigation and Jev actions are discoverable from the same catalog. Symbi has full access. External agents use current token grants, including separate approval and configuration permissions.
+Search validates OCFL heads during candidate retrieval and again after provider
+work. Final freshness and citation resolution share the cross-process storage lock
+used by supported adapter writers. Do not mutate this repository through an
+unmanaged rocfl process while the app is running. Provider calls hold no storage,
+index or global judgment-cache lock. Request metrics report durations and head-read
+counts without queries, document text or credentials.
 
-For working alongside people and other agents:
+## Sample tool arguments
 
-- `download_file` creates a server-owned checkout and returns its manifest. Edit the downloaded source in the agent's environment, then `upload_file` with explicit `mode`, `checkoutId` and `idempotencyKey`. Replacement preserves the loader and rejects stale revisions; retries return the original saved receipt. `mode=create` explicitly creates a new file; `mode=propose` prepares a reviewable change without saving it.
-- Website working copies contain actual source files and binary assets. Branch-targeted downloads and uploads keep private changes separate until merge or approval.
-- `claim_doc` holds a document while editing; `release_doc` frees it. History attributes changes to the authenticated caller, independently of its display name.
+Single and bulk operations both use a `files` array. Preserve the UUID request ID
+when retrying an upload. Supply `document_id` to update a document; otherwise the
+request ID determines a stable new identity. Identical files with different upload
+request IDs retain independent identities. Identical updates still get new versions.
 
-The browser refreshes the canvas every few seconds, so agent edits and locks appear without reloading.
+```json
+{
+  "name": "upload",
+  "arguments": {
+    "files": [{
+      "filename": "notes.txt",
+      "mime_type": "text/plain",
+      "source": "/notes/notes.txt",
+      "request_id": "6be4ba0b-38ac-4b51-9ec1-1d4f1896857d",
+      "content_base64": "SGVsbG8gU3ltYmlrbm93Cg=="
+    }]
+  }
+}
+```
 
-### Local development only
+Updates may include `expected_version: "v1"` for optimistic concurrency. A replay
+of a committed request returns the original version even after later updates.
+Reusing that request ID with different bytes or metadata is an error.
 
-`npm run mcp` starts the same tools over stdio for an agent on the same machine as a checkout of this repository ([`.mcp.json`](.mcp.json), [`.codex/config.toml`](.codex/config.toml)). It reads `CANVAS_API_URL`. For a protected workspace, export `SYMBIKNOW_ACCESS_TOKEN` before starting the MCP client, or set `CANVAS_API_TOKEN` explicitly; the legacy access-token variable also works. Its `upload_file` / `download_file` can also read and write local paths.
+```json
+{"name":"download","arguments":{"files":[{"document_id":"DOCUMENT_ID","version":"v1"}]}}
+```
 
-The page also exposes its actions through [WebMCP](https://webmcp.dev/) for an agent that drives the open browser tab through the local `webmcp` bridge (`./node_modules/.bin/webmcp --mcp`, with a token pasted into the widget on the canvas). Like stdio, this only works on the same machine as the browser.
+Downloads include actual `content_base64`, original filename/MIME/source, the pinned
+version, whole-file SHA-256, range offset, returned size, and EOF. Continue ranges
+using that returned version. Use `history: true` on a download item to list all
+version metadata along with the requested byte range.
 
-## Checks
+```json
+{"name":"search","arguments":{"query":"What did we decide?","mode":"hybrid","limit":8,"evaluate":true}}
+```
 
-Install Chromium once for the browser scenarios (`npx playwright install --with-deps chromium` on Linux):
+Modes are `semantic`, `keyword`, `hybrid`, and `answer` (hybrid with Jev evaluation).
+`answer` and `evaluate=true` return accepted answer evidence only. If nothing is supported,
+`matches` is empty and `answer.status` explains whether no answer was established,
+more context is needed, or checking is unavailable. Partial answers and premise corrections
+remain explicit. Use `evaluate=false` to browse related files without answer checking.
+The evaluation budget and candidate counts are reported; an empty answer list does not
+assert that the entire library has no answer. See `docs/mcp-reference.md` for the contract.
+
+Optional `folder` and `group` filters use logical metadata. Results identify the
+exact document and OCFL version, evidence IDs, passage/page provenance, score kind,
+and relevance explanation. Jev adds direct/partial/related/unrelated/uncertain judgments and
+IDs of supplied supporting passages. Pure visual matches have no text answerability
+claim. Jev may decline to assign a relationship.
+
+## File transfer client
 
 ```sh
-npx playwright install chromium
-npm run lint
-npm run typecheck
-npm test
-npx cucumber-js
+uv run python client.py upload notes.txt photo.png
+uv run python client.py upload notes.txt --document-id DOCUMENT_ID --expected-version v1
+uv run python client.py download DOCUMENT_ID --version v1 --output-dir downloads
+uv run python client.py search "What did we decide?" --evaluate
 ```
+
+The client starts its own stdio server, so stop an existing server using the same
+data directory first. Prefer an agent's long-lived connection for background
+indexing. For a transfer-only session use `client.py --storage-only upload ...`.
+Use `--data-dir PATH` before the command for an isolated repository.
+
+For retries across CLI invocations, pass one `--request-id UUID` per input file.
+Without explicit IDs, a fresh CLI invocation is a fresh upload.
+
+The transfer client batches at most two small files per call and uses 256 KiB raw
+chunks for larger files, with SHA-256 verification and version-pinned downloads.
+It preserves filenames in metadata and prefixes downloaded filenames with document
+and version IDs to avoid collisions. It refuses to overwrite an existing output.
+Partial upload state is kept in `data/temp`; repeat chunks with the same request ID,
+offset, total size, and whole-file SHA-256 to resume. The default maximum file size
+is 256 MiB. Completed transfer receipts persist for idempotence.
+
+## Processing and recovery
+
+Original bytes are committed before conversion/model initialization. The single
+ingestion worker reconciles committed OCFL heads with LanceDB metadata after startup
+and when uploads arrive. Indexing retries replace derived chunks, never create file
+versions. Publication follows complete chunk writes. Search verifies hits against
+current OCFL heads and excludes old content while a newer version is pending.
+
+Search reports worker activity, queued upload items, and known retry counts,
+rather than a complete stored-file count. Download reports the requested version's
+indexing status. Superseded relationship endpoints are omitted; affected linked
+sources are queued for fresh organization when an update is indexed.
+
+Markdown, UTF-8 TXT, HTML, PDFs, and common image formats are supported. Docling's
+existing structural/token chunker preserves headings and page provenance. PDFs
+include extracted text and page-image representations; images include native
+visual embeddings and available OCR. Unsupported formats remain downloadable with
+an explicit `unsupported` indexing status. Encrypted PDFs, unavailable model/OCR
+assets, malformed input, and extraction errors keep originals and report failures.
+
+Jev organization is metadata, never a filesystem move. Full rebuilds prepare shared
+subject folders from headings, named projects and shared prose topics, then rank memberships with stored
+chunk embeddings and Jev. Subject paths provide parent/child navigation and descendant
+filters. Links preserve both endpoint versions
+and supplied evidence IDs. Judgments are validated against the offered choices and
+passages. Exact duplicate links are verified with SHA-256, independently of semantic
+neighbor rank; model passage similarity alone cannot label different files duplicates.
+Duplicate judgments never merge document identities.
+Candidate names exclude document types and test boilerplate. Project scope is retained
+for new topics as well as existing folders. Symmetric related/duplicate links display
+once per document/version pair; support and contradiction directions remain distinct.
+
+Use a folder's action menu to delete its organization and move its documents to
+Unfiled, preserving their history. Use Document actions → Delete document to
+permanently delete a document and all versions after confirmation. A latest-version
+guard protects newer uploads from stale selections. Interrupted purges recover at
+startup; deleted identities cannot be restored by replaying an old upload request.
+
+## Validate and back up
+
+```sh
+uv run pytest -q
+uv run ruff check app client.py tests scripts
+```
+
+Tests exercise real rocfl and LanceDB, actual SDK stdio transfers, historical byte
+integrity, conflicts/replays, parent-process interruption, indexing recovery, stale
+hit rejection, formats/provenance, and Jev SDK response validation. Unit retrieval
+tests use an explicitly labeled injected test embedder; production never uses it.
+Live model/provider checks are separate from reproducible offline tests.
+
+Live checks and the repeatable synthetic benchmark:
+
+```sh
+uv run python scripts/check-mcp.py
+uv run python scripts/benchmark.py --output benchmark.json
+```
+
+After a large indexing batch, stop the daemon and run LanceDB's built-in maintenance:
+
+```sh
+uv run python -c 'from app.search import maintain_index; print(maintain_index("data"))'
+```
+
+Use your actual data-directory path. This creates scalar indexes, a cosine IVF-SQ
+index when at least 1,024 chunks exist, and compacts derived tables. New fragments
+remain searchable before maintenance. ANN trades exact ranking for speed and needs
+corpus quality measurements; the five-file benchmark uses exact vector scanning.
+
+Stop the server before backing up. Copy the **complete data directory** (including
+`files`, `index`, and `temp`), then restore to a separate directory and compare old
+and current download hashes. OCFL originals are authoritative; the search index can
+be rebuilt by removing only the derived `index` directory while stopped and restarting.
+Never remove or rewrite the OCFL files/inventories manually.
+
+rocfl update commits rename the new version directory then copy root inventory
+files. A killed Python parent leaves the child rocfl process holding the storage
+lock so it can finish, which is tested. Killing rocfl itself, power loss, or disk
+failure during that upstream commit can still require OCFL validation and recovery
+from backup. No stronger crash durability guarantee is claimed.
+
+## Measurements and limits
+
+See `VALIDATION.md` for the actual host, checks, and measured workload. This is a
+single-computer implementation, without microservices, an external graph store,
+custom search engines, or custom file versioning. A 100,000-document corpus, 50 real
+labeled questions, 16 GB peak-memory budget, and L4 performance are **not validated**
+by small functional tests. Corpus chunk counts, image dimensions, OCR complexity,
+and historical byte volumes determine capacity. Startup head reconciliation is a
+scan, and historical download ranges currently read/verify the whole file per range.
+
+## Verified upstream contracts
+
+- [rocfl 1.7.0](https://github.com/pwinckles/rocfl/releases/tag/v1.7.0)
+- [LanceDB hybrid search](https://docs.lancedb.com/search/hybrid-search)
+- [Docling chunking](https://docling-project.github.io/docling/concepts/chunking/)
+- [Google EmbeddingGemma 2 model card](https://ai.google.dev/gemma/docs/embeddinggemma/model_card_2)
+- [EmbeddingGemma 2 developer guide](https://developers.googleblog.com/embeddinggemma-2-the-developer-guide/)
+- [TypeSafe official Python SDK](https://docs.typesafe.ai/sdk/python)
+- [TypeSafe model limitations](https://docs.typesafe.ai/models)
+- [Official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
+
+Memory ownership, idle unloading, transfer limits and the optional pinned MLX
+runtime are documented in [memory runtime controls](docs/memory-runtime.md).

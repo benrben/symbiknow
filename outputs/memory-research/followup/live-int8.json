@@ -1,0 +1,118 @@
+{
+  "before": {
+    "pid": 54272,
+    "native": {
+      "pid": 54272,
+      "physical_bytes": 154338312,
+      "rss_bytes": 237060096
+    },
+    "library_total": 89,
+    "processing_states": {
+      "indexed": 89
+    },
+    "inventories": {
+      "inventory_files": 272,
+      "aggregate_sha256": "e60287b26f8e800998f14ad4b4d703349737e02bbabe62e57cf9bd776aad6b66"
+    }
+  },
+  "samples": [
+    {
+      "stage": "startup_idle",
+      "native": {
+        "pid": 54272,
+        "physical_bytes": 154338312,
+        "rss_bytes": 237060096
+      },
+      "runtime": {
+        "pid": 54272,
+        "runtime": "torch",
+        "model": {
+          "loaded": false,
+          "vision": false,
+          "loads": 0,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8"
+        },
+        "accounting": "GPU allocator values overlap process physical footprint; do not add them."
+      }
+    },
+    {
+      "stage": "cycle0_after_searches",
+      "native": {
+        "pid": 54272,
+        "physical_bytes": 2156284136,
+        "rss_bytes": 1298677760
+      },
+      "runtime": {
+        "pid": 54272,
+        "runtime": "torch",
+        "model": {
+          "loaded": true,
+          "vision": false,
+          "loads": 1,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 338973952,
+            "driver_bytes": 1252786176
+          }
+        },
+        "accounting": "GPU allocator values overlap process physical footprint; do not add them."
+      }
+    },
+    {
+      "stage": "cycle0_idle_66s",
+      "native": {
+        "pid": 54272,
+        "physical_bytes": 755337376,
+        "rss_bytes": 1249050624
+      },
+      "runtime": {
+        "pid": 54272,
+        "runtime": "torch",
+        "model": {
+          "loaded": false,
+          "vision": false,
+          "loads": 1,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 0,
+            "driver_bytes": 720896
+          }
+        },
+        "accounting": "GPU allocator values overlap process physical footprint; do not add them."
+      }
+    }
+  ],
+  "searches": [
+    {
+      "cycle": 0,
+      "cold_s": 4.463468667003326,
+      "warm_median_s": 0.3857868330087513,
+      "warm_p95_s": 0.40101187501568347,
+      "warm_sample_count": 7,
+      "all_searches_have_matches": true
+    }
+  ],
+  "limitations": [
+    "Live pre-restart server has an unknown prior workload; comparison is not a matched isolated benchmark.",
+    "GPU allocator numbers overlap physical footprint and must not be added.",
+    "Other applications and validation jobs were running; timings are local observations."
+  ],
+  "restarted": false,
+  "after_pid": 54272,
+  "after": {
+    "library_total": 89,
+    "processing_states": {
+      "indexed": 89
+    },
+    "inventories": {
+      "inventory_files": 272,
+      "aggregate_sha256": "e60287b26f8e800998f14ad4b4d703349737e02bbabe62e57cf9bd776aad6b66"
+    }
+  },
+  "inventories_unchanged": true,
+  "observed_server_peak_physical_bytes": 2759870816,
+  "observed_server_peak_rss_bytes": 1606483968
+}

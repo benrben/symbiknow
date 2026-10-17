@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "found": {
+    "ATLAS": true,
+    "Team": true,
+    "Security": true,
+    "Review": true,
+    "July": true,
+    "Original": true
+  },
+  "text_pages": [
+    1,
+    2
+  ],
+  "visual_pages": [
+    1,
+    2
+  ],
+  "bilingual_top1": {
+    "en": true,
+    "he": true
+  },
+  "original_sha256_verified": true,
+  "runtime": {
+    "model": "google/embeddinggemma-2",
+    "revision": "2c791de4ddbe5cabd592cc93692f7acb67e52555",
+    "runtime": "torch",
+    "torch_version": "2.14.1",
+    "transformers_version": "5.19.0",
+    "quantization": "torchao-0.17.0-int8-group16/float32-text/bfloat16-vision",
+    "dimensions": 768,
+    "query_prefix": "task: search result | query: ",
+    "document_prefix": "title: {title} | text: {text}",
+    "pooling": "masked-mean",
+    "normalize": true,
+    "audio": false,
+    "max_tokens": 2048,
+    "mlx": "0.32.3",
+    "mlx_vlm": "3d87e88402f307efbf68e568971aa887ee7d9ed0"
+  },
+  "limitation": "Generated scanned table mechanics test, not production OCR certification."
+}

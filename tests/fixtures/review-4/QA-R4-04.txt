@@ -1,0 +1,1 @@
+Nacre disables an employee account at the end of the final working day. The identity team revokes active sessions and registered passkeys, removes application permissions, and records completion in the access register.

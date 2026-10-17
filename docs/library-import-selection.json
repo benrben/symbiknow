@@ -1,0 +1,50 @@
+[
+  {
+    "path": "/Users/benreich/Projects/symbiknow/README.md",
+    "filename": "Symbiknow README.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/UI.md",
+    "filename": "Symbiknow UI guide.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/VALIDATION.md",
+    "filename": "Symbiknow validation record.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/docs/architecture.md",
+    "filename": "Symbiknow architecture.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/docs/mcp-reference.md",
+    "filename": "Symbiknow MCP reference.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/docs/operations.md",
+    "filename": "Symbiknow operations.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/docs/current-status.md",
+    "filename": "Symbiknow current development status.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/docs/performance-evidence.md",
+    "filename": "Symbiknow performance evidence.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/docs/project-library.md",
+    "filename": "Symbiknow project documentation.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/docs/original-build-plan.md",
+    "filename": "Symbiknow original build checklist.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/data/files/ocfl_1.1.md",
+    "filename": "OCFL 1.1 specification.md"
+  },
+  {
+    "path": "/Users/benreich/Projects/symbiknow/data/files/0004-hashed-n-tuple-storage-layout.md",
+    "filename": "OCFL hashed n tuple storage layout.md"
+  }
+]

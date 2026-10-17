@@ -1,57 +1,47 @@
-# Dependencies and generated builds
-node_modules/
-.venv/
-dist/
-coverage/
-*.tsbuildinfo
-.vite/
-
-# Local workspace data and credentials
-/data/
+# Secrets and machine-specific settings
 .env
 .env.*
 !.env.example
-.npmrc
-/.envrc
-/.direnv/
-/.mcp.local.json
-/.codex/config.local.toml
-/.claude/settings.local.json
-
-# Test reports and temporary diagnostics
-*.log
-/playwright-report/
-/test-results/
-/features/markdown-rtl.feature
-/features/todos.feature
-/features/jev-canvas-status.feature
-/features/launch-dry-run.feature
-/features/mcp-file-workflow.feature
-/.quality/*
-!/.quality/run-tests.mjs
-
-# Editor and operating system files
+*.pem
+*.key
 .DS_Store
-Thumbs.db
 .idea/
 .vscode/
-*.swp
-*.swo
-*~
 
-# Python caches from local tooling
+# Local library, model assets and downloaded tools
+data/
+downloads/
+.tools/
+.python/
+.venv/
+.mcp-venv/
+.uv-cache/
+
+# Python caches and coverage
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.quality/coverage/
+.quality/ui-coverage/
+.quality/.coverage*
 
-# Local design and media drafts
-/design/
-/brag-output/
-/brag-output-*/
-/JEV_FIXES_HANDOFF.md
-/*.png
-/*.excalidraw
+# JavaScript dependencies, build output and browser test artifacts
+node_modules/
+dist/
+frontend/dist-*/
+*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
 
-# Local benchmark runs and implementation scratch files
-/work/
-
-/scripts/jev-bench/out/
+# Local generated reports and captures; keep reproducible memory research
+*.log
+/output/
+/screenshots/
+/outputs/*
+!/outputs/memory-research/

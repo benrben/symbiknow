@@ -1,0 +1,6 @@
+{
+  "pid": 4871,
+  "physical_footprint_bytes": 3856206680,
+  "ps": "4871     1 160096 02-22:11:23 /Users/benreich/Projects/symbiknow/.venv/bin/python",
+  "note": "Live server before restart; no private document content read. Existing workload/history unknown; not an isolated workload comparison."
+}

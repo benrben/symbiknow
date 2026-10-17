@@ -1,0 +1,2284 @@
+{
+  "exit_code": 0,
+  "sample_interval_s": 0.2,
+  "gpu_accounting": "Allocator values are in the app report. Do not add them to process footprint.",
+  "processes": {
+    "21286": {
+      "pid": 21286,
+      "root": true,
+      "name": ".venv/bin/python",
+      "rss_bytes": 2342912,
+      "physical_bytes": 15303088,
+      "peak_physical_bytes": 3615902624,
+      "peak_rss_bytes": 2653011968
+    },
+    "21316": {
+      "pid": 21316,
+      "root": false,
+      "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+      "rss_bytes": 15302656,
+      "physical_bytes": 9666968,
+      "peak_physical_bytes": 9666968,
+      "peak_rss_bytes": 19349504
+    }
+  },
+  "peak_simultaneous_footprint_bytes": 3625569592,
+  "samples": [
+    {
+      "seconds": 418546.132577291,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 2342912,
+          "physical_bytes": 15303088
+        }
+      ],
+      "simultaneous_footprint_bytes": 15303088
+    },
+    {
+      "seconds": 418546.3631505,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 172032000,
+          "physical_bytes": 129122976
+        }
+      ],
+      "simultaneous_footprint_bytes": 129122976
+    },
+    {
+      "seconds": 418546.593782583,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 228458496,
+          "physical_bytes": 187613928
+        }
+      ],
+      "simultaneous_footprint_bytes": 187613928
+    },
+    {
+      "seconds": 418546.826467166,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 269533184,
+          "physical_bytes": 224690944
+        }
+      ],
+      "simultaneous_footprint_bytes": 224690944
+    },
+    {
+      "seconds": 418547.058759208,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 301056000,
+          "physical_bytes": 252543744
+        }
+      ],
+      "simultaneous_footprint_bytes": 252543744
+    },
+    {
+      "seconds": 418547.291608041,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 305528832,
+          "physical_bytes": 258245376
+        }
+      ],
+      "simultaneous_footprint_bytes": 258245376
+    },
+    {
+      "seconds": 418547.526590666,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 317161472,
+          "physical_bytes": 266109744
+        }
+      ],
+      "simultaneous_footprint_bytes": 266109744
+    },
+    {
+      "seconds": 418547.761094541,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 320241664,
+          "physical_bytes": 273400624
+        }
+      ],
+      "simultaneous_footprint_bytes": 273400624
+    },
+    {
+      "seconds": 418547.995931166,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 376356864,
+          "physical_bytes": 319292256
+        }
+      ],
+      "simultaneous_footprint_bytes": 319292256
+    },
+    {
+      "seconds": 418548.228197333,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 394969088,
+          "physical_bytes": 332219256
+        }
+      ],
+      "simultaneous_footprint_bytes": 332219256
+    },
+    {
+      "seconds": 418548.460106291,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 450904064,
+          "physical_bytes": 369247240
+        }
+      ],
+      "simultaneous_footprint_bytes": 369247240
+    },
+    {
+      "seconds": 418548.702445416,
+      "processes": [
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 481280000,
+          "physical_bytes": 395199616
+        }
+      ],
+      "simultaneous_footprint_bytes": 395199616
+    },
+    {
+      "seconds": 418548.940082333,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 15302656,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 502169600,
+          "physical_bytes": 410699360
+        }
+      ],
+      "simultaneous_footprint_bytes": 420366328
+    },
+    {
+      "seconds": 418549.185667666,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1920434176,
+          "physical_bytes": 2422671616
+        }
+      ],
+      "simultaneous_footprint_bytes": 2432338584
+    },
+    {
+      "seconds": 418549.429297708,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1920286720,
+          "physical_bytes": 2506967296
+        }
+      ],
+      "simultaneous_footprint_bytes": 2516634264
+    },
+    {
+      "seconds": 418549.671450041,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1507753984,
+          "physical_bytes": 2717796368
+        }
+      ],
+      "simultaneous_footprint_bytes": 2727463336
+    },
+    {
+      "seconds": 418549.916849583,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1781579776,
+          "physical_bytes": 2965293264
+        }
+      ],
+      "simultaneous_footprint_bytes": 2974960232
+    },
+    {
+      "seconds": 418550.164239125,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1913454592,
+          "physical_bytes": 3096070448
+        }
+      ],
+      "simultaneous_footprint_bytes": 3105737416
+    },
+    {
+      "seconds": 418550.402659125,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1947729920,
+          "physical_bytes": 3145927008
+        }
+      ],
+      "simultaneous_footprint_bytes": 3155593976
+    },
+    {
+      "seconds": 418550.643372541,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1060470784,
+          "physical_bytes": 2001307400
+        }
+      ],
+      "simultaneous_footprint_bytes": 2010974368
+    },
+    {
+      "seconds": 418550.895255625,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1113915392,
+          "physical_bytes": 2095744800
+        }
+      ],
+      "simultaneous_footprint_bytes": 2105411768
+    },
+    {
+      "seconds": 418551.140981958,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1121796096,
+          "physical_bytes": 2117486368
+        }
+      ],
+      "simultaneous_footprint_bytes": 2127153336
+    },
+    {
+      "seconds": 418551.385559833,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1128611840,
+          "physical_bytes": 2124252984
+        }
+      ],
+      "simultaneous_footprint_bytes": 2133919952
+    },
+    {
+      "seconds": 418551.632350791,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1129725952,
+          "physical_bytes": 2125449016
+        }
+      ],
+      "simultaneous_footprint_bytes": 2135115984
+    },
+    {
+      "seconds": 418551.875103958,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1133117440,
+          "physical_bytes": 2135328568
+        }
+      ],
+      "simultaneous_footprint_bytes": 2144995536
+    },
+    {
+      "seconds": 418552.123844708,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1139277824,
+          "physical_bytes": 2162427704
+        }
+      ],
+      "simultaneous_footprint_bytes": 2172094672
+    },
+    {
+      "seconds": 418552.363387166,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1146224640,
+          "physical_bytes": 2169358160
+        }
+      ],
+      "simultaneous_footprint_bytes": 2179025128
+    },
+    {
+      "seconds": 418552.608583625,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1147142144,
+          "physical_bytes": 2170242896
+        }
+      ],
+      "simultaneous_footprint_bytes": 2179909864
+    },
+    {
+      "seconds": 418552.85254075,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1147404288,
+          "physical_bytes": 2172553040
+        }
+      ],
+      "simultaneous_footprint_bytes": 2182220008
+    },
+    {
+      "seconds": 418553.096768291,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1155006464,
+          "physical_bytes": 2178434896
+        }
+      ],
+      "simultaneous_footprint_bytes": 2188101864
+    },
+    {
+      "seconds": 418553.341405958,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1162723328,
+          "physical_bytes": 2185725776
+        }
+      ],
+      "simultaneous_footprint_bytes": 2195392744
+    },
+    {
+      "seconds": 418553.585974666,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1170456576,
+          "physical_bytes": 2201831248
+        }
+      ],
+      "simultaneous_footprint_bytes": 2211498216
+    },
+    {
+      "seconds": 418553.829617083,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1178402816,
+          "physical_bytes": 2209711952
+        }
+      ],
+      "simultaneous_footprint_bytes": 2219378920
+    },
+    {
+      "seconds": 418554.070591875,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1185038336,
+          "physical_bytes": 2217199464
+        }
+      ],
+      "simultaneous_footprint_bytes": 2226866432
+    },
+    {
+      "seconds": 418554.315156958,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1193623552,
+          "physical_bytes": 2224654184
+        }
+      ],
+      "simultaneous_footprint_bytes": 2234321152
+    },
+    {
+      "seconds": 418554.558133541,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1201356800,
+          "physical_bytes": 2232354664
+        }
+      ],
+      "simultaneous_footprint_bytes": 2242021632
+    },
+    {
+      "seconds": 418554.802554833,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1209057280,
+          "physical_bytes": 2240055144
+        }
+      ],
+      "simultaneous_footprint_bytes": 2249722112
+    },
+    {
+      "seconds": 418555.045135833,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1216937984,
+          "physical_bytes": 2235320168
+        }
+      ],
+      "simultaneous_footprint_bytes": 2244987136
+    },
+    {
+      "seconds": 418555.285465875,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1224425472,
+          "physical_bytes": 2242561920
+        }
+      ],
+      "simultaneous_footprint_bytes": 2252228888
+    },
+    {
+      "seconds": 418555.526946958,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1232027648,
+          "physical_bytes": 2250147712
+        }
+      ],
+      "simultaneous_footprint_bytes": 2259814680
+    },
+    {
+      "seconds": 418555.765831458,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1239842816,
+          "physical_bytes": 2257962880
+        }
+      ],
+      "simultaneous_footprint_bytes": 2267629848
+    },
+    {
+      "seconds": 418556.002266125,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1247576064,
+          "physical_bytes": 2265696152
+        }
+      ],
+      "simultaneous_footprint_bytes": 2275363120
+    },
+    {
+      "seconds": 418556.242545833,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1258487808,
+          "physical_bytes": 2293417880
+        }
+      ],
+      "simultaneous_footprint_bytes": 2303084848
+    },
+    {
+      "seconds": 418556.478962,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1262764032,
+          "physical_bytes": 2293417880
+        }
+      ],
+      "simultaneous_footprint_bytes": 2303084848
+    },
+    {
+      "seconds": 418556.713669166,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1266024448,
+          "physical_bytes": 2302052248
+        }
+      ],
+      "simultaneous_footprint_bytes": 2311719216
+    },
+    {
+      "seconds": 418556.947781583,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1270988800,
+          "physical_bytes": 2302642072
+        }
+      ],
+      "simultaneous_footprint_bytes": 2312309040
+    },
+    {
+      "seconds": 418557.175837791,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1270988800,
+          "physical_bytes": 2302642072
+        }
+      ],
+      "simultaneous_footprint_bytes": 2312309040
+    },
+    {
+      "seconds": 418557.404446583,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1278509056,
+          "physical_bytes": 2310080408
+        }
+      ],
+      "simultaneous_footprint_bytes": 2319747376
+    },
+    {
+      "seconds": 418557.635834083,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1278509056,
+          "physical_bytes": 2310080408
+        }
+      ],
+      "simultaneous_footprint_bytes": 2319747376
+    },
+    {
+      "seconds": 418557.866293625,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1278623744,
+          "physical_bytes": 2310195096
+        }
+      ],
+      "simultaneous_footprint_bytes": 2319862064
+    },
+    {
+      "seconds": 418558.096209125,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1278623744,
+          "physical_bytes": 2310195096
+        }
+      ],
+      "simultaneous_footprint_bytes": 2319862064
+    },
+    {
+      "seconds": 418558.322265125,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1279803392,
+          "physical_bytes": 2314913688
+        }
+      ],
+      "simultaneous_footprint_bytes": 2324580656
+    },
+    {
+      "seconds": 418558.553512458,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1285963776,
+          "physical_bytes": 2304952216
+        }
+      ],
+      "simultaneous_footprint_bytes": 2314619184
+    },
+    {
+      "seconds": 418558.784771583,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1285963776,
+          "physical_bytes": 2304952216
+        }
+      ],
+      "simultaneous_footprint_bytes": 2314619184
+    },
+    {
+      "seconds": 418559.017392083,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1293221888,
+          "physical_bytes": 2312505240
+        }
+      ],
+      "simultaneous_footprint_bytes": 2322172208
+    },
+    {
+      "seconds": 418559.245785416,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1293516800,
+          "physical_bytes": 2312505240
+        }
+      ],
+      "simultaneous_footprint_bytes": 2322172208
+    },
+    {
+      "seconds": 418559.473815166,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1293516800,
+          "physical_bytes": 2312505240
+        }
+      ],
+      "simultaneous_footprint_bytes": 2322172208
+    },
+    {
+      "seconds": 418559.70258325,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1301135360,
+          "physical_bytes": 2332706712
+        }
+      ],
+      "simultaneous_footprint_bytes": 2342373680
+    },
+    {
+      "seconds": 418559.935239458,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1301135360,
+          "physical_bytes": 2332706712
+        }
+      ],
+      "simultaneous_footprint_bytes": 2342373680
+    },
+    {
+      "seconds": 418560.167066791,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1302675456,
+          "physical_bytes": 2335573936
+        }
+      ],
+      "simultaneous_footprint_bytes": 2345240904
+    },
+    {
+      "seconds": 418560.406075291,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1308917760,
+          "physical_bytes": 2340505520
+        }
+      ],
+      "simultaneous_footprint_bytes": 2350172488
+    },
+    {
+      "seconds": 418560.639880625,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1308917760,
+          "physical_bytes": 2340505520
+        }
+      ],
+      "simultaneous_footprint_bytes": 2350172488
+    },
+    {
+      "seconds": 418560.874070708,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1310457856,
+          "physical_bytes": 2342062024
+        }
+      ],
+      "simultaneous_footprint_bytes": 2351728992
+    },
+    {
+      "seconds": 418561.10542575,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1316503552,
+          "physical_bytes": 2348107720
+        }
+      ],
+      "simultaneous_footprint_bytes": 2357774688
+    },
+    {
+      "seconds": 418561.3352735,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1316503552,
+          "physical_bytes": 2335524808
+        }
+      ],
+      "simultaneous_footprint_bytes": 2345191776
+    },
+    {
+      "seconds": 418561.565825041,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1316503552,
+          "physical_bytes": 2335524808
+        }
+      ],
+      "simultaneous_footprint_bytes": 2345191776
+    },
+    {
+      "seconds": 418561.800618708,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1316651008,
+          "physical_bytes": 2335672264
+        }
+      ],
+      "simultaneous_footprint_bytes": 2345339232
+    },
+    {
+      "seconds": 418562.034258708,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1316651008,
+          "physical_bytes": 2335672264
+        }
+      ],
+      "simultaneous_footprint_bytes": 2345339232
+    },
+    {
+      "seconds": 418562.265370791,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1316651008,
+          "physical_bytes": 2335672264
+        }
+      ],
+      "simultaneous_footprint_bytes": 2345339232
+    },
+    {
+      "seconds": 418562.5025485,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324220416,
+          "physical_bytes": 2355824584
+        }
+      ],
+      "simultaneous_footprint_bytes": 2365491552
+    },
+    {
+      "seconds": 418562.733206666,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324220416,
+          "physical_bytes": 2355824584
+        }
+      ],
+      "simultaneous_footprint_bytes": 2365491552
+    },
+    {
+      "seconds": 418562.963586833,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324220416,
+          "physical_bytes": 2355824584
+        }
+      ],
+      "simultaneous_footprint_bytes": 2365491552
+    },
+    {
+      "seconds": 418563.199191666,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324384256,
+          "physical_bytes": 2355988424
+        }
+      ],
+      "simultaneous_footprint_bytes": 2365655392
+    },
+    {
+      "seconds": 418563.43385725,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324384256,
+          "physical_bytes": 2330822600
+        }
+      ],
+      "simultaneous_footprint_bytes": 2340489568
+    },
+    {
+      "seconds": 418563.665308375,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324384256,
+          "physical_bytes": 2330822600
+        }
+      ],
+      "simultaneous_footprint_bytes": 2340489568
+    },
+    {
+      "seconds": 418563.897127958,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324466176,
+          "physical_bytes": 2356053960
+        }
+      ],
+      "simultaneous_footprint_bytes": 2365720928
+    },
+    {
+      "seconds": 418564.124128291,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324466176,
+          "physical_bytes": 2356070344
+        }
+      ],
+      "simultaneous_footprint_bytes": 2365737312
+    },
+    {
+      "seconds": 418564.357786458,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1324466176,
+          "physical_bytes": 2355955656
+        }
+      ],
+      "simultaneous_footprint_bytes": 2365622624
+    },
+    {
+      "seconds": 418564.597909083,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1333362688,
+          "physical_bytes": 2369357768
+        }
+      ],
+      "simultaneous_footprint_bytes": 2379024736
+    },
+    {
+      "seconds": 418564.836427416,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1342799872,
+          "physical_bytes": 2377484232
+        }
+      ],
+      "simultaneous_footprint_bytes": 2387151200
+    },
+    {
+      "seconds": 418565.074142208,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1356513280,
+          "physical_bytes": 2377484232
+        }
+      ],
+      "simultaneous_footprint_bytes": 2387151200
+    },
+    {
+      "seconds": 418565.311909416,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1371193344,
+          "physical_bytes": 2391050208
+        }
+      ],
+      "simultaneous_footprint_bytes": 2400717176
+    },
+    {
+      "seconds": 418565.550655291,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1380646912,
+          "physical_bytes": 2406238176
+        }
+      ],
+      "simultaneous_footprint_bytes": 2415905144
+    },
+    {
+      "seconds": 418565.789225708,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1395228672,
+          "physical_bytes": 2389854200
+        }
+      ],
+      "simultaneous_footprint_bytes": 2399521168
+    },
+    {
+      "seconds": 418566.029638166,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1402159104,
+          "physical_bytes": 2396751864
+        }
+      ],
+      "simultaneous_footprint_bytes": 2406418832
+    },
+    {
+      "seconds": 418566.269533833,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1403076608,
+          "physical_bytes": 2397833208
+        }
+      ],
+      "simultaneous_footprint_bytes": 2407500176
+    },
+    {
+      "seconds": 418566.511164458,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1410859008,
+          "physical_bytes": 2402584568
+        }
+      ],
+      "simultaneous_footprint_bytes": 2412251536
+    },
+    {
+      "seconds": 418566.749750958,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1417805824,
+          "physical_bytes": 2410203128
+        }
+      ],
+      "simultaneous_footprint_bytes": 2419870096
+    },
+    {
+      "seconds": 418566.990848,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1426309120,
+          "physical_bytes": 2418247696
+        }
+      ],
+      "simultaneous_footprint_bytes": 2427914664
+    },
+    {
+      "seconds": 418567.233469791,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1372356608,
+          "physical_bytes": 2232322040
+        }
+      ],
+      "simultaneous_footprint_bytes": 2241989008
+    },
+    {
+      "seconds": 418567.489492708,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1397686272,
+          "physical_bytes": 2798373888
+        }
+      ],
+      "simultaneous_footprint_bytes": 2808040856
+    },
+    {
+      "seconds": 418567.732704166,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 2653011968,
+          "physical_bytes": 2970586232
+        }
+      ],
+      "simultaneous_footprint_bytes": 2980253200
+    },
+    {
+      "seconds": 418567.978071458,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 2253881344,
+          "physical_bytes": 3255143064
+        }
+      ],
+      "simultaneous_footprint_bytes": 3264810032
+    },
+    {
+      "seconds": 418568.224119375,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 2398388224,
+          "physical_bytes": 3461745448
+        }
+      ],
+      "simultaneous_footprint_bytes": 3471412416
+    },
+    {
+      "seconds": 418568.470414375,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 2605432832,
+          "physical_bytes": 3587443592
+        }
+      ],
+      "simultaneous_footprint_bytes": 3597110560
+    },
+    {
+      "seconds": 418568.714915208,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 2607644672,
+          "physical_bytes": 3615902624
+        }
+      ],
+      "simultaneous_footprint_bytes": 3625569592
+    },
+    {
+      "seconds": 418568.961634625,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1777401856,
+          "physical_bytes": 2253670656
+        }
+      ],
+      "simultaneous_footprint_bytes": 2263337624
+    },
+    {
+      "seconds": 418569.2082305,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532002304,
+          "physical_bytes": 2221934848
+        }
+      ],
+      "simultaneous_footprint_bytes": 2231601816
+    },
+    {
+      "seconds": 418569.455021583,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532379136,
+          "physical_bytes": 2240088320
+        }
+      ],
+      "simultaneous_footprint_bytes": 2249755288
+    },
+    {
+      "seconds": 418569.701891333,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532510208,
+          "physical_bytes": 2240186624
+        }
+      ],
+      "simultaneous_footprint_bytes": 2249853592
+    },
+    {
+      "seconds": 418569.94827025,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532526592,
+          "physical_bytes": 2240203008
+        }
+      ],
+      "simultaneous_footprint_bytes": 2249869976
+    },
+    {
+      "seconds": 418570.191324083,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532592128,
+          "physical_bytes": 2240203008
+        }
+      ],
+      "simultaneous_footprint_bytes": 2249869976
+    },
+    {
+      "seconds": 418570.432246625,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532608512,
+          "physical_bytes": 2242251008
+        }
+      ],
+      "simultaneous_footprint_bytes": 2251917976
+    },
+    {
+      "seconds": 418570.673277291,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532739584,
+          "physical_bytes": 2242251008
+        }
+      ],
+      "simultaneous_footprint_bytes": 2251917976
+    },
+    {
+      "seconds": 418570.910868125,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532739584,
+          "physical_bytes": 2242251008
+        }
+      ],
+      "simultaneous_footprint_bytes": 2251917976
+    },
+    {
+      "seconds": 418571.151467166,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532739584,
+          "physical_bytes": 2242283776
+        }
+      ],
+      "simultaneous_footprint_bytes": 2251950744
+    },
+    {
+      "seconds": 418571.391881583,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532772352,
+          "physical_bytes": 2242283776
+        }
+      ],
+      "simultaneous_footprint_bytes": 2251950744
+    },
+    {
+      "seconds": 418571.629914,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532772352,
+          "physical_bytes": 2242283776
+        }
+      ],
+      "simultaneous_footprint_bytes": 2251950744
+    },
+    {
+      "seconds": 418571.867674125,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532772352,
+          "physical_bytes": 2242283776
+        }
+      ],
+      "simultaneous_footprint_bytes": 2251950744
+    },
+    {
+      "seconds": 418572.099989791,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532772352,
+          "physical_bytes": 2242283776
+        }
+      ],
+      "simultaneous_footprint_bytes": 2251950744
+    },
+    {
+      "seconds": 418572.333747166,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532821504,
+          "physical_bytes": 2242349312
+        }
+      ],
+      "simultaneous_footprint_bytes": 2252016280
+    },
+    {
+      "seconds": 418572.562513583,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1532985344,
+          "physical_bytes": 2242349312
+        }
+      ],
+      "simultaneous_footprint_bytes": 2252016280
+    },
+    {
+      "seconds": 418572.790806791,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1533018112,
+          "physical_bytes": 2242365696
+        }
+      ],
+      "simultaneous_footprint_bytes": 2252032664
+    },
+    {
+      "seconds": 418573.022280083,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1533591552,
+          "physical_bytes": 2242578688
+        }
+      ],
+      "simultaneous_footprint_bytes": 2252245656
+    },
+    {
+      "seconds": 418573.255231916,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1533755392,
+          "physical_bytes": 2225801472
+        }
+      ],
+      "simultaneous_footprint_bytes": 2235468440
+    },
+    {
+      "seconds": 418573.487308625,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1403748352,
+          "physical_bytes": 2086471936
+        }
+      ],
+      "simultaneous_footprint_bytes": 2096138904
+    },
+    {
+      "seconds": 418573.718072166,
+      "processes": [
+        {
+          "pid": 21316,
+          "root": false,
+          "name": "/Users/benreich/Projects/symbiknow/.venv/bin/python",
+          "rss_bytes": 19349504,
+          "physical_bytes": 9666968
+        },
+        {
+          "pid": 21286,
+          "root": true,
+          "name": ".venv/bin/python",
+          "rss_bytes": 1392541696,
+          "physical_bytes": 2079148264
+        }
+      ],
+      "simultaneous_footprint_bytes": 2088815232
+    }
+  ]
+}

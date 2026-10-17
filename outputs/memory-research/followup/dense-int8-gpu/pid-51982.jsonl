@@ -1,0 +1,91 @@
+{"pid": 51982, "role": "conversion", "time": 420443.833293208}
+{"pid": 51982, "role": "conversion", "time": 420444.038363583}
+{"pid": 51982, "role": "conversion", "time": 420444.243819416}
+{"pid": 51982, "role": "conversion", "time": 420444.454078291}
+{"pid": 51982, "role": "conversion", "time": 420444.671775}
+{"pid": 51982, "role": "conversion", "time": 420444.885586916}
+{"pid": 51982, "role": "conversion", "time": 420445.094198208}
+{"pid": 51982, "role": "conversion", "time": 420445.299309375}
+{"pid": 51982, "role": "conversion", "time": 420445.504653875}
+{"pid": 51982, "role": "conversion", "time": 420445.7107735}
+{"pid": 51982, "role": "conversion", "time": 420445.914994041}
+{"pid": 51982, "role": "conversion", "time": 420446.2386665}
+{"pid": 51982, "role": "conversion", "time": 420446.455302708}
+{"pid": 51982, "role": "conversion", "time": 420446.658741041, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420446.883771041, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420447.091115708, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420447.296921375, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420447.515922708, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420447.721889708, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420447.929097833, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420448.136288041, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420448.439943125, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420448.643867958, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420448.849002916, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420449.049716458, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420449.252274916, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420449.457722958, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420449.726084, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420449.937912333, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420450.143226125, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420450.347458666, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420450.558855791, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420450.7664685, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420450.972598125, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420451.184715208, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420451.396307916, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420451.609754916, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420451.82560975, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420452.027265333, "mps_active_bytes": 0, "mps_driver_bytes": 458752}
+{"pid": 51982, "role": "conversion", "time": 420452.232974458, "mps_active_bytes": 94847488, "mps_driver_bytes": 126844928}
+{"pid": 51982, "role": "conversion", "time": 420452.438109875, "mps_active_bytes": 171838976, "mps_driver_bytes": 201801728}
+{"pid": 51982, "role": "conversion", "time": 420452.640425875, "mps_active_bytes": 171838976, "mps_driver_bytes": 201801728}
+{"pid": 51982, "role": "conversion", "time": 420452.844581166, "mps_active_bytes": 224333568, "mps_driver_bytes": 1277902848}
+{"pid": 51982, "role": "conversion", "time": 420453.047797166, "mps_active_bytes": 189201152, "mps_driver_bytes": 1302085632}
+{"pid": 51982, "role": "conversion", "time": 420453.257837875, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420453.468777666, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420453.671736958, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420453.876935125, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420454.082063833, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420454.287218041, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420454.4931175, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420454.698267208, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420454.903639625, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420455.107081625, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420455.312183083, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420455.51730175, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420455.722439958, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420455.92726925, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420456.132446833, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420456.337583541, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420456.538377833, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420456.743500583, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420456.948623583, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420457.153859416, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420457.359045791, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420457.564310625, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420457.766068791, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420457.970191333, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420458.17538175, "mps_active_bytes": 172391424, "mps_driver_bytes": 1302052864}
+{"pid": 51982, "role": "conversion", "time": 420458.380631125, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420458.585872041, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420458.790981375, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420458.99610725, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420459.200608541, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420459.405042375, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420459.606606791, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420459.809516875, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420460.012785375, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420460.218010458, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420460.423164333, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420460.628285541, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420460.831115208, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420461.032272125, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420461.237500291, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420461.440619291, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420461.641866708, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420461.847045375, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420462.052305375, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420462.257188041, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420462.461169375, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}
+{"pid": 51982, "role": "conversion", "time": 420462.662266875, "mps_active_bytes": 172391424, "mps_driver_bytes": 1285275648}

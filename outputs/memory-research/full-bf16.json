@@ -1,0 +1,78 @@
+[
+  {
+    "stage": "python",
+    "mode": "full-bf16",
+    "peak_rss_mib": 18.703125,
+    "physical_footprint_mib": 9.328514099121094
+  },
+  {
+    "stage": "ml_imports",
+    "mode": "full-bf16",
+    "peak_rss_mib": 464.609375,
+    "mps_available": true,
+    "physical_footprint_mib": 377.3604049682617,
+    "mps_tensor_mib": 0.0,
+    "mps_driver_mib": 0.4375
+  },
+  {
+    "stage": "loaded",
+    "mode": "full-bf16",
+    "peak_rss_mib": 1271.21875,
+    "seconds": 2.1899166670045815,
+    "parameter_mib": 836.869140625,
+    "physical_footprint_mib": 2189.376419067383,
+    "mps_tensor_mib": 842.257568359375,
+    "mps_driver_mib": 1472.453125
+  },
+  {
+    "stage": "text_encoded",
+    "mode": "full-bf16",
+    "peak_rss_mib": 1271.21875,
+    "seconds": 0.24557383300270885,
+    "finite": true,
+    "physical_footprint_mib": 2264.7984771728516,
+    "mps_tensor_mib": 842.257568359375,
+    "mps_driver_mib": 1474.71875
+  },
+  {
+    "stage": "image_encoded",
+    "mode": "full-bf16",
+    "peak_rss_mib": 1271.21875,
+    "finite": true,
+    "physical_footprint_mib": 2310.3453979492188,
+    "mps_tensor_mib": 842.257568359375,
+    "mps_driver_mib": 1487.71875
+  },
+  {
+    "stage": "empty_cache_model_live",
+    "mode": "full-bf16",
+    "peak_rss_mib": 1271.21875,
+    "physical_footprint_mib": 2310.3453979492188,
+    "mps_tensor_mib": 842.257568359375,
+    "mps_driver_mib": 1479.6875
+  },
+  {
+    "stage": "models_released",
+    "mode": "full-bf16",
+    "peak_rss_mib": 1271.21875,
+    "physical_footprint_mib": 2155.5953521728516,
+    "mps_tensor_mib": 0.0,
+    "mps_driver_mib": 7.6875
+  },
+  {
+    "stage": "models_released_after_1s",
+    "mode": "full-bf16",
+    "peak_rss_mib": 1271.21875,
+    "physical_footprint_mib": 561.5641021728516,
+    "mps_tensor_mib": 0.0,
+    "mps_driver_mib": 7.6875
+  },
+  {
+    "stage": "models_released_after_5s",
+    "mode": "full-bf16",
+    "peak_rss_mib": 1271.21875,
+    "physical_footprint_mib": 559.4859771728516,
+    "mps_tensor_mib": 0.0,
+    "mps_driver_mib": 1.6875
+  }
+]

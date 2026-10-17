@@ -1,0 +1,1 @@
+Nacre processes a returned product by matching the order number to the warehouse inspection. The commerce team checks that delivery was within twenty-one days and that the item was unused, then returns payment to the original card.

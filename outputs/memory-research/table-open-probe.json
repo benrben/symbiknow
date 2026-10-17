@@ -1,0 +1,9 @@
+{
+  "open_each": {
+    "seconds_100": 0.1600196249783039
+  },
+  "reuse_table": {
+    "seconds_100": 0.10468312498414889
+  },
+  "decision": "Keep existing opens: this small latency probe does not verify cached-handle revision freshness or concurrency, and does not establish a memory saving."
+}

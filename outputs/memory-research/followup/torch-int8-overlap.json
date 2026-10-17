@@ -1,0 +1,67 @@
+{
+  "isolated": true,
+  "real_models": true,
+  "queries": [
+    {
+      "seconds": 0.44415883399778977,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.8143520419835113,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.10493599995970726,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.07037554099224508,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.06902583298506215,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.06953737500589341,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.07103133300552145,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.06614004197763279,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.0717860420118086,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.06656120897969231,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.06839566596318036,
+      "ingestion_in_progress": true
+    },
+    {
+      "seconds": 0.06602925003971905,
+      "ingestion_in_progress": true
+    }
+  ],
+  "image_status": "indexed",
+  "model": {
+    "loaded": false,
+    "vision": false,
+    "loads": 3,
+    "idle_seconds": 60.0,
+    "torch_quantization": "int8",
+    "mps": {
+      "active_bytes": 0,
+      "driver_bytes": 8060928
+    }
+  },
+  "visual_search_has_photo": true
+}

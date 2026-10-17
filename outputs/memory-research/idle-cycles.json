@@ -1,0 +1,113 @@
+[
+  {
+    "stage": "imports",
+    "physical_bytes": 30704264,
+    "gpu_active_bytes": 0,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle0_text_loaded",
+    "physical_bytes": 1074022104,
+    "gpu_active_bytes": 288028134,
+    "gpu_cache_bytes": 15593333,
+    "cold_s": 6.275065834051929,
+    "warm_s": [
+      0.04265654197661206,
+      0.041249083005823195,
+      0.007405333977658302,
+      0.0446864579571411,
+      0.04493400000501424,
+      0.04520187497837469,
+      0.04848337499424815,
+      0.043932000000495464
+    ]
+  },
+  {
+    "stage": "cycle0_heavy_boundary",
+    "physical_bytes": 2148354472,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle0_idle",
+    "physical_bytes": 1212516440,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle0_malloc_relief",
+    "physical_bytes": 1212516440,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle1_text_loaded",
+    "physical_bytes": 1587939584,
+    "gpu_active_bytes": 288028134,
+    "gpu_cache_bytes": 15576949,
+    "cold_s": 0.3783305829856545,
+    "warm_s": [
+      0.04858195799170062,
+      0.05039962497539818,
+      0.04742349998559803,
+      0.050745207990985364,
+      0.03906262503005564,
+      0.007721166999544948,
+      0.012499791046138853,
+      0.012028583034407347
+    ]
+  },
+  {
+    "stage": "cycle1_heavy_boundary",
+    "physical_bytes": 2135460264,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle1_idle",
+    "physical_bytes": 1214990424,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle1_malloc_relief",
+    "physical_bytes": 1214990424,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle2_text_loaded",
+    "physical_bytes": 1590397184,
+    "gpu_active_bytes": 288028134,
+    "gpu_cache_bytes": 15527797,
+    "cold_s": 0.38403400004608557,
+    "warm_s": [
+      0.015485250041820109,
+      0.014931000012438744,
+      0.014374208054505289,
+      0.014638874970842153,
+      0.014913291030097753,
+      0.014262792014051229,
+      0.014328707999084145,
+      0.013991500018164515
+    ]
+  },
+  {
+    "stage": "cycle2_heavy_boundary",
+    "physical_bytes": 2153400744,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle2_idle",
+    "physical_bytes": 1217218648,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  },
+  {
+    "stage": "cycle2_malloc_relief",
+    "physical_bytes": 1217218648,
+    "gpu_active_bytes": 1042,
+    "gpu_cache_bytes": 0
+  }
+]

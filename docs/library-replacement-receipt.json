@@ -1,0 +1,537 @@
+{
+  "date": "2026-10-12",
+  "status": "complete",
+  "endpoint": "http://127.0.0.1:8765/mcp",
+  "operation": "User-requested replacement of all app documents with repository documentation",
+  "previous_documents": [
+    {
+      "document_id": "088c2078-4398-5cf0-b887-1a8d837cbcc9",
+      "filename": "QA-R3-03.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "0b33c581-8f24-5991-858a-1e7a9421cbbd",
+      "filename": "text.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "0cfb6d25-2406-5ee5-b8ca-db2f40646217",
+      "filename": "QA-R5-07.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "0d0dfb2c-924d-55e9-8803-6dfd1a364e63",
+      "filename": "QA-R3-02.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "19bb008a-34f9-5caf-9605-b33ded95585b",
+      "filename": "QA-R3-06.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "1ab138cd-93ce-5133-b26f-25bcb5fc6159",
+      "filename": "QA-R4-01.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "1ab4e91a-944d-5005-bb2e-b92a2d866eb1",
+      "filename": "OCFL 1.1 specification.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "20780430-6484-5f95-b97b-77fbfaa35a69",
+      "filename": "QA-R5-02.html",
+      "version": "v1"
+    },
+    {
+      "document_id": "21ecbd7e-2168-57ee-8f44-5af2168c4f2f",
+      "filename": "QA-R5-08.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "2b313a44-fe37-5593-b6ab-dfd6d4b874e6",
+      "filename": "QA-Version-Probe.txt",
+      "version": "v2"
+    },
+    {
+      "document_id": "31aa484a-6a98-5e78-aaab-57fa957a3aca",
+      "filename": "Symbiknow original developer plan.html",
+      "version": "v1"
+    },
+    {
+      "document_id": "42a78469-d56c-522a-8317-7bb40ebdc788",
+      "filename": "html.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "448d7cba-f1c5-5ce6-914b-70be4024ee97",
+      "filename": "Symbiknow operations.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "46ef046e-24ad-5375-9866-82163bbd5b13",
+      "filename": "QA-R5-05.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "52142143-88ad-56a8-88dc-bbf23e0f0346",
+      "filename": "diagrams.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "56275872-4ff2-537e-804b-e41c58e3f0c2",
+      "filename": "QA-Atlas-Storage-Policy.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "56f388f2-0176-5909-a620-d9c6678aa3ea",
+      "filename": "QA-R5-01.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "64df72df-89cc-5035-9d67-cc7ba91ea1de",
+      "filename": "Symbiknow performance evidence.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "668f17f0-f4c1-512c-a55a-34a10964e47b",
+      "filename": "QA-Atlas-Restore-Runbook.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "6be6d3e3-3b97-56a4-8cbc-886a93649499",
+      "filename": "Symbiknow current development status.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "6f8dacb7-67d3-5b2b-a857-ea12ddcaadaa",
+      "filename": "QA-Cedar-Returns.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "707e52c9-029b-5fdc-b7fc-5eec7a7555df",
+      "filename": "QA-Atlas-Retention-Proposal.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "76dc31f0-a4eb-5dd5-8230-0bd346c31ea6",
+      "filename": "Symbiknow proposed repository tree.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "77a1a958-4f63-5580-9424-023c44ce7735",
+      "filename": "QA-R4-06.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "77dd44f3-1432-5250-87f4-0f3b5352a04b",
+      "filename": "Symbiknow full feature review.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "77ec0fa0-4b03-54c3-9a82-50d30b434e7a",
+      "filename": "Symbiknow followup feature review.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "7cf23312-d043-5fdd-9162-b1eda5c319d7",
+      "filename": "QA-Cedar-Support.html",
+      "version": "v1"
+    },
+    {
+      "document_id": "7d53841c-d9be-5863-866a-2e845292f7b2",
+      "filename": "QA-Atlas-Search-Duplicate.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "834632b6-c501-5fea-a5e1-f339ee5a4b2a",
+      "filename": "QA-R4-04.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "8ae9df73-cf10-53c8-a336-053dac29e920",
+      "filename": "Symbiknow MCP reference.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "8d1058b3-c332-5efb-a230-373321927a30",
+      "filename": "QA-R3-01.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "92693ae4-a7bb-5e9b-8436-a8a59b349f55",
+      "filename": "QA-Greenhouse-Watering.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "97302c04-5acd-5f21-9c98-b9d181718ef8",
+      "filename": "research.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "9b05fd45-07a0-5d66-b9cc-1168c7a6a1a4",
+      "filename": "QA-R4-02.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "9f523626-5f61-5947-8f04-83dac0b10d92",
+      "filename": "QA-R5-06-International-returns-approval-and-exceptions-for-damaged-orders.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "a9a8d9fc-e1db-5051-95fe-199ba40cabe3",
+      "filename": "QA-Atlas-Search-Design.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "afa10185-e85c-53d5-b1e3-34d495b6a512",
+      "filename": "AGENTS.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "b21f777e-d489-576f-ba29-0933d7b5f414",
+      "filename": "Symbiknow validation record.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "c564ca73-4828-5198-ac68-ebd47a7b42d4",
+      "filename": "QA-R5-03.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "c69ad49c-3319-56f6-b5ab-757e65e3f2fb",
+      "filename": "Symbiknow architecture.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "ca588175-2b8b-5af9-9c03-012d2d2f8262",
+      "filename": "QA-Atlas-Retention-Summary.pdf",
+      "version": "v1"
+    },
+    {
+      "document_id": "cc46331b-8bde-5a2c-8c17-6f14965b4a9a",
+      "filename": "QA-R3-04.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "ce77eda8-5092-5fd1-92aa-9473e772cc11",
+      "filename": "QA-R4-05.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "ce793790-6cf5-55e1-b05c-bba975d6f3ad",
+      "filename": "OCFL hashed n tuple storage layout.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "d39da16c-c1c1-5fdb-a4a5-e902f8e47431",
+      "filename": "QA-R5-10.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "d70fffeb-8a29-5dd7-bd6f-1a1238b2d575",
+      "filename": "Symbiknow UI guide.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "d8cfe0a1-ba2f-5b40-a6bc-70d5bd608eaa",
+      "filename": "QA-R4-03.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "dbe427a1-8b6d-5bc3-8a58-f0a649d59f50",
+      "filename": "QA-Atlas-Search-Acceptance.html",
+      "version": "v1"
+    },
+    {
+      "document_id": "e03c027f-7102-5f96-9400-928b4bc41116",
+      "filename": "QA-R3-05.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "e3139e27-231b-5b15-97e2-16e0762feb93",
+      "filename": "Symbiknow README.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "e9323a6c-3cf4-56de-9dab-83447964eab1",
+      "filename": "QA-Cedar-Warranty.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "ece91f24-c608-5d8e-8809-8a046b074754",
+      "filename": "QA-Atlas-Search-Flow.png",
+      "version": "v1"
+    },
+    {
+      "document_id": "f13f8f94-0736-5642-9434-f30e28e2c742",
+      "filename": "QA-R5-04.txt",
+      "version": "v1"
+    },
+    {
+      "document_id": "f30e9305-95a0-53a6-b268-c2846cb904b4",
+      "filename": "video.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "f73c3c24-58ba-5fd0-b13c-4a3d3f2347bd",
+      "filename": "Symbiknow project documentation.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "f82c0c6b-0b5c-5865-bdc4-d5cdedbac136",
+      "filename": "Symbiknow original build checklist.md",
+      "version": "v1"
+    },
+    {
+      "document_id": "ff54d55e-1204-5954-aad4-b72df65b9512",
+      "filename": "QA-R5-09.html",
+      "version": "v1"
+    }
+  ],
+  "deleted_ids": [
+    "088c2078-4398-5cf0-b887-1a8d837cbcc9",
+    "0b33c581-8f24-5991-858a-1e7a9421cbbd",
+    "0cfb6d25-2406-5ee5-b8ca-db2f40646217",
+    "0d0dfb2c-924d-55e9-8803-6dfd1a364e63",
+    "19bb008a-34f9-5caf-9605-b33ded95585b",
+    "1ab138cd-93ce-5133-b26f-25bcb5fc6159",
+    "1ab4e91a-944d-5005-bb2e-b92a2d866eb1",
+    "20780430-6484-5f95-b97b-77fbfaa35a69",
+    "21ecbd7e-2168-57ee-8f44-5af2168c4f2f",
+    "2b313a44-fe37-5593-b6ab-dfd6d4b874e6",
+    "31aa484a-6a98-5e78-aaab-57fa957a3aca",
+    "42a78469-d56c-522a-8317-7bb40ebdc788",
+    "448d7cba-f1c5-5ce6-914b-70be4024ee97",
+    "46ef046e-24ad-5375-9866-82163bbd5b13",
+    "52142143-88ad-56a8-88dc-bbf23e0f0346",
+    "56275872-4ff2-537e-804b-e41c58e3f0c2",
+    "56f388f2-0176-5909-a620-d9c6678aa3ea",
+    "64df72df-89cc-5035-9d67-cc7ba91ea1de",
+    "668f17f0-f4c1-512c-a55a-34a10964e47b",
+    "6be6d3e3-3b97-56a4-8cbc-886a93649499",
+    "6f8dacb7-67d3-5b2b-a857-ea12ddcaadaa",
+    "707e52c9-029b-5fdc-b7fc-5eec7a7555df",
+    "76dc31f0-a4eb-5dd5-8230-0bd346c31ea6",
+    "77a1a958-4f63-5580-9424-023c44ce7735",
+    "77dd44f3-1432-5250-87f4-0f3b5352a04b",
+    "77ec0fa0-4b03-54c3-9a82-50d30b434e7a",
+    "7cf23312-d043-5fdd-9162-b1eda5c319d7",
+    "7d53841c-d9be-5863-866a-2e845292f7b2",
+    "834632b6-c501-5fea-a5e1-f339ee5a4b2a",
+    "8ae9df73-cf10-53c8-a336-053dac29e920",
+    "8d1058b3-c332-5efb-a230-373321927a30",
+    "92693ae4-a7bb-5e9b-8436-a8a59b349f55",
+    "97302c04-5acd-5f21-9c98-b9d181718ef8",
+    "9b05fd45-07a0-5d66-b9cc-1168c7a6a1a4",
+    "9f523626-5f61-5947-8f04-83dac0b10d92",
+    "a9a8d9fc-e1db-5051-95fe-199ba40cabe3",
+    "afa10185-e85c-53d5-b1e3-34d495b6a512",
+    "b21f777e-d489-576f-ba29-0933d7b5f414",
+    "c564ca73-4828-5198-ac68-ebd47a7b42d4",
+    "c69ad49c-3319-56f6-b5ab-757e65e3f2fb",
+    "ca588175-2b8b-5af9-9c03-012d2d2f8262",
+    "cc46331b-8bde-5a2c-8c17-6f14965b4a9a",
+    "ce77eda8-5092-5fd1-92aa-9473e772cc11",
+    "ce793790-6cf5-55e1-b05c-bba975d6f3ad",
+    "d39da16c-c1c1-5fdb-a4a5-e902f8e47431",
+    "d70fffeb-8a29-5dd7-bd6f-1a1238b2d575",
+    "d8cfe0a1-ba2f-5b40-a6bc-70d5bd608eaa",
+    "dbe427a1-8b6d-5bc3-8a58-f0a649d59f50",
+    "e03c027f-7102-5f96-9400-928b4bc41116",
+    "e3139e27-231b-5b15-97e2-16e0762feb93",
+    "e9323a6c-3cf4-56de-9dab-83447964eab1",
+    "ece91f24-c608-5d8e-8809-8a046b074754",
+    "f13f8f94-0736-5642-9434-f30e28e2c742",
+    "f30e9305-95a0-53a6-b268-c2846cb904b4",
+    "f73c3c24-58ba-5fd0-b13c-4a3d3f2347bd",
+    "f82c0c6b-0b5c-5865-bdc4-d5cdedbac136",
+    "ff54d55e-1204-5954-aad4-b72df65b9512"
+  ],
+  "documents": [
+    {
+      "path": "/Users/benreich/Projects/symbiknow/README.md",
+      "filename": "Symbiknow README.md",
+      "sha256": "e90f889236e07b121ccb1c76777aee34916ed9f1a4996de0c530b45be7563f4d",
+      "size": 13478,
+      "request_id": "274baffd-8e52-437a-be8c-94ea77f05b59",
+      "stored": true,
+      "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow Alternative / User support"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/UI.md",
+      "filename": "Symbiknow UI guide.md",
+      "sha256": "2bc1eb4f2917cc2f483fcc3b987fbcf1f283aa08092b0edae8c73fee0fe4f664",
+      "size": 10880,
+      "request_id": "b9dc1396-3720-4dd0-b08d-4a313388a6fd",
+      "stored": true,
+      "document_id": "31bc791f-5b1b-50e5-9768-b3082c615c7b",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow / Development"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/VALIDATION.md",
+      "filename": "Symbiknow validation record.md",
+      "sha256": "598cd54284aa027b2faf612273077e6838f0184c35224c611ea466005e3dd6a9",
+      "size": 18016,
+      "request_id": "fe8dc576-bd82-45cc-b339-54954b9edfbe",
+      "stored": true,
+      "document_id": "db80a1d5-fa5a-5a41-9b38-cf0318411c16",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": ""
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/architecture.md",
+      "filename": "Symbiknow architecture.md",
+      "sha256": "ac03e9455492c3a2eeb81c51b21a25143ed59f2b4f05fa06c2350efaf1ab9c00",
+      "size": 5362,
+      "request_id": "d8dd4c63-8466-4d7a-94b2-9dfda97204e5",
+      "stored": true,
+      "document_id": "46588cb6-595f-5da6-8259-dae15ca79917",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow / Development"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/mcp-reference.md",
+      "filename": "Symbiknow MCP reference.md",
+      "sha256": "27788601986b92e2edb73548d669e43da3131fcaed45750378c7cdc3df6eb2e9",
+      "size": 4568,
+      "request_id": "11fbc8a8-3215-4beb-86aa-e6845d3ffa37",
+      "stored": true,
+      "document_id": "dea9634d-637b-5433-b3c1-efa088f4b121",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow / Development"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/operations.md",
+      "filename": "Symbiknow operations.md",
+      "sha256": "5348ef0ecb4f29e380cfc48c6b50e26875eeece538f9d706279a897c1cdc61d7",
+      "size": 4811,
+      "request_id": "00f7e9e2-cced-41e5-958c-22343bd325c5",
+      "stored": true,
+      "document_id": "8ec3d14b-432b-52b3-adc2-a146afc401a8",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow / Operations"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/current-status.md",
+      "filename": "Symbiknow current development status.md",
+      "sha256": "f8091ba1705f42082b70dcd374977d84ecbe47ee901d40734f92cfdc5acbdb84",
+      "size": 5126,
+      "request_id": "28cf2931-9100-48f9-939b-bfe161a5137d",
+      "stored": true,
+      "document_id": "4ff880aa-a94f-51fa-a94c-6dfc3e3128e9",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow / Development"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/performance-evidence.md",
+      "filename": "Symbiknow performance evidence.md",
+      "sha256": "5bdd608bc1fa584ae467eda7fc071ba2a234090f6071f4b13353d1b537db6787",
+      "size": 6694,
+      "request_id": "591d2653-fa0f-46bd-b7a4-c565dc14fdde",
+      "stored": true,
+      "document_id": "f6e78625-e907-50d0-a39b-1e4973917dba",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow / Validation"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/project-library.md",
+      "filename": "Symbiknow project documentation.md",
+      "sha256": "e8624f3280bb0dffbee04883566bf3a3d9ba7a7d5a22daddbab237ffaea4e6e4",
+      "size": 3404,
+      "request_id": "a77a2723-8c17-4dc7-8534-7121137bcd6b",
+      "stored": true,
+      "document_id": "8d74f345-bf1e-554d-a3d5-d1162b765b56",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow / Development"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/docs/original-build-plan.md",
+      "filename": "Symbiknow original build checklist.md",
+      "sha256": "1f290c0079eb915d5d023f7e2904b09783c39ca0719a2179205b199f786c6bac",
+      "size": 6065,
+      "request_id": "3f7a3abb-55b7-49ad-952b-eb90954bab63",
+      "stored": true,
+      "document_id": "d792433a-8d19-5964-b1f6-072f67b6d69e",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Symbiknow / Development"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/data/files/ocfl_1.1.md",
+      "filename": "OCFL 1.1 specification.md",
+      "sha256": "f445d56038c2834ab1860108385627365ba5a479887459055488ac59d2d4c5cc",
+      "size": 73705,
+      "request_id": "850d8714-32ef-407f-b50f-8c251e5f3496",
+      "stored": true,
+      "document_id": "8a3d351a-8f10-5c92-b5f1-72f833794912",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Need Completeness / User storage"
+    },
+    {
+      "path": "/Users/benreich/Projects/symbiknow/data/files/0004-hashed-n-tuple-storage-layout.md",
+      "filename": "OCFL hashed n tuple storage layout.md",
+      "sha256": "887b9eafb4b2f84de877fbcb95694d1e52433f490ccc2a0d4d705bac7781cfc3",
+      "size": 11533,
+      "request_id": "06b35e75-3ab9-4bb7-a474-f7f9eee41e3b",
+      "stored": true,
+      "document_id": "cd6b918c-5165-52ff-ba50-e143fc0fc2c6",
+      "version": "v1",
+      "download_verified": true,
+      "retrieval_verified": true,
+      "indexing_status": "indexed",
+      "organization_status": "evaluated",
+      "folder": "Parameters Details / Community"
+    }
+  ],
+  "final_document_count": 12,
+  "deleted_documents_unavailable": 57,
+  "searchable_documents": 12
+}

@@ -1,0 +1,543 @@
+{
+  "provenance": {
+    "annotator": "Codex (self-authored); README t0/query pinned from review 9",
+    "split": "development and reserved authored regressions",
+    "independent": false,
+    "reserved_contract": "Reserved cases authored before final quality run and not used for prompt tuning; not independently annotated gold."
+  },
+  "answerability": [
+    {
+      "id": "exact-git",
+      "question": "Where is the Git repository that Symbiknow uses to keep historical document contents?",
+      "documents": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "version": "v2",
+          "filename": "Symbiknow README.md",
+          "evidence": [
+            {
+              "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+              "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+              "basis": "text",
+              "provenance": {
+                "pages": [],
+                "headings": [
+                  "Symbiknow"
+                ]
+              }
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": true
+        }
+      ],
+      "split": "development",
+      "core": true
+    },
+    {
+      "id": "neutral-git",
+      "question": "Does Symbiknow use Git to preserve previous file contents?",
+      "documents": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "version": "v2",
+          "filename": "Symbiknow README.md",
+          "evidence": [
+            {
+              "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+              "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+              "basis": "text",
+              "provenance": {
+                "pages": [],
+                "headings": [
+                  "Symbiknow"
+                ]
+              }
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ],
+      "split": "development",
+      "core": true
+    },
+    {
+      "id": "branch-git",
+      "question": "Which Git branch stores Symbiknow's previous document versions?",
+      "documents": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "version": "v2",
+          "filename": "Symbiknow README.md",
+          "evidence": [
+            {
+              "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+              "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+              "basis": "text",
+              "provenance": {
+                "pages": [],
+                "headings": [
+                  "Symbiknow"
+                ]
+              }
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "development",
+      "core": true
+    },
+    {
+      "id": "reset-why",
+      "question": "Why does Symbiknow delete all old file versions during an organization reset?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow current policy: An organization reset removes only derived folders, groups and relationships. It preserves original files and all earlier versions.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": true
+        }
+      ],
+      "split": "development",
+      "core": true
+    },
+    {
+      "id": "reset-neutral",
+      "question": "Does reset preserve history?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow current policy: An organization reset removes only derived folders, groups and relationships. It preserves original files and all earlier versions.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ],
+      "split": "development",
+      "core": true
+    },
+    {
+      "id": "git-why",
+      "question": "Why does Symbiknow put its historical contents in a Git repository?",
+      "documents": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "version": "v2",
+          "filename": "Symbiknow README.md",
+          "evidence": [
+            {
+              "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+              "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+              "basis": "text",
+              "provenance": {
+                "pages": [],
+                "headings": [
+                  "Symbiknow"
+                ]
+              }
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "git-which-repository",
+      "question": "Which source-control repository holds older Symbiknow file bytes?",
+      "documents": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "version": "v2",
+          "filename": "Symbiknow README.md",
+          "evidence": [
+            {
+              "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+              "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+              "basis": "text",
+              "provenance": {
+                "pages": [],
+                "headings": [
+                  "Symbiknow"
+                ]
+              }
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "git-paraphrase",
+      "question": "Where can I find the Git repo backing previous Symbiknow document contents?",
+      "documents": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "version": "v2",
+          "filename": "Symbiknow README.md",
+          "evidence": [
+            {
+              "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+              "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+              "basis": "text",
+              "provenance": {
+                "pages": [],
+                "headings": [
+                  "Symbiknow"
+                ]
+              }
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "reset-where",
+      "question": "Where are the old Symbiknow versions deleted during reset?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow current policy: An organization reset removes only derived folders, groups and relationships. It preserves original files and all earlier versions.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "reset-which",
+      "question": "Which earlier versions does Symbiknow erase on reset?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow current policy: An organization reset removes only derived folders, groups and relationships. It preserves original files and all earlier versions.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "reset-paraphrase",
+      "question": "Why are original revisions purged when Symbiknow rebuilds organization?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow current policy: An organization reset removes only derived folders, groups and relationships. It preserves original files and all earlier versions.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "other-project-git",
+      "question": "Where is the Git repository Cedar uses to retain prior document bytes?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Cedar policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Cedar preserves independent file histories in OCFL, without Git.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "other-project-reset",
+      "question": "Which revisions does NovaPay delete on organization reset?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "NovaPay policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "NovaPay organization resets retain every file revision and original.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "wrong-project",
+      "question": "Why does Symbiknow delete history during reset?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "OtherBox policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "OtherBox deletes all document histories during reset.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "missing-revenue",
+      "question": "What is Symbiknow's audited revenue?",
+      "documents": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "version": "v2",
+          "filename": "Symbiknow README.md",
+          "evidence": [
+            {
+              "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+              "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+              "basis": "text",
+              "provenance": {
+                "pages": [],
+                "headings": [
+                  "Symbiknow"
+                ]
+              }
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "missing-silence",
+      "question": "Why does Symbiknow earn ten million euros?",
+      "documents": [
+        {
+          "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+          "version": "v2",
+          "filename": "Symbiknow README.md",
+          "evidence": [
+            {
+              "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+              "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+              "basis": "text",
+              "provenance": {
+                "pages": [],
+                "headings": [
+                  "Symbiknow"
+                ]
+              }
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "rejected-current",
+      "question": "Does Symbiknow delete originals during reset?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow rejected proposal: Delete original files and all previous versions during an organization reset. This proposal was rejected and never adopted.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "rejected-requested",
+      "question": "What did the rejected Symbiknow reset proposal say to delete?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow rejected proposal: Delete original files and all previous versions during an organization reset. This proposal was rejected and never adopted.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "obsolete-current",
+      "question": "Does the current Symbiknow reset delete history?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Obsolete Symbiknow policy, replaced and no longer used: reset deletes every original file and previous revision.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "obsolete-requested",
+      "question": "What did the obsolete Symbiknow reset policy remove?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Obsolete Symbiknow policy, replaced and no longer used: reset deletes every original file and previous revision.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "partial-views",
+      "question": "Does switching Files to Canvas or panning change query or scope?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow: switching from Files to Canvas reuses the existing search query and folder scope. This passage does not describe panning.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ],
+      "split": "reserved",
+      "core": false
+    },
+    {
+      "id": "genuine-disagreement",
+      "question": "Does Symbiknow reset preserve versions?",
+      "documents": [
+        {
+          "document_id": "authored",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "authored:v1:t0",
+              "text": "Symbiknow current policy: reset preserves all versions. Symbiknow current policy also says reset deletes all versions. These two current statements disagree.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true
+        }
+      ],
+      "split": "reserved",
+      "core": false,
+      "expected_disagreement": true
+    }
+  ]
+}

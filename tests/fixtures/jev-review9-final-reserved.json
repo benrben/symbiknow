@@ -1,0 +1,255 @@
+{
+  "provenance": {
+    "annotator": "Codex, self-authored before first final reserved run",
+    "split": "new-reserved",
+    "independent": false,
+    "reserved_contract": "Frozen after v6 development, before fresh provider execution; never used to tune prompts or thresholds."
+  },
+  "answerability": [
+    {
+      "id": "server-presupposition",
+      "question": "On which Git server is Symbiknow\u2019s retained document history hosted?",
+      "documents": [
+        {
+          "document_id": "server",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "server:v1:t0",
+              "text": "Symbiknow retains independent document histories in OCFL through rocfl. It does not use Git for document storage or history. Earlier file versions remain downloadable.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": true,
+          "expected_disagreement": false
+        }
+      ],
+      "split": "new-reserved",
+      "core": true
+    },
+    {
+      "id": "alternate-selection",
+      "question": "Which revision labels does Birch discard when rebuilding file organization?",
+      "documents": [
+        {
+          "document_id": "birch",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "birch:v1:t0",
+              "text": "Birch preserves every original revision while rebuilding file organization. No revisions are discarded.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": true,
+          "expected_support": true,
+          "expected_disagreement": false
+        }
+      ],
+      "split": "new-reserved",
+      "core": true
+    },
+    {
+      "id": "neutral-alternative",
+      "question": "Is Git required to retrieve an earlier Symbiknow file?",
+      "documents": [
+        {
+          "document_id": "neutral",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "neutral:v1:t0",
+              "text": "Symbiknow retains independent document histories in OCFL through rocfl. It does not use Git for document storage or history. Earlier file versions remain downloadable.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true,
+          "expected_disagreement": false
+        }
+      ],
+      "split": "new-reserved",
+      "core": true
+    },
+    {
+      "id": "reset-neutral-negative",
+      "question": "Does Symbiknow destroy old revisions when rebuilding organization?",
+      "documents": [
+        {
+          "document_id": "reset",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "reset:v1:t0",
+              "text": "Symbiknow current reset policy preserves every original file and prior version. Rebuilding organization clears only derived folder assignments and relationship links.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true,
+          "expected_disagreement": false
+        }
+      ],
+      "split": "new-reserved",
+      "core": true
+    },
+    {
+      "id": "cross-disagreement",
+      "question": "Does Symbiknow reset preserve previous versions?",
+      "documents": [
+        {
+          "document_id": "keeps",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "keeps:v1:t0",
+              "text": "Symbiknow current reset policy preserves every original file and prior version. Rebuilding organization clears only derived folder assignments and relationship links.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true,
+          "expected_disagreement": true
+        },
+        {
+          "document_id": "deletes",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "deletes:v1:t0",
+              "text": "Symbiknow current reset policy permanently deletes every earlier file version.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true,
+          "expected_disagreement": true
+        }
+      ],
+      "split": "new-reserved",
+      "core": true
+    },
+    {
+      "id": "cross-agreement",
+      "question": "Does Symbiknow reset preserve previous versions?",
+      "documents": [
+        {
+          "document_id": "keeps",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "keeps:v1:t0",
+              "text": "Symbiknow current reset policy preserves every original file and prior version. Rebuilding organization clears only derived folder assignments and relationship links.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true,
+          "expected_disagreement": false
+        },
+        {
+          "document_id": "also-keeps",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "also-keeps:v1:t0",
+              "text": "Symbiknow reset keeps the complete version history and all original bytes.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true,
+          "expected_disagreement": false
+        }
+      ],
+      "split": "new-reserved",
+      "core": true
+    },
+    {
+      "id": "cross-wrong-project",
+      "question": "Does Symbiknow reset preserve previous versions?",
+      "documents": [
+        {
+          "document_id": "keeps",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "keeps:v1:t0",
+              "text": "Symbiknow current reset policy preserves every original file and prior version. Rebuilding organization clears only derived folder assignments and relationship links.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true,
+          "expected_disagreement": false
+        },
+        {
+          "document_id": "other",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "other:v1:t0",
+              "text": "Cedar current reset policy permanently deletes previous versions.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false,
+          "expected_disagreement": false
+        }
+      ],
+      "split": "new-reserved",
+      "core": true
+    },
+    {
+      "id": "cross-obsolete",
+      "question": "Does the current Symbiknow reset preserve previous versions?",
+      "documents": [
+        {
+          "document_id": "keeps",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "keeps:v1:t0",
+              "text": "Symbiknow current reset policy preserves every original file and prior version. Rebuilding organization clears only derived folder assignments and relationship links.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": true,
+          "expected_disagreement": false
+        },
+        {
+          "document_id": "old",
+          "version": "v1",
+          "filename": "Symbiknow policy.txt",
+          "evidence": [
+            {
+              "evidence_id": "old:v1:t0",
+              "text": "Obsolete, superseded Symbiknow policy: reset deletes all prior document versions.",
+              "basis": "text"
+            }
+          ],
+          "expected_correction": false,
+          "expected_support": false,
+          "expected_disagreement": false
+        }
+      ],
+      "split": "new-reserved",
+      "core": true
+    }
+  ],
+  "grouping": []
+}

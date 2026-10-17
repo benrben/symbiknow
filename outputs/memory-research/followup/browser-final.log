@@ -1,0 +1,125 @@
+
+> symbiknow-ui@0.1.0 test
+> playwright test tests/review8.spec.ts tests/review10-ui.spec.ts tests/ui.spec.ts tests/zz-desktop.spec.ts tests/compact-desktop.spec.ts --grep legacy124|generated112|pinnedREADME|many folders|revision churn|slow library poll|repeated samebadge|reference screens|canvas previews|positions and viewport survive|background refresh never hides|canvas drag|changed folder parents|Quick Look|bulk uploads|HTML preview
+
+[WebServer] [10/17/26 15:02:32] INFO     detected formats: [<InputFormat.MD: document.py:876
+[WebServer]                              'md'>]                                             
+[WebServer]                     INFO     Going to convert document document_converter.py:824
+[WebServer]                              batch...                                           
+[WebServer]                     INFO     Initializing pipeline for document_converter.py:869
+[WebServer]                              SimplePipeline with                                
+[WebServer]                              options hash                                       
+[WebServer]                              d0b2593c314dcec4308352559                          
+[WebServer]                              95dfe54                                            
+[WebServer]                     INFO     Loading plugin                  base_factory.py:124
+[WebServer]                              'docling_defaults'                                 
+[WebServer]                     INFO     Registered picture descriptions:     __init__.py:31
+[WebServer]                              ['picture_description_vlm_engine',                 
+[WebServer]                              'vlm', 'api']                                      
+[WebServer]                     INFO     Processing document             base_pipeline.py:79
+[WebServer]                              storage-decisions.md                               
+[WebServer]                     INFO     Finished converting       document_converter.py:848
+[WebServer]                              document                                           
+[WebServer]                              storage-decisions.md in                            
+[WebServer]                              0.02 sec.                                          
+[WebServer]                     INFO     detected formats: [<InputFormat.MD: document.py:876
+[WebServer]                              'md'>]                                             
+[WebServer]                     INFO     Going to convert document document_converter.py:824
+[WebServer]                              batch...                                           
+[WebServer]                     INFO     Initializing pipeline for document_converter.py:869
+[WebServer]                              SimplePipeline with                                
+[WebServer]                              options hash                                       
+[WebServer]                              d0b2593c314dcec4308352559                          
+[WebServer]                              95dfe54                                            
+[WebServer]                     INFO     Processing document             base_pipeline.py:79
+[WebServer]                              retrieval-notes.md                                 
+[WebServer]                     INFO     Finished converting       document_converter.py:848
+[WebServer]                              document                                           
+[WebServer]                              retrieval-notes.md in                              
+[WebServer]                              0.01 sec.                                          
+[WebServer] [10/17/26 15:02:33] INFO     detected formats:                   document.py:876
+[WebServer]                              [<InputFormat.HTML: 'html'>]                       
+[WebServer]                     INFO     Going to convert document document_converter.py:824
+[WebServer]                              batch...                                           
+[WebServer]                     INFO     Initializing pipeline for document_converter.py:869
+[WebServer]                              SimplePipeline with                                
+[WebServer]                              options hash                                       
+[WebServer]                              d0b2593c314dcec4308352559                          
+[WebServer]                              95dfe54                                            
+[WebServer]                     INFO     Processing document             base_pipeline.py:79
+[WebServer]                              api-reference.html                                 
+[WebServer]                     INFO     Finished converting       document_converter.py:848
+[WebServer]                              document                                           
+[WebServer]                              api-reference.html in                              
+[WebServer]                              0.01 sec.                                          
+[WebServer]                     INFO     detected formats: [<InputFormat.MD: document.py:876
+[WebServer]                              'md'>]                                             
+[WebServer]                     INFO     Going to convert document document_converter.py:824
+[WebServer]                              batch...                                           
+[WebServer]                     INFO     Initializing pipeline for document_converter.py:869
+[WebServer]                              SimplePipeline with                                
+[WebServer]                              options hash                                       
+[WebServer]                              d0b2593c314dcec4308352559                          
+[WebServer]                              95dfe54                                            
+[WebServer]                     INFO     Processing document             base_pipeline.py:79
+[WebServer]                              product-brief.md                                   
+[WebServer]                     INFO     Finished converting       document_converter.py:848
+[WebServer]                              document product-brief.md                          
+[WebServer]                              in 0.00 sec.                                       
+[WebServer] [10/17/26 15:02:34] INFO     detected formats: [<InputFormat.MD: document.py:876
+[WebServer]                              'md'>]                                             
+[WebServer]                     INFO     Going to convert document document_converter.py:824
+[WebServer]                              batch...                                           
+[WebServer]                     INFO     Initializing pipeline for document_converter.py:869
+[WebServer]                              SimplePipeline with                                
+[WebServer]                              options hash                                       
+[WebServer]                              d0b2593c314dcec4308352559                          
+[WebServer]                              95dfe54                                            
+[WebServer]                     INFO     Processing document             base_pipeline.py:79
+[WebServer]                              release-plan.md                                    
+[WebServer]                     INFO     Finished converting       document_converter.py:848
+[WebServer]                              document release-plan.md                           
+[WebServer]                              in 0.01 sec.                                       
+[WebServer] [10/17/26 15:02:35] INFO     StreamableHTTP       streamable_http_manager.py:162
+[WebServer]                              session manager                                    
+[WebServer]                              started                                            
+[WebServer] (node:15015) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 21 tests using 1 worker
+
+(node:15026) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/compact-desktop.spec.ts:411:1 › canvas previews, collapsed search accounting, zoom and real link strip (2.6s)
+  ✓   2 tests/compact-desktop.spec.ts:522:1 › canvas positions and viewport survive views and unchanged background refresh; search has separate storage (2.7s)
+  ✓   3 tests/review10-ui.spec.ts:210:1 › legacy124-pitch upgrade offers reversible reflow, retains16collision history and manual coordinates through views and reload (3.3s)
+  ✓   4 tests/review10-ui.spec.ts:304:1 › versioned generated112px layouts migrate automatically while intentionalmanual position stays pinned (2.4s)
+  ✓   5 tests/review10-ui.spec.ts:335:3 › repeated samebadge and historicalv1 navigation return to requestedv2 evidence from List (1.9s)
+  ✓   6 tests/review10-ui.spec.ts:335:3 › repeated samebadge and historicalv1 navigation return to requestedv2 evidence from Cards (2.1s)
+  ✓   7 tests/review10-ui.spec.ts:335:3 › repeated samebadge and historicalv1 navigation return to requestedv2 evidence from Canvas (3.3s)
+  ✓   8 tests/review10-ui.spec.ts:397:3 › pinnedREADME decimal and multiline excerpt preserves subject mechanism negation: Does Symbiknow use Git to preserve previous file contents? (2.4s)
+  ✓   9 tests/review10-ui.spec.ts:397:3 › pinnedREADME decimal and multiline excerpt preserves subject mechanism negation: Are previous Symbiknow document versions kept using Git? (2.2s)
+  ✓  10 tests/review8.spec.ts:60:3 › many folders retain all search matches, ranks and readable judgments in hybrid (2.2s)
+  ✓  11 tests/review8.spec.ts:60:3 › many folders retain all search matches, ranks and readable judgments in keyword (2.5s)
+  ✓  12 tests/review8.spec.ts:60:3 › many folders retain all search matches, ranks and readable judgments in semantic (2.2s)
+  ✓  13 tests/review8.spec.ts:188:1 › revision churn queues one refresh without canceling a slow search and keeps completed results visible (789ms)
+  ✓  14 tests/review8.spec.ts:247:1 › a slow library poll completes without overlapping polls discarding its response (496ms)
+[WebServer] [2026-10-17T12:03:11Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_distance`.  Currently the `_distance` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:11Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_score`.  Currently the `_score` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:13Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_score`.  Currently the `_score` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:13Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_distance`.  Currently the `_distance` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:14Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_score`.  Currently the `_score` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:14Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_distance`.  Currently the `_distance` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:15Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_score`.  Currently the `_score` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:15Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_distance`.  Currently the `_distance` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:15Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_score`.  Currently the `_score` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+[WebServer] [2026-10-17T12:03:15Z WARN  lance::dataset::scanner] Deprecation warning, this behavior will change in the future. This search specified output columns but did not include `_distance`.  Currently the `_distance` column will be included.  In the future it will not.  Call `disable_scoring_autoprojection` to adopt the future behavior and avoid this warning
+  ✓  15 tests/ui.spec.ts:9:1 › reference screens, canvas links, history, keyboard and responsive layouts (7.7s)
+  ✓  16 tests/ui.spec.ts:180:1 › bulk uploads, explicit update, history bytes and unsupported file (3.3s)
+  ✓  17 tests/ui.spec.ts:262:1 › HTML preview is sandboxed and cannot execute scripts or fetch remote assets (1.7s)
+  ✓  18 tests/zz-desktop.spec.ts:37:1 › multi-selection, loaded Select all, guarded move, ZIP download and Quick Look (2.2s)
+  ✓  19 tests/zz-desktop.spec.ts:204:1 › canvas drag, arrange undo, viewport and positions survive switching and refresh (5.6s)
+  ✓  20 tests/zz-desktop.spec.ts:365:1 › background refresh never hides measured cards or clears their content (12.4s)
+  ✓  21 tests/zz-desktop.spec.ts:494:1 › changed folder parents and growing frames repair positions without overlaps (2.0s)
+
+  21 passed (1.3m)

@@ -1,0 +1,1600 @@
+{
+  "bytes": 67108864,
+  "stages": [
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 71321184,
+          "rss_bytes": 226754560
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 26035328,
+          "rss_bytes": 100450304
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 63456792,
+          "rss_bytes": 190955520
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64406944,
+          "rss_bytes": 187777024
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 334595248,
+          "rss_bytes": 155222016
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24216560,
+          "rss_bytes": 105824256
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 20005800,
+          "rss_bytes": 81379328
+        }
+      ],
+      "stage": "initial",
+      "seconds": 1792236151.429,
+      "heap": {
+        "usedSize": 5293024,
+        "totalSize": 9781248,
+        "embedderHeapUsedSize": 2870800,
+        "backingStorageSize": 615711
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 70927968,
+          "rss_bytes": 233521152
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 134760128,
+          "rss_bytes": 267616256
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64669088,
+          "rss_bytes": 188465152
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319571144,
+          "rss_bytes": 159465472
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24527856,
+          "rss_bytes": 107036672
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "old_full_buffer_held",
+      "seconds": 1792236160.039,
+      "heap": {
+        "usedSize": 4624644,
+        "totalSize": 7946240,
+        "embedderHeapUsedSize": 1671824,
+        "backingStorageSize": 67720339
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 70927968,
+          "rss_bytes": 233521152
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 62604944,
+          "rss_bytes": 196231168
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64669088,
+          "rss_bytes": 188465152
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 326288584,
+          "rss_bytes": 159514624
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24527856,
+          "rss_bytes": 107036672
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "old_buffer_released",
+      "seconds": 1792236160.082,
+      "heap": {
+        "usedSize": 4305768,
+        "totalSize": 4800512,
+        "embedderHeapUsedSize": 1576280,
+        "backingStorageSize": 611074
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 71108192,
+          "rss_bytes": 234192896
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 85411592,
+          "rss_bytes": 223576064
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64669088,
+          "rss_bytes": 188465152
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 326288584,
+          "rss_bytes": 159514624
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24544240,
+          "rss_bytes": 107249664
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236160.274,
+      "heap": {
+        "usedSize": 5480612,
+        "totalSize": 8208384,
+        "embedderHeapUsedSize": 2509248,
+        "backingStorageSize": 611739
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 71173728,
+          "rss_bytes": 234258432
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 100370208,
+          "rss_bytes": 238698496
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64669088,
+          "rss_bytes": 188465152
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 326288584,
+          "rss_bytes": 159514624
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24544240,
+          "rss_bytes": 107249664
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236160.431,
+      "heap": {
+        "usedSize": 5480612,
+        "totalSize": 8208384,
+        "embedderHeapUsedSize": 2509248,
+        "backingStorageSize": 611739
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 71255648,
+          "rss_bytes": 234340352
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 113215264,
+          "rss_bytes": 251543552
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64669088,
+          "rss_bytes": 188465152
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 326288584,
+          "rss_bytes": 159514624
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24544240,
+          "rss_bytes": 107249664
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236160.58,
+      "heap": {
+        "usedSize": 5480612,
+        "totalSize": 8208384,
+        "embedderHeapUsedSize": 2509248,
+        "backingStorageSize": 611739
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 71386720,
+          "rss_bytes": 234471424
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 127125304,
+          "rss_bytes": 265437184
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64669088,
+          "rss_bytes": 188465152
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 326288584,
+          "rss_bytes": 159514624
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24544240,
+          "rss_bytes": 107249664
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236160.73,
+      "heap": {
+        "usedSize": 5480612,
+        "totalSize": 8208384,
+        "embedderHeapUsedSize": 2509248,
+        "backingStorageSize": 611739
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 73107040,
+          "rss_bytes": 236404736
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 74729128,
+          "rss_bytes": 215465984
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64669088,
+          "rss_bytes": 188465152
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 326304968,
+          "rss_bytes": 159531008
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24904688,
+          "rss_bytes": 107659264
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236160.889,
+      "heap": {
+        "usedSize": 12084100,
+        "totalSize": 18546688,
+        "embedderHeapUsedSize": 2552608,
+        "backingStorageSize": 2272682
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 74466912,
+          "rss_bytes": 238157824
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 108365504,
+          "rss_bytes": 248938496
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 64669088,
+          "rss_bytes": 188465152
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 326304968,
+          "rss_bytes": 159531008
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24921072,
+          "rss_bytes": 107757568
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236161.045,
+      "heap": {
+        "usedSize": 21073580,
+        "totalSize": 46235648,
+        "embedderHeapUsedSize": 2262800,
+        "backingStorageSize": 4108366
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 73827960,
+          "rss_bytes": 240746496
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25937024,
+          "rss_bytes": 100679680
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 132351728,
+          "rss_bytes": 277692416
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 326108360,
+          "rss_bytes": 159531008
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24921072,
+          "rss_bytes": 107757568
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236161.209,
+      "heap": {
+        "usedSize": 15414952,
+        "totalSize": 43614208,
+        "embedderHeapUsedSize": 2077056,
+        "backingStorageSize": 2009982
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 73713272,
+          "rss_bytes": 241598464
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 145868552,
+          "rss_bytes": 290521088
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321422536,
+          "rss_bytes": 159531008
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24921072,
+          "rss_bytes": 107757568
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236161.343,
+      "heap": {
+        "usedSize": 19554124,
+        "totalSize": 64978944,
+        "embedderHeapUsedSize": 2470808,
+        "backingStorageSize": 5157566
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 73713272,
+          "rss_bytes": 241614848
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 198428448,
+          "rss_bytes": 340459520
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321455304,
+          "rss_bytes": 159563776
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24888304,
+          "rss_bytes": 107773952
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236161.502,
+      "heap": {
+        "usedSize": 22912568,
+        "totalSize": 87162880,
+        "embedderHeapUsedSize": 2877064,
+        "backingStorageSize": 9092051
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 74729080,
+          "rss_bytes": 241631232
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 219842360,
+          "rss_bytes": 361906176
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321471688,
+          "rss_bytes": 159580160
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24888304,
+          "rss_bytes": 107773952
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236161.649,
+      "heap": {
+        "usedSize": 37182088,
+        "totalSize": 91848704,
+        "embedderHeapUsedSize": 3355288,
+        "backingStorageSize": 12501938
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76400248,
+          "rss_bytes": 241631232
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 241436496,
+          "rss_bytes": 363708416
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321471688,
+          "rss_bytes": 159580160
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24904688,
+          "rss_bytes": 107790336
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236161.808,
+      "heap": {
+        "usedSize": 28173304,
+        "totalSize": 77332480,
+        "embedderHeapUsedSize": 2249568,
+        "backingStorageSize": 1747686
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 73893496,
+          "rss_bytes": 241631232
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 205768552,
+          "rss_bytes": 375209984
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321488072,
+          "rss_bytes": 159596544
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24904688,
+          "rss_bytes": 107790336
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236161.95,
+      "heap": {
+        "usedSize": 30423576,
+        "totalSize": 81920000,
+        "embedderHeapUsedSize": 2387720,
+        "backingStorageSize": 4895274
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 77219448,
+          "rss_bytes": 241631232
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 219678568,
+          "rss_bytes": 378437632
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319161544,
+          "rss_bytes": 159612928
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24921072,
+          "rss_bytes": 107806720
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236162.097,
+      "heap": {
+        "usedSize": 44188416,
+        "totalSize": 86605824,
+        "embedderHeapUsedSize": 2719920,
+        "backingStorageSize": 8305161
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76400248,
+          "rss_bytes": 241631232
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 238438224,
+          "rss_bytes": 387399680
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319177928,
+          "rss_bytes": 159629312
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24921072,
+          "rss_bytes": 107806720
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236162.254,
+      "heap": {
+        "usedSize": 36550572,
+        "totalSize": 91652096,
+        "embedderHeapUsedSize": 3029480,
+        "backingStorageSize": 11977347
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76400248,
+          "rss_bytes": 241631232
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 258918248,
+          "rss_bytes": 403226624
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319177928,
+          "rss_bytes": 159629312
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24921072,
+          "rss_bytes": 107806720
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236162.409,
+      "heap": {
+        "usedSize": 50810096,
+        "totalSize": 97124352,
+        "embedderHeapUsedSize": 3333072,
+        "backingStorageSize": 15387234
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76416632,
+          "rss_bytes": 241647616
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 277890944,
+          "rss_bytes": 420773888
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319194312,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24937456,
+          "rss_bytes": 107823104
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236162.557,
+      "heap": {
+        "usedSize": 53476424,
+        "totalSize": 101974016,
+        "embedderHeapUsedSize": 3757800,
+        "backingStorageSize": 18534822
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76449400,
+          "rss_bytes": 240943104
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 298043288,
+          "rss_bytes": 440975360
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319194312,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24937456,
+          "rss_bytes": 107823104
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236162.704,
+      "heap": {
+        "usedSize": 55886092,
+        "totalSize": 107085824,
+        "embedderHeapUsedSize": 4046032,
+        "backingStorageSize": 21682410
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76514936,
+          "rss_bytes": 240893952
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 267896776,
+          "rss_bytes": 428228608
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319194312,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24937456,
+          "rss_bytes": 107839488
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236162.855,
+      "heap": {
+        "usedSize": 39697768,
+        "totalSize": 82378752,
+        "embedderHeapUsedSize": 2456600,
+        "backingStorageSize": 3321480
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76580472,
+          "rss_bytes": 241713152
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 251594696,
+          "rss_bytes": 434044928
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319194312,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24937456,
+          "rss_bytes": 107839488
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236163.009,
+      "heap": {
+        "usedSize": 19766436,
+        "totalSize": 87064576,
+        "embedderHeapUsedSize": 2655112,
+        "backingStorageSize": 6731367
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76580472,
+          "rss_bytes": 240893952
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 264325064,
+          "rss_bytes": 437698560
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319096008,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24937456,
+          "rss_bytes": 107839488
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236163.16,
+      "heap": {
+        "usedSize": 43704132,
+        "totalSize": 91029504,
+        "embedderHeapUsedSize": 2918616,
+        "backingStorageSize": 9616656
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76580472,
+          "rss_bytes": 241713152
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 281872328,
+          "rss_bytes": 443056128
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319096008,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24937456,
+          "rss_bytes": 107839488
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236163.312,
+      "heap": {
+        "usedSize": 46366408,
+        "totalSize": 95354880,
+        "embedderHeapUsedSize": 3128504,
+        "backingStorageSize": 12764244
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76580472,
+          "rss_bytes": 241713152
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 296847304,
+          "rss_bytes": 455753728
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319096008,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24953840,
+          "rss_bytes": 107855872
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236163.456,
+      "heap": {
+        "usedSize": 49285800,
+        "totalSize": 99680256,
+        "embedderHeapUsedSize": 3534992,
+        "backingStorageSize": 15912240
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76580472,
+          "rss_bytes": 241713152
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 315082720,
+          "rss_bytes": 469893120
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319096008,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24953840,
+          "rss_bytes": 107855872
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236163.605,
+      "heap": {
+        "usedSize": 51611380,
+        "totalSize": 104005632,
+        "embedderHeapUsedSize": 3760952,
+        "backingStorageSize": 19059828
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 76580472,
+          "rss_bytes": 241713152
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 335448056,
+          "rss_bytes": 484474880
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 319096008,
+          "rss_bytes": 159645696
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24970224,
+          "rss_bytes": 107872256
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236163.762,
+      "heap": {
+        "usedSize": 64579012,
+        "totalSize": 108691456,
+        "embedderHeapUsedSize": 4212920,
+        "backingStorageSize": 22469715
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 74352248,
+          "rss_bytes": 240926720
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 269010936,
+          "rss_bytes": 464322560
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321340616,
+          "rss_bytes": 159858688
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24970224,
+          "rss_bytes": 107872256
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236163.913,
+      "heap": {
+        "usedSize": 11301044,
+        "totalSize": 75595776,
+        "embedderHeapUsedSize": 2634632,
+        "backingStorageSize": 2009992
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 74303096,
+          "rss_bytes": 240877568
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 269010936,
+          "rss_bytes": 464322560
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321340616,
+          "rss_bytes": 159858688
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24970224,
+          "rss_bytes": 107872256
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236164.061,
+      "heap": {
+        "usedSize": 11301044,
+        "totalSize": 75595776,
+        "embedderHeapUsedSize": 2634632,
+        "backingStorageSize": 2009992
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 74303096,
+          "rss_bytes": 240877568
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 269010936,
+          "rss_bytes": 464322560
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321340616,
+          "rss_bytes": 159858688
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24970224,
+          "rss_bytes": 107872256
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236164.211,
+      "heap": {
+        "usedSize": 11301044,
+        "totalSize": 75595776,
+        "embedderHeapUsedSize": 2634632,
+        "backingStorageSize": 2009992
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 74303096,
+          "rss_bytes": 240877568
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 269010936,
+          "rss_bytes": 464322560
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 321340616,
+          "rss_bytes": 159858688
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24970224,
+          "rss_bytes": 107872256
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "upload",
+      "seconds": 1792236164.361,
+      "heap": {
+        "usedSize": 11301044,
+        "totalSize": 75595776,
+        "embedderHeapUsedSize": 2634632,
+        "backingStorageSize": 2009992
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 74319480,
+          "rss_bytes": 240893952
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 267044856,
+          "rss_bytes": 465190912
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 323830984,
+          "rss_bytes": 159875072
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24970224,
+          "rss_bytes": 107872256
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "after_upload",
+      "seconds": 1792236164.456,
+      "heap": {
+        "usedSize": 12967268,
+        "totalSize": 75595776,
+        "embedderHeapUsedSize": 2964376,
+        "backingStorageSize": 2015109
+      }
+    },
+    {
+      "native": [
+        {
+          "pid": 90499,
+          "physical_bytes": 73451152,
+          "rss_bytes": 245792768
+        },
+        {
+          "pid": 90520,
+          "physical_bytes": 25363584,
+          "rss_bytes": 100761600
+        },
+        {
+          "pid": 90521,
+          "physical_bytes": 268273656,
+          "rss_bytes": 465928192
+        },
+        {
+          "pid": 90518,
+          "physical_bytes": 59458976,
+          "rss_bytes": 188547072
+        },
+        {
+          "pid": 90504,
+          "physical_bytes": 322700512,
+          "rss_bytes": 159973376
+        },
+        {
+          "pid": 90505,
+          "physical_bytes": 24462320,
+          "rss_bytes": 108494848
+        },
+        {
+          "pid": 90506,
+          "physical_bytes": 19989416,
+          "rss_bytes": 81756160
+        }
+      ],
+      "stage": "after_native_zip",
+      "seconds": 1792236164.905,
+      "heap": {
+        "usedSize": 13238736,
+        "totalSize": 75857920,
+        "embedderHeapUsedSize": 2964376,
+        "backingStorageSize": 2015721
+      }
+    }
+  ],
+  "limitation": "Chrome native buffers and worker memory are included in the process-tree report, not page JS heap alone.",
+  "unchanged_library_reads_in_8s": 0,
+  "old_full_buffer_hash_ms": 50,
+  "upload_ms": 4314,
+  "zip_ms": 270,
+  "browser_processes": {
+    "processInfo": [
+      {
+        "type": "browser",
+        "id": 90499,
+        "cpuTime": 2.764544
+      },
+      {
+        "type": "renderer",
+        "id": 90520,
+        "cpuTime": 0.057686
+      },
+      {
+        "type": "renderer",
+        "id": 90521,
+        "cpuTime": 4.54471
+      },
+      {
+        "type": "renderer",
+        "id": 90518,
+        "cpuTime": 0.221402
+      },
+      {
+        "type": "GPU",
+        "id": 90504,
+        "cpuTime": 0.532995
+      },
+      {
+        "type": "network.mojom.NetworkService",
+        "id": 90505,
+        "cpuTime": 0.32766
+      },
+      {
+        "type": "storage.mojom.StorageService",
+        "id": 90506,
+        "cpuTime": 0.045517
+      }
+    ]
+  }
+}

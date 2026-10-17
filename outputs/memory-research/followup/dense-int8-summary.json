@@ -1,0 +1,19 @@
+{
+  "exit_code": 0,
+  "simultaneous_physical_peak_bytes": 5365504888,
+  "gpu": [
+    {
+      "pid": 51982,
+      "role": "conversion",
+      "mps_active_peak_bytes": 224333568,
+      "mps_driver_peak_bytes": 1302085632
+    },
+    {
+      "pid": 51918,
+      "role": "owner",
+      "mps_active_peak_bytes": 708301056,
+      "mps_driver_peak_bytes": 1635483648
+    }
+  ],
+  "accounting": "Per-process GPU maxima overlap physical footprint and each other. Never sum with physical charge or call independent maxima simultaneous."
+}

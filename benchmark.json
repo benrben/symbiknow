@@ -1,0 +1,165 @@
+{
+  "host": {
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "cpu": "Apple M5 Pro",
+    "ram_bytes": 51539607552
+  },
+  "packages": {
+    "docling": "2.137.0",
+    "lancedb": "0.40.0",
+    "sentence-transformers": "6.1.0",
+    "transformers": "5.19.0",
+    "torch": "2.14.1"
+  },
+  "model": "google/embeddinggemma-2",
+  "dimension": 768,
+  "device": "mps:0",
+  "model_load_seconds": 4.012276499999643,
+  "process_peak_rss_mib": 4886.921875,
+  "fixtures": [
+    {
+      "filename": "cats.md",
+      "size": 45,
+      "storage_seconds": 0.07021416699899419,
+      "index_seconds": 0.5133828329999233,
+      "status": "indexed",
+      "text": true,
+      "visual": false,
+      "chunks": 1,
+      "error": "",
+      "basis": [
+        "text"
+      ]
+    },
+    {
+      "filename": "dogs.html",
+      "size": 83,
+      "storage_seconds": 0.08451812500061351,
+      "index_seconds": 0.06378162500004692,
+      "status": "indexed",
+      "text": true,
+      "visual": false,
+      "chunks": 1,
+      "error": "",
+      "basis": [
+        "text"
+      ]
+    },
+    {
+      "filename": "facts.txt",
+      "size": 62,
+      "storage_seconds": 0.07683670900041761,
+      "index_seconds": 0.05973166700096044,
+      "status": "indexed",
+      "text": true,
+      "visual": false,
+      "chunks": 1,
+      "error": "",
+      "basis": [
+        "text"
+      ]
+    },
+    {
+      "filename": "cat.png",
+      "size": 23792,
+      "storage_seconds": 0.07790475000001607,
+      "index_seconds": 4.6172181670008285,
+      "status": "indexed",
+      "text": true,
+      "visual": true,
+      "chunks": 2,
+      "error": "",
+      "basis": [
+        "ocr",
+        "visual"
+      ]
+    },
+    {
+      "filename": "cat.pdf",
+      "size": 48082,
+      "storage_seconds": 0.08426120900003298,
+      "index_seconds": 2.261447707998741,
+      "status": "indexed",
+      "text": true,
+      "visual": true,
+      "chunks": 2,
+      "error": "",
+      "basis": [
+        "text",
+        "visual"
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "query": "domestic pet sleeping indoors",
+      "expected": "cats.md",
+      "top3": [
+        "cat.pdf",
+        "cat.png",
+        "cats.md"
+      ],
+      "hit_at_3": true,
+      "top1_correct": false,
+      "median_seconds": 0.12374808300046425,
+      "samples_seconds": [
+        0.13876341700051853,
+        0.12374808300046425,
+        0.12335154199899989
+      ]
+    },
+    {
+      "query": "canine following a smell",
+      "expected": "dogs.html",
+      "top3": [
+        "dogs.html",
+        "cat.png",
+        "cat.pdf"
+      ],
+      "hit_at_3": true,
+      "top1_correct": true,
+      "median_seconds": 0.12149337499977264,
+      "samples_seconds": [
+        0.12163129200052936,
+        0.11733962500147754,
+        0.12149337499977264
+      ]
+    },
+    {
+      "query": "temperature at which water turns into ice",
+      "expected": "facts.txt",
+      "top3": [
+        "facts.txt",
+        "cat.pdf",
+        "cat.png"
+      ],
+      "hit_at_3": true,
+      "top1_correct": true,
+      "median_seconds": 0.12191104100020311,
+      "samples_seconds": [
+        0.12989079100043455,
+        0.12191104100020311,
+        0.11982916600027238
+      ]
+    },
+    {
+      "query": "A domestic feline sleeps indoors",
+      "expected": "cat.png",
+      "top3": [
+        "cat.pdf",
+        "cat.png",
+        "cats.md"
+      ],
+      "hit_at_3": true,
+      "top1_correct": false,
+      "median_seconds": 0.12412562499957858,
+      "samples_seconds": [
+        0.12746795800012478,
+        0.12412562499957858,
+        0.12216524999894318
+      ]
+    }
+  ],
+  "limitations": "Five synthetic fixtures and four questions; not a capacity or broad quality evaluation."
+}

@@ -1,0 +1,28 @@
+{
+  "original_absolute_top3_threshold": 0.9,
+  "baseline": {
+    "english_top3": 39,
+    "hebrew_top3": 23,
+    "per_language_total": 40
+  },
+  "quantization_preservation": {
+    "mlx": {
+      "lost_top1_cases": [
+        47
+      ],
+      "gained_top1_cases": [],
+      "lost_top3_cases": [],
+      "gained_top3_cases": []
+    },
+    "mlx_query_float32": {
+      "lost_top1_cases": [],
+      "gained_top1_cases": [],
+      "lost_top3_cases": [],
+      "gained_top3_cases": []
+    }
+  },
+  "interpretation": "The old combined gate fails its absolute retrieval target. Relative runtime preservation and baseline multilingual quality are separate findings, and the original gate remains unchanged.",
+  "minimum_query_cosine": 0.9991878867149353,
+  "minimum_document_cosine": 0.9994519948959351,
+  "review_case_47": "Hebrew dimensions/prefix/device question: float32 winning document similarity 0.625099 vs deletion-guide competitor 0.624019; MLX orders deletion 0.624834 then expected guide 0.624050. Other top-three membership is unchanged."
+}

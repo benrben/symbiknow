@@ -1,0 +1,956 @@
+[
+  {
+    "seconds": 10.136000750004314,
+    "retry": {},
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 20.21846912498586,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 30.275366624991875,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 40.3406311669969,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 50.408640625013504,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 60.49809958401602,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 70.54250654199859,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 80.58631512499414,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 90.65053454198642,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 100.70899408403784,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 110.75360229203943,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 120.81148725003004,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 130.86729662498692,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 140.93421758402837,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 150.99788808403537,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 161.04384483402828,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 171.09059683402302,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 181.14683395903558,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 191.18874029198196,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 201.23547000001417,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 211.27657149999868,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 221.30998804199044,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 231.3567829169915,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 241.40375724999467,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 251.45471883402206,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 261.49400383402826,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 271.53264458401827,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 281.5833125000354,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 291.6362427920103,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 301.6695181670366,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 311.7230252500158,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 321.7891794589814,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 331.8437770419987,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 341.9022802920081,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 351.9646800000337,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 362.0280892919982,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 372.0974030420184,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 382.1695709589985,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 392.22209987498354,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 402.2733004170004,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 412.3467406670097,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 422.4225840420113,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 432.4796104999841,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 442.54030329198577,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 452.59736925002653,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 462.6540022920235,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 472.7122340420028,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 482.76353125000605,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 492.8128225840046,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 502.86137804202735,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 512.9134675840032,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 522.953098500031,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 532.9866552090389,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 543.0343142920174,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 553.0763450840022,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 563.1264517090167,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 573.171930750017,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 583.2036461670068,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 593.2498599590035,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  },
+  {
+    "seconds": 603.2911778340349,
+    "retry": {
+      "version": "v1",
+      "attempts": 1,
+      "next_retry": 1792234808.693878,
+      "paused": true,
+      "error": "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte"
+    },
+    "model": {
+      "loaded": false,
+      "vision": false,
+      "loads": 0,
+      "idle_seconds": 60.0
+    }
+  }
+]

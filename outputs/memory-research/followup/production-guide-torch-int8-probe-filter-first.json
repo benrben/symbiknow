@@ -1,0 +1,3612 @@
+{
+  "runtime": "torch",
+  "quantization": "int8",
+  "provenance": {
+    "annotator": "Codex generated; user requested generation",
+    "split": "generated_regression",
+    "independent": false,
+    "source": "actual repository guides, October 12 snapshot; not authoritative current behavior"
+  },
+  "production_chunking": true,
+  "conversion_isolation": false,
+  "modes": {
+    "semantic": {
+      "summary": {
+        "en": {
+          "top1": 37,
+          "top3": 40,
+          "total": 40
+        },
+        "he": {
+          "top1": 17,
+          "top3": 28,
+          "total": 40
+        }
+      },
+      "seconds": 20.13405175000662,
+      "cases": [
+        {
+          "source": "ranged-download-integrity-procedure.md",
+          "language": "en",
+          "question": "How do I verify the version, offsets and checksum while downloading a file in ranges?",
+          "id": 0,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "ranged-download-integrity-procedure.md",
+            "mcp-transfer-batching-chunks-and-retries.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "original-bytes-and-version-history.md",
+            "repository-document-refresh-receipts-and-provenance.md"
+          ]
+        },
+        {
+          "source": "ranged-download-integrity-procedure.md",
+          "language": "he",
+          "question": "איך מאמתים גרסה, היסטים וחתימת קובץ בהורדה בחלקים?",
+          "id": 1,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "resumable-upload-state-machine.md",
+            "original-bytes-and-version-history.md",
+            "ranged-download-integrity-procedure.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "request-identities-and-idempotent-version-commits.md"
+          ]
+        },
+        {
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "language": "en",
+          "question": "What prevents a retried upload request from creating an extra version?",
+          "id": 2,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "resumable-upload-state-machine.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "mcp-transfer-batching-chunks-and-retries.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "full-selective-reset-and-recovery-contract.md"
+          ]
+        },
+        {
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "language": "he",
+          "question": "מה מונע יצירת גרסה נוספת כשמנסים שוב אותה בקשת העלאה?",
+          "id": 3,
+          "rank_in_five": 5,
+          "returned_sources": [
+            "visual-handbook-and-media-index.md",
+            "keyword-search-diagnostics-for-imported-guides.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "original-bytes-and-version-history.md",
+            "request-identities-and-idempotent-version-commits.md"
+          ]
+        },
+        {
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "language": "en",
+          "question": "How should an update detect that someone else already changed the current document?",
+          "id": 4,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "safe-document-updates-and-conflict-handling.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "shared-search-state-and-presentation-invalidation.md"
+          ]
+        },
+        {
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "language": "he",
+          "question": "איך עדכון מזהה שמישהו כבר שינה את הגרסה הנוכחית?",
+          "id": 5,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "request-identities-and-idempotent-version-commits.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "original-bytes-and-version-history.md",
+            "preview-history-gfm-and-pdf-behavior.md"
+          ]
+        },
+        {
+          "source": "resumable-upload-state-machine.md",
+          "language": "en",
+          "question": "How can a partially uploaded file resume after the server restarts?",
+          "id": 6,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "resumable-upload-state-machine.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "concurrency-and-safe-publication.md",
+            "startup-reconciliation-and-recovery-runbook.md"
+          ]
+        },
+        {
+          "source": "resumable-upload-state-machine.md",
+          "language": "he",
+          "question": "איך ממשיכים העלאה חלקית אחרי הפעלה מחדש של השרת?",
+          "id": 7,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "resumable-upload-state-machine.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "evidence-ids-provenance-and-current-head-rules.md"
+          ]
+        },
+        {
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "language": "en",
+          "question": "Does ZIP export preserve the selected versions when two files have identical names?",
+          "id": 8,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "bulk-zip-exact-versions-and-filename-collisions.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "concurrency-and-safe-publication.md"
+          ]
+        },
+        {
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "language": "he",
+          "question": "האם ייצוא ZIP שומר על הגרסאות שנבחרו כששמות הקבצים זהים?",
+          "id": 9,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "bulk-zip-exact-versions-and-filename-collisions.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "shared-search-state-and-presentation-invalidation.md"
+          ]
+        },
+        {
+          "source": "original-bytes-and-version-history.md",
+          "language": "en",
+          "question": "Where are original bytes and earlier versions kept?",
+          "id": 10,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "original-bytes-and-version-history.md",
+            "ranged-download-integrity-procedure.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "resumable-upload-state-machine.md"
+          ]
+        },
+        {
+          "source": "original-bytes-and-version-history.md",
+          "language": "he",
+          "question": "איפה נשמרים הבתים המקוריים והגרסאות הקודמות?",
+          "id": 11,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "original-bytes-and-version-history.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "repository-module-map.md",
+            "current-head-checks-at-retrieval-boundaries.md"
+          ]
+        },
+        {
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "language": "en",
+          "question": "What must be backed up, and does deleting a document remove its old versions?",
+          "id": 12,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "deletion-boundaries-backup-and-restore.md",
+            "concurrency-and-safe-publication.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "index-maintenance-vector-dimensions-and-migration.md"
+          ]
+        },
+        {
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "language": "he",
+          "question": "מה צריך לגבות והאם מחיקת מסמך מסירה גם גרסאות ישנות?",
+          "id": 13,
+          "rank_in_five": null,
+          "returned_sources": [
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "manual-folder-corrections-and-durable-overrides.md",
+            "evidence-ids-provenance-and-current-head-rules.md"
+          ]
+        },
+        {
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "language": "en",
+          "question": "How does startup recovery reconcile stored files with a missing or stale search index?",
+          "id": 14,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "startup-reconciliation-and-recovery-runbook.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "concurrency-and-safe-publication.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "current-head-checks-at-retrieval-boundaries.md"
+          ]
+        },
+        {
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "language": "he",
+          "question": "איך שחזור בעת ההפעלה מתאם קבצים שמורים עם אינדקס חיפוש חסר או מיושן?",
+          "id": 15,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "startup-reconciliation-and-recovery-runbook.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "keyword-search-diagnostics-for-imported-guides.md"
+          ]
+        },
+        {
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "language": "en",
+          "question": "What happens if metadata publication is interrupted between its multiple steps?",
+          "id": 16,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "atomic-metadata-transactions-failure-matrix.md",
+            "concurrency-and-safe-publication.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "safe-document-updates-and-conflict-handling.md"
+          ]
+        },
+        {
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "language": "he",
+          "question": "מה קורה כשפרסום מטא נתונים נקטע בין שלבי העדכון?",
+          "id": 17,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "concurrency-and-safe-publication.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "atomic-metadata-transactions-failure-matrix.md",
+            "data-ownership-and-system-flow.md",
+            "repository-document-refresh-receipts-and-provenance.md"
+          ]
+        },
+        {
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "language": "en",
+          "question": "How does an interrupted organization rebuild resume its checkpointed work?",
+          "id": 18,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "startup-reconciliation-and-recovery-runbook.md",
+            "manual-folder-corrections-and-durable-overrides.md",
+            "deletion-boundaries-backup-and-restore.md"
+          ]
+        },
+        {
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "language": "he",
+          "question": "איך בנייה מחדש של ארגון המסמכים ממשיכה מנקודת ביקורת לאחר הפרעה?",
+          "id": 19,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "full-selective-reset-and-recovery-contract.md",
+            "manual-folder-corrections-and-durable-overrides.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md"
+          ]
+        },
+        {
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "language": "en",
+          "question": "How do selective resets differ when clearing folders, links, or both?",
+          "id": 20,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "full-selective-reset-and-recovery-contract.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "deletion-boundaries-backup-and-restore.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md"
+          ]
+        },
+        {
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "language": "he",
+          "question": "מה ההבדל בין איפוס תיקיות, קישורים או שניהם?",
+          "id": 21,
+          "rank_in_five": null,
+          "returned_sources": [
+            "relationships-deduplication-and-link-evidence.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "bulk-zip-exact-versions-and-filename-collisions.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "jev-answerability-labels-and-safeguards.md"
+          ]
+        },
+        {
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "language": "en",
+          "question": "Do manual folder corrections survive automatic organization and restarts?",
+          "id": 22,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "manual-folder-corrections-and-durable-overrides.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "startup-reconciliation-and-recovery-runbook.md",
+            "deletion-boundaries-backup-and-restore.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md"
+          ]
+        },
+        {
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "language": "he",
+          "question": "האם תיקוני תיקיות ידניים נשמרים אחרי ארגון אוטומטי והפעלה מחדש?",
+          "id": 23,
+          "rank_in_five": null,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "isolated-live-runtime-checks-without-library-pollution.md",
+            "resumable-upload-state-machine.md",
+            "atomic-metadata-transactions-failure-matrix.md"
+          ]
+        },
+        {
+          "source": "concurrency-and-safe-publication.md",
+          "language": "en",
+          "question": "How are searches protected from partially published document versions during ingestion?",
+          "id": 24,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "ingestion-lifecycle-and-processing-states.md",
+            "concurrency-and-safe-publication.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "retrieval-modes-ranking-and-scopes.md"
+          ]
+        },
+        {
+          "source": "concurrency-and-safe-publication.md",
+          "language": "he",
+          "question": "איך מגינים על חיפושים מפני גרסאות שפורסמו חלקית בזמן קליטה?",
+          "id": 25,
+          "rank_in_five": null,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "resumable-upload-state-machine.md",
+            "bulk-zip-exact-versions-and-filename-collisions.md"
+          ]
+        },
+        {
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "language": "en",
+          "question": "When must current versions be rechecked before returning search evidence?",
+          "id": 26,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "current-head-checks-at-retrieval-boundaries.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "keyword-search-diagnostics-for-imported-guides.md"
+          ]
+        },
+        {
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "language": "he",
+          "question": "מתי צריך לבדוק שוב את הגרסה הנוכחית לפני החזרת ראיות חיפוש?",
+          "id": 27,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "repository-document-refresh-receipts-and-provenance.md",
+            "startup-reconciliation-and-recovery-runbook.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "shared-search-state-and-presentation-invalidation.md"
+          ]
+        },
+        {
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "language": "en",
+          "question": "How do passage identifiers record page provenance and endpoint versions?",
+          "id": 28,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "data-ownership-and-system-flow.md",
+            "repository-document-refresh-receipts-and-provenance.md"
+          ]
+        },
+        {
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "language": "he",
+          "question": "איך מזהי קטעים מתעדים מקורות בעמודים וגרסאות מסמכים?",
+          "id": 29,
+          "rank_in_five": null,
+          "returned_sources": [
+            "current-head-checks-at-retrieval-boundaries.md",
+            "files-folders-filtering-and-sorting.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "relationships-deduplication-and-link-evidence.md"
+          ]
+        },
+        {
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "language": "en",
+          "question": "Which checks reject a relationship whose evidence has become stale?",
+          "id": 30,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "relationships-deduplication-and-link-evidence.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "jev-answerability-labels-and-safeguards.md"
+          ]
+        },
+        {
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "language": "he",
+          "question": "אילו בדיקות דוחות קשר שהראיות שלו התיישנו?",
+          "id": 31,
+          "rank_in_five": 5,
+          "returned_sources": [
+            "regression-test-map-and-current-evidence.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "relationships-deduplication-and-link-evidence.md",
+            "original-bytes-and-version-history.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "language": "en",
+          "question": "How are exact duplicates distinguished from evidence-backed related documents?",
+          "id": 32,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "relationships-deduplication-and-link-evidence.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "safe-document-updates-and-conflict-handling.md"
+          ]
+        },
+        {
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "language": "he",
+          "question": "איך מבדילים בין כפילויות מדויקות למסמכים קשורים המבוססים על ראיות?",
+          "id": 33,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "relationships-deduplication-and-link-evidence.md",
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "capacity-and-independent-quality-evaluation-plan.md",
+            "ocr-aliases-and-project-identity-policy.md"
+          ]
+        },
+        {
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "language": "en",
+          "question": "Does the neighbor search guarantee discovery of every valid relationship?",
+          "id": 34,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "neighbor-discovery-budgets-and-link-coverage.md",
+            "relationships-deduplication-and-link-evidence.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md"
+          ]
+        },
+        {
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "language": "he",
+          "question": "האם חיפוש השכנים מבטיח גילוי של כל קשר תקף?",
+          "id": 35,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "neighbor-discovery-budgets-and-link-coverage.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "relationships-deduplication-and-link-evidence.md"
+          ]
+        },
+        {
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "language": "en",
+          "question": "How are project identities separated from subject topics during organization?",
+          "id": 36,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "quality-corpus-json-schema-and-offline-scoring.md"
+          ]
+        },
+        {
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "language": "he",
+          "question": "איך מבדילים בין זהות פרויקט לנושא בתהליך ארגון מסמכים?",
+          "id": 37,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "original-bytes-and-version-history.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md"
+          ]
+        },
+        {
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "language": "en",
+          "question": "How should OCR spelling mistakes and aliases affect project identity decisions?",
+          "id": 38,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "ocr-aliases-and-project-identity-policy.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "isolated-live-runtime-checks-without-library-pollution.md"
+          ]
+        },
+        {
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "language": "he",
+          "question": "איך שגיאות כתיב של OCR וכינויים משפיעים על זיהוי פרויקט?",
+          "id": 39,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "ocr-aliases-and-project-identity-policy.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "text-pdf-image-and-ocr-ingestion.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "jev-answerability-labels-and-safeguards.md"
+          ]
+        },
+        {
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "language": "en",
+          "question": "Which limits bound taxonomy preparation, and what scalability is still unproven?",
+          "id": 40,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "lazy-content-cards-cache-and-text-budgets.md"
+          ]
+        },
+        {
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "language": "he",
+          "question": "אילו מגבלות תוחמות הכנת טקסונומיה ואיזו יכולת גדילה עדיין לא נבדקה?",
+          "id": 41,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "regression-test-map-and-current-evidence.md",
+            "deletion-boundaries-backup-and-restore.md"
+          ]
+        },
+        {
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "language": "en",
+          "question": "How are text, scanned PDF pages and native images ingested for retrieval?",
+          "id": 42,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "text-pdf-image-and-ocr-ingestion.md",
+            "visual-handbook-and-media-index.md",
+            "retrieval-modes-ranking-and-scopes.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "ingestion-lifecycle-and-processing-states.md"
+          ]
+        },
+        {
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "language": "he",
+          "question": "איך קולטים טקסט, עמודי PDF סרוקים ותמונות לצורך חיפוש?",
+          "id": 43,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "text-pdf-image-and-ocr-ingestion.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "visual-handbook-and-media-index.md",
+            "visual-similarity-versus-textual-answer-support.md"
+          ]
+        },
+        {
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "language": "en",
+          "question": "What do queued, processing, indexed, skipped and failed mean during ingestion?",
+          "id": 44,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "ingestion-lifecycle-and-processing-states.md",
+            "concurrency-and-safe-publication.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "startup-reconciliation-and-recovery-runbook.md"
+          ]
+        },
+        {
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "language": "he",
+          "question": "מה המשמעות של ממתין, בעיבוד, מאונדקס, דולג ונכשל בזמן קליטה?",
+          "id": 45,
+          "rank_in_five": 5,
+          "returned_sources": [
+            "atomic-metadata-transactions-failure-matrix.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "original-bytes-and-version-history.md",
+            "ingestion-lifecycle-and-processing-states.md"
+          ]
+        },
+        {
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "language": "en",
+          "question": "Which dimensions, prefixes and devices define embedding compatibility?",
+          "id": 46,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "embedding-runtime-and-vector-compatibility.md",
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "configuration-dependency-and-secret-boundaries.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "performance-measurement-exclusions-and-reproducibility.md"
+          ]
+        },
+        {
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "language": "he",
+          "question": "אילו ממדים, קידומות והתקנים קובעים תאימות של וקטורי הטמעה?",
+          "id": 47,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "embedding-runtime-and-vector-compatibility.md",
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "visual-handbook-and-media-index.md",
+            "ingestion-lifecycle-and-processing-states.md"
+          ]
+        },
+        {
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "language": "en",
+          "question": "What must be rebuilt when changing the vector dimension?",
+          "id": 48,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "embedding-runtime-and-vector-compatibility.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "runtime-dependency-and-extension-contracts.md",
+            "lancedb-document-and-chunk-schema.md"
+          ]
+        },
+        {
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "language": "he",
+          "question": "מה צריך לבנות מחדש כשמשנים את ממד הווקטור?",
+          "id": 49,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "embedding-runtime-and-vector-compatibility.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "lancedb-document-and-chunk-schema.md",
+          "language": "en",
+          "question": "What belongs in document rows versus searchable text or visual chunk rows?",
+          "id": 50,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "lancedb-document-and-chunk-schema.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "current-head-checks-at-retrieval-boundaries.md"
+          ]
+        },
+        {
+          "source": "lancedb-document-and-chunk-schema.md",
+          "language": "he",
+          "question": "מה נשמר ברשומות מסמכים לעומת רשומות קטעי טקסט או תמונה?",
+          "id": 51,
+          "rank_in_five": null,
+          "returned_sources": [
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "text-pdf-image-and-ocr-ingestion.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md"
+          ]
+        },
+        {
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "language": "en",
+          "question": "What is the difference between keyword, semantic and hybrid retrieval scopes?",
+          "id": 52,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "retrieval-modes-ranking-and-scopes.md",
+            "configuration-dependency-and-secret-boundaries.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "neighbor-discovery-budgets-and-link-coverage.md",
+            "keyword-search-diagnostics-for-imported-guides.md"
+          ]
+        },
+        {
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "language": "he",
+          "question": "מה ההבדל בין חיפוש מילות מפתח, חיפוש סמנטי וחיפוש משולב?",
+          "id": 53,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "retrieval-modes-ranking-and-scopes.md",
+            "keyword-search-diagnostics-for-imported-guides.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "neighbor-discovery-budgets-and-link-coverage.md"
+          ]
+        },
+        {
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "language": "en",
+          "question": "Can a visually similar picture be labeled as a direct textual answer?",
+          "id": 54,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "jev-answerability-labels-and-safeguards.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "language": "he",
+          "question": "האם תמונה דומה מבחינה חזותית יכולה לקבל תווית של תשובה טקסטואלית ישירה?",
+          "id": 55,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "text-pdf-image-and-ocr-ingestion.md"
+          ]
+        },
+        {
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "language": "en",
+          "question": "How are direct, partial, related and uncertain answerability judgments distinguished?",
+          "id": 56,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "jev-answerability-labels-and-safeguards.md",
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "language": "he",
+          "question": "איך מבדילים בין שיפוטי מענה ישיר, חלקי, קשור ולא ודאי?",
+          "id": 57,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "relationships-deduplication-and-link-evidence.md",
+            "jev-answerability-labels-and-safeguards.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "resumable-upload-state-machine.md",
+            "bulk-zip-exact-versions-and-filename-collisions.md"
+          ]
+        },
+        {
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "language": "en",
+          "question": "What provenance and labels are needed to evaluate saved Jev predictions offline?",
+          "id": 58,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "capacity-and-independent-quality-evaluation-plan.md",
+            "jev-answerability-labels-and-safeguards.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "regression-test-map-and-current-evidence.md"
+          ]
+        },
+        {
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "language": "he",
+          "question": "אילו מקורות ותוויות נדרשים להערכת תחזיות Jev שמורות ללא חיבור לשירות?",
+          "id": 59,
+          "rank_in_five": 5,
+          "returned_sources": [
+            "jev-answerability-labels-and-safeguards.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "launch-modes-and-single-owner-checklist.md",
+            "relationships-deduplication-and-link-evidence.md",
+            "quality-corpus-json-schema-and-offline-scoring.md"
+          ]
+        },
+        {
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "language": "en",
+          "question": "What evidence is still required before claiming capacity for one hundred thousand documents?",
+          "id": 60,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "capacity-and-independent-quality-evaluation-plan.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "original-bytes-and-version-history.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "preview-history-gfm-and-pdf-behavior.md"
+          ]
+        },
+        {
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "language": "he",
+          "question": "אילו ראיות עדיין נדרשות לפני שטוענים לתמיכה במאה אלף מסמכים?",
+          "id": 61,
+          "rank_in_five": null,
+          "returned_sources": [
+            "jev-answerability-labels-and-safeguards.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "language": "en",
+          "question": "Which work is excluded from the published synthetic performance measurements?",
+          "id": 62,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "isolated-live-runtime-checks-without-library-pollution.md",
+            "concurrency-and-safe-publication.md",
+            "neighbor-discovery-budgets-and-link-coverage.md"
+          ]
+        },
+        {
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "language": "he",
+          "question": "איזו עבודה לא נכללת במדידות הביצועים הסינתטיות שפורסמו?",
+          "id": 63,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "isolated-live-runtime-checks-without-library-pollution.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "capacity-and-independent-quality-evaluation-plan.md"
+          ]
+        },
+        {
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "language": "en",
+          "question": "Can the stdio and HTTP servers own the same data directory simultaneously?",
+          "id": 64,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "concurrency-and-safe-publication.md",
+            "launch-modes-and-single-owner-checklist.md",
+            "data-ownership-and-system-flow.md",
+            "runtime-dependency-and-extension-contracts.md",
+            "original-bytes-and-version-history.md"
+          ]
+        },
+        {
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "language": "he",
+          "question": "האם שרת stdio ושרת HTTP יכולים להחזיק באותה תיקיית נתונים בו זמנית?",
+          "id": 65,
+          "rank_in_five": null,
+          "returned_sources": [
+            "concurrency-and-safe-publication.md",
+            "data-ownership-and-system-flow.md",
+            "ranged-download-integrity-procedure.md",
+            "original-bytes-and-version-history.md",
+            "safe-document-updates-and-conflict-handling.md"
+          ]
+        },
+        {
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "language": "en",
+          "question": "How are hostile HTML originals and remote resources restricted in the reader?",
+          "id": 66,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "local-security-and-content-rendering-boundaries.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "configuration-dependency-and-secret-boundaries.md",
+            "visual-handbook-and-media-index.md",
+            "ocr-aliases-and-project-identity-policy.md"
+          ]
+        },
+        {
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "language": "he",
+          "question": "איך מגבילים קובצי HTML זדוניים ומשאבים מרוחקים בתצוגת המסמך?",
+          "id": 67,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "preview-history-gfm-and-pdf-behavior.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "files-folders-filtering-and-sorting.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "safe-document-updates-and-conflict-handling.md"
+          ]
+        },
+        {
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "language": "en",
+          "question": "Where should API secrets be configured without entering the library or repository?",
+          "id": 68,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "configuration-dependency-and-secret-boundaries.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "runtime-dependency-and-extension-contracts.md",
+            "launch-modes-and-single-owner-checklist.md"
+          ]
+        },
+        {
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "language": "he",
+          "question": "איפה מגדירים סודות API בלי להכניס אותם לספרייה או למאגר הקוד?",
+          "id": 69,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "configuration-dependency-and-secret-boundaries.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "ocr-aliases-and-project-identity-policy.md"
+          ]
+        },
+        {
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "language": "en",
+          "question": "How are content card previews loaded and cached within text and image budgets?",
+          "id": 70,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md"
+          ]
+        },
+        {
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "language": "he",
+          "question": "איך תצוגות מקדימות של כרטיסים נטענות ונשמרות במטמון במסגרת מגבלות טקסט ותמונה?",
+          "id": 71,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "local-security-and-content-rendering-boundaries.md"
+          ]
+        },
+        {
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "language": "en",
+          "question": "How do canvas overview zoom levels and saved manual positions work?",
+          "id": 72,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "canvas-overview-reading-and-saved-positions.md",
+            "visual-handbook-and-media-index.md",
+            "desktop-pane-constraints-and-responsive-behavior.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "preview-history-gfm-and-pdf-behavior.md"
+          ]
+        },
+        {
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "language": "he",
+          "question": "איך עובדים רמות הזום במפה ומיקומים ידניים שמורים?",
+          "id": 73,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "visual-handbook-and-media-index.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "folder-revisions-and-layout-key-migration.md"
+          ]
+        },
+        {
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "language": "en",
+          "question": "Which keyboard shortcuts open quick look and avoid hijacking focused controls?",
+          "id": 74,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "keyboard-shortcuts-focus-and-accessibility.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "files-folders-filtering-and-sorting.md",
+            "shared-search-state-and-presentation-invalidation.md"
+          ]
+        },
+        {
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "language": "he",
+          "question": "אילו קיצורי מקלדת פותחים מבט מהיר בלי להפריע לפקדים שבמיקוד?",
+          "id": 75,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "keyboard-shortcuts-focus-and-accessibility.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "canvas-overview-reading-and-saved-positions.md"
+          ]
+        },
+        {
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "language": "en",
+          "question": "Does switching between List, Cards and Canvas rerun a submitted search?",
+          "id": 76,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "shared-search-state-and-presentation-invalidation.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "repository-module-map.md",
+            "visual-handbook-and-media-index.md"
+          ]
+        },
+        {
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "language": "he",
+          "question": "האם מעבר בין רשימה, כרטיסים ומפה מריץ שוב את החיפוש שנשלח?",
+          "id": 77,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "preview-history-gfm-and-pdf-behavior.md"
+          ]
+        },
+        {
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "language": "en",
+          "question": "How can I preview an old version, a Markdown table or a specific PDF page?",
+          "id": 78,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "preview-history-gfm-and-pdf-behavior.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "visual-handbook-and-media-index.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "safe-document-updates-and-conflict-handling.md"
+          ]
+        },
+        {
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "language": "he",
+          "question": "איך מציגים גרסה ישנה, טבלת Markdown או עמוד PDF מסוים?",
+          "id": 79,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "preview-history-gfm-and-pdf-behavior.md",
+            "visual-handbook-and-media-index.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "local-security-and-content-rendering-boundaries.md"
+          ]
+        }
+      ]
+    },
+    "hybrid": {
+      "summary": {
+        "en": {
+          "top1": 35,
+          "top3": 39,
+          "total": 40
+        },
+        "he": {
+          "top1": 16,
+          "top3": 28,
+          "total": 40
+        }
+      },
+      "seconds": 20.04254354198929,
+      "cases": [
+        {
+          "source": "ranged-download-integrity-procedure.md",
+          "language": "en",
+          "question": "How do I verify the version, offsets and checksum while downloading a file in ranges?",
+          "id": 0,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "ranged-download-integrity-procedure.md",
+            "mcp-transfer-batching-chunks-and-retries.md",
+            "original-bytes-and-version-history.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "repository-document-refresh-receipts-and-provenance.md"
+          ]
+        },
+        {
+          "source": "ranged-download-integrity-procedure.md",
+          "language": "he",
+          "question": "איך מאמתים גרסה, היסטים וחתימת קובץ בהורדה בחלקים?",
+          "id": 1,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "resumable-upload-state-machine.md",
+            "original-bytes-and-version-history.md",
+            "ranged-download-integrity-procedure.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "request-identities-and-idempotent-version-commits.md"
+          ]
+        },
+        {
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "language": "en",
+          "question": "What prevents a retried upload request from creating an extra version?",
+          "id": 2,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "request-identities-and-idempotent-version-commits.md",
+            "resumable-upload-state-machine.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "mcp-transfer-batching-chunks-and-retries.md",
+            "original-bytes-and-version-history.md"
+          ]
+        },
+        {
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "language": "he",
+          "question": "מה מונע יצירת גרסה נוספת כשמנסים שוב אותה בקשת העלאה?",
+          "id": 3,
+          "rank_in_five": 5,
+          "returned_sources": [
+            "visual-handbook-and-media-index.md",
+            "keyword-search-diagnostics-for-imported-guides.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "original-bytes-and-version-history.md",
+            "request-identities-and-idempotent-version-commits.md"
+          ]
+        },
+        {
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "language": "en",
+          "question": "How should an update detect that someone else already changed the current document?",
+          "id": 4,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "safe-document-updates-and-conflict-handling.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md"
+          ]
+        },
+        {
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "language": "he",
+          "question": "איך עדכון מזהה שמישהו כבר שינה את הגרסה הנוכחית?",
+          "id": 5,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "request-identities-and-idempotent-version-commits.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "original-bytes-and-version-history.md",
+            "preview-history-gfm-and-pdf-behavior.md"
+          ]
+        },
+        {
+          "source": "resumable-upload-state-machine.md",
+          "language": "en",
+          "question": "How can a partially uploaded file resume after the server restarts?",
+          "id": 6,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "resumable-upload-state-machine.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "startup-reconciliation-and-recovery-runbook.md",
+            "data-ownership-and-system-flow.md",
+            "ranged-download-integrity-procedure.md"
+          ]
+        },
+        {
+          "source": "resumable-upload-state-machine.md",
+          "language": "he",
+          "question": "איך ממשיכים העלאה חלקית אחרי הפעלה מחדש של השרת?",
+          "id": 7,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "resumable-upload-state-machine.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "evidence-ids-provenance-and-current-head-rules.md"
+          ]
+        },
+        {
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "language": "en",
+          "question": "Does ZIP export preserve the selected versions when two files have identical names?",
+          "id": 8,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "bulk-zip-exact-versions-and-filename-collisions.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "manual-folder-corrections-and-durable-overrides.md",
+            "files-folders-filtering-and-sorting.md",
+            "folder-revisions-and-layout-key-migration.md"
+          ]
+        },
+        {
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "language": "he",
+          "question": "האם ייצוא ZIP שומר על הגרסאות שנבחרו כששמות הקבצים זהים?",
+          "id": 9,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "bulk-zip-exact-versions-and-filename-collisions.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "shared-search-state-and-presentation-invalidation.md"
+          ]
+        },
+        {
+          "source": "original-bytes-and-version-history.md",
+          "language": "en",
+          "question": "Where are original bytes and earlier versions kept?",
+          "id": 10,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "original-bytes-and-version-history.md",
+            "ranged-download-integrity-procedure.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "request-identities-and-idempotent-version-commits.md"
+          ]
+        },
+        {
+          "source": "original-bytes-and-version-history.md",
+          "language": "he",
+          "question": "איפה נשמרים הבתים המקוריים והגרסאות הקודמות?",
+          "id": 11,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "original-bytes-and-version-history.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "repository-module-map.md",
+            "current-head-checks-at-retrieval-boundaries.md"
+          ]
+        },
+        {
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "language": "en",
+          "question": "What must be backed up, and does deleting a document remove its old versions?",
+          "id": 12,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "deletion-boundaries-backup-and-restore.md",
+            "concurrency-and-safe-publication.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "shared-search-state-and-presentation-invalidation.md"
+          ]
+        },
+        {
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "language": "he",
+          "question": "מה צריך לגבות והאם מחיקת מסמך מסירה גם גרסאות ישנות?",
+          "id": 13,
+          "rank_in_five": null,
+          "returned_sources": [
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "manual-folder-corrections-and-durable-overrides.md",
+            "evidence-ids-provenance-and-current-head-rules.md"
+          ]
+        },
+        {
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "language": "en",
+          "question": "How does startup recovery reconcile stored files with a missing or stale search index?",
+          "id": 14,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "startup-reconciliation-and-recovery-runbook.md",
+            "concurrency-and-safe-publication.md",
+            "deletion-boundaries-backup-and-restore.md",
+            "manual-folder-corrections-and-durable-overrides.md",
+            "retrieval-modes-ranking-and-scopes.md"
+          ]
+        },
+        {
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "language": "he",
+          "question": "איך שחזור בעת ההפעלה מתאם קבצים שמורים עם אינדקס חיפוש חסר או מיושן?",
+          "id": 15,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "startup-reconciliation-and-recovery-runbook.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "keyword-search-diagnostics-for-imported-guides.md"
+          ]
+        },
+        {
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "language": "en",
+          "question": "What happens if metadata publication is interrupted between its multiple steps?",
+          "id": 16,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "concurrency-and-safe-publication.md",
+            "atomic-metadata-transactions-failure-matrix.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "startup-reconciliation-and-recovery-runbook.md",
+            "manual-folder-corrections-and-durable-overrides.md"
+          ]
+        },
+        {
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "language": "he",
+          "question": "מה קורה כשפרסום מטא נתונים נקטע בין שלבי העדכון?",
+          "id": 17,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "concurrency-and-safe-publication.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "atomic-metadata-transactions-failure-matrix.md",
+            "data-ownership-and-system-flow.md",
+            "repository-document-refresh-receipts-and-provenance.md"
+          ]
+        },
+        {
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "language": "en",
+          "question": "How does an interrupted organization rebuild resume its checkpointed work?",
+          "id": 18,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "startup-reconciliation-and-recovery-runbook.md",
+            "concurrency-and-safe-publication.md",
+            "resumable-upload-state-machine.md"
+          ]
+        },
+        {
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "language": "he",
+          "question": "איך בנייה מחדש של ארגון המסמכים ממשיכה מנקודת ביקורת לאחר הפרעה?",
+          "id": 19,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "full-selective-reset-and-recovery-contract.md",
+            "manual-folder-corrections-and-durable-overrides.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md"
+          ]
+        },
+        {
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "language": "en",
+          "question": "How do selective resets differ when clearing folders, links, or both?",
+          "id": 20,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "full-selective-reset-and-recovery-contract.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "deletion-boundaries-backup-and-restore.md",
+            "shared-search-state-and-presentation-invalidation.md"
+          ]
+        },
+        {
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "language": "he",
+          "question": "מה ההבדל בין איפוס תיקיות, קישורים או שניהם?",
+          "id": 21,
+          "rank_in_five": null,
+          "returned_sources": [
+            "relationships-deduplication-and-link-evidence.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "bulk-zip-exact-versions-and-filename-collisions.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "jev-answerability-labels-and-safeguards.md"
+          ]
+        },
+        {
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "language": "en",
+          "question": "Do manual folder corrections survive automatic organization and restarts?",
+          "id": 22,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "manual-folder-corrections-and-durable-overrides.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "concurrency-and-safe-publication.md",
+            "deletion-boundaries-backup-and-restore.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md"
+          ]
+        },
+        {
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "language": "he",
+          "question": "האם תיקוני תיקיות ידניים נשמרים אחרי ארגון אוטומטי והפעלה מחדש?",
+          "id": 23,
+          "rank_in_five": null,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "isolated-live-runtime-checks-without-library-pollution.md",
+            "resumable-upload-state-machine.md",
+            "atomic-metadata-transactions-failure-matrix.md"
+          ]
+        },
+        {
+          "source": "concurrency-and-safe-publication.md",
+          "language": "en",
+          "question": "How are searches protected from partially published document versions during ingestion?",
+          "id": 24,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "ingestion-lifecycle-and-processing-states.md",
+            "concurrency-and-safe-publication.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "retrieval-modes-ranking-and-scopes.md",
+            "text-pdf-image-and-ocr-ingestion.md"
+          ]
+        },
+        {
+          "source": "concurrency-and-safe-publication.md",
+          "language": "he",
+          "question": "איך מגינים על חיפושים מפני גרסאות שפורסמו חלקית בזמן קליטה?",
+          "id": 25,
+          "rank_in_five": null,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "resumable-upload-state-machine.md",
+            "bulk-zip-exact-versions-and-filename-collisions.md"
+          ]
+        },
+        {
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "language": "en",
+          "question": "When must current versions be rechecked before returning search evidence?",
+          "id": 26,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "current-head-checks-at-retrieval-boundaries.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "keyword-search-diagnostics-for-imported-guides.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "language": "he",
+          "question": "מתי צריך לבדוק שוב את הגרסה הנוכחית לפני החזרת ראיות חיפוש?",
+          "id": 27,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "repository-document-refresh-receipts-and-provenance.md",
+            "startup-reconciliation-and-recovery-runbook.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "shared-search-state-and-presentation-invalidation.md"
+          ]
+        },
+        {
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "language": "en",
+          "question": "How do passage identifiers record page provenance and endpoint versions?",
+          "id": 28,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "visual-handbook-and-media-index.md",
+            "relationships-deduplication-and-link-evidence.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "repository-document-refresh-receipts-and-provenance.md"
+          ]
+        },
+        {
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "language": "he",
+          "question": "איך מזהי קטעים מתעדים מקורות בעמודים וגרסאות מסמכים?",
+          "id": 29,
+          "rank_in_five": null,
+          "returned_sources": [
+            "current-head-checks-at-retrieval-boundaries.md",
+            "files-folders-filtering-and-sorting.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "relationships-deduplication-and-link-evidence.md"
+          ]
+        },
+        {
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "language": "en",
+          "question": "Which checks reject a relationship whose evidence has become stale?",
+          "id": 30,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "relationships-deduplication-and-link-evidence.md",
+            "neighbor-discovery-budgets-and-link-coverage.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "current-head-checks-at-retrieval-boundaries.md"
+          ]
+        },
+        {
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "language": "he",
+          "question": "אילו בדיקות דוחות קשר שהראיות שלו התיישנו?",
+          "id": 31,
+          "rank_in_five": 5,
+          "returned_sources": [
+            "regression-test-map-and-current-evidence.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "relationships-deduplication-and-link-evidence.md",
+            "original-bytes-and-version-history.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "language": "en",
+          "question": "How are exact duplicates distinguished from evidence-backed related documents?",
+          "id": 32,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "relationships-deduplication-and-link-evidence.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "bulk-zip-exact-versions-and-filename-collisions.md",
+            "keyword-search-diagnostics-for-imported-guides.md",
+            "evidence-ids-provenance-and-current-head-rules.md"
+          ]
+        },
+        {
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "language": "he",
+          "question": "איך מבדילים בין כפילויות מדויקות למסמכים קשורים המבוססים על ראיות?",
+          "id": 33,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "relationships-deduplication-and-link-evidence.md",
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "capacity-and-independent-quality-evaluation-plan.md",
+            "ocr-aliases-and-project-identity-policy.md"
+          ]
+        },
+        {
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "language": "en",
+          "question": "Does the neighbor search guarantee discovery of every valid relationship?",
+          "id": 34,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "neighbor-discovery-budgets-and-link-coverage.md",
+            "relationships-deduplication-and-link-evidence.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "jev-answerability-labels-and-safeguards.md"
+          ]
+        },
+        {
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "language": "he",
+          "question": "האם חיפוש השכנים מבטיח גילוי של כל קשר תקף?",
+          "id": 35,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "neighbor-discovery-budgets-and-link-coverage.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "relationships-deduplication-and-link-evidence.md"
+          ]
+        },
+        {
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "language": "en",
+          "question": "How are project identities separated from subject topics during organization?",
+          "id": 36,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "neighbor-discovery-budgets-and-link-coverage.md",
+            "repository-module-map.md"
+          ]
+        },
+        {
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "language": "he",
+          "question": "איך מבדילים בין זהות פרויקט לנושא בתהליך ארגון מסמכים?",
+          "id": 37,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "original-bytes-and-version-history.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md"
+          ]
+        },
+        {
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "language": "en",
+          "question": "How should OCR spelling mistakes and aliases affect project identity decisions?",
+          "id": 38,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "ocr-aliases-and-project-identity-policy.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "request-identities-and-idempotent-version-commits.md",
+            "text-pdf-image-and-ocr-ingestion.md"
+          ]
+        },
+        {
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "language": "he",
+          "question": "איך שגיאות כתיב של OCR וכינויים משפיעים על זיהוי פרויקט?",
+          "id": 39,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "text-pdf-image-and-ocr-ingestion.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md"
+          ]
+        },
+        {
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "language": "en",
+          "question": "Which limits bound taxonomy preparation, and what scalability is still unproven?",
+          "id": 40,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "capacity-and-independent-quality-evaluation-plan.md",
+            "lazy-content-cards-cache-and-text-budgets.md"
+          ]
+        },
+        {
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "language": "he",
+          "question": "אילו מגבלות תוחמות הכנת טקסונומיה ואיזו יכולת גדילה עדיין לא נבדקה?",
+          "id": 41,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "project-subject-taxonomy-and-candidate-cohesion.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "regression-test-map-and-current-evidence.md",
+            "deletion-boundaries-backup-and-restore.md"
+          ]
+        },
+        {
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "language": "en",
+          "question": "How are text, scanned PDF pages and native images ingested for retrieval?",
+          "id": 42,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "text-pdf-image-and-ocr-ingestion.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "visual-handbook-and-media-index.md"
+          ]
+        },
+        {
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "language": "he",
+          "question": "איך קולטים טקסט, עמודי PDF סרוקים ותמונות לצורך חיפוש?",
+          "id": 43,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "text-pdf-image-and-ocr-ingestion.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "visual-handbook-and-media-index.md",
+            "lazy-content-cards-cache-and-text-budgets.md"
+          ]
+        },
+        {
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "language": "en",
+          "question": "What do queued, processing, indexed, skipped and failed mean during ingestion?",
+          "id": 44,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "ingestion-lifecycle-and-processing-states.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "data-ownership-and-system-flow.md"
+          ]
+        },
+        {
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "language": "he",
+          "question": "מה המשמעות של ממתין, בעיבוד, מאונדקס, דולג ונכשל בזמן קליטה?",
+          "id": 45,
+          "rank_in_five": 5,
+          "returned_sources": [
+            "atomic-metadata-transactions-failure-matrix.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "original-bytes-and-version-history.md",
+            "ingestion-lifecycle-and-processing-states.md"
+          ]
+        },
+        {
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "language": "en",
+          "question": "Which dimensions, prefixes and devices define embedding compatibility?",
+          "id": 46,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "embedding-runtime-and-vector-compatibility.md",
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "runtime-dependency-and-extension-contracts.md",
+            "canvas-overview-reading-and-saved-positions.md"
+          ]
+        },
+        {
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "language": "he",
+          "question": "אילו ממדים, קידומות והתקנים קובעים תאימות של וקטורי הטמעה?",
+          "id": 47,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "embedding-runtime-and-vector-compatibility.md",
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "visual-handbook-and-media-index.md",
+            "ingestion-lifecycle-and-processing-states.md"
+          ]
+        },
+        {
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "language": "en",
+          "question": "What must be rebuilt when changing the vector dimension?",
+          "id": 48,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "embedding-runtime-and-vector-compatibility.md",
+            "runtime-dependency-and-extension-contracts.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "folder-revisions-and-layout-key-migration.md"
+          ]
+        },
+        {
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "language": "he",
+          "question": "מה צריך לבנות מחדש כשמשנים את ממד הווקטור?",
+          "id": 49,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "current-head-checks-at-retrieval-boundaries.md",
+            "embedding-runtime-and-vector-compatibility.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "lancedb-document-and-chunk-schema.md",
+          "language": "en",
+          "question": "What belongs in document rows versus searchable text or visual chunk rows?",
+          "id": 50,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "lancedb-document-and-chunk-schema.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "current-head-checks-at-retrieval-boundaries.md"
+          ]
+        },
+        {
+          "source": "lancedb-document-and-chunk-schema.md",
+          "language": "he",
+          "question": "מה נשמר ברשומות מסמכים לעומת רשומות קטעי טקסט או תמונה?",
+          "id": 51,
+          "rank_in_five": null,
+          "returned_sources": [
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "text-pdf-image-and-ocr-ingestion.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md"
+          ]
+        },
+        {
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "language": "en",
+          "question": "What is the difference between keyword, semantic and hybrid retrieval scopes?",
+          "id": 52,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "retrieval-modes-ranking-and-scopes.md",
+            "keyword-search-diagnostics-for-imported-guides.md",
+            "neighbor-discovery-budgets-and-link-coverage.md",
+            "configuration-dependency-and-secret-boundaries.md",
+            "visual-similarity-versus-textual-answer-support.md"
+          ]
+        },
+        {
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "language": "he",
+          "question": "מה ההבדל בין חיפוש מילות מפתח, חיפוש סמנטי וחיפוש משולב?",
+          "id": 53,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "retrieval-modes-ranking-and-scopes.md",
+            "keyword-search-diagnostics-for-imported-guides.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "neighbor-discovery-budgets-and-link-coverage.md"
+          ]
+        },
+        {
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "language": "en",
+          "question": "Can a visually similar picture be labeled as a direct textual answer?",
+          "id": 54,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "jev-answerability-labels-and-safeguards.md",
+            "text-pdf-image-and-ocr-ingestion.md"
+          ]
+        },
+        {
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "language": "he",
+          "question": "האם תמונה דומה מבחינה חזותית יכולה לקבל תווית של תשובה טקסטואלית ישירה?",
+          "id": 55,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "text-pdf-image-and-ocr-ingestion.md"
+          ]
+        },
+        {
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "language": "en",
+          "question": "How are direct, partial, related and uncertain answerability judgments distinguished?",
+          "id": 56,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "jev-answerability-labels-and-safeguards.md",
+            "visual-similarity-versus-textual-answer-support.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "language": "he",
+          "question": "איך מבדילים בין שיפוטי מענה ישיר, חלקי, קשור ולא ודאי?",
+          "id": 57,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "relationships-deduplication-and-link-evidence.md",
+            "jev-answerability-labels-and-safeguards.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "resumable-upload-state-machine.md",
+            "bulk-zip-exact-versions-and-filename-collisions.md"
+          ]
+        },
+        {
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "language": "en",
+          "question": "What provenance and labels are needed to evaluate saved Jev predictions offline?",
+          "id": 58,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "quality-corpus-json-schema-and-offline-scoring.md",
+            "capacity-and-independent-quality-evaluation-plan.md",
+            "jev-answerability-labels-and-safeguards.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "regression-test-map-and-current-evidence.md"
+          ]
+        },
+        {
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "language": "he",
+          "question": "אילו מקורות ותוויות נדרשים להערכת תחזיות Jev שמורות ללא חיבור לשירות?",
+          "id": 59,
+          "rank_in_five": null,
+          "returned_sources": [
+            "jev-answerability-labels-and-safeguards.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "configuration-dependency-and-secret-boundaries.md",
+            "launch-modes-and-single-owner-checklist.md",
+            "relationships-deduplication-and-link-evidence.md"
+          ]
+        },
+        {
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "language": "en",
+          "question": "What evidence is still required before claiming capacity for one hundred thousand documents?",
+          "id": 60,
+          "rank_in_five": 5,
+          "returned_sources": [
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "full-selective-reset-and-recovery-contract.md",
+            "capacity-and-independent-quality-evaluation-plan.md"
+          ]
+        },
+        {
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "language": "he",
+          "question": "אילו ראיות עדיין נדרשות לפני שטוענים לתמיכה במאה אלף מסמכים?",
+          "id": 61,
+          "rank_in_five": null,
+          "returned_sources": [
+            "jev-answerability-labels-and-safeguards.md",
+            "safe-document-updates-and-conflict-handling.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md"
+          ]
+        },
+        {
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "language": "en",
+          "question": "Which work is excluded from the published synthetic performance measurements?",
+          "id": 62,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "index-maintenance-vector-dimensions-and-migration.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "capacity-and-independent-quality-evaluation-plan.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md"
+          ]
+        },
+        {
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "language": "he",
+          "question": "איזו עבודה לא נכללת במדידות הביצועים הסינתטיות שפורסמו?",
+          "id": 63,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "performance-measurement-exclusions-and-reproducibility.md",
+            "isolated-live-runtime-checks-without-library-pollution.md",
+            "ocr-aliases-and-project-identity-policy.md",
+            "bounded-taxonomy-preparation-and-scale-limits.md",
+            "capacity-and-independent-quality-evaluation-plan.md"
+          ]
+        },
+        {
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "language": "en",
+          "question": "Can the stdio and HTTP servers own the same data directory simultaneously?",
+          "id": 64,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "concurrency-and-safe-publication.md",
+            "launch-modes-and-single-owner-checklist.md",
+            "isolated-live-runtime-checks-without-library-pollution.md",
+            "data-ownership-and-system-flow.md",
+            "deletion-boundaries-backup-and-restore.md"
+          ]
+        },
+        {
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "language": "he",
+          "question": "האם שרת stdio ושרת HTTP יכולים להחזיק באותה תיקיית נתונים בו זמנית?",
+          "id": 65,
+          "rank_in_five": null,
+          "returned_sources": [
+            "concurrency-and-safe-publication.md",
+            "data-ownership-and-system-flow.md",
+            "ranged-download-integrity-procedure.md",
+            "original-bytes-and-version-history.md",
+            "visual-handbook-and-media-index.md"
+          ]
+        },
+        {
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "language": "en",
+          "question": "How are hostile HTML originals and remote resources restricted in the reader?",
+          "id": 66,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "local-security-and-content-rendering-boundaries.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "text-pdf-image-and-ocr-ingestion.md",
+            "original-bytes-and-version-history.md"
+          ]
+        },
+        {
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "language": "he",
+          "question": "איך מגבילים קובצי HTML זדוניים ומשאבים מרוחקים בתצוגת המסמך?",
+          "id": 67,
+          "rank_in_five": 2,
+          "returned_sources": [
+            "preview-history-gfm-and-pdf-behavior.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "files-folders-filtering-and-sorting.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "safe-document-updates-and-conflict-handling.md"
+          ]
+        },
+        {
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "language": "en",
+          "question": "Where should API secrets be configured without entering the library or repository?",
+          "id": 68,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "configuration-dependency-and-secret-boundaries.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "repository-document-refresh-receipts-and-provenance.md",
+            "concurrency-and-safe-publication.md",
+            "manual-folder-corrections-and-durable-overrides.md"
+          ]
+        },
+        {
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "language": "he",
+          "question": "איפה מגדירים סודות API בלי להכניס אותם לספרייה או למאגר הקוד?",
+          "id": 69,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "configuration-dependency-and-secret-boundaries.md",
+            "ingestion-lifecycle-and-processing-states.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "bulk-zip-exact-versions-and-filename-collisions.md"
+          ]
+        },
+        {
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "language": "en",
+          "question": "How are content card previews loaded and cached within text and image budgets?",
+          "id": 70,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md"
+          ]
+        },
+        {
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "language": "he",
+          "question": "איך תצוגות מקדימות של כרטיסים נטענות ונשמרות במטמון במסגרת מגבלות טקסט ותמונה?",
+          "id": 71,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "local-security-and-content-rendering-boundaries.md"
+          ]
+        },
+        {
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "language": "en",
+          "question": "How do canvas overview zoom levels and saved manual positions work?",
+          "id": 72,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "canvas-overview-reading-and-saved-positions.md",
+            "desktop-pane-constraints-and-responsive-behavior.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "visual-handbook-and-media-index.md",
+            "evidence-ids-provenance-and-current-head-rules.md"
+          ]
+        },
+        {
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "language": "he",
+          "question": "איך עובדים רמות הזום במפה ומיקומים ידניים שמורים?",
+          "id": 73,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "rebuild-checkpoints-and-interruption-replay-trace.md",
+            "visual-handbook-and-media-index.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "folder-revisions-and-layout-key-migration.md"
+          ]
+        },
+        {
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "language": "en",
+          "question": "Which keyboard shortcuts open quick look and avoid hijacking focused controls?",
+          "id": 74,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "keyboard-shortcuts-focus-and-accessibility.md",
+            "preview-history-gfm-and-pdf-behavior.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "desktop-pane-constraints-and-responsive-behavior.md"
+          ]
+        },
+        {
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "language": "he",
+          "question": "אילו קיצורי מקלדת פותחים מבט מהיר בלי להפריע לפקדים שבמיקוד?",
+          "id": 75,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "keyboard-shortcuts-focus-and-accessibility.md",
+            "bulk-selection-range-anchors-and-guarded-actions.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "folder-revisions-and-layout-key-migration.md",
+            "canvas-overview-reading-and-saved-positions.md"
+          ]
+        },
+        {
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "language": "en",
+          "question": "Does switching between List, Cards and Canvas rerun a submitted search?",
+          "id": 76,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "shared-search-state-and-presentation-invalidation.md",
+            "canvas-overview-reading-and-saved-positions.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "keyboard-shortcuts-focus-and-accessibility.md",
+            "visual-handbook-and-media-index.md"
+          ]
+        },
+        {
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "language": "he",
+          "question": "האם מעבר בין רשימה, כרטיסים ומפה מריץ שוב את החיפוש שנשלח?",
+          "id": 77,
+          "rank_in_five": 3,
+          "returned_sources": [
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "evidence-ids-provenance-and-current-head-rules.md",
+            "shared-search-state-and-presentation-invalidation.md",
+            "relationship-acceptance-and-stale-evidence-checklist.md",
+            "preview-history-gfm-and-pdf-behavior.md"
+          ]
+        },
+        {
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "language": "en",
+          "question": "How can I preview an old version, a Markdown table or a specific PDF page?",
+          "id": 78,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "preview-history-gfm-and-pdf-behavior.md",
+            "visual-handbook-and-media-index.md",
+            "text-pdf-image-and-ocr-ingestion.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "lazy-content-cards-cache-and-text-budgets.md"
+          ]
+        },
+        {
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "language": "he",
+          "question": "איך מציגים גרסה ישנה, טבלת Markdown או עמוד PDF מסוים?",
+          "id": 79,
+          "rank_in_five": 1,
+          "returned_sources": [
+            "preview-history-gfm-and-pdf-behavior.md",
+            "lazy-content-cards-cache-and-text-budgets.md",
+            "pdf-first-page-rendering-pipeline-and-failure-states.md",
+            "local-security-and-content-rendering-boundaries.md",
+            "visual-handbook-and-media-index.md"
+          ]
+        }
+      ]
+    }
+  },
+  "indexing_seconds": 24.23440179199679,
+  "documents": 54,
+  "chunks": 343,
+  "float32_queries_on_int8": {
+    "semantic": {
+      "summary": {
+        "en": {
+          "top1": 0,
+          "top3": 0,
+          "total": 40
+        },
+        "he": {
+          "top1": 0,
+          "top3": 0,
+          "total": 40
+        }
+      },
+      "seconds": 6.029918541957159,
+      "cases": [
+        {
+          "source": "ranged-download-integrity-procedure.md",
+          "language": "en",
+          "question": "How do I verify the version, offsets and checksum while downloading a file in ranges?",
+          "id": 0,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ranged-download-integrity-procedure.md",
+          "language": "he",
+          "question": "איך מאמתים גרסה, היסטים וחתימת קובץ בהורדה בחלקים?",
+          "id": 1,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "language": "en",
+          "question": "What prevents a retried upload request from creating an extra version?",
+          "id": 2,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "language": "he",
+          "question": "מה מונע יצירת גרסה נוספת כשמנסים שוב אותה בקשת העלאה?",
+          "id": 3,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "language": "en",
+          "question": "How should an update detect that someone else already changed the current document?",
+          "id": 4,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "language": "he",
+          "question": "איך עדכון מזהה שמישהו כבר שינה את הגרסה הנוכחית?",
+          "id": 5,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "resumable-upload-state-machine.md",
+          "language": "en",
+          "question": "How can a partially uploaded file resume after the server restarts?",
+          "id": 6,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "resumable-upload-state-machine.md",
+          "language": "he",
+          "question": "איך ממשיכים העלאה חלקית אחרי הפעלה מחדש של השרת?",
+          "id": 7,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "language": "en",
+          "question": "Does ZIP export preserve the selected versions when two files have identical names?",
+          "id": 8,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "language": "he",
+          "question": "האם ייצוא ZIP שומר על הגרסאות שנבחרו כששמות הקבצים זהים?",
+          "id": 9,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "original-bytes-and-version-history.md",
+          "language": "en",
+          "question": "Where are original bytes and earlier versions kept?",
+          "id": 10,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "original-bytes-and-version-history.md",
+          "language": "he",
+          "question": "איפה נשמרים הבתים המקוריים והגרסאות הקודמות?",
+          "id": 11,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "language": "en",
+          "question": "What must be backed up, and does deleting a document remove its old versions?",
+          "id": 12,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "language": "he",
+          "question": "מה צריך לגבות והאם מחיקת מסמך מסירה גם גרסאות ישנות?",
+          "id": 13,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "language": "en",
+          "question": "How does startup recovery reconcile stored files with a missing or stale search index?",
+          "id": 14,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "language": "he",
+          "question": "איך שחזור בעת ההפעלה מתאם קבצים שמורים עם אינדקס חיפוש חסר או מיושן?",
+          "id": 15,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "language": "en",
+          "question": "What happens if metadata publication is interrupted between its multiple steps?",
+          "id": 16,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "language": "he",
+          "question": "מה קורה כשפרסום מטא נתונים נקטע בין שלבי העדכון?",
+          "id": 17,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "language": "en",
+          "question": "How does an interrupted organization rebuild resume its checkpointed work?",
+          "id": 18,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "language": "he",
+          "question": "איך בנייה מחדש של ארגון המסמכים ממשיכה מנקודת ביקורת לאחר הפרעה?",
+          "id": 19,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "language": "en",
+          "question": "How do selective resets differ when clearing folders, links, or both?",
+          "id": 20,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "language": "he",
+          "question": "מה ההבדל בין איפוס תיקיות, קישורים או שניהם?",
+          "id": 21,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "language": "en",
+          "question": "Do manual folder corrections survive automatic organization and restarts?",
+          "id": 22,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "language": "he",
+          "question": "האם תיקוני תיקיות ידניים נשמרים אחרי ארגון אוטומטי והפעלה מחדש?",
+          "id": 23,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "concurrency-and-safe-publication.md",
+          "language": "en",
+          "question": "How are searches protected from partially published document versions during ingestion?",
+          "id": 24,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "concurrency-and-safe-publication.md",
+          "language": "he",
+          "question": "איך מגינים על חיפושים מפני גרסאות שפורסמו חלקית בזמן קליטה?",
+          "id": 25,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "language": "en",
+          "question": "When must current versions be rechecked before returning search evidence?",
+          "id": 26,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "language": "he",
+          "question": "מתי צריך לבדוק שוב את הגרסה הנוכחית לפני החזרת ראיות חיפוש?",
+          "id": 27,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "language": "en",
+          "question": "How do passage identifiers record page provenance and endpoint versions?",
+          "id": 28,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "language": "he",
+          "question": "איך מזהי קטעים מתעדים מקורות בעמודים וגרסאות מסמכים?",
+          "id": 29,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "language": "en",
+          "question": "Which checks reject a relationship whose evidence has become stale?",
+          "id": 30,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "language": "he",
+          "question": "אילו בדיקות דוחות קשר שהראיות שלו התיישנו?",
+          "id": 31,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "language": "en",
+          "question": "How are exact duplicates distinguished from evidence-backed related documents?",
+          "id": 32,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "language": "he",
+          "question": "איך מבדילים בין כפילויות מדויקות למסמכים קשורים המבוססים על ראיות?",
+          "id": 33,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "language": "en",
+          "question": "Does the neighbor search guarantee discovery of every valid relationship?",
+          "id": 34,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "language": "he",
+          "question": "האם חיפוש השכנים מבטיח גילוי של כל קשר תקף?",
+          "id": 35,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "language": "en",
+          "question": "How are project identities separated from subject topics during organization?",
+          "id": 36,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "language": "he",
+          "question": "איך מבדילים בין זהות פרויקט לנושא בתהליך ארגון מסמכים?",
+          "id": 37,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "language": "en",
+          "question": "How should OCR spelling mistakes and aliases affect project identity decisions?",
+          "id": 38,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "language": "he",
+          "question": "איך שגיאות כתיב של OCR וכינויים משפיעים על זיהוי פרויקט?",
+          "id": 39,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "language": "en",
+          "question": "Which limits bound taxonomy preparation, and what scalability is still unproven?",
+          "id": 40,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "language": "he",
+          "question": "אילו מגבלות תוחמות הכנת טקסונומיה ואיזו יכולת גדילה עדיין לא נבדקה?",
+          "id": 41,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "language": "en",
+          "question": "How are text, scanned PDF pages and native images ingested for retrieval?",
+          "id": 42,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "language": "he",
+          "question": "איך קולטים טקסט, עמודי PDF סרוקים ותמונות לצורך חיפוש?",
+          "id": 43,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "language": "en",
+          "question": "What do queued, processing, indexed, skipped and failed mean during ingestion?",
+          "id": 44,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "language": "he",
+          "question": "מה המשמעות של ממתין, בעיבוד, מאונדקס, דולג ונכשל בזמן קליטה?",
+          "id": 45,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "language": "en",
+          "question": "Which dimensions, prefixes and devices define embedding compatibility?",
+          "id": 46,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "language": "he",
+          "question": "אילו ממדים, קידומות והתקנים קובעים תאימות של וקטורי הטמעה?",
+          "id": 47,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "language": "en",
+          "question": "What must be rebuilt when changing the vector dimension?",
+          "id": 48,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "language": "he",
+          "question": "מה צריך לבנות מחדש כשמשנים את ממד הווקטור?",
+          "id": 49,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "lancedb-document-and-chunk-schema.md",
+          "language": "en",
+          "question": "What belongs in document rows versus searchable text or visual chunk rows?",
+          "id": 50,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "lancedb-document-and-chunk-schema.md",
+          "language": "he",
+          "question": "מה נשמר ברשומות מסמכים לעומת רשומות קטעי טקסט או תמונה?",
+          "id": 51,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "language": "en",
+          "question": "What is the difference between keyword, semantic and hybrid retrieval scopes?",
+          "id": 52,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "language": "he",
+          "question": "מה ההבדל בין חיפוש מילות מפתח, חיפוש סמנטי וחיפוש משולב?",
+          "id": 53,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "language": "en",
+          "question": "Can a visually similar picture be labeled as a direct textual answer?",
+          "id": 54,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "language": "he",
+          "question": "האם תמונה דומה מבחינה חזותית יכולה לקבל תווית של תשובה טקסטואלית ישירה?",
+          "id": 55,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "language": "en",
+          "question": "How are direct, partial, related and uncertain answerability judgments distinguished?",
+          "id": 56,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "language": "he",
+          "question": "איך מבדילים בין שיפוטי מענה ישיר, חלקי, קשור ולא ודאי?",
+          "id": 57,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "language": "en",
+          "question": "What provenance and labels are needed to evaluate saved Jev predictions offline?",
+          "id": 58,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "language": "he",
+          "question": "אילו מקורות ותוויות נדרשים להערכת תחזיות Jev שמורות ללא חיבור לשירות?",
+          "id": 59,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "language": "en",
+          "question": "What evidence is still required before claiming capacity for one hundred thousand documents?",
+          "id": 60,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "language": "he",
+          "question": "אילו ראיות עדיין נדרשות לפני שטוענים לתמיכה במאה אלף מסמכים?",
+          "id": 61,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "language": "en",
+          "question": "Which work is excluded from the published synthetic performance measurements?",
+          "id": 62,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "language": "he",
+          "question": "איזו עבודה לא נכללת במדידות הביצועים הסינתטיות שפורסמו?",
+          "id": 63,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "language": "en",
+          "question": "Can the stdio and HTTP servers own the same data directory simultaneously?",
+          "id": 64,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "language": "he",
+          "question": "האם שרת stdio ושרת HTTP יכולים להחזיק באותה תיקיית נתונים בו זמנית?",
+          "id": 65,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "language": "en",
+          "question": "How are hostile HTML originals and remote resources restricted in the reader?",
+          "id": 66,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "language": "he",
+          "question": "איך מגבילים קובצי HTML זדוניים ומשאבים מרוחקים בתצוגת המסמך?",
+          "id": 67,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "language": "en",
+          "question": "Where should API secrets be configured without entering the library or repository?",
+          "id": 68,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "language": "he",
+          "question": "איפה מגדירים סודות API בלי להכניס אותם לספרייה או למאגר הקוד?",
+          "id": 69,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "language": "en",
+          "question": "How are content card previews loaded and cached within text and image budgets?",
+          "id": 70,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "language": "he",
+          "question": "איך תצוגות מקדימות של כרטיסים נטענות ונשמרות במטמון במסגרת מגבלות טקסט ותמונה?",
+          "id": 71,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "language": "en",
+          "question": "How do canvas overview zoom levels and saved manual positions work?",
+          "id": 72,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "language": "he",
+          "question": "איך עובדים רמות הזום במפה ומיקומים ידניים שמורים?",
+          "id": 73,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "language": "en",
+          "question": "Which keyboard shortcuts open quick look and avoid hijacking focused controls?",
+          "id": 74,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "language": "he",
+          "question": "אילו קיצורי מקלדת פותחים מבט מהיר בלי להפריע לפקדים שבמיקוד?",
+          "id": 75,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "language": "en",
+          "question": "Does switching between List, Cards and Canvas rerun a submitted search?",
+          "id": 76,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "language": "he",
+          "question": "האם מעבר בין רשימה, כרטיסים ומפה מריץ שוב את החיפוש שנשלח?",
+          "id": 77,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "language": "en",
+          "question": "How can I preview an old version, a Markdown table or a specific PDF page?",
+          "id": 78,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "language": "he",
+          "question": "איך מציגים גרסה ישנה, טבלת Markdown או עמוד PDF מסוים?",
+          "id": 79,
+          "rank_in_five": null,
+          "returned_sources": []
+        }
+      ]
+    },
+    "hybrid": {
+      "summary": {
+        "en": {
+          "top1": 0,
+          "top3": 0,
+          "total": 40
+        },
+        "he": {
+          "top1": 0,
+          "top3": 0,
+          "total": 40
+        }
+      },
+      "seconds": 5.84421387501061,
+      "cases": [
+        {
+          "source": "ranged-download-integrity-procedure.md",
+          "language": "en",
+          "question": "How do I verify the version, offsets and checksum while downloading a file in ranges?",
+          "id": 0,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ranged-download-integrity-procedure.md",
+          "language": "he",
+          "question": "איך מאמתים גרסה, היסטים וחתימת קובץ בהורדה בחלקים?",
+          "id": 1,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "language": "en",
+          "question": "What prevents a retried upload request from creating an extra version?",
+          "id": 2,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "request-identities-and-idempotent-version-commits.md",
+          "language": "he",
+          "question": "מה מונע יצירת גרסה נוספת כשמנסים שוב אותה בקשת העלאה?",
+          "id": 3,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "language": "en",
+          "question": "How should an update detect that someone else already changed the current document?",
+          "id": 4,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "safe-document-updates-and-conflict-handling.md",
+          "language": "he",
+          "question": "איך עדכון מזהה שמישהו כבר שינה את הגרסה הנוכחית?",
+          "id": 5,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "resumable-upload-state-machine.md",
+          "language": "en",
+          "question": "How can a partially uploaded file resume after the server restarts?",
+          "id": 6,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "resumable-upload-state-machine.md",
+          "language": "he",
+          "question": "איך ממשיכים העלאה חלקית אחרי הפעלה מחדש של השרת?",
+          "id": 7,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "language": "en",
+          "question": "Does ZIP export preserve the selected versions when two files have identical names?",
+          "id": 8,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "bulk-zip-exact-versions-and-filename-collisions.md",
+          "language": "he",
+          "question": "האם ייצוא ZIP שומר על הגרסאות שנבחרו כששמות הקבצים זהים?",
+          "id": 9,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "original-bytes-and-version-history.md",
+          "language": "en",
+          "question": "Where are original bytes and earlier versions kept?",
+          "id": 10,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "original-bytes-and-version-history.md",
+          "language": "he",
+          "question": "איפה נשמרים הבתים המקוריים והגרסאות הקודמות?",
+          "id": 11,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "language": "en",
+          "question": "What must be backed up, and does deleting a document remove its old versions?",
+          "id": 12,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "deletion-boundaries-backup-and-restore.md",
+          "language": "he",
+          "question": "מה צריך לגבות והאם מחיקת מסמך מסירה גם גרסאות ישנות?",
+          "id": 13,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "language": "en",
+          "question": "How does startup recovery reconcile stored files with a missing or stale search index?",
+          "id": 14,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "startup-reconciliation-and-recovery-runbook.md",
+          "language": "he",
+          "question": "איך שחזור בעת ההפעלה מתאם קבצים שמורים עם אינדקס חיפוש חסר או מיושן?",
+          "id": 15,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "language": "en",
+          "question": "What happens if metadata publication is interrupted between its multiple steps?",
+          "id": 16,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "atomic-metadata-transactions-failure-matrix.md",
+          "language": "he",
+          "question": "מה קורה כשפרסום מטא נתונים נקטע בין שלבי העדכון?",
+          "id": 17,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "language": "en",
+          "question": "How does an interrupted organization rebuild resume its checkpointed work?",
+          "id": 18,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "rebuild-checkpoints-and-interruption-replay-trace.md",
+          "language": "he",
+          "question": "איך בנייה מחדש של ארגון המסמכים ממשיכה מנקודת ביקורת לאחר הפרעה?",
+          "id": 19,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "language": "en",
+          "question": "How do selective resets differ when clearing folders, links, or both?",
+          "id": 20,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "full-selective-reset-and-recovery-contract.md",
+          "language": "he",
+          "question": "מה ההבדל בין איפוס תיקיות, קישורים או שניהם?",
+          "id": 21,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "language": "en",
+          "question": "Do manual folder corrections survive automatic organization and restarts?",
+          "id": 22,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "manual-folder-corrections-and-durable-overrides.md",
+          "language": "he",
+          "question": "האם תיקוני תיקיות ידניים נשמרים אחרי ארגון אוטומטי והפעלה מחדש?",
+          "id": 23,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "concurrency-and-safe-publication.md",
+          "language": "en",
+          "question": "How are searches protected from partially published document versions during ingestion?",
+          "id": 24,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "concurrency-and-safe-publication.md",
+          "language": "he",
+          "question": "איך מגינים על חיפושים מפני גרסאות שפורסמו חלקית בזמן קליטה?",
+          "id": 25,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "language": "en",
+          "question": "When must current versions be rechecked before returning search evidence?",
+          "id": 26,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "current-head-checks-at-retrieval-boundaries.md",
+          "language": "he",
+          "question": "מתי צריך לבדוק שוב את הגרסה הנוכחית לפני החזרת ראיות חיפוש?",
+          "id": 27,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "language": "en",
+          "question": "How do passage identifiers record page provenance and endpoint versions?",
+          "id": 28,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "evidence-ids-provenance-and-current-head-rules.md",
+          "language": "he",
+          "question": "איך מזהי קטעים מתעדים מקורות בעמודים וגרסאות מסמכים?",
+          "id": 29,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "language": "en",
+          "question": "Which checks reject a relationship whose evidence has become stale?",
+          "id": 30,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "relationship-acceptance-and-stale-evidence-checklist.md",
+          "language": "he",
+          "question": "אילו בדיקות דוחות קשר שהראיות שלו התיישנו?",
+          "id": 31,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "language": "en",
+          "question": "How are exact duplicates distinguished from evidence-backed related documents?",
+          "id": 32,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "relationships-deduplication-and-link-evidence.md",
+          "language": "he",
+          "question": "איך מבדילים בין כפילויות מדויקות למסמכים קשורים המבוססים על ראיות?",
+          "id": 33,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "language": "en",
+          "question": "Does the neighbor search guarantee discovery of every valid relationship?",
+          "id": 34,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "neighbor-discovery-budgets-and-link-coverage.md",
+          "language": "he",
+          "question": "האם חיפוש השכנים מבטיח גילוי של כל קשר תקף?",
+          "id": 35,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "language": "en",
+          "question": "How are project identities separated from subject topics during organization?",
+          "id": 36,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "project-subject-taxonomy-and-candidate-cohesion.md",
+          "language": "he",
+          "question": "איך מבדילים בין זהות פרויקט לנושא בתהליך ארגון מסמכים?",
+          "id": 37,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "language": "en",
+          "question": "How should OCR spelling mistakes and aliases affect project identity decisions?",
+          "id": 38,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ocr-aliases-and-project-identity-policy.md",
+          "language": "he",
+          "question": "איך שגיאות כתיב של OCR וכינויים משפיעים על זיהוי פרויקט?",
+          "id": 39,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "language": "en",
+          "question": "Which limits bound taxonomy preparation, and what scalability is still unproven?",
+          "id": 40,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "bounded-taxonomy-preparation-and-scale-limits.md",
+          "language": "he",
+          "question": "אילו מגבלות תוחמות הכנת טקסונומיה ואיזו יכולת גדילה עדיין לא נבדקה?",
+          "id": 41,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "language": "en",
+          "question": "How are text, scanned PDF pages and native images ingested for retrieval?",
+          "id": 42,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "text-pdf-image-and-ocr-ingestion.md",
+          "language": "he",
+          "question": "איך קולטים טקסט, עמודי PDF סרוקים ותמונות לצורך חיפוש?",
+          "id": 43,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "language": "en",
+          "question": "What do queued, processing, indexed, skipped and failed mean during ingestion?",
+          "id": 44,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "ingestion-lifecycle-and-processing-states.md",
+          "language": "he",
+          "question": "מה המשמעות של ממתין, בעיבוד, מאונדקס, דולג ונכשל בזמן קליטה?",
+          "id": 45,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "language": "en",
+          "question": "Which dimensions, prefixes and devices define embedding compatibility?",
+          "id": 46,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "embedding-runtime-and-vector-compatibility.md",
+          "language": "he",
+          "question": "אילו ממדים, קידומות והתקנים קובעים תאימות של וקטורי הטמעה?",
+          "id": 47,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "language": "en",
+          "question": "What must be rebuilt when changing the vector dimension?",
+          "id": 48,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "index-maintenance-vector-dimensions-and-migration.md",
+          "language": "he",
+          "question": "מה צריך לבנות מחדש כשמשנים את ממד הווקטור?",
+          "id": 49,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "lancedb-document-and-chunk-schema.md",
+          "language": "en",
+          "question": "What belongs in document rows versus searchable text or visual chunk rows?",
+          "id": 50,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "lancedb-document-and-chunk-schema.md",
+          "language": "he",
+          "question": "מה נשמר ברשומות מסמכים לעומת רשומות קטעי טקסט או תמונה?",
+          "id": 51,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "language": "en",
+          "question": "What is the difference between keyword, semantic and hybrid retrieval scopes?",
+          "id": 52,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "retrieval-modes-ranking-and-scopes.md",
+          "language": "he",
+          "question": "מה ההבדל בין חיפוש מילות מפתח, חיפוש סמנטי וחיפוש משולב?",
+          "id": 53,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "language": "en",
+          "question": "Can a visually similar picture be labeled as a direct textual answer?",
+          "id": 54,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "visual-similarity-versus-textual-answer-support.md",
+          "language": "he",
+          "question": "האם תמונה דומה מבחינה חזותית יכולה לקבל תווית של תשובה טקסטואלית ישירה?",
+          "id": 55,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "language": "en",
+          "question": "How are direct, partial, related and uncertain answerability judgments distinguished?",
+          "id": 56,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "jev-answerability-labels-and-safeguards.md",
+          "language": "he",
+          "question": "איך מבדילים בין שיפוטי מענה ישיר, חלקי, קשור ולא ודאי?",
+          "id": 57,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "language": "en",
+          "question": "What provenance and labels are needed to evaluate saved Jev predictions offline?",
+          "id": 58,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "quality-corpus-json-schema-and-offline-scoring.md",
+          "language": "he",
+          "question": "אילו מקורות ותוויות נדרשים להערכת תחזיות Jev שמורות ללא חיבור לשירות?",
+          "id": 59,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "language": "en",
+          "question": "What evidence is still required before claiming capacity for one hundred thousand documents?",
+          "id": 60,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "capacity-and-independent-quality-evaluation-plan.md",
+          "language": "he",
+          "question": "אילו ראיות עדיין נדרשות לפני שטוענים לתמיכה במאה אלף מסמכים?",
+          "id": 61,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "language": "en",
+          "question": "Which work is excluded from the published synthetic performance measurements?",
+          "id": 62,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "performance-measurement-exclusions-and-reproducibility.md",
+          "language": "he",
+          "question": "איזו עבודה לא נכללת במדידות הביצועים הסינתטיות שפורסמו?",
+          "id": 63,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "language": "en",
+          "question": "Can the stdio and HTTP servers own the same data directory simultaneously?",
+          "id": 64,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "launch-modes-and-single-owner-checklist.md",
+          "language": "he",
+          "question": "האם שרת stdio ושרת HTTP יכולים להחזיק באותה תיקיית נתונים בו זמנית?",
+          "id": 65,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "language": "en",
+          "question": "How are hostile HTML originals and remote resources restricted in the reader?",
+          "id": 66,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "local-security-and-content-rendering-boundaries.md",
+          "language": "he",
+          "question": "איך מגבילים קובצי HTML זדוניים ומשאבים מרוחקים בתצוגת המסמך?",
+          "id": 67,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "language": "en",
+          "question": "Where should API secrets be configured without entering the library or repository?",
+          "id": 68,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "configuration-dependency-and-secret-boundaries.md",
+          "language": "he",
+          "question": "איפה מגדירים סודות API בלי להכניס אותם לספרייה או למאגר הקוד?",
+          "id": 69,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "language": "en",
+          "question": "How are content card previews loaded and cached within text and image budgets?",
+          "id": 70,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "lazy-content-cards-cache-and-text-budgets.md",
+          "language": "he",
+          "question": "איך תצוגות מקדימות של כרטיסים נטענות ונשמרות במטמון במסגרת מגבלות טקסט ותמונה?",
+          "id": 71,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "language": "en",
+          "question": "How do canvas overview zoom levels and saved manual positions work?",
+          "id": 72,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "canvas-overview-reading-and-saved-positions.md",
+          "language": "he",
+          "question": "איך עובדים רמות הזום במפה ומיקומים ידניים שמורים?",
+          "id": 73,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "language": "en",
+          "question": "Which keyboard shortcuts open quick look and avoid hijacking focused controls?",
+          "id": 74,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "keyboard-shortcuts-focus-and-accessibility.md",
+          "language": "he",
+          "question": "אילו קיצורי מקלדת פותחים מבט מהיר בלי להפריע לפקדים שבמיקוד?",
+          "id": 75,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "language": "en",
+          "question": "Does switching between List, Cards and Canvas rerun a submitted search?",
+          "id": 76,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "shared-search-state-and-presentation-invalidation.md",
+          "language": "he",
+          "question": "האם מעבר בין רשימה, כרטיסים ומפה מריץ שוב את החיפוש שנשלח?",
+          "id": 77,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "language": "en",
+          "question": "How can I preview an old version, a Markdown table or a specific PDF page?",
+          "id": 78,
+          "rank_in_five": null,
+          "returned_sources": []
+        },
+        {
+          "source": "preview-history-gfm-and-pdf-behavior.md",
+          "language": "he",
+          "question": "איך מציגים גרסה ישנה, טבלת Markdown או עמוד PDF מסוים?",
+          "id": 79,
+          "rank_in_five": null,
+          "returned_sources": []
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Generated regression labels; not independent held-out user labels.",
+    "Existing 90% threshold is unchanged. No default runtime change or private index access.",
+    "Input set is English technical guides, not a diverse production library."
+  ]
+}

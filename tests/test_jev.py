@@ -1,11 +1,11 @@
-"""Exercise the actual official SDK request/response contract with mocked HTTP."""
+"""Historical passage-policy contracts; new production proof contracts are in test_jev_proof.py."""
 
 import json
 
 import httpx2
 from typesafe_sdk import RetryPolicy, TypeSafeClient
 
-from app.jev import judge_matches, organize_document
+from app.jev import _judge_matches_legacy as judge_matches, _organize_document_legacy as organize_document
 
 
 def sdk_client(choices=None, nouls=None):

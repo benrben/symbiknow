@@ -13,19 +13,8 @@ import {
   type NodeProps,
   type ReactFlowInstance,
 } from "@xyflow/react";
-import {
-  Folder,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  Image as ImageIcon,
-  MousePointer2,
-  Hand,
-  Minus,
-  Plus,
-  SlidersHorizontal,
-  Undo2,
-} from "lucide-react";
+import { Folder, ChevronDown, ChevronRight, Image as ImageIcon, MousePointer2, Hand, Minus, Plus, Scan, SlidersHorizontal, Undo2 } from "lucide-react";
+import { DocumentIcon as FileText } from "./KnowledgeIcons";
 import "@xyflow/react/dist/style.css";
 import {
   title,
@@ -389,6 +378,7 @@ export default function LibraryCanvas(p: {
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null),
     [nodes, setNodes] = useState<Node[]>([]);
   const fitted = useRef("");
+  const fitRevision = useRef(0);
   const focusGroup = useRef<(ids: string[]) => void>(() => {});
   const draggingNode = useRef(false);
   const matched = p.matchedIds || [];
@@ -766,10 +756,15 @@ export default function LibraryCanvas(p: {
   useEffect(() => {
     if (draggingNode.current) return;
     setNodes((previous) => {
-      const measured = new Map(previous.map((n) => [n.id, n.measured]));
+      const prior = new Map(previous.map((n) => [n.id, n]));
       return built.map((n) => ({
         ...n,
-        measured: measured.get(n.id),
+        // Old measurements must not pin a card to its pre-undo size.
+        measured:
+          prior.get(n.id)?.style?.height === n.style?.height &&
+          prior.get(n.id)?.style?.width === n.style?.width
+            ? prior.get(n.id)?.measured
+            : undefined,
         initialWidth: Number(n.style?.width),
         initialHeight: Number(n.style?.height),
       }));
@@ -989,10 +984,15 @@ export default function LibraryCanvas(p: {
     )
       return;
     const pending = pendingFit.current;
-    pendingFit.current = undefined;
-    const timer = requestAnimationFrame(() =>
-      fit(pending.ids || undefined, pending.reading),
-    );
+    const revision = fitRevision.current;
+    const timer = requestAnimationFrame(() => {
+      if (revision !== fitRevision.current || pendingFit.current !== pending)
+        return;
+      // A redraw may cancel this frame. Keep the request until it executes
+      // so selecting a card during a layout update still reaches reading scale.
+      pendingFit.current = undefined;
+      fit(pending.ids || undefined, pending.reading);
+    });
     return () => cancelAnimationFrame(timer);
   }, [nodes, overview, flow]);
 
@@ -1000,9 +1000,11 @@ export default function LibraryCanvas(p: {
     if (!flow || !nodes.length) return;
     const signature = p.search ? "search:" + p.searchKey : "browse";
     if (fitted.current === signature) return;
+    const revision = fitRevision.current;
     const timer = requestAnimationFrame(() => {
-      if (layout.viewport)
-        void flow.setViewport(layout.viewport, { duration: 0 });
+      if (revision !== fitRevision.current) return;
+      if (latestLayout.current.viewport)
+        void flow.setViewport(latestLayout.current.viewport, { duration: 0 });
       else if (p.search) fit(matched);
       else fit();
       fitted.current = signature;
@@ -1137,7 +1139,7 @@ export default function LibraryCanvas(p: {
         >
           <strong>
             {nodes.filter((n) => n.type === "folder").length} folder groups ·
-            Open a folder or Fit to read
+            Open a folder to read its documents
           </strong>
           <div>
             {nodes
@@ -1292,11 +1294,22 @@ export default function LibraryCanvas(p: {
             title="Undo arrangement"
             onClick={() => {
               const previous = undo || layout.previous!;
+              // A queued Arrange fit must not switch the restored layout back
+              // to overview after Undo has restored its detailed positions.
+              fitRevision.current += 1;
+              pendingFit.current = undefined;
+              latestViewport.current = previous.viewport;
+              if (previous.viewport)
+                void flow?.setViewport(previous.viewport, { duration: 0 });
               setLayout(previous);
               setOverview(previous.overview === true);
               save(key, previous);
               setUndo(undefined);
-              fitted.current = "";
+              fitted.current = previous.viewport
+                ? p.search
+                  ? "search:" + p.searchKey
+                  : "browse"
+                : "";
             }}
           >
             <Undo2 size={15} />
@@ -1345,10 +1358,10 @@ export default function LibraryCanvas(p: {
           Fit
         </button>
         {p.search ? (
-          <button onClick={() => fitSelection(matched)}>Fit results</button>
+          <button onClick={() => fitSelection(matched)}><Scan size={16} aria-hidden="true" /> Fit results</button>
         ) : p.selected ? (
           <button onClick={() => fitSelection([p.selected!])}>
-            Fit selection
+            <Scan size={16} aria-hidden="true" /> Fit selection
           </button>
         ) : null}
       </div>

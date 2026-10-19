@@ -135,8 +135,9 @@ async def main():
     ):
         schema = await mcp.list_tools()
         check(
-            "Exactly three MCP tools",
-            {t.name for t in schema.tools} == {"upload", "download", "search"},
+            "Exactly five MCP tools",
+            {t.name for t in schema.tools}
+            == {"upload", "download", "search", "upload_folder", "download_folder"},
         )
         if args.seed:
             manifest = {}

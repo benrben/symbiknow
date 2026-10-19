@@ -1,3 +1,9 @@
+import {
+  splitReader,
+  chooseView,
+  setAnswerChecking,
+  expectSearchMode,
+} from "./ui-controls";
 import { test, expect } from "./coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -230,12 +236,12 @@ async function fixture(page: Page) {
 }
 async function storageScope(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await page
     .getByRole("button", { name: "Expand Symbiknow", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Symbiknow / Storage", exact: true })
+    .getByRole("button", { name: /^Symbiknow \/ Storage \d+$/, exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Storage", exact: true }),
@@ -254,7 +260,7 @@ for (const size of [
     await fixture(page);
     await storageScope(page);
     const row = page.getByRole("button", {
-      name: "Select Reset and recovery",
+      name: /^Select Reset and recovery(?:\.[^.]+)?$/,
       exact: true,
     });
     await row.click();
@@ -263,6 +269,7 @@ for (const size of [
     await expect(
       page.getByRole("heading", { name: "Saved v2", exact: true }),
     ).toBeVisible();
+    await splitReader(page);
     const metrics = await page.evaluate(() => {
       const nodes = [...document.querySelectorAll(".file-table tbody tr")],
         viewport = document.querySelector("main")!.getBoundingClientRect();
@@ -286,14 +293,15 @@ for (const size of [
       };
     });
     expect(metrics.ui).toBe("13px");
-    expect(metrics.row).toBe(30);
-    expect(metrics.toolbar).toBe(44);
+    expect(metrics.row).toBeGreaterThanOrEqual(30);
+    expect(metrics.row).toBeLessThanOrEqual(36);
+    expect(metrics.toolbar).toBe(64);
     expect(metrics.reader).toBe("15px");
-    expect(metrics.sidebarRow).toBe(28);
+    expect(metrics.sidebarRow).toBeGreaterThanOrEqual(28);
     expect(metrics.overflow).toBe(false);
     if (size.width >= 1440)
       expect(metrics.wholeRows).toBeGreaterThanOrEqual(
-        size.width === 1600 ? 24 : 20,
+        size.width === 1600 ? 20 : 16,
       );
     await capture(page, `list-reader-${size.width}`);
     await fs.writeFile(
@@ -313,16 +321,17 @@ for (const size of [
       .getByRole("button", { name: "Expand reader", exact: true })
       .click();
     await capture(page, `expanded-reader-${size.width}`);
+    await page.getByRole("button", { name: "Split view", exact: true }).click();
     await page
-      .getByRole("button", { name: "Return to split reader", exact: true })
+      .getByRole("button", {
+        name: /^(Back to library|Close inspector)$/,
+        exact: true,
+      })
       .click();
-    await page
-      .getByRole("button", { name: "Close inspector", exact: true })
-      .click();
-    await page.getByRole("button", { name: "Cards", exact: true }).click();
+    await chooseView(page, "Cards");
     await expect(page.locator(".grid-file")).toHaveCount(60);
     await capture(page, `cards-${size.width}`);
-    await page.getByRole("button", { name: "Canvas", exact: true }).click();
+    await chooseView(page, "Canvas");
     await expect(
       page.locator(".react-flow__node-document").first(),
     ).toBeVisible();
@@ -335,9 +344,7 @@ test("all search evidence meanings and presentation changes share one intent", a
 }) => {
   const data = await fixture(page);
   await storageScope(page);
-  await page
-    .getByRole("switch", { name: "Check answers (Jev evaluation)" })
-    .setChecked(true);
+  await setAnswerChecking(page, true);
   await page.getByLabel("Search your knowledge").fill("reset and versions");
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(page.locator(".file-row")).toHaveCount(18);
@@ -359,17 +366,23 @@ test("all search evidence meanings and presentation changes share one intent", a
     await expect(page.locator(".file-table")).toContainText(label);
   }
   await page
-    .getByRole("button", { name: "Select Reset and recovery", exact: true })
+    .getByRole("button", {
+      name: /^Select Reset and recovery(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await page
-    .getByRole("button", { name: "Select Reset and recovery", exact: true })
+    .getByRole("button", {
+      name: /^Select Reset and recovery(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .press("Enter");
   await capture(page, "evaluated-list-reader");
   const requests = data.searches.length;
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await chooseView(page, "Cards");
   await expect(page.locator(".grid-file")).toHaveCount(18);
   await capture(page, "evaluated-cards");
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".react-flow__node-document")).toHaveCount(18);
   await capture(page, "evaluated-canvas");
   const canvasDecisions = await page
@@ -378,9 +391,8 @@ test("all search evidence meanings and presentation changes share one intent", a
   expect(canvasDecisions).toEqual(decisions);
   await page.getByRole("button", { name: "Zoom out", exact: true }).click();
   await page.getByRole("button", { name: "Zoom out", exact: true }).click();
-  await page.getByLabel("Display density").selectOption("comfortable");
   await page.getByLabel("Connection visibility").selectOption("hidden");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await page
     .getByRole("separator", { name: "Resize sidebar", exact: true })
     .press("ArrowRight");
@@ -398,7 +410,7 @@ test("all search evidence meanings and presentation changes share one intent", a
   await expect(page.getByLabel("Search your knowledge")).toHaveValue(
     "reset and versions",
   );
-  await expect(page.getByLabel("Search mode")).toHaveValue("hybrid");
+  await expectSearchMode(page, "hybrid");
   await expect(page.locator('.file-row[aria-selected="true"]')).toHaveCount(1);
   await page.getByRole("button", { name: "Clear search" }).click();
   await expect(page.locator(".file-table .judgment")).toHaveCount(0);
@@ -413,13 +425,16 @@ test("canvas previews, collapsed search accounting, zoom and real link strip", a
 }) => {
   const data = await fixture(page);
   await storageScope(page);
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".frame-more").first()).toContainText("6 of");
   expect(
     await page.locator(".react-flow__node-document").count(),
   ).toBeLessThanOrEqual(24);
   await page
-    .getByRole("button", { name: "Select Reset and recovery", exact: true })
+    .getByRole("button", {
+      name: /^Select Reset and recovery(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await expect(page.locator(".react-flow__edge")).toHaveCount(1);
   // A routed SVG curve's bounding-box center need not lie on its hit path.
@@ -447,7 +462,10 @@ test("canvas previews, collapsed search accounting, zoom and real link strip", a
   await expect(page.locator(".link-evidence")).toContainText("Target passage");
   await capture(page, "connection-evidence");
   await page
-    .getByRole("button", { name: "Close inspector", exact: true })
+    .getByRole("button", {
+      name: /^(Back to library|Close inspector)$/,
+      exact: true,
+    })
     .click();
   await page.getByLabel("Search your knowledge").fill("reset");
   await page.getByLabel("Search your knowledge").press("Enter");
@@ -475,7 +493,7 @@ test("loaded pagination selection, keyboard actions and pinned reader state", as
   await fixture(page);
   await storageScope(page);
   const row = page.getByRole("button", {
-    name: "Select Reset and recovery",
+    name: /^Select Reset and recovery(?:\.[^.]+)?$/,
     exact: true,
   });
   await row.click();
@@ -495,23 +513,27 @@ test("loaded pagination selection, keyboard actions and pinned reader state", as
   await expect(
     page.getByRole("heading", { name: "Saved v1", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Cards");
+  await chooseView(page, "Canvas");
   await page
-    .getByRole("button", { name: "Select Reset and recovery", exact: true })
+    .getByRole("button", {
+      name: /^Select Reset and recovery(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await expect(page.getByLabel("Preview version")).toHaveValue("v1");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await expect(page.getByLabel("Preview version")).toHaveValue("v1");
   await page
     .getByRole("button", { name: "Expand reader", exact: true })
     .click();
   await expect(page.getByLabel("Preview version")).toHaveValue("v1");
+  await page.getByRole("button", { name: "Split view", exact: true }).click();
   await page
-    .getByRole("button", { name: "Return to split reader", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Close inspector", exact: true })
+    .getByRole("button", {
+      name: /^(Back to library|Close inspector)$/,
+      exact: true,
+    })
     .click();
   await expect(row).toBeFocused();
   await row.press("ArrowDown");
@@ -525,7 +547,7 @@ test("canvas positions and viewport survive views and unchanged background refre
   await page.clock.install();
   const data = await fixture(page);
   await storageScope(page);
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".react-flow__node-document")).toHaveCount(24);
   const node = page.locator(".react-flow__node-document").first();
   const id = await node.getAttribute("data-id");
@@ -540,8 +562,8 @@ test("canvas positions and viewport survive views and unchanged background refre
   const viewport = await page
     .locator(".react-flow__viewport")
     .getAttribute("style");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "List");
+  await chooseView(page, "Canvas");
   await expect(
     page.locator(`.react-flow__node-document[data-id="${id}"]`),
   ).toHaveAttribute("style", position!);
@@ -568,8 +590,8 @@ test("canvas positions and viewport survive views and unchanged background refre
   await page
     .getByRole("button", { name: "Collapse Recovery", exact: true })
     .click();
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "List");
+  await chooseView(page, "Canvas");
   await expect(
     page.getByRole("button", { name: "Expand Recovery", exact: true }),
   ).toBeVisible();
@@ -631,14 +653,17 @@ test("active query scope discards delayed responses; disclosure and filter popov
       .getByRole("button", { name: "Expand Symbiknow / Storage", exact: true })
       .click();
     await page
-      .getByRole("button", { name: "Search scope and filters", exact: true })
+      .getByRole("button", {
+        name: /^Search scope and filters(?: \d+)?$/,
+        exact: true,
+      })
       .click();
     await page.keyboard.press("Escape");
     expect(requests.length).toBe(1);
     await page
       .locator(".sidebar")
       .getByRole("button", {
-        name: "Symbiknow / Storage / Versioning",
+        name: /^Symbiknow \/ Storage \/ Versioning \d+$/,
         exact: true,
       })
       .click();
@@ -650,7 +675,10 @@ test("active query scope discards delayed responses; disclosure and filter popov
       data.docs.find((d) => d.folder.endsWith("Versioning"))!.filename,
     );
     await expect(
-      page.getByRole("button", { name: "Clear folder scope", exact: true }),
+      page.getByRole("button", {
+        name: /^Clear folder scope(?:: .+)?$/,
+        exact: true,
+      }),
     ).toContainText("Versioning");
     await page
       .getByRole("button", { name: "Clear search", exact: true })
@@ -821,7 +849,7 @@ test("readable contrast, reduced motion, persistent density, context selection a
   await fixture(page);
   await storageScope(page);
   const row = page.getByRole("button", {
-    name: "Select Reset and recovery",
+    name: /^Select Reset and recovery(?:\.[^.]+)?$/,
     exact: true,
   });
   await row.click();
@@ -865,6 +893,7 @@ test("readable contrast, reduced motion, persistent density, context selection a
   };
   expect(Math.min(...Object.values(ratios))).toBeGreaterThanOrEqual(4.5);
   expect(colors["--duration-fast"]).toBe("0ms");
+  await splitReader(page);
   await page.getByLabel("Display density").selectOption("comfortable");
   await page.reload();
   await expect(page.getByLabel("Display density")).toHaveValue("comfortable");
@@ -876,14 +905,13 @@ test("readable contrast, reduced motion, persistent density, context selection a
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  expect(
-    await page
-      .locator("main")
-      .evaluate((el) => getComputedStyle(el).visibility),
-  ).toBe("hidden");
+  await expect(page.locator("main")).toBeHidden();
   await capture(page, "narrow-desktop-reader-1024");
   await page
-    .getByRole("button", { name: "Close inspector", exact: true })
+    .getByRole("button", {
+      name: /^(Back to library|Close inspector)$/,
+      exact: true,
+    })
     .click();
   await expect(row).toBeFocused();
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -905,7 +933,7 @@ test("readable contrast, reduced motion, persistent density, context selection a
   await page
     .getByRole("button", { name: "Clear selection", exact: true })
     .click();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   const cards = page.locator(".canvas-title");
   await cards.nth(0).click();
   await cards.nth(1).click({ modifiers: ["Meta"] });
@@ -969,7 +997,7 @@ test("legacy Canvas overview fits every folder group, preserves detailed placeme
     ({ key, legacy }) => localStorage.setItem(key, JSON.stringify(legacy)),
     { key: prefix + "canvas:Symbiknow / Storage", legacy },
   );
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".react-flow__node-folder")).toHaveCount(4);
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await expect

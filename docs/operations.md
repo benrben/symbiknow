@@ -42,6 +42,19 @@ Stop the owner and copy the complete configured data directory to a separate bac
 
 A derived-index repair must preserve committed originals and version histories. `recover_organization_filters` repairs filters from document rows; `maintain_index` performs LanceDB maintenance while the daemon is stopped. A hard-killed native commit or power loss can still require OCFL validation or restoration; the current checks do not establish enterprise durability.
 
+## Runtime and failed-index recovery
+
+Preserve an existing library's runtime settings. The example selects tested MPS INT8; CPU/CUDA require `SYMBIKNOW_TORCH_QUANTIZATION=none`. Revision, precision, dimensions and preprocessing must match `index/embedding-runtime.json` or an explicitly measured compatibility receipt. Do not remove a manifest to bypass an error. `docs/memory-runtime.md` documents defaults and resource limits.
+
+Index failures persist by version with exponential delays from 30 seconds to one hour. Permanent/configuration failures pause until corrected or explicitly retried. Retry indexing in the current-version inspector is guarded by the expected head and does not upload a new original. `GET /api/runtime` observes model ownership and initialized allocators without loading weights. GPU counters overlap process footprint.
+
+Retain `organization-rebuild.jsonl` along with its JSON checkpoint when backing up. Rebuilding outcomes append fsynced checkpoint-bound journal records; clearing still checkpoints in batches of 32. The worker ignores torn/obsolete journal tails on recovery. Manual snapshots and filter-publication markers avoid repeated full-table work on clean reads/startup. Unfiled and connection reviews are alternatives to a full grouping reset; their browser summary history is not an audit log.
+
 ## Source references
 
 `README.md`, `UI.md`, `app/server.py`, `app/storage.py`, `app/search.py`, `app/rebuild.py` and `tests/test_ui_api.py` define the operational behavior and regression coverage.
+
+## Folder transfer receipts and exports
+Folder MCP uploads preserve relative subfolders as manual assignments. Keep `temp/folder-uploads` with the durable library state: its UUID bindings and placement completion receipts prevent retries from duplicating files or undoing later manual moves. A stored file whose placement failed remains recoverable; retry the same request and bytes after the blocking organization job finishes. Individual upload receipts and original history remain authoritative for bytes.
+
+`temp/folder-exports` holds up to four ten-minute ZIP snapshots, each with at most 1,000 files / 1 GiB of original bytes. These are temporary copies, not additional library documents. Subsequent folder-download calls clean expired files. Clients must use the same transfer ID across ranges, verify the whole archive hash, and restart if it expired. Prefer a smaller subfolder when export limits are reached.

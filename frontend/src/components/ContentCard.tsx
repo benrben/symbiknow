@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { searchEvidence, passagePreview } from "../searchEvidence";
 import Markdown from "./Markdown";
+import { browseExcerpt } from "../browsePresentation";
 import { api, kind, type Doc, type CardPreview } from "../api";
-import { FileText, Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon } from "lucide-react";
+import { DocumentIcon as FileText } from "./KnowledgeIcons";
 // Version-keyed, bounded memory cache. No document text goes into localStorage.
 const previews = new Map<string, CardPreview>();
 export default function ContentCard({
@@ -71,10 +73,9 @@ export default function ContentCard({
     const cached = previews.get(key);
     if (cached) {
       setTable(cached.table);
-      setText(cached.evidence.find((e) => e.text)?.text || "");
-      setHeading(
-        cached.evidence.find((e) => e.text)?.provenance?.headings?.at(-1) || "",
-      );
+      const preview = browseExcerpt(cached.evidence);
+      setText(preview.text);
+      setHeading(preview.heading);
       setPending(false);
       return;
     }
@@ -89,10 +90,9 @@ export default function ContentCard({
           previews.delete(previews.keys().next().value!);
         previews.set(key, r);
         setTable(r.table);
-        setText(r.evidence.find((e) => e.text)?.text || "");
-        setHeading(
-          r.evidence.find((e) => e.text)?.provenance?.headings?.at(-1) || "",
-        );
+        const preview = browseExcerpt(r.evidence);
+        setText(preview.text);
+        setHeading(preview.heading);
       })
       .catch((e) => {
         if (e.name !== "AbortError") setFailed(true);

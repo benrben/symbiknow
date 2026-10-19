@@ -1,3 +1,9 @@
+import {
+  chooseView,
+  setSearchMode,
+  setAnswerChecking,
+  expectAnswerChecking,
+} from "./ui-controls";
 import { test, expect } from "./coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -13,14 +19,17 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(page.getByText("7 files", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page
-    .getByRole("button", { name: "Select storage-decisions", exact: true })
+    .getByRole("button", {
+      name: /^Select storage\-decisions(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .press("Enter");
   await expect(
     page.getByRole("heading", { name: "Keep every version" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await fs.mkdir(screenshots, { recursive: true });
   await page.screenshot({
@@ -78,15 +87,13 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
     page.getByRole("heading", { name: "Search results" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Canvas", exact: true }),
+    page.getByRole("button", { name: "Map", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("Folder canvas")).toBeVisible();
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await expect(page.locator(".results-list .file-row").first()).toBeVisible();
-  await expect(
-    page.getByRole("switch", { name: "Jev evaluation" }),
-  ).not.toBeChecked();
-  await page.getByRole("switch", { name: "Jev evaluation" }).click();
+  await expectAnswerChecking(page, false);
+  await setAnswerChecking(page);
   await expect(
     page.getByText("Supports answer", { exact: true }).first(),
   ).toBeVisible();
@@ -116,7 +123,7 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
   await page.screenshot({
     path: path.join(screenshots, "02-search-evidence-1280.png"),
   });
-  await page.getByRole("switch", { name: "Jev evaluation" }).click();
+  await setAnswerChecking(page);
   await expect(page.getByText("Supports answer", { exact: true })).toHaveCount(
     0,
   );
@@ -126,19 +133,22 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
         r.url().endsWith("/api/search") &&
         r.request().postDataJSON().mode === mode.toLowerCase(),
     );
-    await page.getByLabel("Search mode").selectOption(mode.toLowerCase());
+    await setSearchMode(page, mode.toLowerCase());
     await response;
   }
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(
     page.getByRole("heading", { name: "Search results" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear search" }).click();
   await expect(
-    page.getByRole("heading", { name: "All files", exact: true }),
+    page.getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Select storage-decisions", exact: true })
+    .getByRole("button", {
+      name: /^Select storage\-decisions(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await page.getByRole("tab", { name: "Versions", exact: true }).click();
   await page.getByRole("button", { name: /v2.*storage-decisions.md/ }).click();
@@ -162,7 +172,7 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
   await page.keyboard.press("Escape");
   await expect(page.getByLabel("Document inspector")).toHaveCount(0);
   await page.setViewportSize({ width: 1102, height: 808 });
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await page.reload();
   await expect(
     page.getByRole("button", { name: "List", exact: true }),
@@ -181,7 +191,7 @@ test("bulk uploads, explicit update, history bytes and unsupported file", async 
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   const payload = Buffer.from("Browser upload fixture\nOriginal bytes\n");
   await page.getByLabel("Upload files", { exact: true }).setInputFiles([
     { name: "browser-upload.txt", mimeType: "text/plain", buffer: payload },
@@ -217,7 +227,9 @@ test("bulk uploads, explicit update, history bytes and unsupported file", async 
   await page.getByRole("link", { name: "Download v1", exact: true }).click();
   const download = await ready;
   expect(await fs.readFile((await download.path())!)).toEqual(payload);
-  await page.getByRole("button", { name: "Close inspector" }).click();
+  await page
+    .getByRole("button", { name: /^(Back to library|Close inspector)$/ })
+    .click();
   await page.locator(".file-row").filter({ hasText: "unsupported" }).dblclick();
   await expect(
     page.getByText("This format has no browser preview.", { exact: false }),
@@ -228,7 +240,7 @@ test("obsolete search responses cannot replace current results", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   let released: () => void = () => {};
   await page.route("**/api/search", async (route) => {
     const data = route.request().postDataJSON();
@@ -263,7 +275,7 @@ test("HTML preview is sandboxed and cannot execute scripts or fetch remote asset
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   let external = 0;
   page.on("request", (r) => {
     if (r.url().startsWith("https://example.com")) external++;
@@ -286,6 +298,9 @@ test("HTML preview is sandboxed and cannot execute scripts or fetch remote asset
       .getByRole("heading", { name: "Safe content" }),
   ).toBeVisible();
   expect(external).toBe(0);
+  await page
+    .getByRole("button", { name: "Back to library", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "All files", exact: true }),
   ).toBeVisible();
@@ -295,11 +310,9 @@ test("search failure can retry the same query; Jev outage keeps retrieval usable
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  const evaluation = page.getByRole("switch", { name: "Jev evaluation" });
-  if ((await evaluation.getAttribute("aria-checked")) === "true")
-    await evaluation.click();
-  await expect(evaluation).toHaveAttribute("aria-checked", "false");
+  await chooseView(page, "List");
+  await setAnswerChecking(page, false);
+  await expectAnswerChecking(page, false);
   let fail = true;
   await page.route("**/api/search", async (route) => {
     if (fail) {
@@ -326,7 +339,7 @@ test("search failure can retry the same query; Jev outage keeps retrieval usable
     });
     await route.fulfill({ json: body });
   });
-  await page.getByRole("switch", { name: "Jev evaluation" }).click();
+  await setAnswerChecking(page);
   await expect(
     page.getByText(
       "Answer checking is unavailable. Retry, or turn off Check answers to browse related files.",
@@ -364,7 +377,9 @@ test("selective reset uses actual folder count and leaves unchecked grouping int
     links: true,
   });
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Jev activity" })).toContainText("Jev");
+  await expect(
+    page.getByRole("region", { name: "Jev activity" }),
+  ).toContainText("Rebuilding organization");
   await expect
     .poll(
       async () => {
@@ -435,7 +450,7 @@ test("dev proxy preserves same-origin uploads and rejects foreign origins", asyn
       }),
     )
     .toBe(true);
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await fs.mkdir(screenshots, { recursive: true });
   await page.screenshot({
@@ -447,7 +462,7 @@ test("delete options confirm, cancel, preserve folder documents and purge all do
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await page.getByLabel("Upload files", { exact: true }).setInputFiles({
     name: "delete-option.txt",
     mimeType: "text/plain",
@@ -539,8 +554,8 @@ test("query, verdicts and selection survive Files and Map switches", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByRole("switch", { name: "Jev evaluation" }).click();
+  await chooseView(page, "List");
+  await setAnswerChecking(page);
   await page.getByLabel("Search your knowledge").fill("keep every version");
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(page.locator(".results-list .file-row").first()).toBeVisible();
@@ -552,14 +567,14 @@ test("query, verdicts and selection survive Files and Map switches", async ({
   const verdicts = await page
     .locator(".results-list .judgment")
     .allTextContents();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.getByLabel("Folder canvas")).toBeVisible();
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(
-    page.getByRole("button", { name: "Canvas", exact: true }),
+    page.getByRole("button", { name: "Map", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("Folder canvas")).toBeVisible();
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   expect(
     await page
       .locator(".results-list .file-description > strong")
@@ -597,7 +612,7 @@ test("terminal indexing outcomes replace queued upload notices", async ({
     await route.fulfill({ json: detail });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await page.getByLabel("Upload files", { exact: true }).setInputFiles([
     {
       name: "notice-empty.txt",
@@ -655,7 +670,7 @@ test("PDF preview has open and download alternatives without an embedded viewer"
     }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await page.locator(".file-row").filter({ hasText: "preview" }).dblclick();
   await expect(
     page.getByText("PDF page preview unavailable.", {
@@ -796,10 +811,10 @@ test("scoped counts, representative cards, matched snippets and symmetric edge f
   await page.goto("/");
   await expect(page.getByText("2 files", { exact: true })).toBeVisible();
   const cardA = page.getByRole("button", {
-    name: "Select neutral-a",
+    name: /^Select neutral\-a(?:\.[^.]+)?$/,
     exact: true,
   });
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   const cardNode = cardA.locator(
     "xpath=ancestor::div[contains(@class, 'canvas-document')]",
   );
@@ -850,7 +865,7 @@ test("scoped counts, representative cards, matched snippets and symmetric edge f
   await page.getByLabel("Search your knowledge").fill("refund window");
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(
-    page.getByRole("button", { name: "Canvas", exact: true }),
+    page.getByRole("button", { name: "Map", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(cardNode).toContainText(
     "Refund requests are accepted within fourteen days",
@@ -864,10 +879,10 @@ for (const view of ["List", "Canvas"] as const) {
     page,
   }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: view, exact: true }).click();
+    await chooseView(page, view);
     await page
       .locator(".sidebar")
-      .getByRole("button", { name: "Research", exact: true })
+      .getByRole("button", { name: /^Research \d+$/, exact: true })
       .click();
     const input = page.getByLabel("Search your knowledge");
     await input.fill("keep every version");
@@ -887,10 +902,13 @@ for (const view of ["List", "Canvas"] as const) {
       page.getByRole("heading", { name: "Search results", exact: true }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: "Clear folder scope" }),
+      page.getByRole("button", { name: /^Clear folder scope(?:: .+)?$/ }),
     ).toContainText("Research");
     await expect(
-      page.getByRole("button", { name: view, exact: true }),
+      page.getByRole("button", {
+        name: view === "Canvas" ? "Map" : view,
+        exact: true,
+      }),
     ).toHaveAttribute("aria-pressed", "true");
     if (view === "List") await expect(page.locator(".file-row")).toHaveCount(2);
     else await expect(page.getByLabel("Folder canvas")).toBeVisible();
@@ -902,13 +920,15 @@ for (const view of ["List", "Canvas"] as const) {
     await page
       .getByRole("button", { name: "Clear search", exact: true })
       .click();
-    await page.getByRole("button", { name: "All files", exact: true }).click();
+    await page
+      .getByRole("button", { name: /^All files \d+$/, exact: true })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Search results", exact: true }),
     ).toHaveCount(0);
     await expect(input).toHaveValue("");
     await expect(
-      page.getByRole("button", { name: "Clear folder scope" }),
+      page.getByRole("button", { name: /^Clear folder scope(?:: .+)?$/ }),
     ).toHaveCount(0);
   });
 }

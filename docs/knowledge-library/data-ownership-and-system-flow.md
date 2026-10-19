@@ -15,7 +15,7 @@ Symbiknow is one Python application with a shared human interface and MCP endpoi
 A storage commit can succeed before indexing or organization finishes. A failed model call does not erase the original. Reindexing and resetting organization are different operations and do not create content versions.
 
 ## Design boundary
-Keep the three public MCP tools upload, download and search. UI-only browsing, moving and confirmations use the same owner through local routes. There is no second graph database or fallback embedding runtime. Backups and recovery must distinguish irreplaceable originals from reconstructable indexes and durable operational receipts.
+The five public MCP tools are upload, download, search, upload_folder and download_folder. UI-only browsing, moving and confirmations use the same owner through local routes. There is no second graph database or fallback embedding runtime. Backups and recovery must distinguish irreplaceable originals from reconstructable indexes and durable operational receipts.
 
 ## Source references
 - `app/server.py`
@@ -24,3 +24,6 @@ Keep the three public MCP tools upload, download and search. UI-only browsing, m
 - `docs/architecture.md`
 
 This guide summarizes the checked repository implementation; it is not a separately validated external specification.
+
+## Folder transfers
+Folder uploads reuse individual versioned original commits and durable manual assignments for relative subfolders. Folder downloads stream version-pinned original files into a bounded ZIP snapshot. `app/folder_transfer.py` coordinates these operations; the client supplies and receives actual bytes. Neither tool reads an arbitrary server-side directory path.

@@ -1,6 +1,6 @@
 # Symbiknow / Interface / Lazy content cards cache and text budgets
 
-Repository implementation guide. Snapshot: 13 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 
 ## Request boundary
 ContentCard observes visibility with IntersectionObserver and a preload margin. It requests representative current-version evidence rather than downloading every original body. The UI card endpoint returns at most two evidence rows with each text truncated to 1,600 characters.
@@ -21,6 +21,10 @@ Abort signals prevent obsolete requests publishing into a new card. Missing/fail
 
 ## Scope limit
 Lazy previews and bounded cards reduce a rendering cost. They do not prove browser/native memory for one hundred thousand originals, and they must preserve clear loaded-versus-scope counts when only a working subset is mounted.
+
+## Current loading boundaries
+
+Markdown rendering and the reader are separate lazy-loaded bundles. Browse excerpts prefer substantive source prose over introductory metadata; contextual UI titles may shorten a repeated folder project prefix without renaming originals. The readable map caps initially mounted samples, with Show more and explicit coverage. Its development-only 10,000-row fixture is a synthetic rendering check rather than a storage/model capacity result.
 
 ## Source references
 - `frontend/src/components/ContentCard.tsx`

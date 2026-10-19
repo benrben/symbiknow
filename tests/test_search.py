@@ -79,6 +79,7 @@ def test_retrieval_and_evidence(corpus, mode):
     matches = find_documents(root, "cat", mode=mode, embedder=embedder)
     assert matches[0]["document_id"] == cat["document_id"]
     assert matches[0]["version"] == "v1"
+    assert matches[0]["created_at"] == cat["created_at"]
     assert "cat rests" in matches[0]["evidence"][0]["text"]
     assert matches[0]["evidence"][0]["basis"] == "text"
 
@@ -213,7 +214,8 @@ def test_organization_candidates_reserve_same_project_topic_despite_global_distr
     evidence = document_evidence(root, source["document_id"], "v1")
     candidates = search.organization_neighbors(root, source, evidence)
     assert candidates[0]["document_id"] == peer["document_id"]
-    with sdk_client({"link_0": "related", "source_0": "p0", "target_0": "p0"}) as sdk:
+    pairs = {f"pair_{n}_{s}_{t}": "none" for n in range(1, 6) for s in range(12) for t in range(12)}
+    with sdk_client(pairs | {"pair_1_0_0": "related"}) as sdk:
         decision = organize_document(source, evidence, candidates, client=sdk)
     assert [link["document_id"] for link in decision["links"]] == [peer["document_id"]]
     audits = decision["link_evaluations"]
@@ -221,5 +223,5 @@ def test_organization_candidates_reserve_same_project_topic_despite_global_distr
     assert audits[0]["accepted"] and audits[0]["document_id"] == peer["document_id"]
     assert all(not item["accepted"] and item["relation"] == "none" for item in audits[1:])
     # Retrieval does not assert a link when the provider declines it.
-    with sdk_client() as sdk:
+    with sdk_client(pairs) as sdk:
         assert organize_document(source, evidence, candidates, client=sdk)["links"] == []

@@ -1,6 +1,6 @@
 # Symbiknow / Organization / Rebuild checkpoints and interruption replay trace
 
-Repository implementation guide. Snapshot: 12 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 
 ## Captured work
 A durable reset job records IDs before entering clearing. Selected folder/group/manual and link fields are cleared according to the request. A set of cleared identities avoids linear membership checks as progress grows.
@@ -16,6 +16,10 @@ The synthetic 1,000-record profile reduced serialized bytes and JSON serializati
 
 ## Regression
 The batch-checkpoint test simulates an interruption and verifies replay covers only uncheckpointed work while preserving fields excluded from reset. Smaller recovery/concurrency tests remain separate evidence.
+
+## Rebuilding progress journal
+
+The 32-item boundary above applies to clearing. During rebuilding, a captured work roster and cursor avoid regenerating remaining work each item. Compact outcomes append to `organization-rebuild.jsonl` and are fsynced; full snapshots occur at phase/taxonomy boundaries. Checkpoint IDs prevent an old journal tail from contaminating a replaced snapshot. Recovery ignores an interrupted final append. Evidence profiles spill to job-local scratch one document at a time; taxonomy preparation still scales with the captured corpus.
 
 ## Source references
 - `app/rebuild.py`

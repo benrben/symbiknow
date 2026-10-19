@@ -1,6 +1,6 @@
 # Symbiknow / Organization / Project subject taxonomy and candidate cohesion
 
-Repository implementation guide. Snapshot: 12 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 ## Goal
 Documents should share a meaningful project → subject folder rather than one folder per filename or boilerplate document type. A policy, rejected proposal, runbook and acceptance check can belong to one subject while retaining their distinct content and versions.
 
@@ -15,6 +15,10 @@ Uncertain OCR possessives/casing can resolve against established non-OCR project
 
 ## Limits and evaluation
 Feature, centroid and label-sample budgets bound candidate preparation. They do not prove project/topic accuracy across languages, synonyms or 100,000 originals. Evaluate pairwise co-membership, singleton rate and shuffled-ingestion stability with an independently labeled corpus; exact Finance versus Billing strings are not sufficient quality metrics.
+
+## Current membership evidence
+
+Project ownership uses a separate bounded selection of owner-bearing passages and canonical identity candidates. This can inspect up to 128 sampled source chunks without passing them all to the provider. Topic and link evidence retain smaller budgets. A source filename or import path is corroboration, not an assignment command. Canonical owner selection and generated topic placement remain separate from manual overrides.
 
 ## Source references
 - `app/organization.py`

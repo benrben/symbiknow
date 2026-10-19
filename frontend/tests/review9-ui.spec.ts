@@ -1,3 +1,4 @@
+import { chooseView, setAnswerChecking } from "./ui-controls";
 import { test, expect } from "./coverage";
 import type { Page } from "@playwright/test";
 import fs from "node:fs/promises";
@@ -117,9 +118,11 @@ async function fixture(page: Page, count = 40) {
     }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByRole("button", { name: "Symbiknow", exact: true }).click();
-  await page.getByRole("switch", { name: "Jev evaluation" }).setChecked(true);
+  await chooseView(page, "List");
+  await page
+    .getByRole("button", { name: /^Symbiknow \d+$/, exact: true })
+    .click();
+  await setAnswerChecking(page, true);
   await page.getByLabel("Search your knowledge").fill(question);
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(page.locator(".file-row")).toHaveCount(count);
@@ -141,7 +144,7 @@ for (const size of [
       await page.setViewportSize(size);
       const data = await fixture(page);
       if (inspector) await page.locator(".file-select").first().press("Enter");
-      await page.getByRole("button", { name: "Canvas", exact: true }).click();
+      await chooseView(page, "Canvas");
       await page
         .getByRole("button", { name: "Fit results", exact: true })
         .click();
@@ -207,12 +210,12 @@ test("all decision rectangles remain disjoint at detail and summary scales, evid
   page,
 }) => {
   const data = await fixture(page, 10);
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".react-flow__node-document")).toHaveCount(10);
   const records = [];
   // Seed only viewport; automatic packing and selected identities remain real.
   for (const zoom of [1, 0.75, 0.46]) {
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await chooseView(page, "List");
     await page.evaluate((z) => {
       const key = Object.keys(localStorage).find((k) =>
         k.includes("canvas:Symbiknow|search:"),
@@ -222,7 +225,7 @@ test("all decision rectangles remain disjoint at detail and summary scales, evid
       v.viewport = { x: 0, y: 60, zoom: z };
       localStorage.setItem(key, JSON.stringify(v));
     }, zoom);
-    await page.getByRole("button", { name: "Canvas", exact: true }).click();
+    await chooseView(page, "Canvas");
     await expect(page.locator(".canvas-document")).toHaveCount(10);
     await expect(page.locator(".zoom-percent")).toHaveText(
       `${Math.round(zoom * 100)}%`,
@@ -262,19 +265,25 @@ test("all decision rectangles remain disjoint at detail and summary scales, evid
       }),
     );
     if (zoom === 1) {
-      const excerpt = await page.locator('.canvas-document[data-document-id="review9-0"] .content-card').evaluate(el => {
-        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-        let text;
-        while ((text = walker.nextNode())) {
-          const index = (text.textContent || "").indexOf("without Git");
-          if (index < 0) continue;
-          const range = document.createRange();
-          range.setStart(text, index); range.setEnd(text, index + 11);
-          const phrase = range.getBoundingClientRect(), preview = el.getBoundingClientRect();
-          return phrase.top >= preview.top && phrase.bottom <= preview.bottom + 1;
-        }
-        return false;
-      });
+      const excerpt = await page
+        .locator('.canvas-document[data-document-id="review9-0"] .content-card')
+        .evaluate((el) => {
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          let text;
+          while ((text = walker.nextNode())) {
+            const index = (text.textContent || "").indexOf("without Git");
+            if (index < 0) continue;
+            const range = document.createRange();
+            range.setStart(text, index);
+            range.setEnd(text, index + 11);
+            const phrase = range.getBoundingClientRect(),
+              preview = el.getBoundingClientRect();
+            return (
+              phrase.top >= preview.top && phrase.bottom <= preview.bottom + 1
+            );
+          }
+          return false;
+        });
       expect(excerpt).toBe(true);
     }
     expect(g).toHaveLength(10);
@@ -294,7 +303,7 @@ test("long original evidence actions in every view use accepted window and versi
   const data = await fixture(page, 10);
   const expected = data.docs[0].evidence[1].evidence_id;
   for (const view of ["List", "Cards", "Canvas"]) {
-    await page.getByRole("button", { name: view, exact: true }).click();
+    await chooseView(page, view);
     if (view === "Canvas")
       await page.locator(".canvas-title").first().press("Enter");
     else await page.locator(".file-select").first().press("Enter");
@@ -316,10 +325,13 @@ test("long original evidence actions in every view use accepted window and versi
     );
     await snap(page, `evidence-${view}`);
     await page
-      .getByRole("button", { name: "Close inspector", exact: true })
+      .getByRole("button", {
+        name: /^(Back to library|Close inspector)$/,
+        exact: true,
+      })
       .click();
   }
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await chooseView(page, "Cards");
   await expect(
     page.locator(".grid-file").first().locator(".card-prose"),
   ).toContainText(

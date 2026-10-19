@@ -383,67 +383,79 @@ def thumbnail(doc_id, version):
     )
 
 
+def _cached_preview(path, doc_id, version, *, page=False):
+    """Copy a bounded preview while holding the same lock as eviction/deletion."""
+    with server.write_lock:
+        info_path = path.with_suffix(".json")
+        if not path.exists() or (page and not info_path.exists()):
+            return None
+        storage.read_metadata(server.DATA_DIR, doc_id, version)
+        headers = {
+            "Cache-Control": "private, max-age=86400",
+            "X-Content-Type-Options": "nosniff",
+        }
+        if page:
+            headers["X-PDF-Page-Count"] = str(json.loads(info_path.read_text())["pages"])
+        content = path.read_bytes()
+        from .previews import prune
+
+        prune(path.parent, path)
+        return Response(content, media_type="image/jpeg", headers=headers)
+
+
 def _thumbnail(doc_id, version):
     storage._validate_id(doc_id)
     storage._validate_version(version)
     if not version:
         raise ValueError("Thumbnail must pin a version")
     path = server.DATA_DIR / "temp" / "thumbnails" / f"{doc_id}-{version}.jpg"
-    if not path.exists():
-        from PIL import Image
+    cached = _cached_preview(path, doc_id, version)
+    if cached is not None:
+        return cached
+    from PIL import Image
 
-        metadata = storage.read_metadata(server.DATA_DIR, doc_id, version)
-        if metadata["mime_type"] == "application/pdf" and metadata["size"] > 32 * 1024**2:
-            raise ValueError("PDF is too large for a thumbnail; open or download the original")
-        with storage.verified_file(server.DATA_DIR, doc_id, version) as (source_path, metadata):
-            if metadata["mime_type"] == "application/pdf":
-                import subprocess
-                import sys
+    metadata = storage.read_metadata(server.DATA_DIR, doc_id, version)
+    if metadata["mime_type"] == "application/pdf" and metadata["size"] > 32 * 1024**2:
+        raise ValueError("PDF is too large for a thumbnail; open or download the original")
+    with storage.verified_file(server.DATA_DIR, doc_id, version) as (source_path, metadata):
+        if metadata["mime_type"] == "application/pdf":
+            import subprocess
+            import sys
 
-                try:
-                    content = subprocess.run(
-                        [
-                            sys.executable,
-                            str(Path(__file__).with_name("pdf_thumbnail.py")),
-                            str(source_path),
-                        ],
-                        check=True,
-                        timeout=20,
-                        capture_output=True,
-                    ).stdout
-                except (subprocess.SubprocessError, OSError):
-                    raise ValueError(
-                        "PDF thumbnail unavailable; open or download the original"
-                    ) from None
-                source_input = BytesIO(content)
-            else:
-                source_input = source_path
-            with Image.open(source_input) as source:
-                source.thumbnail((264, 340))
-                output = BytesIO()
-                rgb = source.convert("RGB")
-                try:
-                    rgb.save(output, format="JPEG", quality=85)
-                finally:
-                    rgb.close()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(".tmp")
-        with server.write_lock:
-            if storage.current_version(server.DATA_DIR, doc_id) is None:
-                raise FileNotFoundError("Document deleted during preview")
-            temporary.write_bytes(output.getvalue())
-            temporary.replace(path)
+            try:
+                content = subprocess.run(
+                    [
+                        sys.executable,
+                        str(Path(__file__).with_name("pdf_thumbnail.py")),
+                        str(source_path),
+                    ],
+                    check=True,
+                    timeout=20,
+                    capture_output=True,
+                ).stdout
+            except (subprocess.SubprocessError, OSError):
+                raise ValueError(
+                    "PDF thumbnail unavailable; open or download the original"
+                ) from None
+            source_input = BytesIO(content)
+        else:
+            source_input = source_path
+        with Image.open(source_input) as source:
+            source.thumbnail((264, 340))
+            output = BytesIO()
+            rgb = source.convert("RGB")
+            try:
+                rgb.save(output, format="JPEG", quality=85)
+            finally:
+                rgb.close()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".tmp")
     with server.write_lock:
-        storage.read_metadata(server.DATA_DIR, doc_id, version)
-        content = path.read_bytes()
-        from .previews import prune
-
-        prune(path.parent, path)
-    return Response(
-        content,
-        media_type="image/jpeg",
-        headers={"Cache-Control": "private, max-age=86400", "X-Content-Type-Options": "nosniff"},
-    )
+        if storage.current_version(server.DATA_DIR, doc_id) is None:
+            raise FileNotFoundError("Document deleted during preview")
+        temporary.write_bytes(output.getvalue())
+        temporary.replace(path)
+        return _cached_preview(path, doc_id, version)
 
 
 def pdf_page(doc_id, version, page_number):
@@ -470,59 +482,46 @@ def _pdf_page(doc_id, version, page_number):
     page_number = int(page_number)
     if not 1 <= page_number <= 10000:
         raise ValueError("PDF page is out of range")
+    path = server.DATA_DIR / "temp" / "thumbnails" / f"{doc_id}-{version}-page-{page_number}.jpg"
+    info_path = path.with_suffix(".json")
+    cached = _cached_preview(path, doc_id, version, page=True)
+    if cached is not None:
+        return cached
     metadata = storage.read_metadata(server.DATA_DIR, doc_id, version)
     if metadata["mime_type"] != "application/pdf":
         raise ValueError("Page preview requires a PDF")
     if metadata.get("size", 0) > 32 * 1024 * 1024:
         raise ValueError("PDF is too large for an inline preview; open or download the original")
-    path = server.DATA_DIR / "temp" / "thumbnails" / f"{doc_id}-{version}-page-{page_number}.jpg"
-    info_path = path.with_suffix(".json")
-    if not path.exists() or not info_path.exists():
-        with storage.verified_file(server.DATA_DIR, doc_id, version) as (input_path, _):
-            try:
-                result = subprocess.run(
-                    [
-                        sys.executable,
-                        str(Path(__file__).with_name("pdf_thumbnail.py")),
-                        str(input_path),
-                        str(page_number),
-                        "1400",
-                    ],
-                    check=True,
-                    timeout=20,
-                    capture_output=True,
-                )
-                page_count = int(result.stderr.decode().rsplit("pages:", 1)[1].strip())
-            except (subprocess.SubprocessError, OSError, ValueError, IndexError):
-                raise ValueError(
-                    "PDF page unavailable or out of range; open the original"
-                ) from None
-        with server.write_lock:
-            if storage.current_version(server.DATA_DIR, doc_id) is None:
-                raise FileNotFoundError("Document deleted during preview")
-            path.parent.mkdir(parents=True, exist_ok=True)
-            staging = path.with_suffix(".tmp")
-            staging.write_bytes(result.stdout)
-            staging.replace(path)
-            info_staging = info_path.with_suffix(".json.tmp")
-            info_staging.write_text(json.dumps({"pages": page_count}))
-            info_staging.replace(info_path)
-    page_count = json.loads(info_path.read_text())["pages"]
+    with storage.verified_file(server.DATA_DIR, doc_id, version) as (input_path, _):
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).with_name("pdf_thumbnail.py")),
+                    str(input_path),
+                    str(page_number),
+                    "1400",
+                ],
+                check=True,
+                timeout=20,
+                capture_output=True,
+            )
+            page_count = int(result.stderr.decode().rsplit("pages:", 1)[1].strip())
+        except (subprocess.SubprocessError, OSError, ValueError, IndexError):
+            raise ValueError(
+                "PDF page unavailable or out of range; open the original"
+            ) from None
     with server.write_lock:
-        storage.read_metadata(server.DATA_DIR, doc_id, version)
-        content = path.read_bytes()
-        from .previews import prune
-
-        prune(path.parent, path)
-    return Response(
-        content,
-        media_type="image/jpeg",
-        headers={
-            "Cache-Control": "private, max-age=86400",
-            "X-Content-Type-Options": "nosniff",
-            "X-PDF-Page-Count": str(page_count),
-        },
-    )
+        if storage.current_version(server.DATA_DIR, doc_id) is None:
+            raise FileNotFoundError("Document deleted during preview")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        staging = path.with_suffix(".tmp")
+        staging.write_bytes(result.stdout)
+        staging.replace(path)
+        info_staging = info_path.with_suffix(".json.tmp")
+        info_staging.write_text(json.dumps({"pages": page_count}))
+        info_staging.replace(info_path)
+        return _cached_preview(path, doc_id, version, page=True)
 
 
 def card(doc_id, version):

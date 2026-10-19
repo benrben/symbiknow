@@ -1,6 +1,6 @@
 # Symbiknow / Interface / PDF first page rendering pipeline and failure states
 
-Repository implementation guide. Snapshot: 13 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 
 ## Derived renderer
 The thumbnail route requires an explicit version and validates the document ID. A cache entry uses document ID plus version. For PDFs, the route reads the exact original, applies a thirty-two-MiB input cap and invokes a separate PDFium subprocess with a twenty-second timeout.
@@ -16,6 +16,10 @@ The HTTP thumbnail is privately cached, while original responses use no-store. A
 
 ## Runtime limit
 The application removes the blank native-iframe path. Target native-desktop viewer qualification and full-document inline PDF requirements remain separate decisions.
+
+## Shared bounded preview owner
+
+Thumbnail and page jobs share `PreviewJobs`: two worker threads, ten total in-flight identities (two running plus eight waiting), and identical requests share one Future. Canceling a waiter does not release a running renderer slot. The default disk budget is 256 MiB with a seven-day age limit; version/page keys and deletion checks remain required. Shutdown drains running work before releasing ownership. Originals use verified disk leases rather than repeated whole-file byte materialization.
 
 ## Source references
 - `app/pdf_thumbnail.py`

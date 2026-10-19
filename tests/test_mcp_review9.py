@@ -139,7 +139,13 @@ def test_actual_sdk_pages_and_bad_cursors(tmp_path, monkeypatch):
     async def exercise():
         async with Client(server.mcp) as c:
             schema = await c.list_tools()
-            assert {t.name for t in schema.tools} == {"upload", "download", "search"}
+            assert {t.name for t in schema.tools} == {
+                "upload",
+                "download",
+                "search",
+                "upload_folder",
+                "download_folder",
+            }
             props = next(t for t in schema.tools if t.name == "search").input_schema["properties"]
             assert props["detail"]["default"] == "compact" and "continuation" in props
             args = dict(query="Q", limit=100, folder="Project", mode="keyword")
@@ -275,7 +281,7 @@ def test_candidate_head_work_does_not_hold_index_lock(tmp_path, monkeypatch):
 
     monkeypatch.setattr(storage, "current_version", head)
     with ThreadPoolExecutor(max_workers=2) as pool:
-        future = pool.submit(server.search, "cat", mode="keyword", limit=8)
+        future = pool.submit(server.search, "cat", mode="keyword", limit=8, detail="full")
         assert entered.wait(3)
 
         def other():
@@ -312,22 +318,23 @@ def test_possible_correction_is_not_quality_success():
 
 
 def test_cached_end_to_end_finishes_while_cold_provider_is_blocked(tmp_path, monkeypatch):
+    from app import jev_proof
+    from test_jev_proof import sdk
+
     monkeypatch.setattr(server, "DATA_DIR", tmp_path)
     monkeypatch.setattr(server, "STORAGE_ONLY", False)
-    monkeypatch.setattr(jev, "_JUDGMENTS", jev.OrderedDict())
+    monkeypatch.setattr(jev_proof, "_CACHE", jev_proof.ByteLRU())
     populate(tmp_path, 8)
     entered, release, done = threading.Event(), threading.Event(), threading.Event()
 
-    def provider(query, matches):
-        if query == "cat history":
+    def provider(state, questions, client=None):
+        if state["user_question"] == "cat history":
             entered.set()
             assert release.wait(5)
-        return {
-            "status": "evaluated",
-            "matches": [dict(m, jev={"status": "evaluated", "label": "related"}) for m in matches],
-        }
+        with sdk({"coverage": "missing"}) as client:
+            return client.system_one(state=state, questions=questions)
 
-    monkeypatch.setattr(jev, "_judge_matches", provider)
+    monkeypatch.setattr(jev, "_call", provider)
     server.search("cat", mode="keyword", limit=8, evaluate=True)
     with ThreadPoolExecutor(max_workers=2) as pool:
         cold = pool.submit(server.search, "cat history", mode="keyword", limit=8, evaluate=True)

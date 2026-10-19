@@ -14,13 +14,16 @@ import pytest
 from mcp import Client
 from typesafe_sdk import RetryPolicy, TypeSafeClient
 
-from app import ingest, jev, search, server, storage
+from app import ingest, jev, jev_proof, search, server, storage
 from app.search_projection import COMPACT_BYTES, project_search
 from test_jev import match
+from test_jev_proof import sdk
 from test_search import FixtureEmbedder
 
 
 def replay(label="partial", confidence=0.39, support=0.94, conflict=0.01, applicability=0.95):
+    """Replay the historical passage policy; production joint-proof tests use sdk()."""
+
     def respond(request):
         body = json.loads(request.content)
         answers = {}
@@ -65,7 +68,7 @@ def replay(label="partial", confidence=0.39, support=0.94, conflict=0.01, applic
         transport=httpx2.MockTransport(respond),
         retry=RetryPolicy(max_retries=0),
     ) as client:
-        return jev.judge_matches(
+        return jev._judge_matches_legacy(
             "Does switching views or panning change search?", [match()], client=client
         )["matches"][0]["jev"]
 
@@ -122,21 +125,20 @@ def test_direct_without_support_and_conflicting_primitives_are_conservative():
 
 
 def test_cached_hit_finishes_before_unrelated_blocked_provider(monkeypatch):
-    monkeypatch.setattr(jev, "_JUDGMENTS", jev.OrderedDict())
+    monkeypatch.setattr(jev_proof, "_CACHE", jev_proof.ByteLRU())
     entered, release, hit_done = threading.Event(), threading.Event(), threading.Event()
     calls = []
 
-    def provider(query, matches):
+    def provider(state, questions, client=None):
+        query = state["user_question"]
         calls.append(query)
         if query == "B":
             entered.set()
             assert release.wait(5)
-        return {
-            "status": "evaluated",
-            "matches": [dict(m, jev={"status": "evaluated", "label": "direct"}) for m in matches],
-        }
+        with sdk() as client:
+            return client.system_one(state=state, questions=questions)
 
-    monkeypatch.setattr(jev, "_judge_matches", provider)
+    monkeypatch.setattr(jev, "_call", provider)
     jev.judge_matches("A", [match()], cache_namespace="isolation")
     with ThreadPoolExecutor(max_workers=2) as pool:
         slow = pool.submit(jev.judge_matches, "B", [match("other")], cache_namespace="isolation")
@@ -158,17 +160,15 @@ def test_cached_hit_finishes_before_unrelated_blocked_provider(monkeypatch):
 
 
 def test_unrelated_misses_can_enter_provider_concurrently(monkeypatch):
-    monkeypatch.setattr(jev, "_JUDGMENTS", jev.OrderedDict())
+    monkeypatch.setattr(jev_proof, "_CACHE", jev_proof.ByteLRU())
     entered = threading.Barrier(3)
 
-    def provider(query, matches):
+    def provider(state, questions, client=None):
         entered.wait(timeout=5)
-        return {
-            "status": "evaluated",
-            "matches": [dict(m, jev={"status": "evaluated"}) for m in matches],
-        }
+        with sdk() as client:
+            return client.system_one(state=state, questions=questions)
 
-    monkeypatch.setattr(jev, "_judge_matches", provider)
+    monkeypatch.setattr(jev, "_call", provider)
     with ThreadPoolExecutor(max_workers=2) as pool:
         a = pool.submit(jev.judge_matches, "A", [match()], cache_namespace="parallel")
         b = pool.submit(jev.judge_matches, "B", [match()], cache_namespace="parallel")
@@ -177,44 +177,41 @@ def test_unrelated_misses_can_enter_provider_concurrently(monkeypatch):
         b.result(timeout=5)
 
 
-def test_mixed_cache_failure_preserves_hit_and_retries_failure(monkeypatch):
-    monkeypatch.setattr(jev, "_JUDGMENTS", jev.OrderedDict())
+def test_expanded_context_failure_cannot_reuse_subset_but_preserves_subset_cache(monkeypatch):
+    monkeypatch.setattr(jev_proof, "_CACHE", jev_proof.ByteLRU())
     failing = False
     calls = []
 
-    def provider(query, matches):
-        calls.append([m["document_id"] for m in matches])
+    def provider(state, questions, client=None):
+        calls.append([m["document_id"] for m in state["documents"]])
         if failing:
             raise RuntimeError("fixture failure")
-        return {
-            "status": "evaluated",
-            "matches": [dict(m, jev={"status": "evaluated", "label": "direct"}) for m in matches],
-        }
+        with sdk() as client:
+            return client.system_one(state=state, questions=questions)
 
-    monkeypatch.setattr(jev, "_judge_matches", provider)
+    monkeypatch.setattr(jev, "_call", provider)
     jev.judge_matches("Q", [match()], cache_namespace="mixed")
     failing = True
     result = jev.judge_matches("Q", [match(), match("miss")], cache_namespace="mixed")
-    assert result["matches"][0]["jev"]["label"] == "direct"
-    assert result["matches"][1]["jev"]["status"] == "unavailable"
+    assert all(m["jev"]["status"] == "unavailable" for m in result["matches"])
+    assert jev.judge_matches("Q", [match()], cache_namespace="mixed")["cached"] == 1
     failing = False
-    assert jev.judge_matches("Q", [match("miss")], cache_namespace="mixed")["cached"] == 0
-    assert calls == [["doc1"], ["miss"], ["miss"]]
+    assert jev.judge_matches("Q", [match(), match("miss")], cache_namespace="mixed")["cached"] == 0
+    assert calls == [["doc1"], ["doc1", "miss"], ["doc1", "miss"]]
 
 
 @pytest.mark.parametrize(
-    "change", ["namespace", "query", "version", "text", "model", "prompt", "policy", "threshold"]
+    "change",
+    ["namespace", "query", "version", "text", "model", "prompt", "policy", "proof_version"],
 )
 def test_cache_fingerprint_invalidates_semantic_changes(monkeypatch, change):
-    monkeypatch.setattr(jev, "_JUDGMENTS", jev.OrderedDict())
-    monkeypatch.setattr(
-        jev,
-        "_judge_matches",
-        lambda q, ms: {
-            "status": "evaluated",
-            "matches": [dict(m, jev={"status": "evaluated"}) for m in ms],
-        },
-    )
+    monkeypatch.setattr(jev_proof, "_CACHE", jev_proof.ByteLRU())
+
+    def provider(state, questions, client=None):
+        with sdk() as client:
+            return client.system_one(state=state, questions=questions)
+
+    monkeypatch.setattr(jev, "_call", provider)
     jev.judge_matches("Q", [match()], cache_namespace="cache")
     doc, query, namespace = match(), "Q", "cache"
     if change == "namespace":
@@ -223,6 +220,7 @@ def test_cache_fingerprint_invalidates_semantic_changes(monkeypatch, change):
         query = "Other"
     elif change == "version":
         doc["version"] = "v2"
+        doc["evidence"][0]["evidence_id"] = "doc1:v2:0"
     elif change == "text":
         doc["evidence"][0]["text"] += " New text."
     elif change == "model":
@@ -232,7 +230,7 @@ def test_cache_fingerprint_invalidates_semantic_changes(monkeypatch, change):
     elif change == "policy":
         monkeypatch.setattr(jev, "POLICY_VERSION", "next-policy")
     else:
-        monkeypatch.setattr(jev, "CONFLICT_ACCEPT", 0.9)
+        monkeypatch.setattr(jev_proof, "VERSION", "next-proof")
     assert jev.judge_matches(query, [doc], cache_namespace=namespace)["cached"] == 0
     doc["folder"] = "Renamed"
     result = jev.judge_matches(query, [doc], cache_namespace=namespace)
@@ -283,7 +281,13 @@ def test_actual_mcp_discovery_schema_json_text_and_full_diagnostics(tmp_path, mo
     async def exercise():
         async with Client(server.mcp) as client:
             tools = (await client.list_tools()).tools
-            assert {t.name for t in tools} == {"upload", "download", "search"}
+            assert {t.name for t in tools} == {
+                "upload",
+                "download",
+                "search",
+                "upload_folder",
+                "download_folder",
+            }
             schema = next(t.input_schema for t in tools if t.name == "search")
             assert schema["properties"]["detail"]["default"] == "compact"
             assert schema["properties"]["detail"]["enum"] == ["compact", "full"]
@@ -451,9 +455,13 @@ def test_relationships_are_refreshed_after_blocked_provider(tmp_path, monkeypatc
         entered.set()
         assert release.wait(5)
         for m in matches:
-            m["jev"] = {"status": "evaluated", "label": "direct", "coverage": "complete",
-                        "supporting_chunk_ids": [m["evidence"][0]["evidence_id"]],
-                        "evaluated_evidence": jev._evidence(m, query)}
+            m["jev"] = {
+                "status": "evaluated",
+                "label": "direct",
+                "coverage": "complete",
+                "supporting_chunk_ids": [m["evidence"][0]["evidence_id"]],
+                "evaluated_evidence": jev._evidence(m, query),
+            }
         return {"status": "evaluated", "matches": matches}
 
     monkeypatch.setattr(jev, "judge_matches", provider)

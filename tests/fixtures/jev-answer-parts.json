@@ -1,0 +1,961 @@
+{
+  "provenance": {
+    "source": "Real hosted Jev responses from candidate attempt 3 on generated MCP passages, 17 October 2026; policy replayed under current routing; L2 captures actual isolated long-document MCP results before the routing fix",
+    "candidate_sha256": "1402b26488bfeb6e83dc04a2ad12338080be2cc5d9201597a9c4b2c26487ba7b",
+    "independent": false,
+    "purpose": "Deterministic SDK parsing/routing regression; provider quality measured separately"
+  },
+  "cases": [
+    {
+      "case": "C001",
+      "query": "How many days are Aurora backup snapshots retained?",
+      "match": {
+        "document_id": "791da527-ee90-5748-b3da-fd2bde61c522",
+        "version": "v1",
+        "filename": "aurora-backup.md",
+        "sha256": "03c3a1a302acbf3c60ea93387d1b785895a6a6a16b170e495d916fc080d684bd",
+        "mime_type": "text/markdown",
+        "source": "generated-search-evaluation",
+        "folder": "Evaluation / English",
+        "groups": [
+          "guides",
+          "even"
+        ],
+        "organization_status": "not_evaluated",
+        "links": [],
+        "evidence": [
+          {
+            "evidence_id": "791da527-ee90-5748-b3da-fd2bde61c522:v1:t0",
+            "text": "Aurora\nAurora backup snapshots are retained for 19 days. Snapshots are encrypted with AES-256. The restore command is aurora_restore --verify. Reference AUR-719.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "Aurora"
+              ]
+            }
+          }
+        ],
+        "retrieval": {
+          "mode": "semantic",
+          "score": 0.1034696102142334,
+          "score_kind": "_distance",
+          "rank": 1
+        },
+        "relevance_explanation": "Retrieved by LanceDB semantic search; evidence basis is text."
+      },
+      "judgment": {
+        "status": "evaluated",
+        "label": "direct",
+        "policy_label": "direct",
+        "coverage": "complete",
+        "evidence_presence": "supported",
+        "decision_reason": "all_parts_supported",
+        "policy_version": "answer-routing-11",
+        "supporting_chunk_ids": [
+          "791da527-ee90-5748-b3da-fd2bde61c522:v1:t0"
+        ],
+        "conflicting_chunk_ids": [],
+        "possible_conflicting_chunk_ids": [],
+        "possible_conflict_reasons": {},
+        "conflict_status": "none_accepted",
+        "premise_correction_status": "none_accepted",
+        "evidence_disagreement": "none_detected",
+        "disagreement_chunk_ids": [],
+        "disagreement_scope": "within supplied document windows; cross-document agreement not assessed",
+        "model_label": "direct",
+        "model_confidence": 1.0,
+        "complete_probability": 0.97,
+        "confidence": 1.0,
+        "confidence_meaning": "Choice distribution concentration; not probability of evidence truth",
+        "probabilities": {
+          "direct": 1.0,
+          "partial": 0.0,
+          "related": 0.0,
+          "unrelated": 0.0,
+          "uncertain": 0.0
+        },
+        "passage_probabilities": [
+          {
+            "chunk_id": "791da527-ee90-5748-b3da-fd2bde61c522:v1:t0",
+            "applicability": 0.96,
+            "scope_mismatch": 0.04,
+            "obsolete": 0.03,
+            "historical_request": 0.05,
+            "support": 0.98,
+            "conflict": 0.03,
+            "entity": 0.98,
+            "premise": 0.06,
+            "disagreement": 0.03
+          }
+        ],
+        "evaluated_evidence": [
+          {
+            "chunk_id": "791da527-ee90-5748-b3da-fd2bde61c522:v1:t0",
+            "text": "Aurora\nAurora backup snapshots are retained for 19 days. Snapshots are encrypted with AES-256. The restore command is aurora_restore --verify. Reference AUR-719.",
+            "text_start": 0,
+            "text_end": 161,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "Aurora"
+              ]
+            }
+          }
+        ],
+        "evaluated_evidence_complete": true,
+        "prompt_version": "project-membership-5/search-evidence-13",
+        "basis": [
+          "text"
+        ],
+        "model": "jev-1.13.0",
+        "provider_usage": {
+          "input_tokens": 2914,
+          "output_tokens": 241
+        },
+        "context_policy": "document-call/passage-local-instructions",
+        "explanation": "Jev selected direct; policy returned direct (all_parts_supported). 1 accepted supporting passage(s). 0 accepted conflict(s); 0 possible conflict(s) requiring verification. No accepted conflict does not prove there is no contradiction. Coverage applies only to evaluated passages, not the complete original."
+      },
+      "expected": "complete"
+    },
+    {
+      "case": "C013",
+      "query": "Does Dahlia document deletion preserve historical versions?",
+      "match": {
+        "document_id": "65fea109-1804-5225-9220-399e2fdc4bde",
+        "version": "v1",
+        "filename": "dahlia-deletion.md",
+        "sha256": "225dea469a616ae0f80c6eacceee75a55232fa2bc887485f9411e856d066b203",
+        "mime_type": "text/markdown",
+        "source": "generated-search-evaluation",
+        "folder": "Evaluation / English",
+        "groups": [
+          "guides",
+          "odd"
+        ],
+        "organization_status": "not_evaluated",
+        "links": [],
+        "evidence": [
+          {
+            "evidence_id": "65fea109-1804-5225-9220-399e2fdc4bde:v1:t0",
+            "text": "Dahlia\nDahlia document deletion permanently removes all historical versions. Removing a folder only unfiles its documents and preserves original bytes. Reference DAH-204.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "Dahlia"
+              ]
+            }
+          }
+        ],
+        "retrieval": {
+          "mode": "semantic",
+          "score": 0.0931442379951477,
+          "score_kind": "_distance",
+          "rank": 1
+        },
+        "relevance_explanation": "Retrieved by LanceDB semantic search; evidence basis is text."
+      },
+      "judgment": {
+        "status": "evaluated",
+        "label": "direct",
+        "policy_label": "direct",
+        "coverage": "complete",
+        "evidence_presence": "supported",
+        "decision_reason": "all_parts_supported",
+        "policy_version": "answer-routing-11",
+        "supporting_chunk_ids": [
+          "65fea109-1804-5225-9220-399e2fdc4bde:v1:t0"
+        ],
+        "conflicting_chunk_ids": [],
+        "possible_conflicting_chunk_ids": [],
+        "possible_conflict_reasons": {},
+        "conflict_status": "none_accepted",
+        "premise_correction_status": "none_accepted",
+        "evidence_disagreement": "none_detected",
+        "disagreement_chunk_ids": [],
+        "disagreement_scope": "within supplied document windows; cross-document agreement not assessed",
+        "model_label": "direct",
+        "model_confidence": 1.0,
+        "complete_probability": 0.97,
+        "confidence": 1.0,
+        "confidence_meaning": "Choice distribution concentration; not probability of evidence truth",
+        "probabilities": {
+          "direct": 1.0,
+          "partial": 0.0,
+          "related": 0.0,
+          "unrelated": 0.0,
+          "uncertain": 0.0
+        },
+        "passage_probabilities": [
+          {
+            "chunk_id": "65fea109-1804-5225-9220-399e2fdc4bde:v1:t0",
+            "applicability": 0.94,
+            "scope_mismatch": 0.06,
+            "obsolete": 0.04,
+            "historical_request": 0.11,
+            "support": 0.98,
+            "conflict": 0.29,
+            "entity": 0.94,
+            "premise": 0.08,
+            "disagreement": 0.07
+          }
+        ],
+        "evaluated_evidence": [
+          {
+            "chunk_id": "65fea109-1804-5225-9220-399e2fdc4bde:v1:t0",
+            "text": "Dahlia\nDahlia document deletion permanently removes all historical versions. Removing a folder only unfiles its documents and preserves original bytes. Reference DAH-204.",
+            "text_start": 0,
+            "text_end": 170,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "Dahlia"
+              ]
+            }
+          }
+        ],
+        "evaluated_evidence_complete": true,
+        "prompt_version": "project-membership-5/search-evidence-13",
+        "basis": [
+          "text"
+        ],
+        "model": "jev-1.13.0",
+        "provider_usage": {
+          "input_tokens": 2864,
+          "output_tokens": 241
+        },
+        "context_policy": "document-call/passage-local-instructions",
+        "explanation": "Jev selected direct; policy returned direct (all_parts_supported). 1 accepted supporting passage(s). 0 accepted conflict(s); 0 possible conflict(s) requiring verification. No accepted conflict does not prove there is no contradiction. Coverage applies only to evaluated passages, not the complete original."
+      },
+      "expected": "complete"
+    },
+    {
+      "case": "C038",
+      "query": "How often does the Juniper sensor measure temperature?",
+      "match": {
+        "document_id": "ddf7d1bf-4f37-567b-b932-52ee582ecf12",
+        "version": "v1",
+        "filename": "juniper-sensor.md",
+        "sha256": "0f9b09dbfeb0a9085007a0950f69287ea7f9d4135014863a7b74d7422baa5aa7",
+        "mime_type": "text/markdown",
+        "source": "generated-search-evaluation",
+        "folder": "Evaluation / Hebrew",
+        "groups": [
+          "guides",
+          "odd"
+        ],
+        "organization_status": "not_evaluated",
+        "links": [],
+        "evidence": [
+          {
+            "evidence_id": "ddf7d1bf-4f37-567b-b932-52ee582ecf12:v1:t0",
+            "text": "ערער\nחיישן ערער מודד טמפרטורה כל 14 שניות. התראה נשלחת מעל 38 מעלות צלזיוס. התקשורת משתמשת בפרוטוקול MQTT. מזהה JUN-038.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "ערער"
+              ]
+            }
+          }
+        ],
+        "retrieval": {
+          "mode": "semantic",
+          "score": 0.20377612113952637,
+          "score_kind": "_distance",
+          "rank": 1
+        },
+        "relevance_explanation": "Retrieved by LanceDB semantic search; evidence basis is text."
+      },
+      "judgment": {
+        "status": "evaluated",
+        "label": "direct",
+        "policy_label": "direct",
+        "coverage": "complete",
+        "evidence_presence": "supported",
+        "decision_reason": "all_parts_supported",
+        "policy_version": "answer-routing-11",
+        "supporting_chunk_ids": [
+          "ddf7d1bf-4f37-567b-b932-52ee582ecf12:v1:t0"
+        ],
+        "conflicting_chunk_ids": [],
+        "possible_conflicting_chunk_ids": [],
+        "possible_conflict_reasons": {},
+        "conflict_status": "none_accepted",
+        "premise_correction_status": "none_accepted",
+        "evidence_disagreement": "none_detected",
+        "disagreement_chunk_ids": [],
+        "disagreement_scope": "within supplied document windows; cross-document agreement not assessed",
+        "model_label": "direct",
+        "model_confidence": 0.74,
+        "complete_probability": 0.83,
+        "confidence": 0.74,
+        "confidence_meaning": "Choice distribution concentration; not probability of evidence truth",
+        "probabilities": {
+          "direct": 0.79,
+          "partial": 0.03,
+          "related": 0.02,
+          "unrelated": 0.05,
+          "uncertain": 0.11
+        },
+        "passage_probabilities": [
+          {
+            "chunk_id": "ddf7d1bf-4f37-567b-b932-52ee582ecf12:v1:t0",
+            "applicability": 0.9,
+            "scope_mismatch": 0.07,
+            "obsolete": 0.1,
+            "historical_request": 0.03,
+            "support": 0.84,
+            "conflict": 0.07,
+            "entity": 0.85,
+            "premise": 0.11,
+            "disagreement": 0.07
+          }
+        ],
+        "evaluated_evidence": [
+          {
+            "chunk_id": "ddf7d1bf-4f37-567b-b932-52ee582ecf12:v1:t0",
+            "text": "ערער\nחיישן ערער מודד טמפרטורה כל 14 שניות. התראה נשלחת מעל 38 מעלות צלזיוס. התקשורת משתמשת בפרוטוקול MQTT. מזהה JUN-038.",
+            "text_start": 0,
+            "text_end": 120,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "ערער"
+              ]
+            }
+          }
+        ],
+        "evaluated_evidence_complete": true,
+        "prompt_version": "project-membership-5/search-evidence-13",
+        "basis": [
+          "text"
+        ],
+        "model": "jev-1.13.0",
+        "provider_usage": {
+          "input_tokens": 3354,
+          "output_tokens": 241
+        },
+        "context_policy": "document-call/passage-local-instructions",
+        "explanation": "Jev selected direct; policy returned direct (all_parts_supported). 1 accepted supporting passage(s). 0 accepted conflict(s); 0 possible conflict(s) requiring verification. No accepted conflict does not prove there is no contradiction. Coverage applies only to evaluated passages, not the complete original."
+      },
+      "expected": "complete"
+    },
+    {
+      "case": "C070",
+      "query": "מה מספר הטלפון של מרפאת איריס?",
+      "match": {
+        "document_id": "585f0107-0235-5742-b67d-489638db19d3",
+        "version": "v1",
+        "filename": "iris-clinic.md",
+        "sha256": "d6e573c7dd033583007a5ffd96a53e3dd89e6ca29e38c8521e76f7d29782cfc3",
+        "mime_type": "text/markdown",
+        "source": "generated-search-evaluation",
+        "folder": "Evaluation / Hebrew",
+        "groups": [
+          "guides",
+          "even"
+        ],
+        "organization_status": "not_evaluated",
+        "links": [],
+        "evidence": [
+          {
+            "evidence_id": "585f0107-0235-5742-b67d-489638db19d3:v1:t0",
+            "text": "איריס\nמרפאת איריס פתוחה בימי שלישי עד השעה 21:15. בדיקות דם מחייבות צום של 9 שעות. מספר הטלפון אינו מתועד. מזהה IRI-915.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "איריס"
+              ]
+            }
+          }
+        ],
+        "retrieval": {
+          "mode": "semantic",
+          "score": 0.16539716720581055,
+          "score_kind": "_distance",
+          "rank": 1
+        },
+        "relevance_explanation": "Retrieved by LanceDB semantic search; evidence basis is text."
+      },
+      "judgment": {
+        "status": "evaluated",
+        "label": "related",
+        "policy_label": "related",
+        "coverage": "none",
+        "evidence_presence": "not_established",
+        "decision_reason": "model_relevance",
+        "policy_version": "answer-routing-11",
+        "supporting_chunk_ids": [],
+        "conflicting_chunk_ids": [],
+        "possible_conflicting_chunk_ids": [],
+        "possible_conflict_reasons": {},
+        "conflict_status": "none_accepted",
+        "premise_correction_status": "none_accepted",
+        "evidence_disagreement": "none_detected",
+        "disagreement_chunk_ids": [],
+        "disagreement_scope": "within supplied document windows; cross-document agreement not assessed",
+        "model_label": "related",
+        "model_confidence": 0.96,
+        "complete_probability": 0.6,
+        "confidence": 0.96,
+        "confidence_meaning": "Choice distribution concentration; not probability of evidence truth",
+        "probabilities": {
+          "direct": 0.02,
+          "partial": 0.01,
+          "related": 0.97,
+          "unrelated": 0.0,
+          "uncertain": 0.0
+        },
+        "passage_probabilities": [
+          {
+            "chunk_id": "585f0107-0235-5742-b67d-489638db19d3:v1:t0",
+            "applicability": 0.95,
+            "scope_mismatch": 0.05,
+            "obsolete": 0.04,
+            "historical_request": 0.02,
+            "support": 0.51,
+            "conflict": 0.23,
+            "entity": 0.94,
+            "premise": 0.06,
+            "disagreement": 0.05
+          }
+        ],
+        "evaluated_evidence": [
+          {
+            "chunk_id": "585f0107-0235-5742-b67d-489638db19d3:v1:t0",
+            "text": "איריס\nמרפאת איריס פתוחה בימי שלישי עד השעה 21:15. בדיקות דם מחייבות צום של 9 שעות. מספר הטלפון אינו מתועד. מזהה IRI-915.",
+            "text_start": 0,
+            "text_end": 120,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "איריס"
+              ]
+            }
+          }
+        ],
+        "evaluated_evidence_complete": true,
+        "prompt_version": "project-membership-5/search-evidence-13",
+        "basis": [
+          "text"
+        ],
+        "model": "jev-1.13.0",
+        "provider_usage": {
+          "input_tokens": 3497,
+          "output_tokens": 241
+        },
+        "context_policy": "document-call/passage-local-instructions",
+        "explanation": "Jev selected related; policy returned related (model_relevance). 0 accepted supporting passage(s). 0 accepted conflict(s); 0 possible conflict(s) requiring verification. No accepted conflict does not prove there is no contradiction. Coverage applies only to evaluated passages, not the complete original."
+      },
+      "expected": "none"
+    },
+    {
+      "case": "C071",
+      "query": "What are the Aurora snapshot retention period and the CEO phone number?",
+      "match": {
+        "document_id": "791da527-ee90-5748-b3da-fd2bde61c522",
+        "version": "v1",
+        "filename": "aurora-backup.md",
+        "sha256": "03c3a1a302acbf3c60ea93387d1b785895a6a6a16b170e495d916fc080d684bd",
+        "mime_type": "text/markdown",
+        "source": "generated-search-evaluation",
+        "folder": "Evaluation / English",
+        "groups": [
+          "guides",
+          "even"
+        ],
+        "organization_status": "not_evaluated",
+        "links": [],
+        "evidence": [
+          {
+            "evidence_id": "791da527-ee90-5748-b3da-fd2bde61c522:v1:t0",
+            "text": "Aurora\nAurora backup snapshots are retained for 19 days. Snapshots are encrypted with AES-256. The restore command is aurora_restore --verify. Reference AUR-719.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "Aurora"
+              ]
+            }
+          }
+        ],
+        "retrieval": {
+          "mode": "semantic",
+          "score": 0.20462799072265625,
+          "score_kind": "_distance",
+          "rank": 1
+        },
+        "relevance_explanation": "Retrieved by LanceDB semantic search; evidence basis is text."
+      },
+      "judgment": {
+        "status": "evaluated",
+        "label": "partial",
+        "policy_label": "partial",
+        "coverage": "partial",
+        "evidence_presence": "supported",
+        "decision_reason": "some_parts_supported",
+        "policy_version": "answer-routing-11",
+        "supporting_chunk_ids": [
+          "791da527-ee90-5748-b3da-fd2bde61c522:v1:t0"
+        ],
+        "conflicting_chunk_ids": [],
+        "possible_conflicting_chunk_ids": [],
+        "possible_conflict_reasons": {},
+        "conflict_status": "none_accepted",
+        "premise_correction_status": "none_accepted",
+        "evidence_disagreement": "none_detected",
+        "disagreement_chunk_ids": [],
+        "disagreement_scope": "within supplied document windows; cross-document agreement not assessed",
+        "model_label": "partial",
+        "model_confidence": 1.0,
+        "complete_probability": 0.04,
+        "confidence": 1.0,
+        "confidence_meaning": "Choice distribution concentration; not probability of evidence truth",
+        "probabilities": {
+          "direct": 0.0,
+          "partial": 1.0,
+          "related": 0.0,
+          "unrelated": 0.0,
+          "uncertain": 0.0
+        },
+        "passage_probabilities": [
+          {
+            "chunk_id": "791da527-ee90-5748-b3da-fd2bde61c522:v1:t0",
+            "applicability": 0.94,
+            "scope_mismatch": 0.06,
+            "obsolete": 0.03,
+            "historical_request": 0.06,
+            "support": 0.97,
+            "conflict": 0.06,
+            "entity": 0.95,
+            "premise": 0.05,
+            "disagreement": 0.04
+          }
+        ],
+        "evaluated_evidence": [
+          {
+            "chunk_id": "791da527-ee90-5748-b3da-fd2bde61c522:v1:t0",
+            "text": "Aurora\nAurora backup snapshots are retained for 19 days. Snapshots are encrypted with AES-256. The restore command is aurora_restore --verify. Reference AUR-719.",
+            "text_start": 0,
+            "text_end": 161,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "Aurora"
+              ]
+            }
+          }
+        ],
+        "evaluated_evidence_complete": true,
+        "prompt_version": "project-membership-5/search-evidence-13",
+        "basis": [
+          "text"
+        ],
+        "model": "jev-1.13.0",
+        "provider_usage": {
+          "input_tokens": 2954,
+          "output_tokens": 241
+        },
+        "context_policy": "document-call/passage-local-instructions",
+        "explanation": "Jev selected partial; policy returned partial (some_parts_supported). 1 accepted supporting passage(s). 0 accepted conflict(s); 0 possible conflict(s) requiring verification. No accepted conflict does not prove there is no contradiction. Coverage applies only to evaluated passages, not the complete original."
+      },
+      "expected": "partial"
+    },
+    {
+      "case": "C072",
+      "query": "What are the Iris clinic Tuesday closing time and its phone number?",
+      "match": {
+        "document_id": "585f0107-0235-5742-b67d-489638db19d3",
+        "version": "v1",
+        "filename": "iris-clinic.md",
+        "sha256": "d6e573c7dd033583007a5ffd96a53e3dd89e6ca29e38c8521e76f7d29782cfc3",
+        "mime_type": "text/markdown",
+        "source": "generated-search-evaluation",
+        "folder": "Evaluation / Hebrew",
+        "groups": [
+          "guides",
+          "even"
+        ],
+        "organization_status": "not_evaluated",
+        "links": [],
+        "evidence": [
+          {
+            "evidence_id": "585f0107-0235-5742-b67d-489638db19d3:v1:t0",
+            "text": "איריס\nמרפאת איריס פתוחה בימי שלישי עד השעה 21:15. בדיקות דם מחייבות צום של 9 שעות. מספר הטלפון אינו מתועד. מזהה IRI-915.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "איריס"
+              ]
+            }
+          }
+        ],
+        "retrieval": {
+          "mode": "semantic",
+          "score": 0.2181462049484253,
+          "score_kind": "_distance",
+          "rank": 1
+        },
+        "relevance_explanation": "Retrieved by LanceDB semantic search; evidence basis is text."
+      },
+      "judgment": {
+        "status": "evaluated",
+        "label": "partial",
+        "policy_label": "partial",
+        "coverage": "partial",
+        "evidence_presence": "supported",
+        "decision_reason": "some_parts_supported",
+        "policy_version": "answer-routing-11",
+        "supporting_chunk_ids": [
+          "585f0107-0235-5742-b67d-489638db19d3:v1:t0"
+        ],
+        "conflicting_chunk_ids": [],
+        "possible_conflicting_chunk_ids": [],
+        "possible_conflict_reasons": {},
+        "conflict_status": "none_accepted",
+        "premise_correction_status": "none_accepted",
+        "evidence_disagreement": "none_detected",
+        "disagreement_chunk_ids": [],
+        "disagreement_scope": "within supplied document windows; cross-document agreement not assessed",
+        "model_label": "partial",
+        "model_confidence": 0.97,
+        "complete_probability": 0.43,
+        "confidence": 0.97,
+        "confidence_meaning": "Choice distribution concentration; not probability of evidence truth",
+        "probabilities": {
+          "direct": 0.02,
+          "partial": 0.98,
+          "related": 0.0,
+          "unrelated": 0.0,
+          "uncertain": 0.0
+        },
+        "passage_probabilities": [
+          {
+            "chunk_id": "585f0107-0235-5742-b67d-489638db19d3:v1:t0",
+            "applicability": 0.92,
+            "scope_mismatch": 0.08,
+            "obsolete": 0.04,
+            "historical_request": 0.03,
+            "support": 0.94,
+            "conflict": 0.16,
+            "entity": 0.97,
+            "premise": 0.05,
+            "disagreement": 0.06
+          }
+        ],
+        "evaluated_evidence": [
+          {
+            "chunk_id": "585f0107-0235-5742-b67d-489638db19d3:v1:t0",
+            "text": "איריס\nמרפאת איריס פתוחה בימי שלישי עד השעה 21:15. בדיקות דם מחייבות צום של 9 שעות. מספר הטלפון אינו מתועד. מזהה IRI-915.",
+            "text_start": 0,
+            "text_end": 120,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "איריס"
+              ]
+            }
+          }
+        ],
+        "evaluated_evidence_complete": true,
+        "prompt_version": "project-membership-5/search-evidence-13",
+        "basis": [
+          "text"
+        ],
+        "model": "jev-1.13.0",
+        "provider_usage": {
+          "input_tokens": 3397,
+          "output_tokens": 241
+        },
+        "context_policy": "document-call/passage-local-instructions",
+        "explanation": "Jev selected partial; policy returned partial (some_parts_supported). 1 accepted supporting passage(s). 0 accepted conflict(s); 0 possible conflict(s) requiring verification. No accepted conflict does not prove there is no contradiction. Coverage applies only to evaluated passages, not the complete original."
+      },
+      "expected": "partial"
+    },
+    {
+      "case": "L2",
+      "query": "What are the Sequoia snapshot retention period and CEO phone number?",
+      "match": {
+        "document_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93",
+        "version": "v1",
+        "filename": "sequoia.md",
+        "sha256": "2fb063cf5e166967aaf87c8b76c2aba889c838a391c4eedad9365481daa49e25",
+        "mime_type": "text/markdown",
+        "source": "generated-long-answer-validation",
+        "folder": "",
+        "groups": [],
+        "organization_status": "failed",
+        "links": [],
+        "evidence": [
+          {
+            "evidence_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t16",
+            "text": "Sequoia operations\nContact\nThe Sequoia CEO phone number is not documented.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Contact"
+              ]
+            }
+          },
+          {
+            "evidence_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t0",
+            "text": "Sequoia operations\nBackup contract\nSequoia snapshot retention is 23 days.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Backup contract"
+              ]
+            }
+          },
+          {
+            "evidence_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t15",
+            "text": "Sequoia operations\nDisaster recovery\nSequoia recovery listens on TCP port 6118. Recovery preserves all historical versions and does not erase any.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Disaster recovery"
+              ]
+            }
+          },
+          {
+            "evidence_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t1",
+            "text": "Sequoia operations\nRoutine section 1\nRoutine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Routine section 1"
+              ]
+            }
+          },
+          {
+            "evidence_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t14",
+            "text": "Sequoia operations\nRoutine section 14\nRoutine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists.",
+            "basis": "text",
+            "provenance": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Routine section 14"
+              ]
+            }
+          }
+        ],
+        "retrieval": {
+          "mode": "hybrid",
+          "score": 0.032522473484277725,
+          "score_kind": "_relevance_score",
+          "rank": 1
+        },
+        "relevance_explanation": "Retrieved by LanceDB hybrid search; evidence basis is text."
+      },
+      "judgment": {
+        "status": "evaluated",
+        "label": "direct",
+        "policy_label": "direct",
+        "coverage": "complete",
+        "evidence_presence": "supported",
+        "decision_reason": "all_parts_supported",
+        "policy_version": "answer-routing-11",
+        "supporting_chunk_ids": [
+          "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t0"
+        ],
+        "conflicting_chunk_ids": [],
+        "possible_conflicting_chunk_ids": [],
+        "possible_conflict_reasons": {},
+        "conflict_status": "none_accepted",
+        "premise_correction_status": "none_accepted",
+        "evidence_disagreement": "none_detected",
+        "disagreement_chunk_ids": [],
+        "disagreement_scope": "within supplied document windows; cross-document agreement not assessed",
+        "model_label": "partial",
+        "model_confidence": 0.99,
+        "complete_probability": 0.8,
+        "confidence": 0.99,
+        "confidence_meaning": "Choice distribution concentration; not probability of evidence truth",
+        "probabilities": {
+          "direct": 0.01,
+          "partial": 0.99,
+          "related": 0.0,
+          "unrelated": 0.0,
+          "uncertain": 0.0
+        },
+        "passage_probabilities": [
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t16",
+            "applicability": 0.95,
+            "scope_mismatch": 0.05,
+            "obsolete": 0.04,
+            "historical_request": 0.06,
+            "support": 0.54,
+            "conflict": 0.16,
+            "entity": 0.95,
+            "premise": 0.05,
+            "disagreement": 0.04
+          },
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t0",
+            "applicability": 0.94,
+            "scope_mismatch": 0.06,
+            "obsolete": 0.03,
+            "historical_request": 0.06,
+            "support": 0.97,
+            "conflict": 0.05,
+            "entity": 0.95,
+            "premise": 0.05,
+            "disagreement": 0.04
+          },
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t15",
+            "applicability": 0.91,
+            "scope_mismatch": 0.09,
+            "obsolete": 0.03,
+            "historical_request": 0.06,
+            "support": 0.15,
+            "conflict": 0.25,
+            "entity": 0.8,
+            "premise": 0.05,
+            "disagreement": 0.04
+          },
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t1",
+            "applicability": 0.94,
+            "scope_mismatch": 0.06,
+            "obsolete": 0.03,
+            "historical_request": 0.06,
+            "support": 0.04,
+            "conflict": 0.04,
+            "entity": 0.34,
+            "premise": 0.05,
+            "disagreement": 0.04
+          },
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t14",
+            "applicability": 0.94,
+            "scope_mismatch": 0.06,
+            "obsolete": 0.03,
+            "historical_request": 0.06,
+            "support": 0.03,
+            "conflict": 0.04,
+            "entity": 0.31,
+            "premise": 0.05,
+            "disagreement": 0.04
+          }
+        ],
+        "evaluated_evidence": [
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t16",
+            "text": "Sequoia operations\nContact\nThe Sequoia CEO phone number is not documented.",
+            "text_start": 0,
+            "text_end": 74,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Contact"
+              ]
+            }
+          },
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t0",
+            "text": "Sequoia operations\nBackup contract\nSequoia snapshot retention is 23 days.",
+            "text_start": 0,
+            "text_end": 73,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Backup contract"
+              ]
+            }
+          },
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t15",
+            "text": "Sequoia operations\nDisaster recovery\nSequoia recovery listens on TCP port 6118. Recovery preserves all historical versions and does not erase any.",
+            "text_start": 0,
+            "text_end": 146,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Disaster recovery"
+              ]
+            }
+          },
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t1",
+            "text": "Sequoia operations\nRoutine section 1\nRoutine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists.",
+            "text_start": 0,
+            "text_end": 2340,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Routine section 1"
+              ]
+            }
+          },
+          {
+            "chunk_id": "eb46aaae-47e3-53d5-bd8a-65c259a5bc93:v1:t14",
+            "text": "Sequoia operations\nRoutine section 14\nRoutine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists. Routine operation reviews cover shelving, packaging, staff rotations and inspection checklists.",
+            "text_start": 0,
+            "text_end": 2341,
+            "truncated": false,
+            "basis": "text",
+            "location": {
+              "pages": [],
+              "headings": [
+                "Sequoia operations",
+                "Routine section 14"
+              ]
+            }
+          }
+        ],
+        "evaluated_evidence_complete": true,
+        "prompt_version": "project-membership-5/search-evidence-13",
+        "basis": [
+          "text"
+        ],
+        "model": "jev-1.13.0",
+        "provider_usage": {
+          "input_tokens": 15095,
+          "output_tokens": 661
+        },
+        "context_policy": "document-call/passage-local-instructions",
+        "explanation": "Jev selected partial; policy returned direct (all_parts_supported). 1 accepted supporting passage(s). 0 accepted conflict(s); 0 possible conflict(s) requiring verification. No accepted conflict does not prove there is no contradiction. Coverage applies only to evaluated passages, not the complete original."
+      },
+      "expected": "partial"
+    }
+  ]
+}

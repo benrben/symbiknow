@@ -1,3 +1,4 @@
+import { chooseView } from "./ui-controls";
 import { test, expect } from "./coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -19,8 +20,11 @@ test("Files, folders and Canvas design references with twelve real repository do
     .getByRole("button", { name: "Expand Symbiknow", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Select Symbiknow UI guide", exact: true })
-    .click();
+    .getByRole("button", {
+      name: /^Select Symbiknow UI guide(?:\.[^.]+)?$/,
+      exact: true,
+    })
+    .press("Enter");
   await expect(page.getByLabel("Document inspector")).toContainText(
     "Symbiknow human interface",
   );
@@ -42,15 +46,16 @@ test("Files, folders and Canvas design references with twelve real repository do
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page
-    .getByRole("button", { name: "Close inspector", exact: true })
+    .getByRole("button", {
+      name: /^(Back to library|Close inspector)$/,
+      exact: true,
+    })
     .click();
   await page
     .locator(".sidebar")
-    .getByRole("button", { name: "Symbiknow", exact: true })
+    .getByRole("button", { name: /^Symbiknow \d+$/, exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Thumbnail layout", exact: true })
-    .click();
+  await chooseView(page, "Cards");
   await expect(page.locator(".file-grid .file-row")).toHaveCount(7);
   for (let i = 0; i < 3; i++)
     await expect(
@@ -59,23 +64,23 @@ test("Files, folders and Canvas design references with twelve real repository do
   await page.screenshot({ path: path.join(output, "folders-view.png") });
   await page
     .locator(".sidebar")
-    .getByRole("button", { name: "Symbiknow", exact: true })
+    .getByRole("button", { name: /^Symbiknow \d+$/, exact: true })
     .click();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await expect(page.locator(".react-flow__node-document")).toHaveCount(7);
   await expect(page.locator(".canvas .card-prose").first()).toBeVisible();
   await page.screenshot({ path: path.join(output, "canvas-view.png") });
   await page
-    .getByRole("button", { name: "Select Symbiknow architecture", exact: true })
+    .getByRole("button", {
+      name: /^Select Symbiknow architecture(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await expect(page.locator(".react-flow__edge")).toHaveCount(2);
-  await page
-    .getByRole("button", { name: "Close inspector", exact: true })
-    .click();
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await page.screenshot({ path: path.join(output, "canvas-links.png") });
-  await page.getByRole("button", { name: "Files", exact: true }).click();
+  await chooseView(page, "List");
   await page.getByLabel("Search your knowledge").fill("original file versions");
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(page.locator(".results-list .file-row").first()).toBeVisible();

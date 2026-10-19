@@ -4,7 +4,7 @@
 
 Keep original files and their version history, search text and images in English
 or Hebrew, and inspect the evidence behind each result. A browser interface and
-three MCP tools share one Python application and one library.
+five MCP tools share one Python application and one library.
 
 [Quick start](#quick-start) · [Connect an agent](#connect-an-agent) ·
 [Documentation](#documentation) · [Measured performance](#measured-performance) ·
@@ -21,9 +21,9 @@ three MCP tools share one Python application and one library.
   partial evidence and uncertainty.
 - **Keep independent file histories.** Updates create a new version of the same
   document. Downloads preserve the original bytes and verify SHA-256 integrity.
-- **Browse an organized library.** Use Files, Cards or Canvas, nested folders,
+- **Browse an organized library.** Use Overview, List, Cards or Map, nested folders,
   related documents, PDF previews and version history.
-- **Connect agents through MCP.** `upload`, `download` and `search` support
+- **Connect agents through MCP.** `upload`, `download`, `search`, `upload_folder` and `download_folder` support
   resumable transfers, upload retries and version-pinned reads.
 - **Control resource use.** PyTorch INT8 text weights, on-demand vision, idle
   unloading, bounded OCR child processes and streamed transfers reduce retention
@@ -138,6 +138,8 @@ with `list_tools()` before calling them.
 | `upload` | Store one or more files; optionally update a document. | Stable request IDs make retries idempotent; `expected_version` guards updates. |
 | `download` | Read current or historical original bytes. | Version-pinned ranges and whole-file SHA-256 verification. |
 | `search` | Retrieve files, evidence and optional answer judgments. | Results identify exact versions and exclude stale current-file evidence. |
+| `upload_folder` | Upload relative-path files into a library folder and its subfolders. | Per-file retry identities, guarded updates and durable manual placement. |
+| `download_folder` | Download a folder and descendants as ZIP byte ranges. | Version-pinned ten-minute snapshot and whole-ZIP SHA-256. |
 
 Example `search` arguments for browsing related files:
 
@@ -153,6 +155,50 @@ Example `search` arguments for browsing related files:
 Use `evaluate: true` or `mode: "answer"` for accepted answer evidence. An empty
 answer list describes the evaluated candidates; it does not prove that the whole
 library has no answer. Pure visual matches do not claim textual answer support.
+
+For supported numeric questions (durations, prices and refund limits), Jev checks
+each possible answer against the retrieved documents together in one call. This
+allows an explicit alias or service rule in another document to support a value.
+`answer.values` returns the verified value, its exact source span, context
+references and any unit calculation. Fixed-duration conversions run in Python;
+calendar/business-day conversions and rounded values are not invented. The
+verifier checks at most 8 documents, 24 numeric candidates and 24,000 text
+characters. Other question shapes or larger inputs use the general evaluator.
+All context is revalidated before publishing an answer; provider failures are
+reported as unavailable. The existing `TYPESAFE_DEFAULT_MODEL` setting is honored.
+
+General answer checks now combine the original passages across retrieved documents,
+including rules, aliases, corrections and disclaimers. Uncertain decisions receive
+a second citation check using the exact source text. All supporting context is
+hashed and revalidated before publication or pagination. Retrieval retains up to
+eight ranked passages plus adjacent/introduction context, capped at twelve windows
+per document; this remains a check of retrieved evidence, not the entire library.
+The joint proof cache is capped at 128 entries and 2 MiB.
+
+The UI and MCP both use the same backend search function. When answer checking
+is enabled, that function retrieves at most eight candidate documents, even if
+the caller requests 40 or 100 results. A larger display limit does not increase
+the answer-checking context. Ordinary searches still honor the requested limit.
+If context is too large to check, the response says `not_evaluated` with reason
+`context_budget`; the UI displays “Answer was not checked,” not a negative answer.
+That also applies when TypeSafe rejects a request for exceeding its token limit.
+Jev receives source page numbers and headings without repeated OCR drawing
+coordinates; the original citation metadata remains available to the reader.
+
+Document links are selected from actual passage pairs, with a focused check for
+uncertain selected links. Up to 45 claim pairs are evaluated against the supplied
+context; identical-content links still require matching hashes. Topic tags are
+classified independently of project ownership, so shared or unowned documents can
+receive tags. The default provider model is pinned to `jev-1.14.0`; an explicit
+environment override remains supported. Existing saved organization is updated
+only through normal ingestion or an explicitly requested review.
+
+Long-file organization uses bounded samples of original passages, prioritizing
+opening, ending and representative passages. Its context assessment records how
+many supplied windows were selected. Search proofs reject over-budget contexts
+instead of silently dropping passages. The built-in topic tags are Storage,
+Search, Security and Research; custom tags use a stricter acceptance threshold
+and do not share the four-tag benchmark's accuracy claim.
 
 [Full MCP reference](docs/mcp-reference.md): schemas, upload examples, chunked
 transfers, expected versions, compact pagination and evidence decisions.
@@ -291,7 +337,7 @@ uv run --locked ruff check app client.py tests scripts
 npm --prefix frontend run build
 ```
 
-Browser tests use an isolated fixture server. From `frontend/`, run `npm test`.
+Browser tests use an isolated fixture server. From `frontend/`, run `npm test`. Focused cross-browser/axe checks use `npm run test:quality`; touch-device emulation uses `npm run test:mobile`. See [UI verification](UI.md#reproducible-ui-quality-checks) for browser-engine setup, fixture scope and separate optional runs.
 The configuration defaults to Google Chrome on macOS; set `SYMBIKNOW_CHROME` to
 your Chrome/Chromium executable elsewhere. Live model/provider checks are separate
 from fixture tests:
@@ -311,12 +357,16 @@ recorded with the [benchmark reports](outputs/memory-research/REPRODUCE.md).
 | Guide | Contents |
 | --- | --- |
 | [MCP reference](docs/mcp-reference.md) | Tool arguments, transfer protocol, pagination and evidence semantics. |
+| [MCP tools review](MCP-tools-review.md) | All-format checks, fixes, and measured search-mode scores with explanations. |
+| [Hard search review](MCP-hard-search-review.md) | Missing facts, misleading matches, partial answers, and live Jev failures. |
 | [UI guide](UI.md) | Browsing, search, Canvas, previews and version history. |
 | [Architecture](docs/architecture.md) | Components, data layout and publication boundaries. |
 | [Operations](docs/operations.md) | Startup, recovery, rebuilds, backup and deletion. |
 | [Runtime controls](docs/memory-runtime.md) | INT8 support, fallback, index compatibility and resource limits. |
 | [Memory verification](Optimize-memory-symbiknow.md) | Implemented improvements, matched measurements and remaining limits. |
 | [Earlier validation](VALIDATION.md) | Dated checks and historical implementation evidence. |
+| [Current status](docs/current-status.md) | Current implementation snapshot and remaining limits. |
+| [Project library catalog](docs/project-library.md) | Sources, focused guides, dated media and MCP refresh provenance. |
 
 ## Support and license
 
@@ -327,3 +377,19 @@ private documents and library data out of reports.
 
 © 2026 Ben R. All rights reserved. See [LICENSE](LICENSE) for source-use terms.
 Third-party dependencies retain their own licenses and notices.
+
+## UI fixes verified 18 October 2026
+Search result headers toggle Name, Type and Modified independently of browse sorting; search dates come from the saved document version in the shared UI/MCP result. Original previews restore keyboard focus when closed, and the toolbar wraps when workspace width is constrained. See [UI behavior and verification](UI.md#manual-ui-report-fixes--18-october-2026) and [validation](VALIDATION.md#manual-ui-report-verification--18-october-2026) for the 105 focused regression checks and their limits.
+
+## Folder transfers through the running MCP app
+
+```sh
+.venv/bin/python client.py --url http://127.0.0.1:8765/mcp upload-folder ./project-notes --folder "Projects / Apollo" --request-id YOUR_UUID
+.venv/bin/python client.py --url http://127.0.0.1:8765/mcp download-folder "Projects / Apollo" --output ./apollo.zip
+```
+
+Replace `YOUR_UUID` with a UUID and retain it for identical retries, including after an interrupted transfer. Upload sends regular file bytes recursively and preserves relative subfolders as manual library assignments; it rejects symbolic links. Empty directories are not stored. A new request creates new documents unless each update supplies its existing `document_id` and `expected_version`; filenames are not overwrite targets.
+
+Folder upload is additive: files omitted from a later upload are not deleted. For an existing member, call `upload_folder` with its document ID and expected version; see the [update example](docs/mcp-reference.md#updating-an-existing-folder-member).
+
+Download returns original files in a ZIP without extracting it on your computer. It includes descendants, pins current versions when the snapshot is created, and supports up to 1,000 files / 1 GiB of source bytes. Reuse the returned `transfer_id` for every range within ten minutes. The client verifies the ZIP hash and refuses to overwrite an existing output. See the [MCP reference](docs/mcp-reference.md#folder-transfers) for partial failures, chunking and snapshot limits.

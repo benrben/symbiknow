@@ -23,7 +23,13 @@ async def run():
     with tempfile.TemporaryDirectory(prefix="symbiknow-live-mcp-") as data:
         async with Client(server_parameters(data)) as session:
             tools = await session.list_tools()
-            assert {t.name for t in tools.tools} == {"upload", "download", "search"}
+            assert {t.name for t in tools.tools} == {
+                "upload",
+                "download",
+                "search",
+                "upload_folder",
+                "download_folder",
+            }
             original = b"France is in Europe. The capital of France is Paris."
             started = time.perf_counter()
             saved = (

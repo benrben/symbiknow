@@ -2,6 +2,8 @@
 
 import asyncio
 import base64
+import io
+import zipfile
 import socket
 import threading
 import time
@@ -50,7 +52,8 @@ def test_shared_http_clients_browser_and_one_worker(tmp_path, monkeypatch):
         ):
             tool_lists = await asyncio.gather(first.list_tools(), second.list_tools())
             assert all(
-                {t.name for t in result.tools} == {"upload", "download", "search"}
+                {t.name for t in result.tools}
+                == {"upload", "download", "search", "upload_folder", "download_folder"}
                 for result in tool_lists
             )
             saved = await call(
@@ -78,6 +81,26 @@ def test_shared_http_clients_browser_and_one_worker(tmp_path, monkeypatch):
                 == b"\x00\xffshared"
             )
             assert listing.json()["total"] == 1
+            folder_upload = await call(
+                first,
+                "upload_folder",
+                {
+                    "folder": "HTTP folder",
+                    "request_id": str(uuid.uuid4()),
+                    "files": [
+                        {
+                            "relative_path": "nested/shared.bin",
+                            "content_base64": base64.b64encode(b"folder bytes").decode(),
+                        }
+                    ],
+                },
+            )
+            assert folder_upload["complete"]
+            folder_zip = await call(second, "download_folder", {"folder": "HTTP folder"})
+            with zipfile.ZipFile(
+                io.BytesIO(base64.b64decode(folder_zip["content_base64"]))
+            ) as archive:
+                assert archive.read("nested/shared.bin") == b"folder bytes"
             assert starts == ["symbiknow-ingest"]
         # Disconnecting every MCP client does not release the application's owner.
         assert thread.is_alive()

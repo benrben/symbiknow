@@ -2,7 +2,6 @@
 
 import asyncio
 from copy import deepcopy
-import threading
 
 import pytest
 from mcp import Client
@@ -140,7 +139,9 @@ def test_answer_states_do_not_conflate_outage_uncertainty_partial_and_correction
 
 
 def test_wrong_checkpoint_cannot_publish_support_even_in_current_document():
-    with sdk_client(nouls={"scope_mismatch_0_0": 0.96}) as client:
+    from test_jev_proof import sdk
+
+    with sdk({"coverage": "missing", "proof_0_0": "unused", "status_0_0": "scoped"}) as client:
         result = jev.judge_matches(
             "What is the final score?",
             [match(text="Intermediate checkpoint scored 172/231.")],
@@ -169,19 +170,16 @@ def test_binary_complete_coverage_does_not_override_missing_or_wrong_scope_suppo
     )
 
 
-def test_independent_document_requests_overlap_and_merge_request_metrics(monkeypatch):
-    barrier = threading.Barrier(4, timeout=5)
+def test_joint_document_request_preserves_order_and_request_metrics(monkeypatch):
+    from test_jev_proof import sdk
+
     identities = []
-    lock = threading.Lock()
 
     def call(state, questions, client=None):
-        if any(k.startswith("judge_") for k in questions):
-            with lock:
-                identities.append(state["document"]["document_id"])
-            barrier.wait()
-            add("provider_calls", 1)
-            add("provider_input_tokens", 17)
-        with sdk_client(nouls={f"entity_{i}_0": 0.1 for i in range(4)}) as client:
+        identities.extend(d["document_id"] for d in state["documents"])
+        add("provider_calls", 1)
+        add("provider_input_tokens", 68)
+        with sdk({"coverage": "missing"}) as client:
             return client.system_one(state=state, questions=questions)
 
     monkeypatch.setattr(jev, "_call", call)
@@ -193,7 +191,7 @@ def test_independent_document_requests_overlap_and_merge_request_metrics(monkeyp
         CURRENT.reset(token)
     assert result["status"] == "evaluated"
     assert set(identities) == {"0", "1", "2", "3"}
-    assert metrics["provider_calls"] == 4 and metrics["provider_input_tokens"] == 68
+    assert metrics["provider_calls"] == 1 and metrics["provider_input_tokens"] == 68
     assert [m["document_id"] for m in result["matches"]] == ["0", "1", "2", "3"]
 
 

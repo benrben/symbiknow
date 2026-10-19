@@ -1,6 +1,13 @@
-import { Search, X, Info, SlidersHorizontal, Upload } from "lucide-react";
+import {
+  Search,
+  X,
+  SlidersHorizontal,
+  Upload,
+  ChevronDown,
+  Sparkles,
+} from "lucide-react";
 import * as Switch from "@radix-ui/react-switch";
-import * as Menu from "@radix-ui/react-dropdown-menu";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useState, type RefObject, type ReactNode } from "react";
 import { folderCounts } from "../api";
 export type Mode = "hybrid" | "semantic" | "keyword";
@@ -25,6 +32,11 @@ export default function SearchBar(p: {
   actions: ReactNode;
 }) {
   const [folderQuery, setFolderQuery] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const paths = Object.keys(folderCounts(p.folders))
+    .filter((f) => !!f && f.toLowerCase().includes(folderQuery.toLowerCase()))
+    .sort();
+  const filterCount = Number(p.folder !== undefined) + Number(!!p.group);
   return (
     <>
       <header className="topbar">
@@ -34,7 +46,7 @@ export default function SearchBar(p: {
             p.onSubmit();
           }}
         >
-          <Search size={16} />
+          <Search size={18} />
           <input
             ref={p.inputRef}
             aria-label="Search your knowledge"
@@ -62,95 +74,157 @@ export default function SearchBar(p: {
             <kbd>⌘ K</kbd>
           )}
         </form>
-        <select
-          aria-label="Search mode"
-          value={p.mode}
-          onChange={(e) => p.onMode(e.target.value as Mode)}
+        <Switch.Root
+          aria-label="Check answers (Jev evaluation)"
+          aria-describedby="jev-quick-help"
+          className="jev-quick-toggle"
+          checked={p.evaluate}
+          onCheckedChange={p.onEvaluate}
+          title="Check whether files answer your question. Sends selected text to TypeSafe when on."
         >
-          <option value="hybrid">Hybrid</option>
-          <option value="semantic">Semantic</option>
-          <option value="keyword">Keyword</option>
-        </select>
-        <label className="jev-control">
-          Check answers
-          <Switch.Root
-            aria-label="Check answers (Jev evaluation)"
-            title="Check whether results answer the question"
-            className="switch"
-            checked={p.evaluate}
-            onCheckedChange={p.onEvaluate}
-          >
-            <Switch.Thumb className="switch-thumb" />
-          </Switch.Root>
-        </label>
-        <span
-          tabIndex={0}
-          className="tooltip-info"
-          title="Check whether results answer the question. Selected text is sent to TypeSafe. Background organization is independent."
-          aria-label="Selected text is sent to TypeSafe for answerability checking."
-        >
-          <Info size={15} />
+          <Sparkles size={15} aria-hidden="true" />
+          <span>Jev<span className="jev-quick-label"> answers</span></span>
+          <span className="jev-quick-state" aria-hidden="true">{p.evaluate ? "On" : "Off"}</span>
+          <span className="jev-quick-track" aria-hidden="true">
+            <Switch.Thumb className="jev-quick-thumb" />
+          </span>
+        </Switch.Root>
+        <span id="jev-quick-help" className="sr-only">
+          Checks whether retrieved passages answer your question. When on, selected
+          text is sent to TypeSafe. This does not control background organization.
         </span>
-        <Menu.Root>
-          <Menu.Trigger asChild>
+        <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <Dialog.Trigger asChild>
             <button
-              className="icon"
-              aria-label="Search scope and filters"
-              title="Scope and groups"
+              className="filters-button"
+              aria-label={`Search scope and filters${filterCount ? ` ${filterCount}` : ""}`}
             >
-              <SlidersHorizontal size={18} />
+              <SlidersHorizontal size={16} />
+              <span className="filters-label">Filters</span>
+              {filterCount > 0 && (
+                <span className="filter-count"> {filterCount}</span>
+              )}
             </button>
-          </Menu.Trigger>
-          <Menu.Portal>
-            <Menu.Content className="menu scope-menu" align="end">
-              <Menu.Label>Folders</Menu.Label>
+          </Dialog.Trigger>
+          <Dialog.Portal>
+            <Dialog.Overlay className="overlay" />
+            <Dialog.Content className="reset-dialog search-options-dialog">
+              <div className="search-options-heading">
+                <div>
+                  <Dialog.Title>Search filters</Dialog.Title>
+                  <Dialog.Description>
+                    Choose where to search and how to find relevant files.
+                  </Dialog.Description>
+                </div>
+                <Dialog.Close asChild>
+                  <button className="icon" aria-label="Close search filters">
+                    <X size={18} />
+                  </button>
+                </Dialog.Close>
+              </div>
+              <label className="field-label" htmlFor="find-folder">
+                Folder
+              </label>
               <input
+                id="find-folder"
                 className="folder-picker-search"
-                aria-label="Find folder"
                 placeholder="Find folder…"
                 value={folderQuery}
                 onChange={(e) => setFolderQuery(e.target.value)}
-                onKeyDown={(e) => e.stopPropagation()}
               />
-              <Menu.Item onSelect={() => p.onFolder(undefined)}>
-                All files
-              </Menu.Item>
-              <Menu.Item onSelect={() => p.onFolder("")}>Unfiled</Menu.Item>
-              {Object.keys(folderCounts(p.folders))
-                .filter(
-                  (f) =>
-                    !!f && f.toLowerCase().includes(folderQuery.toLowerCase()),
-                )
-                .sort()
-                .map((f) => (
-                  <Menu.Item
+              <div
+                className="folder-options"
+                role="group"
+                aria-label="Search folder"
+              >
+                <button
+                  aria-pressed={p.folder === undefined}
+                  onClick={() => p.onFolder(undefined)}
+                >
+                  All files
+                </button>
+                <button
+                  aria-pressed={p.folder === ""}
+                  onClick={() => p.onFolder("")}
+                >
+                  Unfiled
+                </button>
+                {paths.map((f) => (
+                  <button
                     key={f}
                     title={f}
                     aria-label={f}
-                    onSelect={() => p.onFolder(f)}
+                    aria-pressed={p.folder === f}
+                    onClick={() => p.onFolder(f)}
+                    style={{
+                      paddingLeft: 12 + (f.split(" / ").length - 1) * 14,
+                    }}
                   >
-                    <span
-                      style={{ paddingLeft: (f.split(" / ").length - 1) * 12 }}
-                    >
-                      {f.split(" / ").at(-1)}
-                    </span>
-                  </Menu.Item>
+                    {f.split(" / ").at(-1)}
+                  </button>
                 ))}
-              <Menu.Label>Groups</Menu.Label>
-              <Menu.Item onSelect={() => p.onGroup(undefined)}>
-                All groups
-              </Menu.Item>
-              {p.groups.map((g) => (
-                <Menu.Item key={g} onSelect={() => p.onGroup(g)}>
-                  {p.group === g ? "✓ " : ""}
-                  {g}
-                </Menu.Item>
-              ))}
-            </Menu.Content>
-          </Menu.Portal>
-        </Menu.Root>
+                {folderQuery && !paths.length && (
+                  <p className="secondary">No matching folders.</p>
+                )}
+              </div>
+              <label className="field-label" htmlFor="search-group">
+                Topic group
+              </label>
+              <select
+                id="search-group"
+                aria-label="Topic group"
+                value={p.group || ""}
+                onChange={(e) => p.onGroup(e.target.value || undefined)}
+              >
+                <option value="">All groups</option>
+                {p.groups.map((g) => (
+                  <option key={g}>{g}</option>
+                ))}
+              </select>
+              <p className="field-help">
+                Groups connect related topics across folders.
+              </p>
+              <details className="advanced-search">
+                <summary>
+                  Search options <ChevronDown size={16} />
+                </summary>
+                <label className="field-label" htmlFor="search-mode">
+                  Search method
+                </label>
+                <select
+                  id="search-mode"
+                  aria-label="Search mode"
+                  value={p.mode}
+                  onChange={(e) => p.onMode(e.target.value as Mode)}
+                >
+                  <option value="hybrid">Hybrid · meaning and keywords</option>
+                  <option value="semantic">Semantic · meaning</option>
+                  <option value="keyword">Keyword · exact terms</option>
+                </select>
+                <p className="field-help">
+                  Use Jev answers beside the search box to check whether results
+                  answer your question. When on, selected text is sent to TypeSafe.
+                </p>
+              </details>
+              <div className="search-options-footer">
+                <button
+                  onClick={() => {
+                    p.onFolder(undefined);
+                    p.onGroup(undefined);
+                    setFolderQuery("");
+                  }}
+                >
+                  Clear filters
+                </button>
+                <Dialog.Close asChild>
+                  <button className="primary">Done</button>
+                </Dialog.Close>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
         <button className="import-button primary" onClick={p.add}>
-          <Upload size={15} />
+          <Upload size={16} />
           Import
         </button>
         {p.actions}
@@ -161,7 +235,7 @@ export default function SearchBar(p: {
             <button
               title={p.folder || "Unfiled"}
               onClick={() => p.onFolder(undefined)}
-              aria-label="Clear folder scope"
+              aria-label={`Clear folder scope: ${p.folder || "Unfiled"}`}
             >
               <span>{p.folder || "Unfiled"}</span>
               <X size={13} />
@@ -171,7 +245,7 @@ export default function SearchBar(p: {
             <button
               title={p.group}
               onClick={() => p.onGroup(undefined)}
-              aria-label="Clear group filter"
+              aria-label={`Clear group filter: Group: ${p.group}`}
             >
               <span>Group: {p.group}</span>
               <X size={13} />

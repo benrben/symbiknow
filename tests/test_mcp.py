@@ -27,7 +27,13 @@ def test_real_stdio_bulk_versions_retry_and_bytes(tmp_path):
         request_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
         async with Client(server_parameters(str(data), storage_only=True)) as session:
             tools = await session.list_tools()
-            assert {tool.name for tool in tools.tools} == {"upload", "download", "search"}
+            assert {tool.name for tool in tools.tools} == {
+                "upload",
+                "download",
+                "search",
+                "upload_folder",
+                "download_folder",
+            }
             uploaded = await upload_files(session, [one, two], request_ids=request_ids)
             assert all(item["stored"] and not item["searchable"] for item in uploaded)
             repeated = await upload_files(session, [one, two], request_ids=request_ids)

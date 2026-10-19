@@ -1,3 +1,4 @@
+import { chooseView } from "./ui-controls";
 import { fileURLToPath } from "node:url";
 import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
@@ -41,7 +42,7 @@ test("100-document map pan and zoom measurement", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Search your knowledge").fill("map");
   await page.getByLabel("Search your knowledge").press("Enter");
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".canvas-document").first()).toBeVisible();
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Performance.enable");

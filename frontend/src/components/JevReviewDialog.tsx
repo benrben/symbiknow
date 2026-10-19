@@ -1,6 +1,6 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Sparkles } from "lucide-react";
+import { ReviewIcon, OrganizeIcon } from "./KnowledgeIcons";
 import { folderCounts } from "../api";
 
 export type ReviewMode = "unfiled" | "links";
@@ -33,7 +33,7 @@ export default function JevReviewDialog(p: {
       <Dialog.Portal>
         <Dialog.Overlay className="overlay" />
         <Dialog.Content className="reset-dialog jev-review-dialog">
-          <Sparkles size={24} />
+          {unfiled ? <OrganizeIcon size={24} /> : <ReviewIcon size={24} />}
           <Dialog.Title>
             {unfiled ? "Group unfiled files" : "Review links only"}
           </Dialog.Title>

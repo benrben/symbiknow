@@ -19,6 +19,7 @@ test("bounded upload, unchanged polls, lazy history and native ZIP download", as
     if (r.url().includes("/api/")) requests.push(r.url());
   });
   await page.goto("/");
+  const origin = new URL(page.url()).origin;
   await expect(page.locator(".file-row")).toHaveCount(7);
   const session = await page.context().newCDPSession(page);
   const report: Record<string, unknown> = {
@@ -135,7 +136,7 @@ test("bounded upload, unchanged polls, lazy history and native ZIP download", as
   expect(summary.evidence).toEqual([]);
   started = Date.now();
   const response = await page.request.post("/api/bulk-download", {
-    headers: { "X-Symbiknow-UI": "1", Origin: "http://127.0.0.1:8766" },
+    headers: { "X-Symbiknow-UI": "1", Origin: origin },
     data: { prepare: true, documents: [doc] },
   });
   expect(response.ok()).toBe(true);
@@ -143,7 +144,7 @@ test("bounded upload, unchanged polls, lazy history and native ZIP download", as
   const downloadPromise = page.waitForEvent("download");
   await page.evaluate((url) => {
     const a = document.createElement("a");
-    a.href = "http://127.0.0.1:8766" + url;
+    a.href = url;
     a.click();
   }, url);
   const download = await downloadPromise;
@@ -166,11 +167,11 @@ test("bounded upload, unchanged polls, lazy history and native ZIP download", as
     "SystemInfo.getProcessInfo",
   );
   await fs.writeFile(
-    path.join(output, "browser-memory.json"),
+    process.env.SYMBIKNOW_MEMORY_REPORT || path.join(output, "browser-memory.json"),
     JSON.stringify(report, null, 2),
   );
   await page.request.post("/api/delete-document", {
-    headers: { "X-Symbiknow-UI": "1", Origin: "http://127.0.0.1:8766" },
+    headers: { "X-Symbiknow-UI": "1", Origin: origin },
     data: { document_id: doc.document_id, expected_version: doc.version },
   });
   await fs.rm(dir, { recursive: true, force: true });

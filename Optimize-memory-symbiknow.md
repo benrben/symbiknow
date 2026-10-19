@@ -2,6 +2,14 @@
 
 Updated: 17 October 2026.
 
+**Independent implementation review:** A second review found and fixed three
+gaps in tasks 4, 13 and 16: conversion filename collisions, a separate database
+commit for each four-chunk batch, and preview eviction racing a cache read.
+Fresh isolated tests and speed/RAM measurements are recorded in the
+[implementation review](outputs/memory-research/implementation-review/README.md).
+The earlier validation and live-server observations below retain their original
+scope; this review did not restart or migrate the live library.
+
 This document records implementation and verification on the Apple M5 Pro. **All 20 tasks are complete under the user's revised requirement: 8-bit PyTorch, without MLX.** The live server was restarted on port 8765 (PID **54272**). All **89 indexed documents** remain present and the aggregate hash of **272 OCFL inventory files** is unchanged. Stored vectors and the original float32 index manifest were preserved; a measured compatibility receipt authorizes INT8 queries. `.env` and `.env.example` select torch/INT8; automatic runtime selection also stays torch. Historical MLX research remains unused.
 
 **Final validation:** **273 backend tests and 21 related browser flows pass**, plus production build and Ruff. Existing-index validation covered 80 generated bilingual queries: **100% first-result agreement**, **98.75% top-three overlap**, minimum query cosine **0.999737**, and no expected-match losses. Separate rebuilt production-chunk, real-photo, scanned-PDF, original-byte and overlapping ingestion/search checks pass. Generated labels do not certify broad production accuracy; the float32 baseline itself missed the earlier absolute 90% top-three target.

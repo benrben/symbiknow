@@ -1,7 +1,7 @@
 [project]
 name = "symbiknow"
 version = "0.1.0"
-description = "Local OCFL file memory and three MCP tools for AI agents"
+description = "Local OCFL file memory and five MCP tools for AI agents"
 requires-python = ">=3.12,<3.14"
 dependencies = [
   "mcp==2.3.0",

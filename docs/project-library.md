@@ -87,7 +87,7 @@ A second expansion adds 24 deeper implementation/procedure guides, bringing the 
 
 ## Visual handbook and current media - 13 October 2026
 
-The current documentation refresh adds a six-page visual handbook PDF, three implementation diagrams, two screenshots of the real UI and a searchable media index. It also refreshes changed repository guides in place, preserving document IDs and older versions. The curated set now contains 64 Markdown documents and six media originals; operational receipts and fictional fixtures remain excluded.
+The current documentation refresh adds a six-page visual handbook PDF, three implementation diagrams, two screenshots of the real UI and a searchable media index. It also refreshes changed repository guides in place, preserving document IDs and older versions. That 13 October set contained 64 Markdown documents and six media originals; operational receipts and fictional fixtures remain excluded.
 
 | Library filename | Repository source |
 | --- | --- |
@@ -127,3 +127,31 @@ Files are transferred through Symbiknow's MCP `upload` tool on the existing HTTP
 Preserve a document ID for a later source-file update and provide the latest expected version. Reuse the same request ID only for an identical retry. Verify all full download hashes before marking an import complete. Indexing and provider organization may finish after the file's storage commit.
 
 Current documentation snapshots should take precedence over historical planning statements and older review scores when interpreting the implemented application. Consult `docs/current-status.md` and the dated validation sections for remaining gaps.
+
+## Current source sync — 17 October 2026
+
+The selected documentation set now contains **68 Markdown sources and six existing media originals (74 documents)**. All 54 focused guides under `docs/knowledge-library/` are included. The new runtime/memory entries complement the earlier catalog:
+
+| Library filename | Repository source |
+| --- | --- |
+| Symbiknow memory runtime controls.md | `docs/memory-runtime.md`: selected PyTorch INT8 runtime, compatibility guards, fallback and resource controls. |
+| Symbiknow memory optimization record.md | `Optimize-memory-symbiknow.md`: implementation checklist, dated verification and remaining limits. |
+| Symbiknow memory verification reproduction.md | `outputs/memory-research/REPRODUCE.md`: commands, isolation and measurement boundaries. |
+| Symbiknow PyTorch INT8 verification.md | `outputs/memory-research/followup/README.md`: final matched results, compatibility proof and reproduction. |
+
+The implementation audit corrects the affected focused guides for current model ownership, streaming original transfers, retry/cache/preview boundaries, rebuild journals, canonical project identity, answer-part policy and Overview/readable Map/reader behavior. Unchanged source files keep their current versions. Existing IDs and histories are preserved for updates. Other projects' documents remain outside this selection. The original build checklist, older validation results and six media files retain their historical dates; the 13 October screenshots do not depict the later UI.
+
+`docs/library-sync-2026-10-17-receipt.json` is the operational record for this sync. It records planned request IDs before transfer, source hashes/sizes, current heads, prior history, exact download verification, indexing state and retrieval checks. Read its final status before claiming completion. The receipt is not itself imported as project knowledge. The earlier import/expansion/media receipts remain dated evidence and are not overwritten.
+
+## UI documentation refresh — 19 October 2026
+The related implementation guides now document the four fixes verified on 18 October: independent search sort directions, current saved-version timestamps in full/compact MCP and UI results, preview focus restoration, and wrapping toolbar layout. The validation record preserves the focused 95 backend / five Node / five browser test results and their limits. This refresh updates existing document IDs; it does not add a new product feature or replace historical media.
+
+`docs/library-sync-2026-10-19-receipt.json` records source comparisons, version-pinned uploads, exact download/history verification, indexing and retrieval outcomes. Read its final status before treating the refresh as complete. The selected catalog remains 68 Markdown sources and six dated media originals. Unrelated library documents and the separate CDM proposal are outside this UI documentation refresh.
+
+## Folder tool documentation — 19 October 2026
+
+The current API has five MCP tools: upload, download, search, upload_folder and download_folder. The README, UI reference, MCP reference, architecture, operations and affected focused guides describe the additive folder-transfer contract, retry semantics, exact-version ZIP snapshots and limits. Older test results, original plans and 13 October media retain their dates. The operational refresh record is `docs/library-sync-2026-10-19-folder-tools-receipt.json`; inspect its final status for transfer and retrieval verification.
+
+## Documentation consistency refresh — 19 October 2026
+
+The folder-transfer reference now includes guarded member updates and ZIP continuation examples. Related storage and manual-organization guides distinguish UI selection limits from whole-folder MCP export and explain additive imports. The local CDM proposal's synthetic tool inventory and exact source spans also reflect the five-tool API; it remains a proposal outside the selected implementation-library catalog. `docs/library-sync-2026-10-19-docs-refresh-receipt.json` records the changed catalog documents, retained versions and MCP verification for this refresh.

@@ -1,3 +1,4 @@
+import { chooseView, setSearchMode } from "./ui-controls";
 import { test, expect } from "./coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -38,8 +39,8 @@ test("external same-version folder moves refresh search and scope without resubm
   };
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "List", exact: true }).click();
-    await page.getByLabel("Search mode").selectOption("semantic");
+    await chooseView(page, "List");
+    await setSearchMode(page, "semantic");
     await page.getByLabel("Search your knowledge").fill("keep every version");
     await page.getByLabel("Search your knowledge").press("Enter");
     const row = page
@@ -55,7 +56,7 @@ test("external same-version folder moves refresh search and scope without resubm
     await screenshot(page, "01-search-refreshed");
     await page.clock.runFor(4200);
     expect(searches).toBe(before + 1);
-    await page.getByRole("button", { name: "Canvas", exact: true }).click();
+    await chooseView(page, "Canvas");
     await expect(page.getByLabel("Search your knowledge")).toHaveValue(
       "keep every version",
     );
@@ -63,8 +64,10 @@ test("external same-version folder moves refresh search and scope without resubm
       page.locator(".canvas-title").filter({ hasText: "storage-decisions" }),
     ).toBeVisible();
     expect(searches).toBe(before + 1);
-    await page.getByRole("button", { name: "List", exact: true }).click();
-    await page.getByRole("button", { name: "Review", exact: true }).click();
+    await chooseView(page, "List");
+    await page
+      .getByRole("button", { name: /^Review \d+$/, exact: true })
+      .click();
     await expect(row).toBeVisible();
     await move(doc.folder);
     await page.clock.runFor(4200);
@@ -108,7 +111,12 @@ for (const search of [false, true]) {
           total: selected.length,
           has_more: false,
           folders,
-          scoped_folders: folders,
+          scoped_folders: Object.fromEntries(
+            Object.entries(folders).filter(
+              ([path]) =>
+                !scope || path === scope || path.startsWith(scope + " / "),
+            ),
+          ),
           library_total: docs.length,
         },
       });
@@ -123,7 +131,7 @@ for (const search of [false, true]) {
       }),
     );
     await page.goto("/");
-    await page.getByRole("button", { name: "Canvas", exact: true }).click();
+    await chooseView(page, "Canvas");
     if (search) {
       await page.getByLabel("Search your knowledge").fill("keep every version");
       await page.getByLabel("Search your knowledge").press("Enter");
@@ -173,11 +181,20 @@ for (const search of [false, true]) {
         await page.locator(".canvas-group-summary button").first().click();
       else await page.locator(".frame-label").first().click();
       await expect(
-        page.getByRole("heading", { name: "Project 00", exact: true }),
+        page.getByRole("button", {
+          name: /^Clear folder scope(?:: .+)?$/,
+          exact: true,
+        }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("button", {
+          name: /^Clear folder scope(?:: .+)?$/,
+          exact: true,
+        }),
+      ).toContainText("Project 00");
       await expect(page.locator(".canvas-overview")).toHaveCount(0);
       await screenshot(page, "04-focused-folder");
-      await page.getByRole("button", { name: "List", exact: true }).click();
+      await chooseView(page, "List");
       await screenshot(page, "05-folders-files");
     }
   });

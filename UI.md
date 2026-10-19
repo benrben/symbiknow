@@ -45,26 +45,26 @@ While the UI server is running, all agents connect to the existing HTTP endpoint
 
 Use the HTTP/Streamable HTTP server connection setting of your MCP client. Do not
 launch a stdio process against the same data directory. The endpoint still exposes
-exactly `upload`, `download`, and `search`. Multiple sessions and browser requests
+`upload`, `download`, `search`, `upload_folder`, and `download_folder`. Multiple sessions and browser requests
 share the SDK application's lifespan, owner lock and worker. Disconnecting a client
 does not stop ingestion. `uv run python -m app.server` remains the alternative stdio
 launch when the web server is stopped.
 
 ## Desktop behavior
 
-List, Cards and Canvas share navigation, submitted search, ranking, Jev judgments,
+Overview, List, Cards and Map share navigation, submitted search, ranking, Jev judgments,
 selection and version. View changes reuse results without another evaluation.
 All files, Recent and Unfiled are separate scopes. Recent uses the latest stored
 version's real timestamp; the table labels this field **Modified**. Name, type and
-saved-date sorting happen on the server before paging. Recent visibly selects Modified
+saved-date sorting in library browsing happen on the server before paging. Recent visibly selects Modified
 descending; choosing a table sort leaves Recent and applies that sort. The native
 table exposes column headers, sort direction and row selection. Sidebar counts cover
 the whole library; content tiles and canvas counts use the folder/group intersection
 across all pages. A zero-match group offers Clear filters instead of suggesting import.
 
 Compact is the default: 13px/18px interface text, 30px file rows, 28px tree rows,
-and a 44px toolbar. Comfortable uses 14px text and 38px file rows; reader text stays
-15px/23px. One List | Cards | Canvas control and density persist per library. The
+and a toolbar with a 64px minimum height that grows when controls wrap. Comfortable uses 14px text and 38px file rows; reader text stays
+15px/23px. One Overview | List | Cards | Map control and density persist per library. The
 sidebar starts at 224px (200–320px), and the reader at 420px (340–600px). Drag the
 separators or use Left/Right. Split reading keeps approximately 520px for files;
 at narrower widths the reader replaces the workspace. Expand reader has an explicit
@@ -92,11 +92,12 @@ ZIP content is capped at 1 GiB. Context menus retain update, versions, download 
 permanent document deletion. Updating explicitly pins the existing ID and expected
 current version; filenames never establish identity.
 
-The common reader has Document, Versions and Connections tabs. Connections shows original
-metadata, processing, organization origin and recorded assignment evidence. Related
+The common reader has Document, Versions, Connections and Details tabs. Details shows original
+metadata, processing, organization origin and recorded assignment evidence. Connections loads stored
+relationships directly, without requiring a visit to Details. Expand reader and Split view have explicit labels. Related
 documents and Why linked use stored relationship types, passage IDs, headings/pages
 and exact endpoint versions. Old versions preview/download their actual bytes and
-carry no current judgments or connections. Historical Connections explicitly says organization
+carry no current judgments or connections. Historical Details explicitly says organization
 was not recorded rather than implying Unfiled/Pending. Closing the inspector retains the canvas
 selection and neighborhood; it does not discard positions or the submitted query.
 HTML originals remain attachments and previews remain DOMPurify-sanitized opaque
@@ -106,12 +107,21 @@ Search defaults to Hybrid and preserves previous Jev preferences. Semantic and
 Keyword remain available; the MCP answer alias is unchanged. Enter submits, while
 mode/toggle/scope changes rerun a submitted question once. Whitespace and Clear return
 to browsing in the current scope. Cmd/Ctrl+K focuses search. Stale requests cannot
-replace a later query. The toolbar explains that selected text goes to TypeSafe;
+replace a later query. Filters contains folder search, topic groups, and expandable Search options for retrieval mode and answerability.
+The answerability control explains that selected text goes to TypeSafe;
 Jev's answerability switch does not control background organization. Result counts say Showing N matches (the response is capped at 40); checked, supporting,
 possible-conflict and not-checked counts disclose partial evaluation. Direct/partial/related/unrelated/uncertain/not-checked states stay distinct. Visual-only
 matches cannot get answer badges. Provider failure keeps ordinary retrieval usable.
 
-Canvas uses neutral compact folder frames with 174px document cards (196px in browsing,
+Overview opens a readable folder overview, with aggregate counts across the entire scope,
+including folders absent from the first loaded page. Visible groups can fetch up to three metadata-only
+sample rows; each row opens the reader, while Open folder switches to the file list. The overview
+uses two columns when space permits and collapses to one beside the inspector. Overview and Map are separate navigation choices. The compact overview fits all four current
+root groups in a 1280×720 desktop viewport. Map opens readable clusters; Freeform map retains
+the existing graph and saved layouts, and Readable map returns to the new map. Browsing card excerpts
+remove introductory metadata and prefer actual source prose. Cards also have an explicit Preview action.
+
+The optional Freeform map uses neutral compact folder frames with 174px document cards (196px in browsing,
 224px for search evidence), arranged in
 2–3 columns. Browsing previews are bounded to six per folder (one per folder in
 large overviews), with actual shown/total counts and Open folder. Every returned
@@ -183,7 +193,7 @@ previous valid organization and exposes its failed processing state.
 Added local endpoints: `rename-folder`, `move-folder`, `move-documents`, and
 `bulk-download`. Existing library/detail endpoints gain library identity, scoped reset
 revision, manual revision/change, aggregate processing state and assignment origin/
-evidence. Public MCP remains exactly upload, download and search. Original bytes,
+evidence. Public MCP also includes upload_folder and download_folder alongside upload, download and search. Original bytes,
 IDs, filenames and content versions are unchanged by organization operations.
 
 ## Verification
@@ -221,6 +231,9 @@ also retained. Target desktop sizes are 1440×900, 1280×800, 1102×808 and 1920
 
 ## Validation limits
 
+The focused presentation checks run with `node --test frontend/tests/unit/browse-presentation.test.mjs`
+and cover aggregate scopes, Unfiled, null/zero counters, and prose selection.
+
 The deterministic tests establish data/UI contracts, not hosted Jev accuracy. The
 live provider preflight establishes availability only. No held-out human-labeled
 quality corpus was supplied; multilingual/cross-project regressions are candidate
@@ -229,12 +242,12 @@ set is still needed to measure independent folder quality, link precision and
 answerability errors. Full 100,000-document operation on 16 GB remains unverified;
 synthetic metadata and earlier bounded candidate benchmarks do not establish it.
 
-Uploads process one file at a time and retain retry receipts in the current tab,
-not across tab closure. Browser hashing uses the current file's buffer, up to the
-configured 256 MiB maximum. Bulk ZIP preparation is disk-backed on the server; the
-browser receives a bounded ZIP Blob. Full PDFs open in the user's external browser viewer;
-inline page previews have an explicit unavailable state and retained Open/Download. No mobile redesign, host-app
-launching, editing, collaboration or cloud service was introduced.
+The earlier desktop transfer checks used whole-file browser hashing and ZIP Blobs.
+The 17 October implementation hashes one-MiB slices in a worker, uploads bounded
+base64 chunks, and follows a short-lived prepared ZIP URL. Upload request receipts
+remain scoped to the current tab. Original PDF Open/Download stays available when
+inline page rendering fails. Later narrow-screen and emulated-device checks are
+recorded below; editing, collaboration and cloud hosting remain outside this UI.
 
 ## Deep-review follow-up (12 October 2026)
 
@@ -278,8 +291,8 @@ the real library. It uses deterministic test embeddings/Jev and runs on port 876
 
 ## Jev review actions without resetting
 
-Library actions now offers **Group unfiled files with Jev** and **Review links only**.
-The Unfiled view also has a **Group with Jev** button. Grouping targets the captured
+Library actions now offers **Organize unfiled files** and **Review connections**.
+The Unfiled view also has a **Organize files** button. Grouping targets the captured
 set of unfiled documents, excludes manual placements (including intentional
 Unfiled placements), and uses the existing project/folder vocabulary. Uncertain
 ownership stays Unfiled. Links-only review supports the entire library or a folder
@@ -297,11 +310,12 @@ is a bounded candidate review, not an exhaustive all-pairs graph analysis.
 The Jev activity panel shows a determinate file-completion bar, current filename,
 activity, completed/remaining counts, skipped files and failures. The percentage
 measures finished files, not provider-call progress; no ETA is fabricated. The panel
-can be hidden while work continues, reopened via **Show Jev progress**, and stays
-visible on completion until dismissed. Motion respects reduced-motion preferences.
+can be hidden while work continues, reopened via **Show review status**. Successful completion becomes a compact Review complete
+indicator with expandable details. Failures and files needing a folder remain prominent. Unknown
+counters are omitted rather than rendered as null or guessed as zero. Motion respects reduced-motion preferences.
 
 Reset organization remains a separate explicitly destructive metadata rebuild.
-The MCP tool list remains exactly Upload, Download and Search.
+The MCP tool list is upload, download, search, upload_folder and download_folder.
 
 Completion now separates files grouped, still unfiled, skipped, failed, and links
 added. An unresolved ownership decision has a visible reason in the activity panel
@@ -334,3 +348,103 @@ Tests: `pytest -q tests/test_jev_review.py tests/test_ui_api.py tests/test_jev.p
 For local UI verification, `SYMBIKNOW_REVIEW_FIXTURE=1 SYMBIKNOW_MEDIA_FIXTURE=1
 .venv/bin/python tests/ui_fixture.py` adds one unfiled document and slows the mocked
 provider enough to inspect real worker progress. It sends no data to TypeSafe.
+
+## Focused reader and readable map
+
+Opening a document enters a reading workspace with a compact, searchable file navigator
+for its folder (or the loaded search results). Folder navigation fetches metadata only,
+in 60-file pages with explicit loading and coverage; the selected document is retained
+when it is outside the current page. Split view and Back to library preserve the
+underlying view. UI titles omit a repeated project prefix, while source document text
+is unchanged. Markdown previews expose On this page navigation derived from rendered
+headings, with keyboard focus moving to the selected section. Reading positions are restored by exact document and version identity. Phone navigation collapses behind Folders.
+
+The readable Map uses normally sized document buttons, responsive folder clusters,
+per-cluster Show more/Show fewer, and explicit loaded/total coverage. All aggregate
+folders remain represented even when their files are not yet loaded. Selecting a file
+loads its existing neighborhood; selecting a returned relationship emphasizes its
+endpoints and opens a side panel with versions and the recorded relation. Source
+passages are fetched on request from the existing link-evidence endpoint. Only links
+whose exact endpoint versions are represented may be drawn. Supports/contradicts links
+are directional; related links are not. Neighbor failures expose Retry. The map labels
+its limited coverage and never implies that the selected neighborhood is the full graph.
+Zoom stays within 85–140% for readability, with native scrolling and Fit columns.
+
+Verification for this iteration: TypeScript and production build, focused Node tests
+for aggregate scopes, null counters, excerpt selection, map endpoint versions, selected
+endpoint inclusion, contextual groups, and UI-only title shortening; live browser
+checks of the overview, file navigation, heading jumps, source passages, load-more, and
+390px/820px responsive previews. The historical Playwright specifications are maintained against the current navigation
+and the explicit Split view control.
+
+## Finding, reading, and scale polish (17 October 2026)
+
+- Reader text search supports literal case-insensitive matching, next/previous matches and Enter/Shift+Enter. Cmd/Ctrl+F within the reader focuses its search. Markdown and text previews highlight matches without modifying the source or the React-rendered DOM. Results are bounded at 500 highlights. HTML/PDF retain their existing preview behavior.
+- Reading position is stored for up to 200 exact document/version identities, scoped to the local library. A resumed document provides Back to top. No document text is stored by this feature.
+- The folder sidebar has name filtering, Home/End/Space support, and bounded indentation for deep paths. Reader file navigation uses 60-row pages instead of a terminal 100-file cutoff. Its search explicitly covers the current page.
+- The readable map filters loaded filenames/folders, explains partial coverage, filters the selected file's returned relationships by type, and shows connection lists in batches of 20. Exact endpoint-version validation remains required for drawn lines. Selecting a file or connection focuses the evidence heading; Escape closes evidence and restores an available control.
+- Review history retains the latest 30 terminal job summaries observed by this browser. Times are explicitly observation times, not fabricated completion timestamps. The backend exposes neither historical jobs nor file-by-file change events, so this browser history is not an audit log.
+- Search results expose the active retrieval method directly. A selected result explains its supplied evidence; backend answer explanations are displayed only when evaluation is enabled and available. Empty results retain recovery actions.
+- Skip-to-content, consistent visible focus, polite result counts, reduced-motion overrides, coarse-pointer targets, and collapsed navigation below 760px support keyboard and narrow-screen use.
+- Markdown rendering and the reader are loaded on demand. Production initial JavaScript fell from about 627 KB to 420 KB before compression; deferred Markdown is about 159 KB and reader about 57 KB. This is a bundle comparison, not a measured user-perceived speed guarantee.
+
+Validation: production TypeScript/Vite build; 18 Node regression tests; browser checks of real document search, next match, section jumps, position restoration across file switches, map search, relationship filtering, dialog focus return, keyword no-results recovery, dark/light views, and 390px/640px responsive frames. Main text/secondary/accent tokens exceed 4.5:1 on tested surface/raised/selection colors in both themes. This is not a full accessibility certification.
+
+Reproducible development fixtures: `/tests/fixtures/ui-scale.html` renders 10,000 synthetic metadata rows across 100 groups, with 250 connections for the first file; only 300 file nodes render initially. `/tests/fixtures/ui-responsive.html` embeds the app at 390px and 640px. Both are development-only; neither is included in the production entrypoint. Cross-browser checks are available through `npm run test:quality`. Physical-device,
+human screen-reader, and independent usability validation remain separate from automated checks.
+
+
+## Reproducible UI quality checks
+
+From `frontend/`, run `npm run build` before `npm test`. The legacy browser suite
+uses a disposable OCFL library on port 8766 and a Vite proxy on 5174; its mutations
+never target the primary library. Search and provider decisions are deterministic
+fixtures, not model-accuracy evidence.
+
+`npm run test:quality` runs the focused reader, readable map, keyboard navigation,
+responsive layouts and axe WCAG 2.0/2.1/2.2 A/AA checks in Chromium, Firefox and
+WebKit. Install the latter engines with `npx playwright install firefox webkit`
+or set `PLAYWRIGHT_BROWSERS_PATH` to an existing browser installation. It routes
+all API requests to synthetic data and uses port 5176. Light and dark audits cover
+overview, filters (including advanced options and active scopes), review history,
+list, cards, selected map and reader. Clipped scrolling targets are brought into
+view and checked again with the same target-size rule; no rule is disabled.
+
+Two fixture-dependent legacy tests run separately, with no early-stop limit:
+
+```sh
+SYMBIKNOW_UI_PORT=8767 SYMBIKNOW_DESIGN_FIXTURE=1 SYMBIKNOW_UI_RESULTS=design-test-results npm test -- design-capture.spec.ts
+SYMBIKNOW_UI_PORT=8768 SYMBIKNOW_METADATA_ROWS=10000 SYMBIKNOW_UI_RESULTS=benchmark-test-results npm test -- metadata-benchmark.spec.ts
+```
+
+The metadata benchmark measures synthetic derived rows plus seven fixture
+documents. It does not measure extraction, full-library original-file operations,
+real model accuracy or hosted-provider latency. Automated axe and emulated
+viewports are useful regression checks, not accessibility certification or
+physical-device usability results.
+
+## Mobile accessibility regression checks
+
+`npm --prefix frontend run test:mobile` uses isolated synthetic data with touch-enabled
+iPhone SE, iPhone 13, iPad and Pixel 7 browser profiles. It covers current navigation
+state, folder-menu Escape/focus recovery, 44px navigation controls, 16px input text,
+reader focus restoration, portrait/landscape reflow, reduced viewport height, filter
+focus containment, empty-search recovery and automated WCAG checks.
+
+These checks emulate devices; reduced height does not reproduce an actual OS keyboard.
+They do not replace physical iOS/Android devices, VoiceOver/TalkBack speech and rotor
+testing, or usability testing with people who use assistive technology.
+
+## Manual UI report fixes — 18 October 2026
+
+Search lists start in relevance order. Name, Type and Modified each toggle ascending/descending independently of the browse order; choosing another column starts ascending. Sorting reorders loaded matches without another retrieval or answer check. A new submitted query resets relevance order. Modified uses the matched current version's saved timestamp, supplied by the shared backend in both full and compact MCP results. Invalid or missing dates sort last in either direction.
+
+Closing an original preview with Escape or its close button restores the visible invoking control: Open file for reader previews, or the file control for Space Quick Look. This also applies to historical versions. If that control disappeared, focus falls back to an available reader Open file control or search. Hidden import/update file inputs are excluded from keyboard tab order.
+
+The toolbar wraps as the workspace narrows, including an 800px window with a 320px sidebar. Below 760px, search uses its own row. The targeted layout checks covered widths 390, 760, 780, 800, 820, 900 and 1024px at normal and 1.25 CSS zoom, plus an 800×600 viewport with the widest sidebar. CSS zoom checks are not certification of every browser zoom or display scaling setting.
+
+Focused verification passed 95 backend tests, five search-presentation unit tests, five browser regressions and the TypeScript/Vite production build. The browser tests use controlled 70-document fixtures. Live keyword verification found seven matching documents with timestamps equal to their browse metadata; the 98-document library's original inventories were unchanged by verification. No provider calls were made for those checks. See `outputs/ui-bug-fixes-2026-10-18/verification.json`, `frontend/tests/manual-ui-regressions.spec.ts` and the dated validation record. This was a focused regression run, not a complete project test run.
+
+## MCP folder transfers — 19 October 2026
+
+Agents can import file trees with `upload_folder` and export a library folder with `download_folder`. Imported relative subfolders use durable manual assignments and appear in the same sidebar and scope filters as UI moves. Export includes descendants and original versions in a bounded ZIP snapshot. This adds MCP tools and client commands; the existing UI file import and selected-file ZIP controls retain their behavior. See [MCP folder contracts](docs/mcp-reference.md#folder-transfers).

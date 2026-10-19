@@ -1,4 +1,4 @@
-"""Actual file transfers through the official MCP SDK (stdio)."""
+"""File and folder transfers through the official MCP SDK (HTTP or stdio)."""
 
 from __future__ import annotations
 
@@ -187,9 +187,141 @@ async def download_files(
     return downloaded
 
 
+async def upload_folder(
+    session, directory, folder, request_id, *, updates=None, chunk_bytes=CHUNK_BYTES
+):
+    """Send regular files recursively; callers retain the folder UUID for retries."""
+    from app.folder_transfer import relative_parts
+
+    if not 1 <= chunk_bytes <= CHUNK_BYTES:
+        raise ValueError("chunk_bytes must be between 1 and 256KiB")
+    directory = Path(directory).resolve()
+    if not directory.is_dir():
+        raise ValueError("Upload source must be a directory")
+    paths = sorted(directory.rglob("*"))
+    if any(path.is_symlink() for path in paths):
+        raise ValueError("Folder upload does not follow symbolic links")
+    paths = [path for path in paths if path.is_file()]
+    if not paths:
+        raise ValueError("Folder contains no regular files; empty directories are not stored")
+    for path in paths:
+        relative_parts(path.relative_to(directory).as_posix())
+    results = []
+    for path in paths:
+        relative = path.relative_to(directory).as_posix()
+        common = {
+            "relative_path": relative,
+            "source": str(path),
+            **(updates or {}).get(relative, {}),
+        }
+        size = path.stat().st_size
+        if size <= chunk_bytes:
+            response = await call(
+                session,
+                "upload_folder",
+                {
+                    "folder": folder,
+                    "request_id": request_id,
+                    "files": [
+                        {
+                            **common,
+                            "content_base64": base64.b64encode(path.read_bytes()).decode("ascii"),
+                        }
+                    ],
+                },
+            )
+        else:
+            with path.open("rb") as handle:
+                digest = hashlib.file_digest(handle, "sha256").hexdigest()
+            offset = 0
+            with path.open("rb") as handle:
+                while chunk := handle.read(chunk_bytes):
+                    response = await call(
+                        session,
+                        "upload_folder",
+                        {
+                            "folder": folder,
+                            "request_id": request_id,
+                            "files": [
+                                {
+                                    **common,
+                                    "content_base64": base64.b64encode(chunk).decode("ascii"),
+                                    "offset": offset,
+                                    "total_size": size,
+                                    "sha256": digest,
+                                    "final": offset + len(chunk) == size,
+                                }
+                            ],
+                        },
+                    )
+                    if response["files"][0].get("error"):
+                        raise ValueError(response["files"][0]["error"])
+                    offset += len(chunk)
+        result = response["files"][0]
+        if result.get("error") or not result.get("folder_assigned"):
+            raise ValueError(result.get("error", "Folder assignment did not complete"))
+        results.append(result)
+    return {"request_id": request_id, "folder": folder, "files": results}
+
+
+async def download_folder(session, folder, output_path, *, chunk_bytes=CHUNK_BYTES):
+    """Save a version-pinned folder ZIP, verifying its bytes without extracting it."""
+    if not 1 <= chunk_bytes <= CHUNK_BYTES:
+        raise ValueError("chunk_bytes must be between 1 and 256KiB")
+    output_path = Path(output_path)
+    if output_path.exists():
+        raise FileExistsError(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output_path.parent / f".symbiknow-folder-{uuid.uuid4()}.part"
+    offset = 0
+    transfer_id = None
+    digest = hashlib.sha256()
+    identity = None
+    try:
+        with temporary.open("xb") as handle:
+            while True:
+                result = await call(
+                    session,
+                    "download_folder",
+                    {
+                        "folder": folder,
+                        "transfer_id": transfer_id,
+                        "offset": offset,
+                        "length": chunk_bytes,
+                    },
+                )
+                current = (result["transfer_id"], result["size"], result["sha256"])
+                if identity is None:
+                    identity = current
+                if current != identity or result["offset"] != offset:
+                    raise ValueError("Folder download snapshot changed")
+                transfer_id = result["transfer_id"]
+                chunk = base64.b64decode(result["content_base64"], validate=True)
+                if len(chunk) != result["returned_bytes"] or (not chunk and not result["eof"]):
+                    raise ValueError("Invalid folder download chunk")
+                handle.write(chunk)
+                digest.update(chunk)
+                offset += len(chunk)
+                if result["eof"]:
+                    break
+        if offset != result["size"] or digest.hexdigest() != result["sha256"]:
+            raise ValueError("Folder ZIP failed integrity verification")
+        # Atomic no-overwrite publication, including a concurrent destination creation.
+        os.link(temporary, output_path)
+        return {k: v for k, v in result.items() if k != "content_base64"} | {
+            "output_path": str(output_path)
+        }
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 async def _main(args) -> None:
-    async with Client(server_parameters(args.data_dir, args.storage_only)) as session:
-        if args.command == "upload":
+    async with Client(args.url or server_parameters(args.data_dir, args.storage_only)) as session:
+        if args.command == "upload-folder":
+            result = await upload_folder(session, args.directory, args.folder, args.request_id)
+        elif args.command == "download-folder":
+            result = await download_folder(session, args.folder, args.output)
+        elif args.command == "upload":
             result = await upload_files(
                 session,
                 args.files,
@@ -218,9 +350,19 @@ async def _main(args) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--url", help="Running HTTP MCP endpoint; avoids a second library owner")
     parser.add_argument("--data-dir")
     parser.add_argument("--storage-only", action="store_true")
     commands = parser.add_subparsers(dest="command", required=True)
+    folder_upload = commands.add_parser("upload-folder")
+    folder_upload.add_argument("directory")
+    folder_upload.add_argument("--folder", required=True)
+    folder_upload.add_argument(
+        "--request-id", required=True, help="UUID reused across retries of this folder upload"
+    )
+    folder_download = commands.add_parser("download-folder")
+    folder_download.add_argument("folder")
+    folder_download.add_argument("--output", required=True, help="New ZIP output path")
     upload = commands.add_parser("upload")
     upload.add_argument("files", nargs="+")
     upload.add_argument("--document-id")

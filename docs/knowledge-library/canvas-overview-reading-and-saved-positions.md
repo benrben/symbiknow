@@ -1,6 +1,6 @@
 # Symbiknow / Interface / Canvas overview reading and saved positions
 
-Repository implementation guide. Snapshot: 13 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 
 ## Two presentation modes
 Folder overview and Document map change presentation, not retrieval or Jev evaluation. Folder frames contain immediate-child documents. At reading scale, document cards show actual bounded text or version-keyed image/PDF thumbnails. Fit, Fit results and Fit selection frame the relevant nodes; the low-zoom folder navigation remains available when card headings are hidden. Search accounts for all returned matches, while related context is separate.
@@ -14,6 +14,10 @@ Positions, geometry and viewport are scoped by library and navigation/search sco
 
 ## Evidence access
 List, Cards and Canvas share result identities, versions and judgments. Every evidence-badge activation creates a new navigation sequence. It reopens Evidence at the matched version, even after viewing Document, selecting an older version or closing the inspector. The selected evidence region receives keyboard focus. Full evaluated passages remain available when compact cards quote only an excerpt.
+
+## Readable overview and map
+
+Overview now opens `FolderOverview`, with scope-wide aggregate groups and metadata-only file samples. Map opens `ConnectionMap`, a readable clustered presentation with explicit loaded/total coverage, bounded per-cluster samples and 85–140% zoom. It draws only actual relationships whose endpoint versions match represented documents; the selected neighborhood is not the complete library graph. Filename/folder filtering and relationship-type filtering are presentation actions. The geometry version 3 graph described above remains available through Freeform map, preserving saved layouts and scoped Arrange/Undo.
 
 ## Source references
 - `frontend/src/components/LibraryCanvas.tsx`

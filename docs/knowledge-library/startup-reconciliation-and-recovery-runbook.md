@@ -1,6 +1,6 @@
 # Symbiknow / Operations / Startup reconciliation and recovery runbook
 
-Repository implementation guide. Snapshot: 12 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 ## Startup responsibilities
 The owner initializes storage, recovers durable deletion/manual-edit work, reconciles derived metadata with originals and resumes ingestion/rebuild processing. Do not manually modify OCFL inventories or insert fake LanceDB rows to imitate a completed upload.
 
@@ -18,6 +18,10 @@ Unsupported/empty extraction is terminal, not a reason to schedule an endless re
 
 ## Native integrity limits
 Clean shutdown and recovery receipts reduce known interruption risks. A hard-killed native storage commit or power loss can require OCFL validation or restoration from a verified backup. Current automated recovery cases are not an exhaustive power-cut campaign.
+
+## Current recovery files
+
+Rebuild recovery replays `temp/organization-rebuild.jsonl` against the checkpoint in `organization-rebuild.json`, ignores a torn final record and rejects old checkpoint tails. Filter recovery uses `temp/filter-publications/` markers, with a full initial legacy repair. Upload lookup repair uses `temp/receipts/`; extraction retry policy uses `temp/index-retries/`. Clean startup does not repeatedly rewrite every chunk filter. Back up the complete directory rather than selecting only the snapshot JSON.
 
 ## Source references
 - `app/server.py`

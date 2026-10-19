@@ -1,20 +1,14 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useId } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import * as Dialog from "@radix-ui/react-dialog";
-import Markdown from "./Markdown";
+import Markdown from "./MarkdownRenderer";
+import ReaderTools from "./ReaderTools";
 import PdfPreview from "./PdfPreview";
 import { useAppearance } from "../appearance";
 import DOMPurify from "dompurify";
-import {
-  X,
-  Download,
-  ExternalLink,
-  MoreHorizontal,
-  FileText,
-  Link2,
-  ChevronRight,
-} from "lucide-react";
+import { ArrowLeft, Info, X, Download, ExternalLink, MoreHorizontal, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
+import { VersionsIcon, EvidenceIcon, DocumentIcon as FileText, ConnectionsIcon as Link2 } from "./KnowledgeIcons";
 import {
   api,
   title,
@@ -29,16 +23,24 @@ import {
   type Evidence,
   type CardPreview,
 } from "../api";
+import { contextualTitle } from "../browsePresentation";
 import { searchEvidence, passagePreview } from "../searchEvidence";
 import { Judgment } from "./FileList";
 export function Preview({
   doc,
   highlights = [],
+  libraryId,
 }: {
   doc: Doc;
   highlights?: string[];
+  libraryId?: string;
 }) {
   const [text, setText] = useState("");
+  const proseRef = useRef<HTMLDivElement>(null);
+  const outlineId = useId();
+  const [headings, setHeadings] = useState<
+    { id: string; text: string; level: number }[]
+  >([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [table, setTable] = useState<string[][]>();
@@ -90,6 +92,28 @@ export function Preview({
     } else setLoading(false);
     return () => c.abort();
   }, [doc.document_id, doc.version, k, doc.size]);
+  useEffect(() => {
+    const root = proseRef.current;
+    if (!root || loading || error || k !== "Markdown") {
+      setHeadings([]);
+      return;
+    }
+    const nodes = Array.from(
+      root.querySelectorAll<HTMLElement>("h1,h2,h3,h4"),
+    ).slice(0, 80);
+    setHeadings(
+      nodes.map((node, index) => {
+        const id = `${outlineId}-section-${index}`;
+        node.id = id;
+        node.tabIndex = -1;
+        return {
+          id,
+          text: node.textContent || "Section",
+          level: Number(node.tagName.slice(1)),
+        };
+      }),
+    );
+  }, [text, loading, error, k, outlineId]);
   if (error && k !== "PDF")
     return (
       <p role="status">
@@ -158,32 +182,75 @@ export function Preview({
     );
   if (k === "Markdown")
     return (
-      <div className="prose">
-        <Markdown
-          highlights={highlights}
-          components={{
-            p: ({ children }) => {
-              const text = typeof children === "string" ? children : "";
-              return (
-                <p>
-                  {text.length > 12 &&
-                  highlights.some((e) => e.includes(text)) ? (
-                    <mark>{children}</mark>
-                  ) : (
-                    children
-                  )}
-                </p>
-              );
-            },
-            img: () => null,
-            a: ({ children }) => <span>{children}</span>,
-          }}
-        >
-          {text}
-        </Markdown>
+      <div className="document-text-preview">
+        <ReaderTools
+          content={proseRef}
+          ready={!loading}
+          identity={doc.document_id + ":" + doc.version}
+          libraryId={libraryId}
+        />
+        {headings.length > 0 && (
+          <label className="document-outline">
+            On this page
+            <select
+              aria-label="On this page"
+              value=""
+              onChange={(e) => {
+                const node = document.getElementById(e.target.value);
+                node?.scrollIntoView({ block: "start", behavior: "auto" });
+                node?.focus({ preventScroll: true });
+              }}
+            >
+              <option value="">Jump to section…</option>
+              {headings.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {" ".repeat(Math.max(0, h.level - 1))}
+                  {h.text}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="prose" ref={proseRef}>
+          <Markdown
+            highlights={highlights}
+            components={{
+              p: ({ children }) => {
+                const text = typeof children === "string" ? children : "";
+                return (
+                  <p>
+                    {text.length > 12 &&
+                    highlights.some((e) => e.includes(text)) ? (
+                      <mark>{children}</mark>
+                    ) : (
+                      children
+                    )}
+                  </p>
+                );
+              },
+              img: () => null,
+              a: ({ children }) => <span>{children}</span>,
+            }}
+          >
+            {text}
+          </Markdown>
+        </div>
       </div>
     );
-  if (k === "Text") return <pre className="text-preview">{text}</pre>;
+  if (k === "Text")
+    return (
+      <div className="document-text-preview">
+        <ReaderTools
+          content={proseRef}
+          ready={!loading}
+          identity={doc.document_id + ":" + doc.version}
+          libraryId={libraryId}
+        />
+        <div ref={proseRef}>
+          <pre className="text-preview">{text}</pre>
+        </div>
+      </div>
+    );
   if (table?.length)
     return (
       <div className="preview-table-wrap">
@@ -262,6 +329,7 @@ export function EvidencePassage({
   );
 }
 export default function DocumentInspector(p: {
+  libraryId?: string;
   doc: Doc;
   hidden?: boolean;
   expanded?: boolean;
@@ -285,11 +353,18 @@ export default function DocumentInspector(p: {
   onDelete: (d: Doc) => void;
   open: boolean;
   onOpen: (v: boolean) => void;
+  onPreviewClose: () => void;
   link?: Link;
   visibleIds?: string[];
   onLink: (l: Link) => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const readingContent = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!p.expanded || p.hidden) return;
+    const frame = requestAnimationFrame(() => closeRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [p.doc.document_id, p.doc.version, p.expanded, p.hidden]);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     // Keep row/card focus available for range selection and keyboard browsing.
@@ -391,7 +466,9 @@ export default function DocumentInspector(p: {
         "&version=" +
         version +
         "&section=" +
-        (["details", "evidence"].includes(tab) ? "details" : "summary"),
+        (["details", "connections", "evidence"].includes(tab)
+          ? "details"
+          : "summary"),
       undefined,
       c.signal,
     )
@@ -416,13 +493,13 @@ export default function DocumentInspector(p: {
     version,
     p.refreshKey,
     retry,
-    tab === "details" || tab === "evidence",
+    ["details", "connections", "evidence"].includes(tab),
   ]);
   useEffect(() => {
     setLinkDetail(undefined);
     setLinkError("");
     if (!p.link) return;
-    setTab("details");
+    setTab("connections");
     const l = p.link,
       c = new AbortController();
     api<{ source: Evidence[]; target: Evidence[]; link: Link }>(
@@ -459,38 +536,59 @@ export default function DocumentInspector(p: {
   }, [tab, matched, detail]);
   return (
     <aside
+      tabIndex={-1}
+      onKeyDown={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+          const field = e.currentTarget.querySelector<HTMLInputElement>(
+            '[aria-label="Find in document"]',
+          );
+          if (field) {
+            e.preventDefault();
+            field.focus();
+            field.select();
+          }
+        }
+      }}
       className={"inspector" + (p.hidden ? " hidden" : "")}
       aria-label={p.hidden ? undefined : "Document inspector"}
       aria-hidden={p.hidden || undefined}
     >
       <div className="inspector-heading">
         <div>
-          <h2 title={doc.filename}>{title(doc)}</h2>
+          <h2 title={doc.filename}>
+            {contextualTitle(
+              doc.filename,
+              detail?.organization?.folder || p.doc.folder,
+            )}
+          </h2>
           <p className="secondary">
             {historical
               ? "Historical version"
-              : detail?.organization?.folder || "Unfiled"}{" "}
-            · {kind(doc)}
+              : (detail ? detail.organization?.folder : p.doc.folder) ||
+                "Unfiled"}{" "}
           </p>
         </div>
         <button
-          className="icon reader-expand"
-          aria-label={p.expanded ? "Return to split reader" : "Expand reader"}
-          title={p.expanded ? "Return to split reader" : "Expand reader"}
+          className="reader-expand"
+          aria-label={p.expanded ? "Split view" : "Expand reader"}
+          title={p.expanded ? "Split view" : "Expand reader"}
           onClick={p.onExpand}
         >
-          <ExternalLink size={16} />
+          {p.expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+          <span>{p.expanded ? "Split view" : "Expand reader"}</span>
         </button>
         <button
           ref={closeRef}
-          className="icon close-inspector"
-          aria-label="Close inspector"
+          className={
+            p.expanded ? "reader-back close-inspector" : "icon close-inspector"
+          }
+          aria-label={p.expanded ? "Back to library" : "Close inspector"}
           onClick={() => {
             setTab("preview");
             p.onClose();
           }}
         >
-          <X size={20} />
+          {p.expanded ? <><ArrowLeft size={16} /> Back to library</> : <X size={20} />}
         </button>
       </div>
       <div className="inspector-meta">
@@ -553,20 +651,28 @@ export default function DocumentInspector(p: {
             "preview",
             ...(matched ? ["evidence"] : []),
             "history",
+            "connections",
             "details",
           ].map((t) => (
             <Tabs.Trigger key={t} value={t}>
+              {t === "history" ? <VersionsIcon size={16} />
+                : t === "preview" ? <FileText size={16} />
+                : t === "evidence" ? <EvidenceIcon size={16} />
+                : t === "connections" ? <Link2 size={16} />
+                : <Info className="tab-icon" size={16} aria-hidden="true" />}
               {t === "history"
                 ? "Versions"
                 : t === "preview"
                   ? "Document"
                   : t === "evidence"
                     ? "Evidence"
-                    : "Connections"}
+                    : t === "connections"
+                      ? "Connections"
+                      : "Details"}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
-        <div className="inspector-content">
+        <div className="inspector-content" ref={readingContent}>
           {error ? (
             <div role="alert">
               {error}
@@ -603,12 +709,24 @@ export default function DocumentInspector(p: {
                           unavailable
                         </small>
                       )}
+                    <details className="result-explanation">
+                      <summary>Why this result?</summary>
+                      <p>
+                        {p.evaluate &&
+                        matched.jev?.status === "evaluated" &&
+                        matched.jev.explanation
+                          ? matched.jev.explanation
+                          : `Search returned ${rows.length} passage${rows.length === 1 ? "" : "s"} from this saved version. Open Evidence to inspect the matching text and its source location.`}
+                      </p>
+                    </details>
                     <button onClick={() => setTab("evidence")}>
                       View evidence
                     </button>
                   </section>
                 )}
                 <Preview
+                  key={doc.document_id + ":" + doc.version}
+                  libraryId={p.libraryId}
                   doc={doc}
                   highlights={
                     p.evaluate && !historical
@@ -663,7 +781,7 @@ export default function DocumentInspector(p: {
                     ))}
                     <button
                       className="link-button"
-                      onClick={() => setTab("details")}
+                      onClick={() => setTab("connections")}
                     >
                       Why linked?
                     </button>
@@ -827,13 +945,16 @@ export default function DocumentInspector(p: {
                         : detail.organization?.organization_status ===
                             "not_evaluated"
                           ? "Jev needs extracted text"
-                          : detail.organization?.organization_status ||
-                            "Pending"}
+                          : detail.organization?.organization_status ===
+                              "evaluated"
+                            ? "Reviewed"
+                            : detail.organization?.organization_status ||
+                              "Pending"}
                   </dd>
                 </dl>
                 {!historical && (
                   <details className="why-here">
-                    <summary>Why here?</summary>
+                    <summary>Why this folder?</summary>
                     <p className="secondary">
                       {detail.organization_review?.origin === "manual"
                         ? "The folder was assigned manually. Routine indexing preserves this correction."
@@ -868,7 +989,8 @@ export default function DocumentInspector(p: {
                       ))}
                   </details>
                 )}
-
+              </Tabs.Content>
+              <Tabs.Content value="connections">
                 <h3>Document connections</h3>
                 {historical ? (
                   <p className="secondary">
@@ -1022,7 +1144,13 @@ export default function DocumentInspector(p: {
       <Dialog.Root open={p.open} onOpenChange={p.onOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="overlay" />
-          <Dialog.Content className="preview-dialog">
+          <Dialog.Content
+            className="preview-dialog"
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              p.onPreviewClose();
+            }}
+          >
             <Dialog.Title>
               {doc.filename} · {version}
             </Dialog.Title>

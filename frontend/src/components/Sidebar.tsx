@@ -1,24 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  Folder,
-  FileText,
-  Clock3,
-  HardDrive,
-  MoreHorizontal,
-  ChevronRight,
-  ChevronDown,
-  Inbox,
-} from "lucide-react";
+import { useEffect, useRef, useState, useId } from "react";
+import { Folder, Clock3, HardDrive, MoreHorizontal, ChevronRight, ChevronDown } from "lucide-react";
+import { LibraryIcon as FileText, UnfiledIcon as Inbox } from "./KnowledgeIcons";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { folderCounts } from "../api";
 import { preferenceKey, readSaved, save } from "../presentation";
 export function Logo() {
   return (
     <span className="logo">
-      <span className="logo-symbol">
-        <i />
-        <i />
-      </span>
+      <img
+        className="logo-symbol"
+        src="/icons/symbiknow.svg"
+        alt=""
+        width={32}
+        height={32}
+      />
       Symbiknow
     </span>
   );
@@ -37,6 +32,16 @@ export default function Sidebar(p: {
 }) {
   const [expanded, setExpanded] = useState<string[]>([]),
     [focused, setFocused] = useState("");
+  const [folderQuery, setFolderQuery] = useState("");
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const navigationId = useId();
+  const menuButton = useRef<HTMLButtonElement>(null);
+  function choose(folder?: string, recent?: boolean) {
+    p.onChoose(folder, recent);
+    setNavigationOpen(false);
+    if (window.matchMedia("(max-width: 760px)").matches)
+      menuButton.current?.focus();
+  }
   const refs = useRef(new Map<string, HTMLDivElement>());
   const counts = folderCounts(p.folders);
   useEffect(() => {
@@ -73,6 +78,10 @@ export default function Sidebar(p: {
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
   const visible = paths.filter((path) => {
+    if (folderQuery.trim())
+      return path
+        .toLocaleLowerCase()
+        .includes(folderQuery.trim().toLocaleLowerCase());
     const parts = path.split(" / ");
     return parts
       .slice(0, -1)
@@ -83,35 +92,84 @@ export default function Sidebar(p: {
     refs.current.get(f)?.focus();
   }
   return (
-    <aside className="sidebar">
-      <Logo />
-      <nav aria-label="Library navigation">
+    <aside
+      className={"sidebar" + (navigationOpen ? " navigation-open" : "")}
+      onKeyDown={(event) => {
+        if (
+          event.key === "Escape" &&
+          navigationOpen &&
+          window.matchMedia("(max-width: 760px)").matches
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          setNavigationOpen(false);
+          menuButton.current?.focus();
+        }
+      }}
+    >
+      <div className="sidebar-brand">
+        <Logo />
         <button
-          aria-label="All files"
-          className={p.folder === undefined && !p.recent ? "active" : ""}
-          onClick={() => p.onChoose()}
+          ref={menuButton}
+          className="mobile-navigation-toggle"
+          aria-label="Folders — toggle library navigation"
+          aria-expanded={navigationOpen}
+          aria-controls={navigationId}
+          onClick={() => setNavigationOpen((v) => !v)}
         >
-          <FileText />
+          <Folder size={16} />
+          Folders
+          <ChevronDown size={14} />
+        </button>
+      </div>
+      <nav id={navigationId} aria-label="Library navigation">
+        <button
+          aria-label={`All files ${p.total}`}
+          aria-description={`${p.total} files`}
+          aria-current={
+            p.folder === undefined && !p.recent ? "page" : undefined
+          }
+          className={p.folder === undefined && !p.recent ? "active" : ""}
+          onClick={() => choose()}
+        >
+          <FileText size={16} />
           <span>All files</span>
-          <small>{p.total}</small>
+          <small aria-hidden="true"> {p.total}</small>
         </button>
         <button
           className={p.recent ? "active" : ""}
-          onClick={() => p.onChoose(undefined, true)}
+          aria-current={p.recent ? "page" : undefined}
+          onClick={() => choose(undefined, true)}
         >
           <Clock3 />
           <span>Recent</span>
         </button>
         <button
-          aria-label="Unfiled"
+          aria-label={`Unfiled ${counts[""] || 0}`}
+          aria-description={`${counts[""] || 0} files`}
+          aria-current={p.folder === "" && !p.recent ? "page" : undefined}
           className={p.folder === "" && !p.recent ? "active" : ""}
-          onClick={() => p.onChoose("")}
+          onClick={() => choose("")}
         >
-          <Inbox />
+          <Inbox size={16} />
           <span>Unfiled</span>
-          <small>{counts[""] || 0}</small>
+          <small aria-hidden="true"> {counts[""] || 0}</small>
         </button>
         <h2>Folders</h2>
+        <input
+          className="sidebar-folder-search"
+          type="search"
+          aria-label="Find a folder"
+          placeholder="Find a folder…"
+          value={folderQuery}
+          onChange={(e) => {
+            setFolderQuery(e.target.value);
+            setFocused("");
+          }}
+        />
+        {folderQuery && !visible.length && (
+          <p role="status">No matching folders.</p>
+        )}
         <div role="tree" aria-label="Folders">
           {visible.map((f) => {
             const depth = f.split(" / ").length,
@@ -131,7 +189,7 @@ export default function Sidebar(p: {
                 className={"folder-nav-row " + (p.folder === f ? "active" : "")}
                 title={f}
                 aria-label={`${f}, ${counts[f]} files`}
-                style={{ paddingLeft: 8 + (depth - 1) * 12 }}
+                style={{ paddingLeft: 8 + Math.min(depth - 1, 5) * 12 }}
                 onFocus={() => setFocused(f)}
                 onKeyDown={(e) => {
                   if (e.target !== e.currentTarget) return;
@@ -143,6 +201,9 @@ export default function Sidebar(p: {
                       "ArrowRight",
                       "ArrowLeft",
                       "Enter",
+                      " ",
+                      "Home",
+                      "End",
                     ].includes(e.key)
                   )
                     e.preventDefault();
@@ -151,14 +212,19 @@ export default function Sidebar(p: {
                   if (e.key === "ArrowUp") focus(visible[Math.max(i - 1, 0)]);
                   if (e.key === "ArrowRight" && children) {
                     if (!expanded.includes(f)) toggle(f);
-                    else focus(visible[i + 1]);
+                    else if (visible[i + 1]) focus(visible[i + 1]);
                   }
                   if (e.key === "ArrowLeft") {
                     if (children && expanded.includes(f)) toggle(f);
-                    else if (depth > 1)
+                    else if (
+                      depth > 1 &&
+                      visible.includes(f.split(" / ").slice(0, -1).join(" / "))
+                    )
                       focus(f.split(" / ").slice(0, -1).join(" / "));
                   }
-                  if (e.key === "Enter") p.onChoose(f);
+                  if (e.key === "Home") focus(visible[0]);
+                  if (e.key === "End") focus(visible[visible.length - 1]);
+                  if (e.key === "Enter" || e.key === " ") choose(f);
                 }}
               >
                 <button
@@ -182,17 +248,17 @@ export default function Sidebar(p: {
                 </button>
                 <button
                   className="folder-label"
-                  aria-label={f}
+                  aria-label={`${f} ${counts[f]}`}
                   tabIndex={-1}
                   onClick={() => {
-                    p.onChoose(f);
+                    choose(f);
                     focus(f);
                   }}
                   title={f}
                 >
                   <Folder size={18} />
                   <span>{f.split(" / ").at(-1)}</span>
-                  <small>{counts[f]}</small>
+                  <small aria-hidden="true"> {counts[f]}</small>
                 </button>
                 <Menu.Root>
                   <Menu.Trigger asChild>

@@ -1,3 +1,4 @@
+import { chooseView, setAnswerChecking } from "./ui-controls";
 import { test, expect } from "./coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -14,23 +15,27 @@ test("Quick Look belongs to file controls; canvas tools and Space drag retain ow
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   const row = page.getByRole("button", {
-    name: "Select storage-decisions",
+    name: /^Select storage\-decisions(?:\.[^.]+)?$/,
     exact: true,
   });
   await row.click();
   await row.press("Space");
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Close inspector" }).click();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^(Back to library|Close inspector)$/ })
+    .click();
+  await chooseView(page, "Canvas");
   const pan = page.getByRole("button", { name: "Pan tool", exact: true });
   await pan.focus();
   await pan.press("Space");
   await expect(pan).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.getByRole("button", { name: "Select tool", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^Select tool(?:\.[^.]+)?$/, exact: true })
+    .click();
   const pane = page.locator(".react-flow__pane");
   const bounds = await pane.boundingBox();
   const viewport = page.locator(".react-flow__viewport");
@@ -92,25 +97,35 @@ test("filtered folder tiles, canvas counts, empty recovery and sidebar global co
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
-  await page.getByRole("button", { name: "Engineering", exact: true }).click();
+  await chooseView(page, "Cards");
+  await page
+    .getByRole("button", { name: /^Engineering \d+$/, exact: true })
+    .click();
   await expect(page.locator(".subfolder-grid")).toContainText("Storage2 files");
   await expect(page.locator(".subfolder-grid")).toContainText("Search1 files");
   await expect(page.locator(".grid-file")).toHaveCount(2);
-  await page.getByRole("button", { name: "Search scope and filters" }).click();
-  await page.getByRole("menuitem", { name: "Review A", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^Search scope and filters(?: \d+)?$/ })
+    .click();
+  await page
+    .getByLabel("Topic group", { exact: true })
+    .selectOption("Review A");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.locator(".subfolder-grid")).toContainText("Storage1 files");
   await expect(page.locator(".subfolder-grid")).not.toContainText("Search");
   await expect(
     page.getByRole("treeitem", { name: "Engineering, 3 files", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".folder-heading")).toContainText("1 file");
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
-  await page.getByRole("button", { name: "Search scope and filters" }).click();
+  await chooseView(page, "Cards");
   await page
-    .getByRole("menuitem", { name: "Review Empty", exact: true })
+    .getByRole("button", { name: /^Search scope and filters(?: \d+)?$/ })
     .click();
+  await page
+    .getByLabel("Topic group", { exact: true })
+    .selectOption("Review Empty");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "No files match these filters" }),
   ).toBeVisible();
@@ -120,9 +135,16 @@ test("filtered folder tiles, canvas counts, empty recovery and sidebar global co
     .getByRole("button", { name: "Clear filters", exact: true })
     .click();
   await expect(page.locator(".grid-file")).toHaveCount(2);
-  await page.getByRole("button", { name: "Unfiled", exact: true }).click();
-  await page.getByRole("button", { name: "Search scope and filters" }).click();
-  await page.getByRole("menuitem", { name: "Review A", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^Unfiled \d+$/, exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: /^Search scope and filters(?: \d+)?$/ })
+    .click();
+  await page
+    .getByLabel("Topic group", { exact: true })
+    .selectOption("Review A");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "No files match these filters" }),
   ).toBeVisible();
@@ -132,7 +154,7 @@ test("Recent displays Saved descending and every requested sort leaves Recent wi
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await page.getByRole("button", { name: "Recent", exact: true }).click();
   const table = page.getByRole("table", { name: "Files", exact: true });
   await expect(
@@ -171,7 +193,10 @@ test("Recent displays Saved descending and every requested sort leaves Recent wi
     );
   }
   await table
-    .getByRole("button", { name: "Select storage-decisions", exact: true })
+    .getByRole("button", {
+      name: /^Select storage\-decisions(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await expect(
     table.getByRole("row").filter({ hasText: "storage-decisions" }),
@@ -254,9 +279,9 @@ test("GFM tables and task lists render in the reader, Quick Look and cards witho
     if (request.url().includes("example.invalid")) external.push(request.url());
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   const select = page.getByRole("button", {
-    name: "Select unicode-table",
+    name: /^Select unicode\-table(?:\.[^.]+)?$/,
     exact: true,
   });
   await select.press("Enter");
@@ -266,18 +291,24 @@ test("GFM tables and task lists render in the reader, Quick Look and cards witho
     page.locator(".prose input[type=checkbox]").first(),
   ).toBeChecked();
   await expect(page.locator(".prose pre code")).toContainText('print("שלום")');
+  await page.getByRole("button", { name: "Split view", exact: true }).click();
   await select.press("Space");
   await expect(page.getByRole("dialog").getByRole("table")).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("switch", { name: "Jev evaluation" }).check();
+  await setAnswerChecking(page, true);
   await page.getByLabel("Search your knowledge").fill("Components");
   await page.getByLabel("Search your knowledge").press("Enter");
   await page
-    .getByRole("button", { name: "Select unicode-table", exact: true })
+    .getByRole("button", {
+      name: /^Select unicode\-table(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await expect(page.locator(".prose table")).toBeVisible();
   await expect(page.locator(".prose td mark")).toBeVisible();
-  await page.getByRole("button", { name: "Close inspector" }).click();
+  await page
+    .getByRole("button", { name: /^(Back to library|Close inspector)$/ })
+    .click();
   await page.getByRole("button", { name: "Clear search" }).click();
   await page.getByRole("button", { name: "Cards" }).click();
   await expect(page.locator(".card-prose table")).toBeVisible();
@@ -289,13 +320,16 @@ test("historical Details omit current organization and selective reset summaries
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   await page
-    .getByRole("button", { name: "Select storage-decisions", exact: true })
+    .getByRole("button", {
+      name: /^Select storage\-decisions(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .press("Enter");
   await page.getByLabel("Preview version").focus();
   await page.getByLabel("Preview version").selectOption("v1");
-  await page.getByRole("tab", { name: "Connections", exact: true }).click();
+  await page.getByRole("tab", { name: "Details", exact: true }).click();
   await expect(page.getByLabel("Document inspector")).toContainText(
     "Organization not recorded for this historical version",
   );
@@ -344,7 +378,9 @@ test("mouse-to-keyboard tree focus stays coherent after label and menu clicks", 
 }) => {
   await page.goto("/");
   const tree = page.getByRole("tree", { name: "Folders", exact: true });
-  await tree.getByRole("button", { name: "Engineering", exact: true }).click();
+  await tree
+    .getByRole("button", { name: /^Engineering \d+$/, exact: true })
+    .click();
   const engineering = tree.getByRole("treeitem", { name: /^Engineering, / });
   await expect(engineering).toBeFocused();
   await page.keyboard.press("ArrowDown");
@@ -410,7 +446,7 @@ for (const count of [12, 60, 100])
     );
     await page.goto("/");
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.getByRole("button", { name: "Canvas", exact: true }).click();
+    await chooseView(page, "Canvas");
     await page.getByRole("button", { name: "Fit", exact: true }).click();
     // Compact frames now fit twelve documents without requiring an overview.
     // Larger scopes keep bounded previews; actual totals stay on their frames.
@@ -449,5 +485,16 @@ for (const count of [12, 60, 100])
       .getByRole("button", { name: "Fit selection", exact: true })
       .click();
     await expect(page.locator(".canvas-overview")).toHaveCount(0);
-    await expect(page.locator(".canvas .card-prose").first()).toBeVisible();
+    await expect
+      .poll(() =>
+        page
+          .locator(".canvas")
+          .evaluate((el) =>
+            Number(getComputedStyle(el).getPropertyValue("--canvas-zoom")),
+          ),
+      )
+      .toBeGreaterThanOrEqual(0.75);
+    await expect(
+      page.locator(".canvas-document.selected .card-prose"),
+    ).toBeVisible();
   });

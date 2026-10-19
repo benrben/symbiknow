@@ -63,9 +63,13 @@ def test_mcp_transfer_batch_errors_keep_actionable_message(tmp_path):
 
     async def exercise():
         async with Client(server_parameters(str(tmp_path), storage_only=True)) as client:
+            items = {
+                "upload": {"filename": "a.txt", "content_base64": ""},
+                "download": {"document_id": "missing"},
+            }
             for tool in ("upload", "download"):
                 for count in (0, 33):
-                    response = await client.call_tool(tool, {"files": [{}] * count})
+                    response = await client.call_tool(tool, {"files": [items[tool]] * count})
                     assert response.is_error
                     message = "; ".join(getattr(part, "text", "") for part in response.content)
                     assert "Provide between 1 and 32 files per call" in message

@@ -1,6 +1,6 @@
 # Symbiknow / Storage / Resumable upload state machine
 
-Repository implementation guide. Snapshot: 12 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 
 ## Persistent transfer identity
 A chunked upload sends filename, source/MIME, request_id, total_size, lowercase SHA-256 and offset. The server stores an identity manifest and a .part file under data/temp. Later chunks must agree with the original identity.
@@ -14,7 +14,7 @@ A non-final result says receiving and stored=false. final=true requires the full
 Keep the same request ID, total size, hash and metadata throughout the transfer. Retry a lost response rather than starting a second object. The client helper uses bounded chunks and checks per-item errors. After completion, download the pinned version and verify the reconstructed full hash.
 
 ## Failure boundary
-A partially received file is not a stored original. A completed transfer receipt can be replayed without another content version. Current code stages the complete file before native commit; a chunked protocol does not imply zero whole-file buffering or a proven large-file memory budget.
+A partially received file is not a stored original. A completed transfer receipt can be replayed without another content version. Current code stages the complete file on disk before native commit and streams its path through hashing/staging. Browser hashing reads one-MiB slices in a worker. Bounded application buffers do not establish a zero-memory transfer or whole-system capacity guarantee.
 
 ## Source references
 - `app/server.py`

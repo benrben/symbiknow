@@ -197,7 +197,7 @@
   margin-left: auto;
 }
 .frame-label {
-  font-size: 12px;
+  font-size: max(12px, calc(12px / var(--canvas-zoom, 1)));
 }
 .canvas-document:not(.overview-card):not(.legacy-card) {
   display: grid;
@@ -434,4 +434,12 @@
     grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
     gap: 9px;
   }
+}
+
+/* Keep every row action fully inside its column at compact density. */
+.file-table .actions-column {
+  width: 48px;
+}
+.grid-file > .content-card {
+  margin: 10px 0;
 }

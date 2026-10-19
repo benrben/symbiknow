@@ -1,7 +1,9 @@
 """Useful compact pages of a bounded, fully validated result window."""
 
+from bisect import bisect_left
 import copy
 import json
+import re
 
 COMPACT_BYTES = 32 * 1024
 # Complete SDK CallToolResult (JSON text + structuredContent), not HTTP wire bytes.
@@ -17,7 +19,62 @@ def _short(value, budget):
     return str(value).encode()[:budget].decode("utf-8", errors="ignore")
 
 
-def _entry(original):
+EXCERPT_BYTES = 384
+
+
+def _query_terms(query):
+    # Short words are mostly stopwords; numbers and identifiers are kept at any length.
+    terms = {t for t in re.findall(r"\w+", query.casefold()) if len(t) > 2 or t.isdigit()}
+    return sorted(terms)
+
+
+def _excerpt(text, query, budget=EXCERPT_BYTES):
+    """The passage region richest in rare query terms; the head when nothing matches.
+
+    Returns (excerpt, character offset in text). An evaluated window can be longer
+    than the compact budget, and the answer-bearing sentence is often not its first.
+    """
+    if not query or len(text.encode()) <= budget:
+        return _short(text, budget), 0
+    lowered = text.casefold()
+    positions = {}
+    for term in _query_terms(query):
+        # A number must match whole (12345 is not 123456); words may carry inflections
+        # or attached prefixes (including Hebrew), so they match as substrings.
+        pattern = rf"(?<!\d){re.escape(term)}(?!\d)" if term.isdigit() else re.escape(term)
+        found = [m.start() for m in re.finditer(pattern, lowered)]
+        if found:
+            positions[term] = found
+    if not positions:
+        return _short(text, budget), 0
+    width = max(1, int(budget * len(text) / len(text.encode())))
+    lead = width // 4
+
+    def score(start):
+        # Rare terms dominate: one exact identifier outweighs many repeated words.
+        # Count only terms that leave room for the sentence that follows them.
+        return sum(
+            1 / len(found)
+            for found in positions.values()
+            if (i := bisect_left(found, start)) < len(found) and found[i] < start + width - lead
+        )
+
+    # Each anchor puts one hit a short lead into the window. Ties prefer the anchor
+    # built on the rarer term, then the earlier position.
+    anchors = {}
+    for found in positions.values():
+        for p in found[:400]:
+            anchor = max(0, p - lead)
+            anchors[anchor] = max(anchors.get(anchor, 0), 1 / len(found))
+    start = max(anchors, key=lambda s: (score(s), anchors[s], -s))
+    if start:
+        # Begin at a line or word boundary when one is close.
+        boundary = max(text.rfind("\n", start - 48, start), text.rfind(" ", start - 24, start))
+        start = boundary + 1 if boundary >= 0 else start
+    return _short(text[start:], budget), start
+
+
+def _entry(original, query=None):
     match = {
         k: copy.deepcopy(original[k])
         for k in (
@@ -25,6 +82,7 @@ def _entry(original):
             "version",
             "filename",
             "mime_type",
+            "created_at",
             "folder",
             "groups",
             "status",
@@ -95,7 +153,7 @@ def _entry(original):
         ref = row["evidence_id"]
         window = evaluated.get(ref)
         text = (window or row).get("text", "")
-        excerpt = _short(text, 384)
+        excerpt, offset = _excerpt(text, query)
         match["evidence"].append(
             {
                 "evidence_id": ref,
@@ -103,7 +161,8 @@ def _entry(original):
                 "basis": row.get("basis"),
                 "roles": [role for key, role in roles if ref in j.get(key, [])],
                 "text": excerpt,
-                "text_start": (window or {}).get("text_start", 0),
+                # Character offset of this excerpt within the stored passage.
+                "text_start": (window or {}).get("text_start", 0) + offset,
                 "excerpt_truncated": len(excerpt) < len(text),
                 "assessment": "evaluated_window" if window else "not_evaluated",
             }
@@ -132,7 +191,7 @@ def _entry(original):
     return match
 
 
-def project_search(result, detail="compact", *, offset=0, continuation=None):
+def project_search(result, detail="compact", *, offset=0, continuation=None, query=None):
     if detail == "full":
         return copy.deepcopy(result)
     if detail != "compact":
@@ -159,7 +218,7 @@ def project_search(result, detail="compact", *, offset=0, continuation=None):
         "sdk_result_budget_bytes": SDK_RESULT_BYTES,
     }
     for original in originals[offset:]:
-        entry = _entry(original)
+        entry = _entry(original, query)
         out["matches"].append(entry)
         if _bytes(out) > _PAYLOAD_BYTES:
             out["matches"].pop()

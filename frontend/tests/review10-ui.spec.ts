@@ -1,3 +1,4 @@
+import { chooseView, setAnswerChecking } from "./ui-controls";
 import { test, expect } from "./coverage";
 import type { Page } from "@playwright/test";
 import fs from "node:fs/promises";
@@ -110,9 +111,11 @@ async function fixture(page: Page) {
     }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByRole("button", { name: "Symbiknow", exact: true }).click();
-  await page.getByRole("switch", { name: "Jev evaluation" }).setChecked(true);
+  await chooseView(page, "List");
+  await page
+    .getByRole("button", { name: /^Symbiknow \d+$/, exact: true })
+    .click();
+  await setAnswerChecking(page, true);
   await page.getByLabel("Search your knowledge").fill(pinned[0].query);
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(page.locator(".file-row")).toHaveCount(40);
@@ -157,9 +160,9 @@ async function rectangles(page: Page) {
   });
 }
 async function seed(page: Page, docs: any[], known = false) {
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".canvas-document")).toHaveCount(40);
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   const key = await layoutKey(page);
   const positions: Record<string, { x: number; y: number }> = {},
     folderById: Record<string, string> = {},
@@ -202,7 +205,7 @@ async function seed(page: Page, docs: any[], known = false) {
     ({ key, state }) => localStorage.setItem(key, JSON.stringify(state)),
     { key, state },
   );
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await expect(page.locator(".canvas-document")).toHaveCount(40);
   return { key, state, manual };
 }
@@ -260,26 +263,28 @@ test("legacy124-pitch upgrade offers reversible reflow, retains16collision histo
   );
   await capture(page, "legacy-reflow", after);
   for (const view of ["List", "Cards", "Canvas"]) {
-    await page.getByRole("button", { name: view, exact: true }).click();
+    await chooseView(page, view);
   }
   await expect(
     page.getByRole("button", { name: "Undo", exact: true }),
   ).toBeVisible();
-  expect((await rectangles(page)).overlaps).toEqual([]);
+  await expect.poll(async () => (await rectangles(page)).overlaps).toEqual([]);
   await page.getByRole("button", { name: "Undo", exact: true }).press("Enter");
   await expect(
     page.getByRole("status", { name: "Saved layout upgrade" }),
   ).toBeVisible();
   expect((await stored(page, old.key)).positions).toEqual(old.state.positions);
-  expect((await rectangles(page)).overlaps).toEqual([]);
+  await expect.poll(async () => (await rectangles(page)).overlaps).toEqual([]);
   await page
     .getByRole("button", { name: "Reflow saved layout", exact: true })
     .click();
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Canvas", exact: true }),
+    page.getByRole("button", { name: "Map", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Symbiknow", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^Symbiknow \d+$/, exact: true })
+    .click();
   // Search itself is not persisted; returning to the identical scope/query uses
   // the upgraded map and the persisted undo snapshot rather than fresh layout.
   await page.getByLabel("Search your knowledge").fill(pinned[0].query);
@@ -287,7 +292,7 @@ test("legacy124-pitch upgrade offers reversible reflow, retains16collision histo
   await expect(
     page.getByRole("button", { name: "Undo", exact: true }),
   ).toBeVisible();
-  expect((await rectangles(page)).overlaps).toEqual([]);
+  await expect.poll(async () => (await rectangles(page)).overlaps).toEqual([]);
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(
     page.getByRole("status", { name: "Saved layout upgrade" }),
@@ -312,7 +317,7 @@ test("versioned generated112px layouts migrate automatically while intentionalma
   await expect
     .poll(async () => (await stored(page, old.key)).geometry?.version)
     .toBe(3);
-  expect((await rectangles(page)).overlaps).toEqual([]);
+  await expect.poll(async () => (await rectangles(page)).overlaps).toEqual([]);
   const saved = await stored(page, old.key);
   expect(saved.positions[old.manual]).toEqual(old.state.positions[old.manual]);
   expect(saved.positionOrigins[old.manual]).toBe("manual");
@@ -320,7 +325,7 @@ test("versioned generated112px layouts migrate automatically while intentionalma
     old.state.positions[data.docs[10].document_id],
   );
   for (const view of ["List", "Cards", "Canvas"]) {
-    await page.getByRole("button", { name: view, exact: true }).click();
+    await chooseView(page, view);
   }
   await expect(page.locator(".canvas-document")).toHaveCount(40);
   expect((await stored(page, old.key)).positions).toEqual(saved.positions);
@@ -336,10 +341,13 @@ for (const view of ["List", "Cards", "Canvas"])
     page,
   }) => {
     const data = await fixture(page);
-    await page.getByRole("button", { name: view, exact: true }).click();
+    await chooseView(page, view);
     if (view === "Canvas") {
       await page
-        .getByRole("button", { name: "Select Symbiknow README", exact: true })
+        .getByRole("button", {
+          name: /^Select Symbiknow README(?:\.[^.]+)?$/,
+          exact: true,
+        })
         .click();
       // Focus the group locally so its full keyboard action remains visible.
       const nav = page.getByRole("navigation", {
@@ -380,7 +388,10 @@ for (const view of ["List", "Cards", "Canvas"])
     await badge.press("Enter");
     await check();
     await page
-      .getByRole("button", { name: "Close inspector", exact: true })
+      .getByRole("button", {
+        name: /^(Back to library|Close inspector)$/,
+        exact: true,
+      })
       .click();
     await expect(badge).toBeFocused();
     await badge.press("Enter");
@@ -402,7 +413,7 @@ for (const record of pinned)
       await page.getByLabel("Search your knowledge").fill(record.query);
       await page.getByLabel("Search your knowledge").press("Enter");
     }
-    await page.getByRole("button", { name: "Cards", exact: true }).click();
+    await chooseView(page, "Cards");
     const preview = page.locator(
       `.grid-file[data-document-id="${record.match.document_id}"] .card-prose`,
     );
@@ -453,11 +464,12 @@ for (const record of pinned)
     expect(cardsRange.every((r) => r.visible)).toBe(true);
     const text = await preview.innerText();
     expect(text).not.toMatch(/^,?\s*without Git\.?$/);
-    await page.getByRole("button", { name: "Canvas", exact: true }).click();
+    await chooseView(page, "Canvas");
     await expect(page.locator(".canvas-document")).toHaveCount(40);
+    // At marker scale, the readable group navigator replaces tiny frame headers.
     await page
-      .locator(".canvas .frame-label")
-      .filter({ hasText: /^Symbiknow$/ })
+      .getByRole("navigation", { name: "Folder groups at low zoom" })
+      .getByRole("button", { name: /^Symbiknow\s*8 matches$/ })
       .click();
     await expect(
       page.locator(
@@ -489,7 +501,7 @@ for (const record of pinned)
       `pinned-canvas-${record === pinned[0] ? "original" : "paraphrase"}`,
     );
     const calls = data.searches.length;
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await chooseView(page, "List");
     expect(data.searches.length).toBe(calls);
     await capture(
       page,

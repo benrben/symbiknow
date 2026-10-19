@@ -1,6 +1,6 @@
 # Symbiknow / Architecture / Ingestion lifecycle and processing states
 
-Repository implementation guide. Snapshot: 12 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 ## Independent outcomes
 An upload's stored result confirms committed bytes. Searchability requires an indexed current version. Organization is a further step with its own status. These outcomes should never be collapsed into one success badge.
 
@@ -20,6 +20,10 @@ The documents row records version, indexed_version, chunk_count, searchable text
 
 ## Troubleshooting distinction
 A stored-but-pending document can legitimately be absent from search. A visually indexed image without text cannot receive a text answer badge. A provider organization failure should be investigated separately from extraction or storage failure. Use the current document's status, and keep a pinned download available even when the derived representation is unavailable.
+
+## Retry policy
+
+Failures persist per document/version under `temp/index-retries/`. Transient attempts back off from 30 seconds to one hour; permanent/configuration failures pause. Retry indexing on the failed current version clears that retry state through a version guard, without creating another original version. New heads bypass older failure state. Repeated polling or waking the worker does not override a paused failure.
 
 ## Source references
 - `app/server.py`

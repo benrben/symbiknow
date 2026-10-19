@@ -1,9 +1,9 @@
 # Symbiknow / Interface / Bulk selection range anchors and guarded actions
 
-Repository implementation guide. Snapshot: 12 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 
 ## Selection owner
-App.tsx stores selected document IDs and a range anchor. A normal click selects one document and opens its inspector. Cmd/Ctrl-click toggles an ID; Shift-click uses the current visible list between anchor and target. Multi-selection hides a single-document inspector and exposes a bulk summary.
+App.tsx stores selected document IDs and a range anchor. A normal click selects one document and updates an already-open reader. Double-click or Enter opens reading; Space opens Quick Look on a focused file control. Cmd/Ctrl-click toggles an ID; Shift-click uses the current visible list between anchor and target. Multi-selection hides a single-document inspector and exposes a bulk summary.
 
 ## Loaded scope
 Cmd/Ctrl+A selects loaded visible files, respecting editable controls. Pagination does not silently select unseen files. Sorting/scoping/search responses reconcile the selection to the new visible IDs rather than applying actions to vanished rows.

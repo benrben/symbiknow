@@ -1,3 +1,4 @@
+import { OrganizeIcon, ReviewIcon, OverviewIcon, CardsIcon, MapIcon } from "./components/KnowledgeIcons";
 import { sameValue } from "./api";
 import {
   useCallback,
@@ -11,6 +12,7 @@ import {
 } from "react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import {
+  List,
   MoreHorizontal,
   Upload,
   Folder,
@@ -27,6 +29,7 @@ import {
   type Library,
   type Link,
   type Rebuild,
+  type SearchAnswer,
 } from "./api";
 import {
   usePreference,
@@ -38,10 +41,16 @@ import AppearanceMenu from "./components/AppearanceMenu";
 import SearchBar, { type Mode } from "./components/SearchBar";
 import FileList, { type SelectionEvent } from "./components/FileList";
 const LibraryCanvas = lazy(() => import("./components/LibraryCanvas"));
-import DocumentInspector from "./components/DocumentInspector";
+const DocumentInspector = lazy(() => import("./components/DocumentInspector"));
 import ResetOrganizationDialog from "./components/ResetOrganizationDialog";
 import JevReviewDialog, { type ReviewMode } from "./components/JevReviewDialog";
+import ReviewHistory from "./components/ReviewHistory";
 import JevProgress from "./components/JevProgress";
+import FolderOverview from "./components/FolderOverview";
+import ConnectionMap from "./components/ConnectionMap";
+import ReaderNavigator from "./components/ReaderNavigator";
+import { overviewFolders } from "./browsePresentation";
+import { emptySearchMessage, reconcileSearchMatches, sortSearchMatches } from "./searchPresentation";
 import DeleteDialog, { type DeleteTarget } from "./components/DeleteDialog";
 import OrganizationDialog, {
   type OrganizationTarget,
@@ -104,7 +113,27 @@ export default function App() {
     (v) => ["compact", "comfortable"].includes(v),
   );
   const [readerExpanded, setReaderExpanded] = useState(false);
-  const [searchSort, setSearchSort] = useState("relevance");
+  const [documentMap, setDocumentMap] = usePreference(
+    library.library_id,
+    "documentMap",
+    false,
+    (v) => typeof v === "boolean",
+  );
+  const [freeformMap, setFreeformMap] = usePreference(
+    library.library_id,
+    "freeformMap",
+    false,
+    (v) => typeof v === "boolean",
+  );
+  const [linksLoading, setLinksLoading] = useState(false);
+  const [linksError, setLinksError] = useState("");
+  const [linksRetry, setLinksRetry] = useState(0);
+  useEffect(() => {
+    setReaderExpanded(false);
+    setInspectorVisible(false);
+  }, [folder, group, recent]);
+  const [searchOrder, setSearchOrder] = useState({ field: "relevance", descending: false });
+  const { field: searchSort, descending: searchDescending } = searchOrder;
   const [mode, setMode] = usePreference<Mode>(
     library.library_id,
     "mode",
@@ -128,11 +157,7 @@ export default function App() {
     [searching, setSearching] = useState(false),
     [searchError, setSearchError] = useState(""),
     [unavailable, setUnavailable] = useState(false),
-    [answer, setAnswer] = useState<{
-      status: string;
-      candidate_count?: number;
-      evaluated_count?: number;
-    }>({ status: "not_requested" });
+    [answer, setAnswer] = useState<SearchAnswer>({ status: "not_requested" });
   const [inspectorVisible, setInspectorVisible] = useState(false);
   const [selected, setSelected] = useState<Doc>(),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
@@ -162,6 +187,8 @@ export default function App() {
     updateInput = useRef<HTMLInputElement>(null),
     updateDoc = useRef<Doc | undefined>(undefined),
     lastFocus = useRef<HTMLElement | null>(null),
+    readerOrigin = useRef<HTMLElement | null>(null),
+    previewOrigin = useRef<HTMLElement | null>(null),
     anchor = useRef<string>("");
   const main = useRef<HTMLElement>(null),
     scrolls = useRef(new Map<string, number>());
@@ -172,43 +199,18 @@ export default function App() {
     busy = !!rebuild && ["queued", "running"].includes(rebuild.status);
   const matches = useMemo(
     () =>
-      rawMatches.flatMap((d) => {
-        if (loadedScope !== wantedScope) return [d];
-        const current = library.documents.find(
-          (item) => item.document_id === d.document_id,
-        );
-        if (!current) return library.has_more ? [d] : [];
-        if (
-          current.version !== d.version ||
-          (current.status && current.status !== "indexed") ||
-          !(
-            folder === undefined ||
-            current.folder === folder ||
-            (!!folder && current.folder?.startsWith(folder + " / "))
-          ) ||
-          (group && !current.groups?.includes(group))
-        )
-          return [];
-        return [
-          {
-            ...d,
-            folder: current.folder,
-            groups: current.groups,
-            organization_status: current.organization_status,
-          },
-        ];
-      }),
+      reconcileSearchMatches(rawMatches, library.documents, loadedScope === wantedScope, folder, group),
     [
       rawMatches,
       loadedScope,
       wantedScope,
       library.documents,
-      library.has_more,
       folder,
       group,
     ],
   );
   const checked = matches.filter((d) => d.jev?.status === "evaluated").length;
+  const emptySearch = emptySearchMessage(answer, evaluate, unavailable);
   const searchIntent = JSON.stringify([
     submitted,
     mode,
@@ -231,21 +233,9 @@ export default function App() {
   const visibleDocs = useMemo(() => {
     if (!showSearch || searchSort === "relevance")
       return showSearch ? matches : library.documents;
-    return [...matches].sort((a, b) => {
-      const field =
-        searchSort === "date"
-          ? "created_at"
-          : searchSort === "type"
-            ? "mime_type"
-            : "filename";
-      return String(a[field] || "").localeCompare(
-        String(b[field] || ""),
-        undefined,
-        { numeric: true },
-      );
-    });
-  }, [showSearch, matches, library.documents, searchSort]);
-  useEffect(() => setSearchSort("relevance"), [submitted]);
+    return sortSearchMatches(matches, searchSort, searchDescending);
+  }, [showSearch, matches, library.documents, searchSort, searchDescending]);
+  useEffect(() => setSearchOrder({ field: "relevance", descending: false }), [submitted]);
   const libraryVersions = library.documents
     .map((d) => d.document_id + ":" + d.version)
     .join(",");
@@ -420,11 +410,7 @@ export default function App() {
       matches: Doc[];
       evaluation: { status: string };
       status: string;
-      answer?: {
-        status: string;
-        candidate_count?: number;
-        evaluated_count?: number;
-      };
+      answer?: SearchAnswer;
     }>(
       "search",
       { query: submitted, mode, evaluate, folder, group, limit: 40 },
@@ -500,7 +486,10 @@ export default function App() {
     const c = new AbortController();
     setLinks([]);
     setNeighbors([]);
+    setLinksError("");
+    setLinksLoading(false);
     if (!selected) return;
+    setLinksLoading(true);
     api<{ documents: Doc[]; links: Link[] }>(
       `neighborhood?id=${selected.document_id}&version=${selected.version}`,
       undefined,
@@ -512,9 +501,15 @@ export default function App() {
           setNeighbors(r.documents);
         }
       })
-      .catch(() => {});
+      .catch((e) => {
+        if (!c.signal.aborted) setLinksError(e.message);
+      })
+      .finally(() => {
+        if (!c.signal.aborted) setLinksLoading(false);
+      });
     return () => c.abort();
   }, [
+    linksRetry,
     selected?.document_id,
     selected?.version,
     rebuild?.completed,
@@ -554,11 +549,15 @@ export default function App() {
     [visibleDocs, selected?.document_id],
   );
   const openDoc = useCallback(
-    (d: Doc) => {
+    (d: Doc, origin?: HTMLElement) => {
+      if (!readerExpanded)
+        readerOrigin.current =
+          origin || (document.activeElement as HTMLElement);
       select(d);
       setInspectorVisible(true);
+      setReaderExpanded(true);
     },
-    [select],
+    [select, readerExpanded],
   );
   const evidenceDoc = useCallback(
     (d: Doc) => {
@@ -576,6 +575,7 @@ export default function App() {
   );
   const quickLookDoc = useCallback(
     (d: Doc) => {
+      previewOrigin.current = document.activeElement as HTMLElement;
       select(d);
       setInspectorVisible(true);
       setOpen(true);
@@ -593,9 +593,14 @@ export default function App() {
           )
         : undefined;
       (
+        (readerOrigin.current?.isConnected
+          ? readerOrigin.current
+          : undefined) ||
         (lastFocus.current?.isConnected ? lastFocus.current : undefined) ||
-        control
+        control ||
+        main.current?.querySelector<HTMLButtonElement>(".segmented button")
       )?.focus();
+      readerOrigin.current = null;
     });
   }
   function clear() {
@@ -906,51 +911,148 @@ export default function App() {
       (d) => !visibleDocs.some((item) => item.document_id === d.document_id),
     ),
   ].slice(0, 100);
-  const canvas = (
-    <Suspense
-      fallback={
-        <div className="loading" role="status">
-          Loading canvas…
-        </div>
-      }
-    >
-      <LibraryCanvas
-        key={JSON.stringify([
-          layoutRevision,
-          folder,
-          group,
-          showSearch,
-          showSearch ? [submitted, mode, evaluate] : null,
-        ])}
-        docs={mapDocs}
-        links={links}
-        selected={selected?.document_id}
-        selectedIds={selectedIds}
-        onSelect={select}
-        onOpen={openDoc}
-        onEvidence={evidenceDoc}
-        onQuickLook={quickLookDoc}
-        onLink={(l) => {
-          setInspectorVisible(true);
-          if (!selected)
-            select(
-              mapDocs.find((d) => d.document_id === l.source_document_id)!,
-            );
-          setChosenLink(l);
+  const overview = !showSearch && !documentMap && !recent;
+  const folderGroupCount = overviewFolders(scopedFolders, folder).length;
+  const needsAttention =
+    !!rebuild &&
+    (rebuild.failed > 0 ||
+      (rebuild.unfiled || 0) > 0 ||
+      ["failed", "interrupted"].includes(rebuild.status));
+  const reviewStatus =
+    rebuild && !progressHidden ? (
+      <JevProgress
+        key={rebuild.request_id}
+        job={rebuild}
+        onHide={() => setProgressHidden(true)}
+        onRetry={() => {
+          api<Rebuild>("rebuild", { retry: true })
+            .then((job) => {
+              setRebuild(job);
+              setProgressHidden(false);
+            })
+            .catch((e) => setError(e.message));
         }}
-        search={showSearch}
-        query={submitted}
-        evaluate={evaluate}
-        unavailable={unavailable}
-        matchedIds={matches.map((d) => d.document_id)}
-        searchKey={JSON.stringify([submitted, mode, evaluate, group])}
-        libraryId={library.library_id || "loading"}
-        scope={folder}
-        folders={scopedFolders}
-        total={showSearch ? matches.length : library.total}
-        onFolder={setFolder}
       />
-    </Suspense>
+    ) : null;
+  const canvas = overview ? (
+    <FolderOverview
+      key={JSON.stringify([folder, group])}
+      docs={visibleDocs}
+      folders={scopedFolders}
+      scope={folder}
+      group={group}
+      total={library.total}
+      revision={JSON.stringify([
+        library.index_revision,
+        library.organization_revision,
+        library.manual_revision,
+      ])}
+      onOpen={openDoc}
+      onFolder={(path) => {
+        setFolder(path);
+        setView("files");
+        setLayout("list");
+      }}
+      onMap={() => {
+        setDocumentMap(true);
+        setFreeformMap(false);
+      }}
+    />
+  ) : !freeformMap ? (
+    <ConnectionMap
+      key={JSON.stringify([folder, group, submitted])}
+      docs={[
+        ...visibleDocs,
+        ...neighbors.filter(
+          (d) => !visibleDocs.some((v) => v.document_id === d.document_id),
+        ),
+      ]}
+      links={links}
+      selected={selected?.document_id}
+      selectedLink={chosenLink}
+      folders={showSearch ? {} : scopedFolders}
+      scope={folder}
+      total={showSearch ? matches.length : library.total}
+      loaded={visibleDocs.length}
+      hasMore={!showSearch && library.has_more}
+      loading={loading}
+      linksLoading={linksLoading}
+      linksError={linksError}
+      onRetryLinks={() => setLinksRetry((n) => n + 1)}
+      onLoadMore={() => void load(true)}
+      onSelect={(d) => {
+        select(d);
+        setInspectorVisible(false);
+        setReaderExpanded(false);
+      }}
+      onOpen={openDoc}
+      onLink={setChosenLink}
+      onClear={() => {
+        setSelected(undefined);
+        setSelectedIds([]);
+        setChosenLink(undefined);
+      }}
+      onFolder={(path) => {
+        setFolder(path);
+        setView("files");
+        setLayout("list");
+      }}
+      onFreeform={() => setFreeformMap(true)}
+      search={showSearch}
+    />
+  ) : (
+    <div className="document-map-surface">
+      <button
+        className="back-to-overview"
+        onClick={() => setFreeformMap(false)}
+      >
+        ← Readable map
+      </button>
+      <Suspense
+        fallback={
+          <div className="loading" role="status">
+            Loading canvas…
+          </div>
+        }
+      >
+        <LibraryCanvas
+          key={JSON.stringify([
+            layoutRevision,
+            folder,
+            group,
+            showSearch,
+            showSearch ? [submitted, mode, evaluate] : null,
+          ])}
+          docs={mapDocs}
+          links={links}
+          selected={selected?.document_id}
+          selectedIds={selectedIds}
+          onSelect={select}
+          onOpen={openDoc}
+          onEvidence={evidenceDoc}
+          onQuickLook={quickLookDoc}
+          onLink={(l) => {
+            setInspectorVisible(true);
+            if (!selected)
+              select(
+                mapDocs.find((d) => d.document_id === l.source_document_id)!,
+              );
+            setChosenLink(l);
+          }}
+          search={showSearch}
+          query={submitted}
+          evaluate={evaluate}
+          unavailable={unavailable}
+          matchedIds={matches.map((d) => d.document_id)}
+          searchKey={JSON.stringify([submitted, mode, evaluate, group])}
+          libraryId={library.library_id || "loading"}
+          scope={folder}
+          folders={scopedFolders}
+          total={showSearch ? matches.length : library.total}
+          onFolder={setFolder}
+        />
+      </Suspense>
+    </div>
   );
   const files = (
     <FileList
@@ -967,10 +1069,13 @@ export default function App() {
       layout={layout}
       scope={folder}
       sort={showSearch ? searchSort : recent ? "date" : sort}
-      descending={recent || descending}
+      descending={showSearch ? searchDescending : recent || descending}
       onSort={(s) => {
         if (showSearch) {
-          setSearchSort(s);
+          setSearchOrder((old) => ({
+            field: s,
+            descending: old.field === s ? !old.descending : false,
+          }));
           return;
         }
         if (recent) {
@@ -1003,7 +1108,8 @@ export default function App() {
         "app " +
         (showSearch ? "searching " : "") +
         (inspectorVisible && selected ? "reader-open " : "") +
-        (readerExpanded ? "reader-expanded" : "")
+        (readerExpanded ? "reader-expanded " : "") +
+        (view === "map" && !overview ? "map-view" : "")
       }
       style={
         {
@@ -1027,6 +1133,19 @@ export default function App() {
         addFiles(Array.from(e.dataTransfer.files));
       }}
     >
+      <a
+        className="skip-content"
+        tabIndex={0}
+        href="#main-content"
+        onClick={(e) => {
+          e.preventDefault();
+          if (readerExpanded)
+            document.querySelector<HTMLElement>(".inspector")?.focus();
+          else main.current?.focus();
+        }}
+      >
+        Skip to content
+      </a>
       <Sidebar
         key={library.library_id + ":" + layoutRevision}
         folders={library.folders}
@@ -1096,6 +1215,11 @@ export default function App() {
           submitted={showSearch}
           actions={
             <>
+              <ReviewHistory
+                job={rebuild}
+                libraryId={library.library_id}
+                onShowCurrent={() => setProgressHidden(false)}
+              />
               <AppearanceMenu />
               <Menu.Root>
                 <Menu.Trigger asChild>
@@ -1113,13 +1237,13 @@ export default function App() {
                       disabled={busy || !library.unfiled_review_count}
                       onSelect={() => setReviewMode("unfiled")}
                     >
-                      Group unfiled files with Jev…
+                      <OrganizeIcon size={16} /> Organize unfiled files…
                     </Menu.Item>
                     <Menu.Item
                       disabled={busy || !library.library_total}
                       onSelect={() => setReviewMode("links")}
                     >
-                      Review links only…
+                      <ReviewIcon size={16} /> Review connections…
                     </Menu.Item>
                     <Menu.Separator className="menu-separator" />
                     <Menu.Item
@@ -1133,7 +1257,7 @@ export default function App() {
                     </Menu.Item>
                     {rebuild && (
                       <Menu.Item onSelect={() => setProgressHidden(false)}>
-                        Show Jev progress
+                        Show review status
                       </Menu.Item>
                     )}
                   </Menu.Content>
@@ -1181,26 +1305,15 @@ export default function App() {
             ))}
           </div>
         )}
-        {rebuild && !progressHidden && (
-          <JevProgress
-            job={rebuild}
-            onHide={() => setProgressHidden(true)}
-            onRetry={() => {
-              api<Rebuild>("rebuild", { retry: true })
-                .then((job) => {
-                  setRebuild(job);
-                  setProgressHidden(false);
-                })
-                .catch((e) => setError(e.message));
-            }}
-          />
-        )}
+        {(busy || needsAttention) && reviewStatus}
         <div
           className={
             "content " + (selected && inspectorVisible ? "has-inspector" : "")
           }
         >
           <main
+            id="main-content"
+            tabIndex={-1}
             ref={main}
             onScroll={(e) =>
               scrolls.current.set(contextKey, e.currentTarget.scrollTop)
@@ -1252,65 +1365,87 @@ export default function App() {
                 <h1 title={folder}>
                   {showSearch
                     ? "Search results"
-                    : recent
-                      ? "Recent"
-                      : folder === ""
-                        ? "Unfiled"
-                        : folder?.split(" / ").at(-1) || "All files"}
+                    : view === "map" && !overview
+                      ? "Connections"
+                      : recent
+                        ? "Recent"
+                        : folder === ""
+                          ? "Unfiled"
+                          : folder?.split(" / ").at(-1) || "All files"}
                 </h1>
-                <p className="secondary">
+                <p className="secondary" role="status" aria-live="polite">
                   {showSearch
                     ? searching
                       ? hasSearchResults
                         ? `${matches.length} retrieved files · Refreshing…`
                         : "Searching…"
                       : `Showing ${matches.length} matches · ${evaluate ? `${answer.evaluated_count ?? checked} checked · ${matches.filter((d) => d.jev?.status === "evaluated" && d.evidence?.some((e) => !!e.text && d.jev?.supporting_chunk_ids?.includes(e.evidence_id))).length} supporting · ${matches.filter((d) => d.jev?.status === "evaluated" && d.jev?.possible_conflicting_chunk_ids?.length).length} possible conflict · ${Math.max(0, (answer.candidate_count ?? matches.length) - (answer.evaluated_count ?? checked))} not checked` : "Answer checking off"}${searchSort !== "relevance" ? " · Sorted loaded matches" : ""}`
-                    : `${library.total} files${folder ? ` · ${childFolders.length} subfolders` : ""}${recent ? " · Latest version activity" : ""}`}
+                    : `${library.total} files${view === "map" && overview ? ` across ${folderGroupCount} ${folderGroupCount === 1 ? "group" : "groups"}` : folder ? ` · ${childFolders.length} subfolders` : ""}${recent ? " · Latest version activity" : ""}`}
                 </p>
               </div>
-              <div className="library-actions">
-                {folder === "" && !showSearch && (
-                  <button
-                    disabled={busy || !library.unfiled_review_count}
-                    onClick={() => setReviewMode("unfiled")}
-                    title="Review unfiled documents and add links without resetting"
-                  >
-                    Group with Jev
-                  </button>
-                )}
-                <div className="segmented" aria-label="View">
-                  {(["List", "Cards", "Canvas"] as const).map((name) => {
-                    const active =
-                      name === "Canvas"
-                        ? view === "map"
-                        : view === "files" &&
-                          layout === (name === "List" ? "list" : "grid");
-                    return (
-                      <button
-                        key={name}
-                        aria-pressed={active}
-                        className={active ? "active" : ""}
-                        onClick={() => {
-                          setView(name === "Canvas" ? "map" : "files");
-                          if (name !== "Canvas")
-                            setLayout(name === "List" ? "list" : "grid");
-                        }}
-                      >
-                        {name}
-                      </button>
-                    );
-                  })}
+              <div className="heading-tools">
+                {!busy && !needsAttention && !readerExpanded && reviewStatus}
+                <div className="library-actions">
+                  {folder === "" && !showSearch && (
+                    <button
+                      disabled={busy || !library.unfiled_review_count}
+                      onClick={() => setReviewMode("unfiled")}
+                      title="Review unfiled documents and add links without resetting"
+                    >
+                      <OrganizeIcon size={16} /> Organize files
+                    </button>
+                  )}
+                  <div className="segmented" aria-label="View">
+                    {(showSearch || recent
+                      ? ["List", "Cards", "Map"]
+                      : ["Overview", "List", "Cards", "Map"]
+                    ).map((name) => {
+                      const active =
+                        name === "Overview"
+                          ? view === "map" && overview
+                          : name === "Map"
+                            ? view === "map" && !overview
+                            : view === "files" &&
+                              layout === (name === "List" ? "list" : "grid");
+                      return (
+                        <button
+                          key={name}
+                          aria-pressed={active}
+                          className={active ? "active" : ""}
+                          onClick={() => {
+                            setView(
+                              name === "Overview" || name === "Map"
+                                ? "map"
+                                : "files",
+                            );
+                            setDocumentMap(name === "Map");
+                            setFreeformMap(false);
+                            if (name === "List" || name === "Cards")
+                              setLayout(name === "List" ? "list" : "grid");
+                          }}
+                        >
+                          {name === "Overview" ? <OverviewIcon size={16} />
+                            : name === "Cards" ? <CardsIcon size={16} />
+                            : name === "Map" ? <MapIcon size={16} />
+                            : <List size={16} aria-hidden="true" />}
+                          {name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {view === "files" && (
+                    <select
+                      aria-label="Display density"
+                      value={density}
+                      onChange={(e) =>
+                        setDensity(e.target.value as "compact" | "comfortable")
+                      }
+                    >
+                      <option value="compact">Compact</option>
+                      <option value="comfortable">Comfortable</option>
+                    </select>
+                  )}
                 </div>
-                <select
-                  aria-label="Display density"
-                  value={density}
-                  onChange={(e) =>
-                    setDensity(e.target.value as "compact" | "comfortable")
-                  }
-                >
-                  <option value="compact">Compact</option>
-                  <option value="comfortable">Comfortable</option>
-                </select>
               </div>
             </div>
             {error && (
@@ -1351,6 +1486,25 @@ export default function App() {
             )}
             {showSearch ? (
               <>
+                <div className="search-method-note">
+                  <label>
+                    Search method{" "}
+                    <select
+                      aria-label="Results search method"
+                      value={mode}
+                      onChange={(e) => setMode(e.target.value as Mode)}
+                    >
+                      <option value="hybrid">Meaning + keywords</option>
+                      <option value="semantic">Meaning</option>
+                      <option value="keyword">Keywords</option>
+                    </select>
+                  </label>
+                  <span>
+                    {evaluate
+                      ? "Answer checks use the returned passages. Open Evidence to inspect the source and explanation."
+                      : "Results are retrieved by relevance. Open Evidence to inspect matching passages; relevance is not a factual verification."}
+                  </span>
+                </div>
                 {searchError && (
                   <p className="notice error" role="alert">
                     {searchError}
@@ -1359,6 +1513,25 @@ export default function App() {
                     </button>
                   </p>
                 )}
+                {!searching && evaluate && !unavailable &&
+                  answer.status === "answered" &&
+                  answer.values?.map((value) => (
+                    <p className="notice" key={value.source.chunk_id}>
+                      <strong>{value.display}</strong>
+                      {value.calculation && <> · Source value: {value.source.quote}</>}
+                      {" · Checked against the returned source passages."}
+                      <button
+                        onClick={() => {
+                          const doc = matches.find(
+                            (m) => m.document_id === value.source.document_id,
+                          );
+                          if (doc) evidenceDoc(doc);
+                        }}
+                      >
+                        View source
+                      </button>
+                    </p>
+                  ))}
                 {unavailable && (
                   <p className="notice">
                     {matches.some((m) => m.jev?.status === "evaluated")
@@ -1392,22 +1565,8 @@ export default function App() {
                       : files
                     : !searchError && (
                         <div className="empty">
-                          <h2>
-                            {evaluate
-                              ? unavailable
-                                ? "Answer checking unavailable"
-                                : answer.status === "needs_context"
-                                  ? "More context needed"
-                                  : "No supported answer found"
-                              : "No matching files"}
-                          </h2>
-                          <p>
-                            {evaluate
-                              ? unavailable
-                                ? "This is not a no-answer judgment. Retry the check or browse related files."
-                                : `Checked ${answer.evaluated_count ?? 0} of ${answer.candidate_count ?? 0} candidates in this scope. ${answer.status === "needs_context" ? "The evidence is ambiguous or conflicting." : "No answer was established in the checked passages."}`
-                              : "Try different words, another mode, or a broader scope."}
-                          </p>
+                          <h2>{emptySearch.title}</h2>
+                          <p>{emptySearch.body}</p>
                           {evaluate && (
                             <button onClick={() => setEvaluate(false)}>
                               Show related files
@@ -1453,15 +1612,24 @@ export default function App() {
                       </div>
                     </section>
                   )}
+                {view === "files" && !showSearch && (
+                  <p className="browse-instructions">
+                    Click to select · Double-click or press Enter to open ·
+                    Space for Quick Look
+                  </p>
+                )}
                 {folder && view === "files" && layout === "grid" && (
                   <div className="folder-content-label">
                     <h3>Files in this folder</h3>
                     <span>Including subfolders</span>
                   </div>
                 )}
-                {loading && !library.documents.length ? (
+                {loadedScope !== wantedScope ||
+                (loading && !library.documents.length) ? (
                   <div className="loading" role="status">
-                    Loading your library…
+                    {error
+                      ? "This folder could not be loaded. Use Retry above."
+                      : "Loading your library…"}
                   </div>
                 ) : library.documents.length ? (
                   view === "map" ? (
@@ -1495,35 +1663,51 @@ export default function App() {
                     )}
                   </div>
                 )}
-                {library.documents.length > 0 && (
-                  <div className="browse-footer">
-                    <span>
-                      Loaded {library.documents.length} · {library.total} files
-                    </span>
-                    {library.has_more && (
-                      <button
-                        disabled={
-                          loading ||
-                          (view === "map" && library.documents.length >= 100)
-                        }
-                        onClick={() => void load(true)}
-                      >
-                        Load more files
-                      </button>
-                    )}
-                    {view === "map" &&
-                      library.has_more &&
-                      library.documents.length >= 100 && (
-                        <span>
-                          Canvas is limited to 100 cards. Choose a folder or use
-                          Files.
-                        </span>
+                {library.documents.length > 0 &&
+                  (view !== "map" || freeformMap) && (
+                    <div className="browse-footer">
+                      <span>
+                        Showing {library.documents.length} of {library.total}{" "}
+                        files
+                      </span>
+                      {library.has_more && (
+                        <button
+                          disabled={
+                            loading ||
+                            (view === "map" && library.documents.length >= 100)
+                          }
+                          onClick={() => void load(true)}
+                        >
+                          Load more files
+                        </button>
                       )}
-                  </div>
-                )}
+                      {view === "map" &&
+                        library.has_more &&
+                        library.documents.length >= 100 && (
+                          <span>
+                            Canvas is limited to 100 cards. Choose a folder or
+                            use Files.
+                          </span>
+                        )}
+                    </div>
+                  )}
               </>
             )}
           </main>
+          {selected && inspectorVisible && readerExpanded && (
+            <ReaderNavigator
+              doc={selected}
+              docs={visibleDocs}
+              search={showSearch}
+              group={group}
+              revision={JSON.stringify([
+                library.organization_revision,
+                library.index_revision,
+                library.manual_revision,
+              ])}
+              onOpen={openDoc}
+            />
+          )}
           {selected && (
             <>
               {inspectorVisible && (
@@ -1550,49 +1734,70 @@ export default function App() {
                   }}
                 />
               )}
-              <DocumentInspector
-                hidden={!inspectorVisible}
-                expanded={readerExpanded}
-                onExpand={() => setReaderExpanded((v) => !v)}
-                doc={selected}
-                visibleIds={visibleDocs.map((d) => d.document_id)}
-                initialTab={inspectorTab}
-                evidenceNavigation={evidenceNavigation}
-                onVersion={(version) =>
-                  setSelected((d) => (d ? { ...d, version } : d))
+              <Suspense
+                fallback={
+                  <div role="status" className="inspector">
+                    Loading reader…
+                  </div>
                 }
-                onMove={(doc) =>
-                  setOrganizationTarget({
-                    action: "move-documents",
-                    docs: [doc],
-                  })
-                }
-                busy={busy}
-                refreshKey={
-                  libraryVersions +
-                  ":" +
-                  (rebuild?.completed || 0) +
-                  ":" +
-                  library.organization_revision
-                }
-                match={
-                  hasSearchResults
-                    ? matches.find(
-                        (m) => m.document_id === selected.document_id,
-                      )
-                    : undefined
-                }
-                evaluate={evaluate}
-                unavailable={unavailable}
-                onClose={closeInspector}
-                onSelect={select}
-                onUpdate={update}
-                onDelete={(doc) => setDeleteTarget({ kind: "document", doc })}
-                open={open}
-                onOpen={setOpen}
-                link={chosenLink}
-                onLink={setChosenLink}
-              />
+              >
+                <DocumentInspector
+                  libraryId={library.library_id}
+                  hidden={!inspectorVisible}
+                  expanded={readerExpanded}
+                  onExpand={() => setReaderExpanded((v) => !v)}
+                  doc={selected}
+                  visibleIds={visibleDocs.map((d) => d.document_id)}
+                  initialTab={inspectorTab}
+                  evidenceNavigation={evidenceNavigation}
+                  onVersion={(version) =>
+                    setSelected((d) => (d ? { ...d, version } : d))
+                  }
+                  onMove={(doc) =>
+                    setOrganizationTarget({
+                      action: "move-documents",
+                      docs: [doc],
+                    })
+                  }
+                  busy={busy}
+                  refreshKey={
+                    libraryVersions +
+                    ":" +
+                    (rebuild?.completed || 0) +
+                    ":" +
+                    library.organization_revision
+                  }
+                  match={
+                    hasSearchResults
+                      ? matches.find(
+                          (m) => m.document_id === selected.document_id,
+                        )
+                      : undefined
+                  }
+                  evaluate={evaluate}
+                  unavailable={unavailable}
+                  onClose={closeInspector}
+                  onSelect={openDoc}
+                  onUpdate={update}
+                  onDelete={(doc) => setDeleteTarget({ kind: "document", doc })}
+                  open={open}
+                  onOpen={(value) => {
+                    if (value) previewOrigin.current = document.activeElement as HTMLElement;
+                    setOpen(value);
+                  }}
+                  onPreviewClose={() => {
+                    const opener = previewOrigin.current;
+                    if (opener?.isConnected && opener.getClientRects().length) opener.focus();
+                    else {
+                      const fallback = document.querySelector<HTMLButtonElement>(".inspector .open-file");
+                      if (fallback?.getClientRects().length) fallback.focus();
+                      else input.current?.focus();
+                    }
+                  }}
+                  link={chosenLink}
+                  onLink={setChosenLink}
+                />
+              </Suspense>
             </>
           )}
         </div>
@@ -1601,6 +1806,7 @@ export default function App() {
         className="sr-only"
         type="file"
         ref={fileInput}
+        tabIndex={-1}
         multiple
         aria-label="Upload files"
         onChange={(e) => {
@@ -1612,6 +1818,7 @@ export default function App() {
         className="sr-only"
         type="file"
         ref={updateInput}
+        tabIndex={-1}
         aria-label="Update selected file"
         onChange={(e) => {
           if (e.target.files?.[0] && updateDoc.current)

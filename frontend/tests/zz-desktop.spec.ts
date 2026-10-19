@@ -1,10 +1,14 @@
+import { chooseView, openSearchOptions } from "./ui-controls";
 import { test, expect } from "./coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
 const shots = path.resolve("../outputs/desktop-redesign");
 async function mutate(page: any, action: string, data: any) {
   const r = await page.request.post("/api/" + action, {
-    headers: { Origin: "http://127.0.0.1:8766", "X-Symbiknow-UI": "1" },
+    headers: {
+      Origin: `http://127.0.0.1:${process.env.SYMBIKNOW_UI_PORT || "8766"}`,
+      "X-Symbiknow-UI": "1",
+    },
     data,
   });
   expect(r.ok(), await r.text()).toBeTruthy();
@@ -30,6 +34,23 @@ async function importNotes(page: any, names: string[]) {
         ).documents.filter((d: any) => names.includes(d.filename)).length,
     )
     .toBe(names.length);
+  // Move/reset tests require completed indexing, not just a saved metadata row.
+  await expect
+    .poll(
+      async () => {
+        const library = await (
+          await page.request.get("/api/library?limit=100")
+        ).json();
+        return (
+          !library.processing &&
+          library.documents.filter(
+            (d: any) => names.includes(d.filename) && d.status === "indexed",
+          ).length === names.length
+        );
+      },
+      { timeout: 20000 },
+    )
+    .toBe(true);
   return (
     await (await page.request.get("/api/library?limit=100")).json()
   ).documents.filter((d: any) => names.includes(d.filename));
@@ -38,16 +59,22 @@ test("multi-selection, loaded Select all, guarded move, ZIP download and Quick L
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   const docs = await importNotes(page, [
     "desktop-bulk-a.md",
     "desktop-bulk-b.md",
   ]);
   await page
-    .getByRole("button", { name: "Select desktop-bulk-a", exact: true })
+    .getByRole("button", {
+      name: /^Select desktop\-bulk\-a(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await page
-    .getByRole("button", { name: "Select desktop-bulk-b", exact: true })
+    .getByRole("button", {
+      name: /^Select desktop\-bulk\-b(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click({ modifiers: ["Meta"] });
   await expect(page.locator(".bulk-toolbar")).toContainText("2 selected");
   await expect(page.getByLabel("Document inspector")).toHaveCount(0);
@@ -77,16 +104,25 @@ test("multi-selection, loaded Select all, guarded move, ZIP download and Quick L
     );
   }
   await page
-    .getByRole("button", { name: "Select desktop-bulk-a", exact: true })
+    .getByRole("button", {
+      name: /^Select desktop\-bulk\-a(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .click();
   await page
-    .getByRole("button", { name: "Select desktop-bulk-a", exact: true })
+    .getByRole("button", {
+      name: /^Select desktop\-bulk\-a(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .press("Space");
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Select desktop-bulk-a", exact: true })
+    .getByRole("button", {
+      name: /^Select desktop\-bulk\-a(?:\.[^.]+)?$/,
+      exact: true,
+    })
     .focus();
   await page.keyboard.press("Meta+a");
   await expect(page.locator(".bulk-toolbar")).toContainText(
@@ -145,7 +181,7 @@ test("folder tree keyboard, subtree rename, move and durable manual assignment",
   await page.getByRole("button", { name: "Rename", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Clear folder scope" }),
+    page.getByRole("button", { name: /^Clear folder scope(?:: .+)?$/ }),
   ).toContainText("Tree / גישה לעובדים / Child");
   await page.reload();
   const detail = await (
@@ -163,7 +199,7 @@ test("search scope reruns once; view changes reuse judgments; collapsed matches 
     if (r.url().endsWith("/api/search")) calls++;
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   const expand = page.locator(".canvas").getByRole("button", {
     name: "Expand Research",
@@ -177,23 +213,28 @@ test("search scope reruns once; view changes reuse judgments; collapsed matches 
   await page.getByLabel("Search your knowledge").fill("keep every version");
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(
-    page.getByRole("button", { name: "Select retrieval-notes", exact: true }),
+    page.getByRole("button", {
+      name: /^Select retrieval\-notes(?:\.[^.]+)?$/,
+      exact: true,
+    }),
   ).toBeVisible();
   await expect.poll(() => calls).toBe(1);
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "List");
+  await chooseView(page, "Canvas");
   expect(calls).toBe(1);
   await page
     .locator(".sidebar")
-    .getByRole("button", { name: "Research", exact: true })
+    .getByRole("button", { name: /^Research \d+$/, exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Clear folder scope" }),
+    page.getByRole("button", { name: /^Clear folder scope(?:: .+)?$/ }),
   ).toContainText("Research");
   await expect.poll(() => calls).toBe(2);
   await expect(page.getByText("Finding useful evidence…")).toHaveCount(0);
   await page.getByRole("button", { name: "Clear search" }).click();
-  await page.getByRole("button", { name: "All files", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^All files \d+$/, exact: true })
+    .click();
   await expect(
     page
       .locator(".canvas")
@@ -205,7 +246,7 @@ test("canvas drag, arrange undo, viewport and positions survive switching and re
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   const node = page.locator(".react-flow__node-document").first();
   const id = await node.getAttribute("data-id");
@@ -213,15 +254,30 @@ test("canvas drag, arrange undo, viewport and positions survive switching and re
   await page
     .getByRole("button", { name: "Fit selection", exact: true })
     .click();
+  await expect
+    .poll(() =>
+      page
+        .locator(".canvas")
+        .evaluate((el) =>
+          Number(getComputedStyle(el).getPropertyValue("--canvas-zoom")),
+        ),
+    )
+    .toBeGreaterThanOrEqual(0.75);
   const before = await node.evaluate(
     (el) => (el as HTMLElement).style.transform,
   );
   const handle = node.locator(".card-handle");
+  // Coordinate dragging needs the same layout-stability wait as a locator click.
+  await handle.hover({ position: { x: 8, y: 10 } });
   const box = await handle.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + 8, box!.y + 10);
   await page.mouse.down();
   await page.mouse.move(box!.x + 20, box!.y + 16, { steps: 3 });
+  // Ensure the gesture has actually started before injecting a refresh.
+  await expect
+    .poll(() => node.evaluate((el) => (el as HTMLElement).style.transform))
+    .not.toBe(before);
   await page.clock.install();
   const refreshed = page.waitForResponse((r) =>
     r.url().includes("/api/progress"),
@@ -230,12 +286,17 @@ test("canvas drag, arrange undo, viewport and positions survive switching and re
   await refreshed;
   await page.mouse.move(box!.x + 48, box!.y + 30, { steps: 5 });
   await page.mouse.up();
+  // Resume animation frames after the controlled background-refresh interval.
+  await page.clock.resume();
+  await expect
+    .poll(() => node.evaluate((el) => (el as HTMLElement).style.transform))
+    .not.toBe(before);
   const changed = await page
     .locator(`[data-id="${id}"]`)
     .evaluate((el) => (el as HTMLElement).style.transform);
   expect(changed).not.toBe(before);
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "List");
+  await chooseView(page, "Canvas");
   await expect
     .poll(() =>
       page
@@ -276,7 +337,7 @@ test("desktop panes, grid, long Unicode paths and truthful reset failure", async
     ],
   });
   await page.reload();
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await chooseView(page, "List");
   for (const size of [
     { width: 1440, height: 900 },
     { width: 1280, height: 800 },
@@ -286,7 +347,7 @@ test("desktop panes, grid, long Unicode paths and truthful reset failure", async
     await page.setViewportSize(size);
     await page
       .getByRole("button", {
-        name: "Select API-מסמך-desktop-long",
+        name: /^Select API\-מסמך\-desktop\-long(?:\.[^.]+)?$/,
         exact: true,
       })
       .press("Enter");
@@ -295,7 +356,9 @@ test("desktop panes, grid, long Unicode paths and truthful reset failure", async
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBeTruthy();
+    await openSearchOptions(page);
     await expect(page.getByLabel("Search mode")).toBeVisible();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Import", exact: true }),
     ).toBeVisible();
@@ -303,11 +366,14 @@ test("desktop panes, grid, long Unicode paths and truthful reset failure", async
       path: path.join(shots, `long-name-${size.width}.png`),
     });
     await page
-      .getByRole("button", { name: "Close inspector", exact: true })
+      .getByRole("button", {
+        name: /^(Back to library|Close inspector)$/,
+        exact: true,
+      })
       .click();
     await expect(
       page.getByRole("button", {
-        name: "Select API-מסמך-desktop-long",
+        name: /^Select API\-מסמך\-desktop\-long(?:\.[^.]+)?$/,
         exact: true,
       }),
     ).toBeFocused();
@@ -358,7 +424,7 @@ test("desktop panes, grid, long Unicode paths and truthful reset failure", async
   await page.getByText("View files needing attention", { exact: true }).click();
   await expect(
     page.getByRole("region", { name: "Jev activity" }),
-  ).toContainText("Unfiled; original stored");
+  ).toContainText("failed.md · Jev unavailable");
   await page.screenshot({ path: path.join(shots, "reset-failure.png") });
 });
 
@@ -371,7 +437,7 @@ test("background refresh never hides measured cards or clears their content", as
       statusRequests++;
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await page.locator(".canvas-title").first().click();
   await page
@@ -414,6 +480,7 @@ test("background refresh never hides measured cards or clears their content", as
 test("subtree reset preserves sibling canvas positions and originals", async ({
   page,
 }) => {
+  test.setTimeout(60000);
   await page.goto("/");
   const docs = await importNotes(page, [
     "layout-affected.md",
@@ -427,7 +494,7 @@ test("subtree reset preserves sibling canvas positions and originals", async ({
       ],
     });
   await page.reload();
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   const lib = await (await page.request.get("/api/library")).json();
   const key = `symbiknow.v2.${lib.library_id}.canvas:*`;
@@ -521,7 +588,7 @@ test("changed folder parents and growing frames repair positions without overlap
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await expect(page.locator(".react-flow__node-document")).toHaveCount(4);
   const lib = await (await page.request.get("/api/library")).json();

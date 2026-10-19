@@ -1,6 +1,6 @@
 # Symbiknow / Architecture / Atomic metadata transactions failure matrix
 
-Repository implementation guide. Snapshot: 12 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 
 ## Durable records
 The manual-organization ledger is atomically written through a temporary file, file fsync, rename and directory fsync. Manual edits persist a prepared transaction before publication. Startup recovery replays recorded decisions, filtering links whose endpoint versions changed, then removes the prepared transaction marker.
@@ -18,6 +18,10 @@ These are derived-organization transactions, not original content commits. They 
 
 ## Limits
 This matrix describes implemented recovery paths and their tests. It does not certify every filesystem power-loss timing or native rocfl interruption. Keep verified backups and separate original-byte validation from index/ledger repair.
+
+## Recovery records and cached reads
+
+Manual metadata reads reuse the latest immutable snapshot per data directory, with narrow copied views for callers and a bounded directory cache. Organization filter publication writes a per-document durable marker before the chunk/document update and clears it after publication. Clean startup replays only outstanding markers; legacy or explicit full repair still traverses the table. Rebuild outcomes use a checkpoint-bound fsynced JSONL journal in addition to the phase snapshot. Keep these records in backups; none replaces original-byte validation.
 
 ## Source references
 - `app/organization_edits.py`

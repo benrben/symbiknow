@@ -1,3 +1,10 @@
+import { chooseView } from "./ui-controls";
+import {
+  setSearchMode,
+  setAnswerChecking,
+  expectSearchMode,
+  expectAnswerChecking,
+} from "./ui-controls";
 import { test, expect } from "./coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -131,10 +138,12 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
     }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByRole("button", { name: "Symbiknow", exact: true }).click();
-  await page.getByLabel("Search mode").selectOption("keyword");
-  await page.getByRole("switch", { name: "Jev evaluation" }).setChecked(true);
+  await chooseView(page, "List");
+  await page
+    .getByRole("button", { name: /^Symbiknow \d+$/, exact: true })
+    .click();
+  await setSearchMode(page, "keyword");
+  await setAnswerChecking(page, true);
   await page
     .getByLabel("Search your knowledge")
     .fill("reset versions and views");
@@ -160,8 +169,9 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
   await page.screenshot({
     path: path.join(out, "files-coverage-conflicts.png"),
   });
+  await page.getByRole("button", { name: "Map", exact: true }).press("Enter");
   await page
-    .getByRole("button", { name: "Canvas", exact: true })
+    .getByRole("button", { name: "Freeform map", exact: true })
     .press("Enter");
   await page.getByRole("button", { name: "Fit results", exact: true }).click();
   await expect(page.locator(".react-flow__node-document")).toHaveCount(5);
@@ -189,11 +199,9 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
   await expect(page.getByLabel("Search your knowledge")).toHaveValue(
     "reset versions and views",
   );
-  await expect(page.getByLabel("Search mode")).toHaveValue("keyword");
-  await expect(
-    page.getByRole("switch", { name: "Jev evaluation" }),
-  ).toBeChecked();
-  await page.getByRole("button", { name: "List", exact: true }).click();
+  await expectSearchMode(page, "keyword");
+  await expectAnswerChecking(page, true);
+  await chooseView(page, "List");
   expect(requests.length).toBe(count);
   await page
     .locator(".file-row")
@@ -207,9 +215,13 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
   await expect(page.locator(".inspector")).toContainText(
     "Original current policy",
   );
-  await page.getByRole("button", { name: "View evidence", exact: true }).press("Enter");
+  await page
+    .getByRole("button", { name: "View evidence", exact: true })
+    .press("Enter");
   await expect(page.locator(".why-file")).toContainText("Possible conflict");
-  await expect(page.locator(".inspector-heading")).toContainText("Possible reset conflict");
+  await expect(page.locator(".inspector-heading")).toContainText(
+    "Possible reset conflict",
+  );
   await expect(page.locator(".inspector-meta")).toContainText("v1");
   await expect(page.locator('[id="evidence-mcp-five-1:v1:t0"]')).toContainText(
     "Reset preserves originals and history",

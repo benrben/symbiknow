@@ -217,21 +217,43 @@ def put_chunks(data_dir, metadata, rows, model_id):
             raise ValueError("Index embedding dimensions differ; rebuild the derived index")
         where = f"document_id = {_literal(metadata['document_id'])}"
         table.delete(where)
-        for batch in batches:
-            batch = pa.Table.from_batches([batch]) if isinstance(batch, pa.RecordBatch) else batch
-            values = {
-                "document_id": metadata["document_id"],
-                "version": str(metadata["version"]),
-                "embedding_model": model_id,
-                "active": False,
-                "folder": "",
-                "groups": [],
-            }
-            for key, value in values.items():
-                batch = batch.append_column(
-                    key, pa.array([value] * batch.num_rows, type=schema.field(key).type)
-                )
-            table.add(batch.select(schema.names).cast(schema))
+        stream_errors = []
+
+        def prepared_batches():
+            # One append transaction consumes bounded batches. Committing each
+            # four-row embedding batch creates thousands of tiny table versions.
+            try:
+                for batch in batches:
+                    batch = (
+                        pa.Table.from_batches([batch])
+                        if isinstance(batch, pa.RecordBatch)
+                        else batch
+                    )
+                    values = {
+                        "document_id": metadata["document_id"],
+                        "version": str(metadata["version"]),
+                        "embedding_model": model_id,
+                        "active": False,
+                        "folder": "",
+                        "groups": [],
+                    }
+                    for key, value in values.items():
+                        batch = batch.append_column(
+                            key, pa.array([value] * batch.num_rows, type=schema.field(key).type)
+                        )
+                    yield from batch.select(schema.names).cast(schema).to_batches()
+            except Exception as exc:
+                stream_errors.append(exc)
+                raise
+
+        try:
+            table.add(pa.RecordBatchReader.from_batches(schema, prepared_batches()))
+        except Exception:
+            # Arrow/native streaming may wrap a producer error. Preserve its
+            # original type for ingestion's transient/permanent retry policy.
+            if stream_errors:
+                raise stream_errors[0]
+            raise
         if not any(index.index_type == "FTS" for index in table.list_indices()):
             from lancedb.index import FTS
 
@@ -728,6 +750,7 @@ def find_documents(
                     "filename": state["filename"],
                     "sha256": state["sha256"],
                     "mime_type": state["mime_type"],
+                    "created_at": state.get("created_at", ""),
                     "source": state["source"],
                     "folder": state["folder"],
                     "groups": state["groups"],
@@ -805,7 +828,7 @@ def find_documents(
             # One structural context slot preserves the document introduction
             # and subject when top-ranked passages lie deep in the document.
             # Resolve it in the existing bounded exact-tuple batch; rankings,
-            # candidate depth and the six-window provider budget stay unchanged.
+            # candidate depth stays unchanged; up to twelve provider windows retain all eight retrieved passages.
             introductions[match["document_id"]] = introduction
             if introduction:
                 refs.insert(0, introduction)
@@ -815,7 +838,7 @@ def find_documents(
             records = resolve_evidence_many(data_dir, requested)
         for rank, match in enumerate(output, 1):
             match["retrieval"]["rank"] = rank
-            selected = match["evidence"][:3]
+            selected = match["evidence"][:8]
             context = []
             for ref in neighbors[match["document_id"]]:
                 neighbor = records.get((match["document_id"], match["version"], ref))
@@ -827,7 +850,7 @@ def find_documents(
                     continue
                 if neighbor and ref not in {e["evidence_id"] for e in [*selected, *context]}:
                     context.append(neighbor)
-            match["evidence"] = [*selected, *context][:6]
+            match["evidence"] = [*selected, *context][:12]
         return output
 
 

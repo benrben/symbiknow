@@ -180,31 +180,14 @@ def test_revision_publication_manual_override_reference_validation_and_original_
 
 
 def test_search_cache_metadata_changes_conflicts_low_confidence_and_query_windows(monkeypatch):
-    from types import SimpleNamespace
+    from test_jev_proof import sdk
 
     calls = []
 
     def provider(state, questions, client=None):
         calls.append(state)
-        return SimpleNamespace(
-            model="fixture",
-            choices={
-                k: SimpleNamespace(
-                    choice="direct",
-                    confidence=0.3,
-                    probabilities={"direct": 0.51, "uncertain": 0.49},
-                )
-                for k, q in questions.items()
-                if q.type == "choice"
-            },
-            nouls={
-                k: SimpleNamespace(
-                    noul=0.01 if k.startswith(("obsolete_", "historical_", "scope_mismatch_")) else 0.95
-                )
-                for k, q in questions.items()
-                if q.type == "noul"
-            },
-        )
+        with sdk({"coverage": "correction"}, confidence=0.7) as client:
+            return client.system_one(state=state, questions=questions)
 
     monkeypatch.setattr(jev, "_call", provider)
     rows = evidence(
@@ -217,15 +200,16 @@ def test_search_cache_metadata_changes_conflicts_low_confidence_and_query_window
     second = jev.judge_matches(
         query, [doc | {"folder": "Review / Renamed"}], cache_namespace="cache-regression"
     )
-    assert len(calls) == 1
+    assert len(calls) == 2  # The uncertain first pass receives an exact-text check.
     assert second["matches"][0]["folder"] == "Review / Renamed"
     judgment = first["matches"][0]["jev"]
-    assert judgment["label"] == "uncertain"
+    assert judgment["premise_correction_status"] == "accepted"
     assert judgment["conflicting_chunk_ids"] == [rows[0]["evidence_id"]]
     assert "does not delete" in judgment["evaluated_evidence"][0]["text"]
     assert not judgment["evaluated_evidence_complete"]
-    jev.judge_matches(query, [doc | {"version": "v2"}], cache_namespace="cache-regression")
-    assert len(calls) == 2
+    updated = doc | {"version": "v2", "evidence": [rows[0] | {"evidence_id": "opaque:v2:t0"}]}
+    jev.judge_matches(query, [updated], cache_namespace="cache-regression")
+    assert len(calls) == 4
 
 
 def test_document_sampling_reaches_tail_and_query_adds_stored_adjacent_context(tmp_path):

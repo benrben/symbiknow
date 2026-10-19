@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">SymbiKnow — Paired passages, sharp</title>
+  <desc id="desc">Two angular source brackets with diagonal cuts, blue and pale on a navy rounded square.</desc>
+  <rect width="1024" height="1024" rx="224" fill="#17253F"/>
+  <path fill="#91B4FF" d="M192 192H640L704 256V384H576V320H320V448H448V512L384 576H192Z"/>
+  <path fill="#EDF0F4" d="M832 832H384L320 768V640H448V704H704V576H576V512L640 448H832Z"/>
+</svg>

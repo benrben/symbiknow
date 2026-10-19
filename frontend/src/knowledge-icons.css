@@ -1,0 +1,50 @@
+/* Paper in motion: quiet by default, brand accent for active controls. */
+.app-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+  --icon-accent: currentColor;
+}
+.sidebar nav > button.active .app-icon,
+.segmented button.active .app-icon,
+.tabs button[data-state="active"] .app-icon,
+.jev-review-dialog > .app-icon {
+  --icon-accent: var(--accent);
+}
+.segmented button,
+.inspector .tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.menu [role="menuitem"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Keep labels readable in the narrow split reader. */
+.inspector .tabs .app-icon,
+.inspector .tabs .tab-icon {
+  display: none;
+}
+.reader-expanded .inspector .tabs .app-icon,
+.reader-expanded .inspector .tabs .tab-icon {
+  display: inline-block;
+}
+@media (max-width: 760px) {
+  .reader-expanded .inspector .tabs .app-icon,
+  .reader-expanded .inspector .tabs .tab-icon {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .segmented button svg {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jev-working-icon {
+    animation: none;
+  }
+}

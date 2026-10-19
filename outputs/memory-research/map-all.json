@@ -1,25 +1,25 @@
 {
   "mode": "all",
   "pan_frame_ms": [
-    70,
-    83,
-    82,
-    83,
+    62,
+    66,
+    69,
     67,
-    84,
+    65,
+    66,
+    69,
+    66,
+    65,
     67,
-    84,
-    82,
-    85,
-    82,
-    83
+    67,
+    67
   ],
   "rendered_cards": 100,
   "before": {
     "metrics": [
       {
         "name": "Timestamp",
-        "value": 414465.270717
+        "value": 455370.34189
       },
       {
         "name": "AudioHandlers",
@@ -35,15 +35,15 @@
       },
       {
         "name": "Frames",
-        "value": 1
+        "value": 2
       },
       {
         "name": "JSEventListeners",
-        "value": 923
+        "value": 929
       },
       {
         "name": "LayoutObjects",
-        "value": 2639
+        "value": 2892
       },
       {
         "name": "MediaKeySessions",
@@ -55,11 +55,11 @@
       },
       {
         "name": "Nodes",
-        "value": 13109
+        "value": 13394
       },
       {
         "name": "Resources",
-        "value": 4
+        "value": 5
       },
       {
         "name": "ContextLifecycleStateObservers",
@@ -115,7 +115,7 @@
       },
       {
         "name": "DevToolsCommandDuration",
-        "value": 0.000028
+        "value": 0.00003
       },
       {
         "name": "ScriptDuration",
@@ -127,27 +127,27 @@
       },
       {
         "name": "TaskDuration",
-        "value": 0.030336
+        "value": 0.038836
       },
       {
         "name": "TaskOtherDuration",
-        "value": 0.030308
+        "value": 0.038806
       },
       {
         "name": "ThreadTime",
-        "value": 0.029386
+        "value": 0.037578
       },
       {
         "name": "ProcessTime",
-        "value": 1.353851
+        "value": 1.300153
       },
       {
         "name": "JSHeapUsedSize",
-        "value": 11040620
+        "value": 10872604
       },
       {
         "name": "JSHeapTotalSize",
-        "value": 12025856
+        "value": 11780096
       },
       {
         "name": "FirstMeaningfulPaint",
@@ -155,11 +155,11 @@
       },
       {
         "name": "DomContentLoaded",
-        "value": 414464.276769
+        "value": 455369.377357
       },
       {
         "name": "NavigationStart",
-        "value": 414464.189968
+        "value": 455369.311565
       }
     ]
   },
@@ -167,7 +167,7 @@
     "metrics": [
       {
         "name": "Timestamp",
-        "value": 414466.441693
+        "value": 455371.349915
       },
       {
         "name": "AudioHandlers",
@@ -183,15 +183,15 @@
       },
       {
         "name": "Frames",
-        "value": 1
+        "value": 2
       },
       {
         "name": "JSEventListeners",
-        "value": 936
+        "value": 942
       },
       {
         "name": "LayoutObjects",
-        "value": 2639
+        "value": 2892
       },
       {
         "name": "MediaKeySessions",
@@ -203,11 +203,11 @@
       },
       {
         "name": "Nodes",
-        "value": 13111
+        "value": 13396
       },
       {
         "name": "Resources",
-        "value": 4
+        "value": 5
       },
       {
         "name": "ContextLifecycleStateObservers",
@@ -251,23 +251,23 @@
       },
       {
         "name": "RecalcStyleCount",
-        "value": 23
+        "value": 21
       },
       {
         "name": "LayoutDuration",
-        "value": 0.002026
+        "value": 0.002373
       },
       {
         "name": "RecalcStyleDuration",
-        "value": 0.017271
+        "value": 0.01666
       },
       {
         "name": "DevToolsCommandDuration",
-        "value": 0.355371
+        "value": 0.256269
       },
       {
         "name": "ScriptDuration",
-        "value": 0.015182
+        "value": 0.022288
       },
       {
         "name": "V8CompileDuration",
@@ -275,27 +275,27 @@
       },
       {
         "name": "TaskDuration",
-        "value": 0.488162
+        "value": 0.40759
       },
       {
         "name": "TaskOtherDuration",
-        "value": 0.098312
+        "value": 0.11
       },
       {
         "name": "ThreadTime",
-        "value": 0.487687
+        "value": 0.409138
       },
       {
         "name": "ProcessTime",
-        "value": 1.905284
+        "value": 1.808823
       },
       {
         "name": "JSHeapUsedSize",
-        "value": 13097752
+        "value": 14644408
       },
       {
         "name": "JSHeapTotalSize",
-        "value": 17612800
+        "value": 22347776
       },
       {
         "name": "FirstMeaningfulPaint",
@@ -303,18 +303,18 @@
       },
       {
         "name": "DomContentLoaded",
-        "value": 414464.276769
+        "value": 455369.377357
       },
       {
         "name": "NavigationStart",
-        "value": 414464.189968
+        "value": 455369.311565
       }
     ]
   },
   "heap": {
-    "usedSize": 13097752,
-    "totalSize": 17612800,
-    "embedderHeapUsedSize": 47480176,
-    "backingStorageSize": 852493
+    "usedSize": 14644408,
+    "totalSize": 22347776,
+    "embedderHeapUsedSize": 10772256,
+    "backingStorageSize": 682783
   }
 }

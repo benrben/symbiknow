@@ -81,7 +81,8 @@ class VisualUnits:
             from PIL import Image
 
             with Image.open(source if isinstance(source, Path) else BytesIO(source)) as opened:
-                self.pages = range(1, opened.n_frames + 1)
+                # Pillow exposes n_frames only for formats with frame support.
+                self.pages = range(1, getattr(opened, "n_frames", 1) + 1)
 
     def __len__(self):
         return len(self.pages)
@@ -154,7 +155,10 @@ def extract_units(metadata, content, embedder, *, isolated=False):
                         boundary()
                 with tempfile.TemporaryDirectory(prefix="symbiknow-convert-") as directory:
                     root = Path(directory)
-                    source = root / Path(filename).name
+                    # User filenames must not alias document.json, result.json or
+                    # stderr.log: writing a worker artifact could overwrite the
+                    # leased original through its input symlink.
+                    source = root / ("input" + Path(filename).suffix)
                     if isinstance(content, Path):
                         # A suffix is required for Docling format detection. No byte copy.
                         source.symlink_to(content.resolve())

@@ -218,7 +218,7 @@ def test_links_only_sdk_request_asks_only_relationship_questions(monkeypatch):
         source, source["evidence"], [target], folders=["Atlas"], links_only=True
     )
     assert result["status"] == "evaluated" and len(result["links"]) == 1
-    assert len(calls) == 1 and set(calls[0]) == {"link_0", "source_0", "target_0"}
+    assert len(calls) == 1 and set(calls[0]) == {"pair_1_0_0", "status_0_0", "status_1_0"}
     assert "folder" not in result and "groups" not in result
     calls.clear()
     assert jev.organize_document(source, source["evidence"], [], links_only=True)["links"] == []
@@ -229,7 +229,7 @@ def test_owner_acceptance_is_not_overwritten_by_a_rejected_link():
     source = match("source", text="Atlas / Storage / Guide\nAtlas preserves versions.")
     target = match("target", text="Unrelated weather record.")
     with sdk_client(
-        {"project_owner": "Atlas", "link_0": "none", "source_0": "none", "target_0": "none"}
+        {"project_owner": "Atlas", "pair_1_0_0": "none"}
     ) as sdk:
         result = jev.organize_document(
             source, source["evidence"], [target], folders=["Atlas / Storage"], client=sdk

@@ -8,6 +8,32 @@ export type Evidence = {
     headings?: string[];
   };
 };
+export type SearchAnswer = {
+  status: string;
+  reason?: string;
+  candidate_count?: number;
+  evaluated_count?: number;
+  values?: {
+    value: string;
+    unit: string;
+    display: string;
+    source: {
+      document_id: string;
+      version: string;
+      chunk_id: string;
+      quote: string;
+      start: number;
+      end: number;
+    };
+    context_sources: { document_id: string; version: string; chunk_id: string }[];
+    calculation: {
+      source_value: string;
+      source_unit: string;
+      factor_numerator: number;
+      factor_denominator: number;
+    } | null;
+  }[];
+};
 export type Link = {
   document_id: string;
   version: string;
@@ -115,9 +141,9 @@ export type Rebuild = {
   completed: number;
   failed: number;
   skipped: number;
-  grouped?: number;
-  unfiled?: number;
-  links_added?: number;
+  grouped?: number | null;
+  unfiled?: number | null;
+  links_added?: number | null;
   details: {
     document_id: string;
     filename: string;

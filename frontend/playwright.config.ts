@@ -1,11 +1,17 @@
 import { defineConfig } from "@playwright/test";
+const port = process.env.SYMBIKNOW_UI_PORT || "8766";
+const baseURL = `http://127.0.0.1:${port}`;
 export default defineConfig({
   testDir: "tests",
+  testMatch: "**/*.spec.ts",
+  // The accessibility/reflow suite runs in all three engines via test:quality.
+  testIgnore: ["**/quality-gate.spec.ts", "**/mobile-accessibility.spec.ts"],
+  outputDir: process.env.SYMBIKNOW_UI_RESULTS || "test-results",
   fullyParallel: false,
   workers: 1,
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:8766",
+    baseURL,
     viewport: { width: 1440, height: 900 },
     reducedMotion: "reduce",
     launchOptions: {
@@ -18,15 +24,19 @@ export default defineConfig({
   webServer: [
     {
       command: "../.venv/bin/python ../tests/ui_fixture.py",
-      url: "http://127.0.0.1:8766/api/library",
+      url: `${baseURL}/api/library`,
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
     },
-    {
-      command: "npm run dev -- --config tests/vite.config.ts --port 5174",
-      url: "http://127.0.0.1:5174",
-      reuseExistingServer: !process.env.CI,
-      timeout: 60000,
-    },
+    ...(port === "8766"
+      ? [
+          {
+            command: "npm run dev -- --config tests/vite.config.ts --port 5174",
+            url: "http://127.0.0.1:5174",
+            reuseExistingServer: !process.env.CI,
+            timeout: 60000,
+          },
+        ]
+      : []),
   ],
 });

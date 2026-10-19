@@ -1,6 +1,6 @@
 # Symbiknow / Organization / Jev answerability labels and safeguards
 
-Repository implementation guide. Snapshot: 13 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 ## Supplied evidence only
 Jev receives the user's question and bounded textual evidence for up to eight retrieval candidates, with at most six passages per candidate. Native image vectors with no text are not sent as text answerability material. Hosted provider exceptions are reported without leaking uploaded text in exception bodies.
 
@@ -20,6 +20,12 @@ The UI says Supports answer, Partially supports, Related, Not relevant or Needs 
 
 ## Validation
 Mocked SDK tests validate schema/evidence behavior. Independent per-class quality requires separately annotated held-out questions and passages, including wrong entities, rejected proposals, multilingual facts and prompt-injection distractors.
+
+## Current policy — 17 October 2026
+
+The current source declares prompt `project-membership-5/search-evidence-14` and policy `answer-routing-12`, with default Jev model 1.13.0. Support/entity/applicability are judged for the question part addressed by a passage; a missing fact elsewhere need not invalidate useful partial evidence. A negative answer can be complete. Explicitly saying that a value is undocumented can answer whether it is documented, but does not supply that value. The independent all-parts check can resolve a split direct/partial choice and cannot promote a confident partial judgment. Strict support/entity/applicability gates remain 0.8.
+
+At most eight document-scoped requests assess six windows each, plus at most one bounded cross-document comparison, with four concurrent provider calls shared across searches. Each judgment/comparison cache has 512-entry and eight-MiB limits using estimated owned Python bytes, rather than an RSS guarantee. Cache identity includes evidence/version, filename context, model, prompt, policy and semantic criteria; provider failures are not cached. Final publication rechecks current heads and compared windows. Earlier policy sections below remain dated history, not the active configuration.
 
 ## Source references
 - `app/jev.py`

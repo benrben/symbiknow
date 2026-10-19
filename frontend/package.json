@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:quality": "playwright test --config playwright.quality.config.ts",
+    "test:mobile": "playwright test --config playwright.mobile.config.ts"
   },
   "dependencies": {
     "@noble/hashes": "2.0.1",
@@ -23,6 +25,7 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "^1.56.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

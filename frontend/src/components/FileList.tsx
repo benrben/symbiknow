@@ -1,15 +1,7 @@
 import { useState, type MouseEvent } from "react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
-import {
-  FileText,
-  CheckCircle2,
-  CircleHelp,
-  Image as ImageIcon,
-  MoreHorizontal,
-  ArrowUp,
-  ArrowDown,
-  CheckSquare,
-} from "lucide-react";
+import { FileCheck2, CircleDashed, TriangleAlert, CircleHelp, Image as ImageIcon, MoreHorizontal, ArrowUp, ArrowDown, CheckSquare, Eye } from "lucide-react";
+import { DocumentIcon as FileText } from "./KnowledgeIcons";
 import {
   title,
   kind,
@@ -143,10 +135,18 @@ export function Judgment({
           : label || "muted")
       }
     >
-      {label === "direct" ? (
-        <CheckCircle2 size={14} />
+      {evaluate && (j?.status === "unavailable" || (unavailable && !j?.status)) ? (
+        <CircleDashed size={14} aria-hidden="true" />
+      ) : disagreement || conflict || possibleConflict ? (
+        <TriangleAlert size={14} aria-hidden="true" />
+      ) : unknownCoverage ? (
+        <CircleHelp size={14} aria-hidden="true" />
+      ) : label === "direct" ? (
+        <FileCheck2 size={14} aria-hidden="true" />
+      ) : label ? (
+        <CircleHelp size={14} aria-hidden="true" />
       ) : (
-        <CircleHelp size={14} />
+        <CircleDashed size={14} aria-hidden="true" />
       )}
       <span className="judgment-label">
         {evaluate &&
@@ -178,7 +178,7 @@ export default function FileList(p: {
   docs: Doc[];
   selectedIds: string[];
   onSelect: (d: Doc, e?: SelectionEvent) => void;
-  onOpen: (d: Doc) => void;
+  onOpen: (d: Doc, origin?: HTMLElement) => void;
   onEvidence: (d: Doc) => void;
   onQuickLook?: (d: Doc) => void;
   search?: boolean;
@@ -249,16 +249,16 @@ export default function FileList(p: {
   const fileButton = (d: Doc) => (
     <button
       className="file-select"
-      aria-label={"Select " + title(d)}
+      aria-label={"Select " + (table ? d.filename : title(d))}
       aria-description={d.filename}
       title={d.filename}
       aria-pressed={p.selectedIds.includes(d.document_id)}
       onClick={(e) => p.onSelect(d, e)}
-      onDoubleClick={() => p.onOpen(d)}
+      onDoubleClick={(event) => p.onOpen(d, event.currentTarget)}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          p.onOpen(d);
+          p.onOpen(d, e.currentTarget);
         }
         if (e.key === " ") {
           e.preventDefault();
@@ -272,7 +272,7 @@ export default function FileList(p: {
       ) : kind(d) === "Image" ? (
         <ImageIcon size={15} className="type-icon image" />
       ) : (
-        <FileText size={15} className={"type-icon " + kind(d).toLowerCase()} />
+        <FileText size={16} className={"type-icon " + kind(d).toLowerCase()} />
       )}
       <span className="file-description">
         <strong title={d.filename}>{table ? d.filename : title(d)}</strong>
@@ -282,23 +282,6 @@ export default function FileList(p: {
           </span>
         )}
       </span>
-      {!table && (
-        <>
-          <ContentCard
-            doc={d}
-            search={!!p.search}
-            evaluate={p.evaluate}
-            query={p.query}
-            compactPreview
-          />
-          <span className="file-card-meta">
-            <span title={d.folder || "Unfiled"}>
-              {formatLabel(d)} · {folderLabel(d)}
-            </span>
-            <span>{d.version}</span>
-          </span>
-        </>
-      )}
     </button>
   );
   const date = (d: Doc) => (
@@ -454,6 +437,21 @@ export default function FileList(p: {
           {...rowEvents(d)}
         >
           {fileButton(d)}
+          <>
+            <ContentCard
+              doc={d}
+              search={!!p.search}
+              evaluate={p.evaluate}
+              query={p.query}
+              compactPreview
+            />
+            <span className="file-card-meta">
+              <span title={d.folder || "Unfiled"}>
+                {formatLabel(d)} · {folderLabel(d)}
+              </span>
+              <span>{d.version}</span>
+            </span>
+          </>
           {p.search && (
             <Judgment
               doc={d}
@@ -462,6 +460,14 @@ export default function FileList(p: {
               onEvidence={() => p.onEvidence(d)}
             />
           )}
+          <button
+            className="card-preview-action"
+            aria-label={`Preview ${title(d)}`}
+            onClick={(event) => p.onOpen(d, event.currentTarget)}
+          >
+            <Eye size={14} />
+            Preview
+          </button>
           {actions(d)}
         </div>
       ))}

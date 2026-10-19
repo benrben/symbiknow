@@ -1,3 +1,4 @@
+import { chooseView, setSearchMode, setAnswerChecking } from "./ui-controls";
 import { test, expect } from "./coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -77,20 +78,22 @@ for (const mode of ["hybrid", "keyword", "semantic"]) {
       });
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await chooseView(page, "List");
     await page
-      .getByRole("button", { name: "Canvas review", exact: true })
+      .getByRole("button", { name: /^Canvas review \d+$/, exact: true })
       .click();
-    await page.getByLabel("Search mode").selectOption(mode);
-    await page.getByRole("switch", { name: "Jev evaluation" }).setChecked(true);
+    await setSearchMode(page, mode);
+    await setAnswerChecking(page, true);
     await page.getByLabel("Search your knowledge").fill("Canvasrevieweight");
     await page.getByLabel("Search your knowledge").press("Enter");
     await expect(page.locator(".file-row")).toHaveCount(18);
     const files = await page
       .locator(".file-row button[aria-label^='Select ']")
-      .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("aria-label")));
+      .evaluateAll((nodes) =>
+        nodes.map((n) => n.getAttribute("aria-label")?.replace(/\.md$/, "")),
+      );
     await record(page, `${mode}-files`, { files, requests });
-    await page.getByRole("button", { name: "Canvas", exact: true }).click();
+    await chooseView(page, "Canvas");
     await page
       .getByRole("button", { name: "Fit results", exact: true })
       .click();
@@ -177,9 +180,9 @@ for (const mode of ["hybrid", "keyword", "semantic"]) {
     );
     expect(requests.length).toBe(calls);
     await expect(
-      page.getByRole("button", { name: "Clear folder scope" }),
+      page.getByRole("button", { name: /^Clear folder scope(?:: .+)?$/ }),
     ).toContainText("Canvas review");
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await chooseView(page, "List");
     await expect(page.locator(".file-row")).toHaveCount(18);
     expect(requests.length).toBe(calls);
   });
@@ -213,7 +216,7 @@ test("revision churn queues one refresh without canceling a slow search and keep
   });
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await chooseView(page, "List");
     await page.getByLabel("Search your knowledge").fill("Canvasrevieweight");
     await page.getByLabel("Search your knowledge").press("Enter");
     await expect.poll(() => requests).toBe(1);
@@ -286,9 +289,9 @@ test("a slow library poll completes without overlapping polls discarding its res
   });
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await chooseView(page, "List");
     await expect(
-      page.getByRole("button", { name: "All files", exact: true }),
+      page.getByRole("button", { name: /^All files \d+$/, exact: true }),
     ).toContainText("18");
     await page.clock.runFor(4200);
     await expect.poll(() => requests).toBe(2);
@@ -296,7 +299,7 @@ test("a slow library poll completes without overlapping polls discarding its res
     expect(requests).toBe(2);
     release();
     await expect(
-      page.getByRole("button", { name: "All files", exact: true }),
+      page.getByRole("button", { name: /^All files \d+$/, exact: true }),
     ).toContainText("19");
     await record(page, "library-poll-coalescing", { requests });
   } finally {

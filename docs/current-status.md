@@ -1,22 +1,30 @@
 # Symbiknow development status
 
-Symbiknow has implemented original-file storage, independent versions, indexing, search, Jev evidence judgments, project folders and links, a human interface, and three MCP tools. The current priority is validating organization quality on realistic prose and larger libraries while preserving the storage and version guarantees.
+Symbiknow has implemented original-file storage, independent versions, indexing, search, Jev evidence judgments, project folders and links, a human interface, and five MCP tools. The current priority is validating organization quality on realistic prose and larger libraries while preserving the storage and version guarantees.
 
 Symbiknow / Development / Current status
 
-Status date: 13 October 2026.
+Status date: 19 October 2026 (UI fixes verified 18 October).
 
 ## Current implementation snapshot
 
-The current evaluator uses Jev 1.13.0, prompt `project-first-3/search-evidence-10` and policy `answer-routing-10`. Passage primitives see their own text; document choice and disagreement see the supplied bounded set. Identity is separate from the assumed mechanism. Neutral negative answers, partial support and false-premise corrections remain distinct; uncertainty and possible references stay explicit. Retrieval reserves one of the existing six context slots for a document's first numbered text passage while preserving three ranked passages.
+Source audit: 17 October 2026. This describes the working tree, including the current frontend and answer-part improvements; it is not a claim that those uncommitted changes are a published release.
 
-Review10 follow-up recorded 194 backend tests and 66 UI tests passing, with two optional fixture tests skipped. Five fresh live MCP cases, exact downloads and all62-result traversal passed. Hosted quality checks used pinned/self-authored cases; they do not establish independent population accuracy. Receipts are in `outputs/review10-followup/`.
+The application exposes `upload`, `download`, `search`, `upload_folder` and `download_folder`. Browser and HTTP MCP sessions share one owner, worker and data directory. OCFL preserves originals and versions; LanceDB stores replaceable evidence. Storage commit, indexing and organization are separate outcomes. Updates preserve IDs and guard the expected head; current search and links reject obsolete evidence.
 
-The current interface supports Dark, Light and System appearance; default new preferences are Dark. Cards have real extracted or image/PDF previews. PDF reader/Quick Look has bounded Previous/Next page rendering and exact original downloads. Canvas geometry version3 expands previews and reserves manual placements. Unknown old compact search layouts retain compatible geometry until explicit Reflow, with persisted Undo. Repeated evidence activation restores matched-version Evidence and focus. Read `UI.md` for current operation; earlier sections below are dated implementation history.
+The current Jev source uses default model `jev-1.13.0`, prompt `project-membership-6/search-evidence-15` and policy `answer-routing-13`. Up to eight documents receive six supplied windows each, plus one bounded cross-document comparison; four provider calls may run concurrently. Passage support/entity/status concerns the requested part it addresses, while independent all-parts coverage controls completeness. Negative answers, partial support, premise correction and disagreement remain distinct. Project ownership uses sampled owner-bearing passages and canonical identities; filenames and source paths only corroborate substantive context.
+
+The selected live embedding runtime is PyTorch INT8 text weights on tested Apple Silicon MPS, with on-demand bfloat16 vision, serialized ownership and idle unloading. CPU/CUDA use the explicit unquantized fallback. Runtime manifests and measured compatibility receipts guard precision/revision/dimension/preprocessing changes. Conversion uses bounded child processes, one decoded page/frame at a time and Arrow-spooled vectors. Verified disk leases serve originals, ranged downloads and ZIP export. Index retries persist with backoff and permanent-failure pause; preview jobs coalesce within two workers and eight waiting slots.
+
+The current interface provides Overview, List, Cards, readable Map and optional Freeform map. Expanded reading adds folder-file navigation, rendered-heading jumps, bounded literal text search and version-specific reading positions. Review history contains only terminal summaries observed by that browser. Dark/Light/System, matched-version evidence focus, historical originals and bounded PDF-page rendering remain available. Freeform geometry version 3 preserves manual anchors and compatible old layouts until explicit Reflow/Undo. See `UI.md` for current behavior and quality/mobile test commands.
+
+The 17 October memory follow-up records 273 backend tests, 21 related browser flows, Ruff and a production build. On the Apple M5 Pro/48-GB host, matched server/child peak fell from 6.06 to 3.98 GiB; final live idle was 720 MiB and dense scanned-PDF peak was 5.00 GiB. These are dated measurements with different scopes, not a new full-suite run during this documentation audit. See `Optimize-memory-symbiknow.md` and `docs/memory-runtime.md` for evidence and exclusions. Newer UI validation is recorded separately in `UI.md`.
+
+Independent hosted quality, full 100k-original capacity, a sustained 16-GiB whole-system ceiling, CUDA performance, exhaustive power-loss recovery and physical-device/screen-reader usability remain unestablished. Older checks below retain their original dates and limits.
 
 ## Historical implementation notes
 
-## Implemented behavior
+## Historical implemented behavior
 
 Originals are managed by rocfl/OCFL and checked with SHA-256. Updates keep a document identity and create a new storage version; current search excludes superseded representations. Historical downloads remain exact. The frontend provides Files, Recent, a nested Canvas, query modes, independent Jev evaluation, pinned preview/history, upload notices, selective organization rebuilds and delete confirmations.
 
@@ -28,9 +36,9 @@ The fourth review follow-up recognizes unfamiliar single-word project names, pre
 
 Prose candidate preparation now uses sparse hashed features, at most 128 minibatch centroids per large scope and bounded label samples. Existing vector aggregation streams float32 sums; project-name lookup and prototype comparison avoid scanning the entire taxonomy for each document. Synthetic 100,000-document candidate-preparation runs completed in 21.529 seconds at 682.75 MiB peak RSS for an unscoped corpus, and 25.801 seconds at 453.05 MiB for distinct single-word projects. These measurements exclude the full indexing/rebuild pipeline and do not establish grouping quality or 16 GB capacity.
 
-## Verified checks
+## Historical verified checks
 
-The latest recorded suite has 77 passing Python cases, 14 passing Chromium scenarios, Ruff and a successful TypeScript/Vite build. The newly affected reset/candidate checks also passed after representative-profile cleanup. Model decisions and embeddings in these regression suites use explicit local fixtures; these results establish behavior and preservation invariants rather than hosted-model accuracy.
+That earlier recorded suite had 77 passing Python cases, 14 passing Chromium scenarios, Ruff and a successful TypeScript/Vite build. The newly affected reset/candidate checks also passed after representative-profile cleanup. Model decisions and embeddings in these regression suites use explicit local fixtures; these results establish behavior and preservation invariants rather than hosted-model accuracy.
 
 The six ordinary-prose regressions generate Vela Labs / Billing, Vela Labs / Employee access and Oak Garden / Rosemary candidates. Shuffled order, renamed projects, single-document new topics and repeated isolated rebuilds are checked. The live reviewer previously verified 21 QA download hashes and unchanged metadata/history across a 27-document rebuild.
 
@@ -41,6 +49,11 @@ The full feature review and follow-up review are historical observations of earl
 At that earlier stage, PDF embedding and manual folder edits were still outstanding. Current code uses isolated PDFium page images and supports manual folder operations. Live ordinary-prose membership evaluation with distractor projects and wider relationship coverage remain quality priorities.
 
 The target of 100,000 files, broad OCR/relevance accuracy, 16 GB M4 memory, NVIDIA L4 performance, power-loss recovery and exhaustive accessibility/security validation remains unestablished. Small benchmarks ran on an M5 Pro with 48 GB RAM. Use those figures as local observations rather than capacity promises.
+
+## Manual UI report fixes — 18 October 2026
+Search Name/Type/Modified sorting now toggles independently of browse order and retains relevance for new queries. UI and full/compact MCP matches carry the current saved-version timestamp. Current/historical original previews restore the invoking control on close, with a visible fallback when it disappears; hidden file inputs no longer enter the tab order. The toolbar wraps at constrained workspace widths, including an 800px window with the maximum sidebar.
+
+The focused check passed 95 backend, five Node and five browser tests plus the production build. Live verification checked seven keyword results' timestamps and preserved the 98-document library's original inventories. See `UI.md`, `VALIDATION.md` and `outputs/ui-bug-fixes-2026-10-18/verification.json` for scope and limits. These fixes do not implement the separate CDM proposal.
 
 ## Source references
 
@@ -78,3 +91,6 @@ candidates offer a general parent and suppress imperative labels. Reset clearing
 31 browser tests passed, plus lint/build. The 12 real originals and histories remain
 exact. See outputs/deep-review-fixes/index.html for evidence and unresolved independent
 quality, target-capacity, native-runtime and assistive-technology validation.
+
+## Folder MCP tools — 19 October 2026
+`upload_folder` accepts bounded batches of relative-path file bytes, preserves subfolders as manual assignments, and reuses the existing original/version/chunk machinery. `download_folder` streams a ZIP snapshot of a folder and descendants, pinned to selected current original versions. Limits are 1,000 files / 1 GiB, four retained exports, ten-minute expiry and bounded transfer ranges. The client adds recursive upload and verified ZIP download commands with HTTP-owner selection. File commits and folder assignment report separate outcomes, allowing identical retries to finish a partial placement.

@@ -70,6 +70,27 @@ def test_listing_pagination_pending_unsupported_recent(context):
     assert client.get("/api/library?limit=101").status_code == 400
 
 
+@pytest.mark.parametrize("mode", ["keyword", "semantic", "hybrid"])
+def test_search_preserves_saved_version_date_across_ui_and_mcp(context, mode):
+    root, monkeypatch, client = context
+    monkeypatch.setattr(server, "STORAGE_ONLY", False)
+    first = indexed(root, name="dated.txt", content=b"cat first version")
+    latest = indexed(
+        root, name="dated.txt", content=b"cat current version",
+        document_id=first["document_id"], expected_version=first["version"],
+    )
+    browsed = client.get("/api/library").json()["documents"][0]
+    response = mutate(client, "search", {"query": "cat", "mode": mode, "evaluate": False})
+    assert response.status_code == 200
+    results = [response.json()]
+    for detail in ("full", "compact"):
+        results.append(server.search("cat", mode=mode, detail=detail))
+    for result in results:
+        hit = result["matches"][0]
+        assert hit["version"] == browsed["version"] == latest["version"] == "v2"
+        assert hit["created_at"] == browsed["created_at"] == latest["created_at"]
+
+
 def test_browser_transfer_replay_update_history_exact_bytes(context):
     root, _, client = context
     request_id = str(uuid.uuid4())
@@ -710,10 +731,13 @@ def test_full_reset_ordinary_prose_uses_shared_topics_and_preserves_versions(con
             preferred = next(key for key, name in names.items() if name == state["project_hypothesis"])
             choices = {"project_owner": preferred}
             nouls = {"project_presence": 0.95}
-        else:
+        elif "folder" in questions:
             folders = questions["folder"].criteria
             preferred = next(iter(folders))
             choices = {"folder": preferred}
+            nouls = {key: 0.0 for key, q in questions.items() if q.type == "noul"}
+        else:
+            choices = {key: "none" for key in questions if key.startswith("pair_")}
             nouls = {key: 0.0 for key, q in questions.items() if q.type == "noul"}
         with sdk_client(choices, nouls) as sdk:
             return sdk.system_one(state=state, questions=questions)

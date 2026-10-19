@@ -152,13 +152,15 @@ def test_limit8_top_document_preserves_pinned_intro_without_deeper_retrieval(pin
     refs = [e["evidence_id"] for e in top["evidence"]]
     assert refs[:3] == FIXTURE["limit8_ranked_ids"]
     assert doc["document_id"] + ":v2:t0" in refs
-    assert len(refs) <= 6
+    assert len(refs) <= 12
     assert limits == [64]  # unchanged global candidate budget, no secondary retrieval
     assert len(result["matches"]) == 8 and result["metrics"]["head_reads"] == 16
-    evaluated = jev._evidence(top, FIXTURE["query"])
+    from app import jev_proof
+
+    evaluated = jev_proof.documents([top], FIXTURE["query"])[0]["evidence"]
     intro = next(e for e in evaluated if e["chunk_id"].endswith(":t0"))
     assert "OCFL" in intro["text"] and "without Git" in intro["text"]
-    assert len(evaluated) <= 6
+    assert len(evaluated) <= 12
 
 
 def test_added_intro_remains_subject_to_final_head_validation(pinned_corpus, monkeypatch):

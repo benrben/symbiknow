@@ -1,6 +1,6 @@
 # Symbiknow / Organization / Full selective reset and recovery contract
 
-Repository implementation guide. Snapshot: 12 October 2026.
+Repository implementation guide. Snapshot: 17 October 2026.
 ## Selected fields and scope
 Reset organization defaults to the entire library with Folders & groups and Document links selected. A folder scope captures its descendants. Grouping clears folders, subfolders, groups and selected manual placements. Link reset clears selected outgoing links and existing incoming links into the scope. Links-only preserves folder placements; grouping-only preserves valid links.
 
@@ -14,6 +14,10 @@ Empty/unsupported/unindexable items are skipped with reasons. Failed or skipped 
 
 ## User contract
 Confirmation copy identifies the exact scope and fields that remain. Hiding progress does not cancel the worker. Originals and histories remain intact. Reset serialization is improved, but whole-reset lock duration and complete target-scale throughput remain unverified.
+
+## Reviews that preserve existing assignments
+
+The local UI also exposes `unfiled` and `links` review modes. Unfiled review captures the current Unfiled scope and can assign its documents and links. Connection review updates links while preserving folders. These modes are distinct from the clearing semantics of a reset. Browser Review history stores at most 30 terminal summaries first observed in that browser; it is not a backend audit log or a list of every changed file. Current progress is a narrow view of the durable snapshot/journal.
 
 ## Source references
 - `app/rebuild.py`

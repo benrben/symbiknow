@@ -1,0 +1,216 @@
+{
+  "date_utc": "2026-10-19T22:38:33.373223+00:00",
+  "reviewer": "Root agent independent verification of GPT-6.1 Sol implementation",
+  "application_source_sha256": {
+    "app/__init__.py": "36221a28f387dfd7b6edef58f194f66deda63e6ee725f57dfb20fac3d7d9ed46",
+    "app/application.py": "39034b9819f3a73d22c4ed21e5d0d936014da0595b2b1b72f54ed2e1687d758f",
+    "app/cache.py": "cb8366c3534f187597bf022168a8b6e3051aafcbdcaa3a7c830ffb478650c92c",
+    "app/contracts.py": "60f5293a4ed49ed0a257364c4592f9c7fdf251c23a36230f58cbcfc176c601e3",
+    "app/contracts.schema.json": "98d4c0879afada8037eda9430faf7140aac64200bc46c66edad6ee8708a8c0d7",
+    "app/conversion_manager.py": "f63fb4837b9e53a6043e98299399dd3138b31542a12b4254836572bd57acdf76",
+    "app/conversion_worker.py": "8c6253d756d48237287b4115ff280ea651e56c5ab56f835b27e0cab93d29d246",
+    "app/embeddings.py": "245c4d10779f77cf7965bedc0f1b85a480f9e01c290dc073f04c708183be2bb5",
+    "app/evaluation.py": "1b2235d7ea6d886c0dfb4d3301ba3204ea313e46f8948129767e45b3975e93c1",
+    "app/evidence_revisions.py": "f21be3a47e2ead4cd7e519d7348a51f1c57e1923d276fa38980211f1c24c89e8",
+    "app/extraction_artifacts.py": "eaea2b00ef0f2ae8da4f33c23bec1676a511252dbbe5cf151dcf09e4162e7c01",
+    "app/folder_transfer.py": "0c8ab2b30a2527f74f5298d06946ba8a1e9db67fb6766ef73135548a53b0fc46",
+    "app/ingest.py": "f927cd50602eff781a46d7417bf76a9c31935ed0ab4fe2a0d6df5bf661824472",
+    "app/jev.py": "fa7df64e7c4a9f2576d58aec112ae9463a349b6e25243c9d71d07317a4d5c138",
+    "app/jev_decisions.py": "11c257e6f89ac662de1e62acf20b8d9aaae6f76e325dda58ba4d2f99b5e6d623",
+    "app/jev_numeric.py": "26050d4ea2a96cd7bd90e47c50c357662fff69e05a0a8377a606a12188264572",
+    "app/jev_proof.py": "d3ed941f170426228acdda6301d42701e9a851c21abd2e560f5aea91c06db6e8",
+    "app/jev_shadow.py": "e1bb41f1141403d127dd43c43733245e488dd5410f001e29d33d68cb68621bd2",
+    "app/jev_topics.py": "b1a55eb20824f39ced6c73c7deb3445a2d383e0afe47e5c73cb8cc0824149b9f",
+    "app/library_service.py": "2f99c6c73498ae470c1eace4ce67699f1ed97c81166a3f24ebb0df3ce34e7531",
+    "app/model_scheduling.py": "dc113deab0cf5d807143ca6c0cab8f3f1272694fb739c819f6ca01e512c8f70e",
+    "app/organization.py": "9f4ce94ad4807ea26a5850e8d9566d912fd8b3113c2b34def418c491c00f0325",
+    "app/organization_edits.py": "276201e1672cd4207e4e185f2ee6d106944f05f309506eac3112ed189e5ebd6b",
+    "app/organization_store.py": "88b1f949646923e3a01121883633bcdf5dadcb29189309cd7ec143f80375df1e",
+    "app/pdf_thumbnail.py": "415ee7f0f7a4269ee9d188eae087fd2f5c44daf0a5d8ed4c15bbf544d95175d1",
+    "app/previews.py": "5c5286f65ac68f06f7827f25a774e94763110724f6bc0a11a6da72d6b16d0463",
+    "app/project_matcher.py": "8ae899f5b49acb9215009b7df43ffcedeafd9896851283742f2b0befd055ad99",
+    "app/rebuild.py": "38d67b5c45a79b636c8da46df43c5f4c9805947281e6f056999f2a47ab1b1c38",
+    "app/relationships.py": "17df3a18eb5a1417e766e7d980d3aedaa8dbcbc9c1c1429f50bcdeafa4eb9265",
+    "app/retry.py": "fa3f66da9d9c432e241a0fbb0d5735eb816a7a64c3457551a49c6c3a6647c9ee",
+    "app/search.py": "4f516623ac53fdee058342b0bdbdc9f9704006b83edcbde2c4e5e170bdf2e4dc",
+    "app/search_metrics.py": "563d4a851db7967f03ae0685629ccb0ae892e61342d375491626aac833b51105",
+    "app/search_projection.py": "c045ce50513b7dcf046800c99025a76d19e4b9bddbc1faffc17fc3ff018d129a",
+    "app/search_service.py": "3ad0c257d6d3f79f3807b87964f415f83db43d10b90a3a2b5bfae4bf9886d888",
+    "app/server.py": "2aa6b1b268e1a4e2a427667b609f7979bae46b6861d94af86228950e1daee5c2",
+    "app/storage.py": "10374d7ae0f23481afc5d4359860c7561137a6b088d2aafd03f0d98e0990e9d5",
+    "app/torch_quantization.py": "5a991a463fd956849e09f6ed444150f638a7536cf65f4df439ca858bef856755",
+    "app/transfer_service.py": "8a69489d22999697314aa9d80276321e6d315a5fe950bf25a5518c61e6bd02a9",
+    "app/ui.py": "a970150aa4546bf06d150d8de160b24f590f5b1a20342c3da673892761d752cb",
+    "app/wire_contracts.py": "c97ef9c36e147aac96eb100b668dbd0ae2b8f2ae6a97d9d4d4552fa7af40dc7b",
+    "frontend/package-lock.json": "81c40f9d62851c405b56c7091fb7fef2957a3e65d3cb1c53849adf184d99091d",
+    "frontend/package.json": "6e593398ffb8c67072c0ea3d0980fa7f222fddb6ac636692e902929d900572ec",
+    "frontend/src/App.tsx": "b59f182b022f4e18c99eb1119211f7d552f856949a45f0721e82680db08ddfcf",
+    "frontend/src/api.ts": "81520a1e540800b25269ad5db05d304a2c63392b18e91eba8790cc5fa8b59bac",
+    "frontend/src/appearance.ts": "df3875bea4347a2ec670c6351e68e96b685cfa81cea713821c385305285f2cc7",
+    "frontend/src/browsePresentation.ts": "d46d8f9c562751e8b9bdf67b284e5045f162c4c8641b21f746ec5ddb9695061c",
+    "frontend/src/components/AppearanceMenu.tsx": "82c6e42bbec7668f0242a1ae9354916d0cc281c8930cee75796ae3417173aeee",
+    "frontend/src/components/ConnectionMap.tsx": "94107d1f7cead1a5d751a68912498685f2f6dc0af5fde379d32f6cbef3fa6cd2",
+    "frontend/src/components/ContentCard.tsx": "cedb0cd0db79f7737d64c14877b65dcc4bb0859cd30696d545a32e5f785be255",
+    "frontend/src/components/DeleteDialog.tsx": "9a9900b93cae7cd68bca05e680214a5279761a009e34da838f08cae40c940739",
+    "frontend/src/components/DocumentInspector.tsx": "87a9dfd1a59de40de2a70bbafb974d88dd86052de8e86f5f713983372ea91501",
+    "frontend/src/components/FileList.tsx": "f528ac967f3582aa9e6398089ba01c1623e1dfc61318d5e9d16ae9edd5af9160",
+    "frontend/src/components/FolderOverview.tsx": "e83dbd0cfad24453b9225c1b61c5a97e16d49ed91d214b4e4ef97cbd4ca32d96",
+    "frontend/src/components/JevProgress.tsx": "fde7e4bee2fa208d6a8fa25ace417e8534f0039df5bae7b4e7e492eaefa7e787",
+    "frontend/src/components/JevReviewDialog.tsx": "0980a88327bf2c074b89a682d2e6e6827c6484486e7285aa14437a97a22eb4f4",
+    "frontend/src/components/KnowledgeIcons.tsx": "f09bac764c3c5a784a233524f93408eebebd9b4ea3c203d3ae6df42f86ce8e92",
+    "frontend/src/components/LibraryCanvas.tsx": "a813ab6e7a0a0204a4d0e4fc689252bf2e3eb82ca10c88fbe181f6b898608393",
+    "frontend/src/components/Markdown.tsx": "2a790dcf0f5772033d54d95b3a4321854fa0b2a82d7aee6161135175be801ebf",
+    "frontend/src/components/MarkdownRenderer.tsx": "258ea9bae0c3a65a9f558d27ff9fa742ecd9ac4a9b56b4b0a82e754d587b8b9d",
+    "frontend/src/components/OrganizationDialog.tsx": "99cac980f9de33bf8c7d4425f255601956e8dade22d5fba9699d2662c883ccf6",
+    "frontend/src/components/PdfPreview.tsx": "4c213a5a75b8c69621436f97b3e889a39de1789d7fff461b1b7c87b18b2e65b6",
+    "frontend/src/components/ReaderNavigator.tsx": "c9294e366d5f3203b6378a827cec987b7c293644406df8c16ddfcea112769cd8",
+    "frontend/src/components/ReaderTools.tsx": "41d6bca11a6090b20f8b7aba198bef9d0a7d8b01c378f145a57869c752a9aca5",
+    "frontend/src/components/ResetOrganizationDialog.tsx": "611db631f8250019966b2965bf949d1ebb49ecc6bc9c3a154a0bbb1d0d0260ec",
+    "frontend/src/components/ReviewHistory.tsx": "a44020bb1829c2ec6294a611c755555aad89186c6fbc71223171d1f6d18d723d",
+    "frontend/src/components/SearchBar.tsx": "7130761ddcf02746ec9e3792c572c1a2f4b040e0fec8c8b1244155ca418aeb72",
+    "frontend/src/components/Sidebar.tsx": "f490db46e6db3a8c527c60f625457d5de8c71a5e6f5a247affa49d8c641a2230",
+    "frontend/src/contracts.generated.ts": "9149a289a93525d6cd74e338fec1d759e31ff653fb2ab15de9c0ec5fac66ea23",
+    "frontend/src/hash.worker.ts": "927fd4b8d6e39cf4e73568e5dadc2b24f2e08ea9a0c60c89d444f10783412d0e",
+    "frontend/src/knowledge-icons.css": "418a559725d7bda94022d803e142a6a3630af1d4d166e87ac58feea5824535d5",
+    "frontend/src/main.tsx": "c2c90a1ceb72d87e3a424420f80f60917fddc94fde8ebc6c6c63f25406ebfcab",
+    "frontend/src/mapPresentation.ts": "2509420f6e1a27c822145bdfd8b18b25774415e87e1f19797495dcc5997f2084",
+    "frontend/src/presentation.ts": "940483540156a2bf40b5458add5bf8d74551db120941c34ed2ef9d0287e6e726",
+    "frontend/src/readable-library.css": "c8813c58f83e9a3aef1a5b75dc8a2134f083140391929e125c8b744e57b4f5d2",
+    "frontend/src/readingTools.ts": "4dabbe48abb17e1e41f2d98db913b1b249b5dbda7452a696063041b559a875ab",
+    "frontend/src/redesign.css": "306194798f0d0beeff7124f889c15601ee1ee1d35e8b137b5ded2780012fdffd",
+    "frontend/src/searchEvidence.ts": "ef59d60259d568912ff00d89d26de67b54a44565607a27dadb887755b5ce0fd8",
+    "frontend/src/searchPresentation.ts": "f6fde7538b455cdd216c6e90672fc061bfdd9904d43c7b10acce4f6e4099892c",
+    "frontend/src/styles.css": "79bd21da78f50b1a063bfddf40e832cb52aade3f9275b93cb23bf4632a82b53b",
+    "frontend/src/tokens.css": "6bfe811273660d053ea385c8a3eb08f42b03a5c3225d28a5c4ae064b214db82b",
+    "frontend/src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
+    "native/ocfl-reader/Cargo.lock": "98288ec1c3172537f8c62b463a4d26f83177ec897a66ddcce81652053c2321a1",
+    "native/ocfl-reader/Cargo.toml": "3c5e882f84edacfb9fada346bb1f0b6a9c9d3217b47c165d476e4c18fffa7472",
+    "native/ocfl-reader/src/bin/seed-library.rs": "5da4cc3385b1b1b8baee57ff9075e7e225ec250f36bad96438382197ea2ada7c",
+    "native/ocfl-reader/src/main.rs": "00046aaf0e55b627b442b831452e56458b35bb64bc213e0c7bd2cd3407e652eb",
+    "pyproject.toml": "8a6dbf3f2717527f357280d2bed07837549fbe219538d5c47b7b137a4bc4843c",
+    "scripts/install-ocfl-reader.sh": "68086fafb415fa8a85841eadb824244a1c1d78171e0499cc23c3f3e882c0113a",
+    "uv.lock": "5228b2d05e0ec4011509d10c43d068cad324b4b8dffdb04e8188b07467426855"
+  },
+  "application_fingerprint": "cc26fc08642757857dd13995fa4044d990a632779d8da0c2a5f78650a9a3d575",
+  "checks": {
+    "baseline_python": {
+      "passed": 425,
+      "seconds": 305.56,
+      "log": "outputs/performance-plan-review/baseline-tests.log"
+    },
+    "current_full_python": {
+      "passed": 510,
+      "seconds": 175.5,
+      "log": "outputs/performance-plan-review/current-tests-final.log",
+      "scope_note": "Complete suite before final protected-library-snapshot and batched-manual-ledger/aggregate reuse refinements. Final refinements were independently verified by the 94-test affected suites and exact replay below."
+    },
+    "final_affected_python": {
+      "passed": 94,
+      "seconds": 36.11,
+      "suites": [
+        "test_application_contracts.py",
+        "test_ui_api.py",
+        "test_evidence_revisions.py",
+        "test_organization_generations.py",
+        "test_search_grouping_repair.py"
+      ],
+      "log": "outputs/performance-plan-review/final-scope-regressions.log"
+    },
+    "frontend_build": {
+      "status": "passed",
+      "log": "outputs/performance-plan-review/frontend-build.log"
+    },
+    "frontend_data_client": {
+      "passed": 9,
+      "log": "outputs/performance-plan-review/frontend-unit-final.log"
+    },
+    "browser_full": {
+      "passed": 75,
+      "skipped": 2,
+      "skip_reasons": [
+        "opt-in design capture",
+        "opt-in synthetic metadata benchmark"
+      ],
+      "log": "outputs/performance-plan-review/frontend-browser-final.log",
+      "scope_note": "Full default browser run preceded final backend broad-scope refinements; the opt-in large-metadata workflow below exercised those refinements."
+    },
+    "browser_100k_metadata": {
+      "passed": 1,
+      "log": "outputs/performance-plan-review/metadata-browser-100k-final.log",
+      "results": {
+        "hardware": "Apple M5 Pro; 18 logical CPUs; 48 GiB RAM; darwin 25.5.0; local Chrome",
+        "metadata_rows": 100000,
+        "real_documents": 7,
+        "providers": "deterministic browser fixture; no hosted model latency in these timings",
+        "limitations": "Synthetic derived metadata without originals for added rows; startup original-integrity recovery is disabled only for this benchmark fixture. Search has seven real fixture documents. Excludes real extraction, embedding, provider decisions, browser native memory and full-library original-file operations.",
+        "initial_visible_load_ms": 117,
+        "library_total": 100007,
+        "server_peak_rss_mib": 933.015625,
+        "folder_navigation_ms": 3875,
+        "search_ms_seven_real_docs_plus_large_metadata": 260,
+        "canvas_initial_ms": 857,
+        "rendered_preview_cards": 6,
+        "loaded_metadata_rows": 120,
+        "preview_limit": 100,
+        "zoom_interaction_ms": 33,
+        "browser_js_heap_mib": 14.959945678710938
+      },
+      "execution_conditions": "Final successful UI run was isolated from other timing and correctness jobs; initial visible load follows server readiness, and peak server memory includes fixture setup."
+    },
+    "deterministic_parity": {
+      "cases": 76,
+      "different_cases": 0,
+      "sha256": "9bfd436126d0be5e06ca73f88fb564fd969f034c18720d3b358df9e200403dc0",
+      "log": "outputs/performance-plan-review/parity-delivery.log",
+      "scope_note": "Exact ordered IDs, versions, filenames, folders, groups, evidence and links; real isolated original update/delete; SDK-parsed proof replay; fixture embeddings, no real-model quality claim."
+    },
+    "native_rust": {
+      "passed": 6,
+      "log": "outputs/performance-plan-review/native-tests.log"
+    },
+    "native_python": {
+      "passed": 10,
+      "included_in_full_python": true,
+      "log": "outputs/performance-plan-review/native-python-tests.log"
+    },
+    "architecture_retirement": "passed",
+    "generated_contract_drift": "passed",
+    "git_diff_whitespace": "passed",
+    "final_scoped_organization_reuse": {
+      "passed": 4,
+      "log": "outputs/performance-plan-review/final-organization-reuse-parity.log",
+      "scope_note": "Independently ran differential document/scoped feature reuse versus cache-cleared recomputation after source/provenance, catalog, common-line and corpus changes. This verifies current feature/scope reuse, not a persistent incremental global graph."
+    }
+  },
+  "resolved_review_findings": [
+    "Historical oversized metadata streams through the same pinned native reader; new-write limits preserve receipt retries.",
+    "Same-head evidence and neighbor changes invalidate dependent automatic organization and judgments; interrupted chunk writes revoke prior completion receipts.",
+    "Fixture migrations preserve strict evidence-epoch and production embedding-compatibility checks.",
+    "Library body and revision share a protected cross-process snapshot.",
+    "Batched manual-ledger reads and shared exact aggregate counts remove redundant broad-folder work."
+  ],
+  "limits": [
+    "Counts across suites overlap and must not be summed.",
+    "This artifact verifies correctness and bounded UI behavior; final speed/capacity measurements are recorded separately.",
+    "Synthetic 100k browser metadata rows do not have original files and do not establish actual OCFL capacity or 100k-distinct-folder usability.",
+    "Hosted judgment regression is documented separately, with fixed synthetic author labels and its label-correction audit."
+  ],
+  "final_evidence_review": {
+    "reviewed_at_utc": "2026-10-19T22:58:55.378053+00:00",
+    "application_source_unchanged": true,
+    "artifacts": {
+      "outputs/performance-plan-review/paired-final/paired-summary.json": "aa26467236a788d08e9869b79111d836af39d71ccb0c652db3da99a1a06526ff",
+      "outputs/performance-plan/capacity-final-100000.json": "d42524c2a5632cdcb92bbdb5f8593c32ca6499dd72fa3d4de4f3da9e02375b08",
+      "outputs/performance-plan/capacity-final-small.json": "6493cb2247764c1c4780ce1952dbf493bee803337310c0b01cef246f89506d24",
+      "outputs/performance-plan-review/native-followup/current/results.json": "ab6daedbbf2363292d85d2fcff8638eddac839deca68ced99a1b4a8a6ec2b7ee",
+      "outputs/performance-plan-review/native-followup/baseline/results.json": "bfb2d4fca571ce869637a525b5b093e00b049920e976c0404ae41594c62794a8"
+    },
+    "findings": [
+      "Both paired workloads completed with identical input/runner hashes, no ordered-evidence mismatches and no recorded failures.",
+      "Final 1k/10k/100k capacity reports have stable application sources, exact complete original-ID sets, zero invalid OCFL objects/storage issues and zero errors across all measured query/service groups.",
+      "Capacity uses ten repeated sparse vector prototypes: physical storage/index/filter/resource evidence, not representative ANN latency or recall.",
+      "Native-PDF follow-up preserves input hashes; all ten page tensors and strides match, all twelve resident comparison vector cosines are 1.0, and both natural idle timers unload weights with zero active MPS allocation.",
+      "Whole native-PDF ingestion direction reverses between the baseline-first and current-first pairs; no reliable whole-PDF speedup or slowdown is established. All observations remain preserved."
+    ]
+  }
+}

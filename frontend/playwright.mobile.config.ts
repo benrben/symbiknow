@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "tests",
+  testDir: "tests/e2e",
   testMatch: "mobile-accessibility.spec.ts",
   fullyParallel: true,
   workers: 3,

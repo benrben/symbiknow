@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 const port = process.env.SYMBIKNOW_UI_PORT || "8766";
 const baseURL = `http://127.0.0.1:${port}`;
 export default defineConfig({
-  testDir: "tests",
+  testDir: "tests/e2e",
   testMatch: "**/*.spec.ts",
   // The accessibility/reflow suite runs in all three engines via test:quality.
   testIgnore: ["**/quality-gate.spec.ts", "**/mobile-accessibility.spec.ts"],
@@ -23,7 +23,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "../.venv/bin/python ../tests/ui_fixture.py",
+      command: "../.venv/bin/python ../backend/tests/support/ui_fixture.py",
       url: `${baseURL}/api/library`,
       reuseExistingServer: !process.env.CI,
       timeout: 60000,

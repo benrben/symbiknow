@@ -1,0 +1,1682 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "DocumentReference": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "EvidenceReference": {
+      "type": "object",
+      "properties": {
+        "document": {
+          "$ref": "#/$defs/DocumentReference"
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "digest": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document",
+        "evidence_id",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessingDescriptor": {
+      "type": "object",
+      "properties": {
+        "converter": {
+          "type": "string"
+        },
+        "extraction_schema": {
+          "type": "string"
+        },
+        "tokenizer": {
+          "type": "string"
+        },
+        "chunking_policy": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "converter",
+        "extraction_schema",
+        "tokenizer",
+        "chunking_policy",
+        "model"
+      ],
+      "additionalProperties": false
+    },
+    "RevisionToken": {
+      "type": "object",
+      "properties": {
+        "library_id": {
+          "type": "string"
+        },
+        "index": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "snapshot": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "library_id",
+        "index",
+        "organization",
+        "snapshot"
+      ],
+      "additionalProperties": false
+    },
+    "PageLocation": {
+      "type": "object",
+      "properties": {
+        "page_no": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "Provenance": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer"
+        },
+        "pages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PageLocation"
+          }
+        },
+        "headings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "Evidence": {
+      "type": "object",
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "basis": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "text",
+        "basis",
+        "provenance"
+      ],
+      "additionalProperties": true
+    },
+    "NumericSource": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "chunk_id": {
+          "type": "string"
+        },
+        "quote": {
+          "type": "string"
+        },
+        "start": {
+          "type": "integer"
+        },
+        "end": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "document_id",
+        "version",
+        "chunk_id",
+        "quote",
+        "start",
+        "end"
+      ],
+      "additionalProperties": true
+    },
+    "NumericContext": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "chunk_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "version",
+        "chunk_id"
+      ],
+      "additionalProperties": true
+    },
+    "Calculation": {
+      "type": "object",
+      "properties": {
+        "source_value": {
+          "type": "string"
+        },
+        "source_unit": {
+          "type": "string"
+        },
+        "factor_numerator": {
+          "type": "integer"
+        },
+        "factor_denominator": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source_value",
+        "source_unit",
+        "factor_numerator",
+        "factor_denominator"
+      ],
+      "additionalProperties": true
+    },
+    "NumericValue": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/NumericSource"
+        },
+        "context_sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NumericContext"
+          }
+        },
+        "calculation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Calculation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "display",
+        "source",
+        "context_sources",
+        "calculation"
+      ],
+      "additionalProperties": true
+    },
+    "SearchAnswer": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "candidate_count": {
+          "type": "integer"
+        },
+        "evaluated_count": {
+          "type": "integer"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NumericValue"
+          }
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": true
+    },
+    "StoredLink": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "source_version": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source_chunk_id": {
+          "type": "string"
+        },
+        "target_chunk_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "version",
+        "source_version",
+        "relation",
+        "source_chunk_id",
+        "target_chunk_id"
+      ],
+      "additionalProperties": true
+    },
+    "Link": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "source_version": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source_chunk_id": {
+          "type": "string"
+        },
+        "target_chunk_id": {
+          "type": "string"
+        },
+        "source_document_id": {
+          "type": "string"
+        },
+        "source_filename": {
+          "type": "string"
+        },
+        "target_filename": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "version",
+        "source_version",
+        "relation",
+        "source_chunk_id",
+        "target_chunk_id",
+        "source_document_id",
+        "source_filename",
+        "target_filename"
+      ],
+      "additionalProperties": true
+    },
+    "JudgedEvidence": {
+      "type": "object",
+      "properties": {
+        "chunk_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "text_start": {
+          "type": "integer"
+        },
+        "text_end": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "location": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "required": [
+        "chunk_id",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "VerificationDependency": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "chunk_id": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "text_start": {
+          "type": "integer"
+        },
+        "text_end": {
+          "type": "integer"
+        },
+        "evidence_revision": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "version",
+        "chunk_id",
+        "sha256",
+        "text_start",
+        "text_end"
+      ],
+      "additionalProperties": true
+    },
+    "JevDecision": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "model_label": {
+          "type": "string"
+        },
+        "model_confidence": {
+          "type": "number"
+        },
+        "confidence_meaning": {
+          "type": "string"
+        },
+        "policy_label": {
+          "type": "string"
+        },
+        "decision_reason": {
+          "type": "string"
+        },
+        "policy_version": {
+          "type": "string"
+        },
+        "prompt_version": {
+          "type": "string"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "supporting_chunk_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "conflicting_chunk_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "possible_conflicting_chunk_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "coverage": {
+          "type": "string"
+        },
+        "evidence_presence": {
+          "type": "string"
+        },
+        "conflict_status": {
+          "type": "string"
+        },
+        "premise_correction_status": {
+          "type": "string"
+        },
+        "evidence_disagreement": {
+          "type": "string"
+        },
+        "disagreement_chunk_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disagreement_scope": {
+          "type": "string"
+        },
+        "cross_document_assessment_status": {
+          "type": "string"
+        },
+        "possible_conflict_reasons": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "evaluated_evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JudgedEvidence"
+          }
+        },
+        "verification_dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VerificationDependency"
+          }
+        },
+        "explanation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": true
+    },
+    "Doc": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "freshness_labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_revision": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "mime_type": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "organization_status": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "index_error": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "excerpt": {
+          "type": "string"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StoredLink"
+          }
+        },
+        "jev": {
+          "$ref": "#/$defs/JevDecision"
+        }
+      },
+      "required": [
+        "document_id",
+        "version",
+        "filename",
+        "mime_type"
+      ],
+      "additionalProperties": true
+    },
+    "OrganizationReset": {
+      "type": "object",
+      "properties": {
+        "revision": {
+          "type": "string"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "revision",
+        "scope"
+      ],
+      "additionalProperties": true
+    },
+    "RenamedPaths": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": true
+    },
+    "OrganizationChange": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "paths": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RenamedPaths"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "document_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "document_ids"
+      ],
+      "additionalProperties": true
+    },
+    "Library": {
+      "type": "object",
+      "properties": {
+        "organization_reset": {
+          "$ref": "#/$defs/OrganizationReset"
+        },
+        "manual_revision": {
+          "type": "string"
+        },
+        "library_id": {
+          "type": "string"
+        },
+        "library_total": {
+          "type": "integer"
+        },
+        "unfiled_review_count": {
+          "type": "integer"
+        },
+        "processing_states": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "organization_change": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OrganizationChange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "organization_revision": {
+          "type": "string"
+        },
+        "index_revision": {
+          "type": "string"
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doc"
+          }
+        },
+        "total": {
+          "type": "integer"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "folders": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "scoped_folders": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "processing": {
+          "type": "boolean"
+        },
+        "max_file_bytes": {
+          "type": "integer"
+        },
+        "max_chunk_bytes": {
+          "type": "integer"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "revision": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rebuild_progress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Rebuild"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "documents",
+        "total",
+        "has_more",
+        "folders",
+        "groups",
+        "processing",
+        "max_file_bytes",
+        "max_chunk_bytes"
+      ],
+      "additionalProperties": true
+    },
+    "HistoryWindow": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "head": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "total",
+        "head",
+        "offset",
+        "has_more"
+      ],
+      "additionalProperties": true
+    },
+    "VersionsPage": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "head": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doc"
+          }
+        }
+      },
+      "required": [
+        "total",
+        "head",
+        "offset",
+        "has_more",
+        "versions"
+      ],
+      "additionalProperties": true
+    },
+    "Detail": {
+      "type": "object",
+      "properties": {
+        "indexing_error": {
+          "type": "string"
+        },
+        "organization_review": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "document": {
+          "$ref": "#/$defs/Doc"
+        },
+        "current_version": {
+          "type": "string"
+        },
+        "organization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Doc"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "connections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Link"
+          }
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doc"
+          }
+        },
+        "versions_page": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HistoryWindow"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "document",
+        "current_version",
+        "organization",
+        "evidence",
+        "connections",
+        "versions"
+      ],
+      "additionalProperties": true
+    },
+    "FreshnessEvidence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "evidence_revision": {
+          "type": "string"
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "start": {
+          "type": "integer"
+        },
+        "end": {
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "required": [
+        "id",
+        "document_id",
+        "version",
+        "filename",
+        "evidence_revision",
+        "evidence_id",
+        "text",
+        "start",
+        "end",
+        "sha256",
+        "position",
+        "provenance"
+      ],
+      "additionalProperties": true
+    },
+    "FreshnessJudgment": {
+      "type": "object",
+      "properties": {
+        "choice": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "probabilities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "choice",
+        "confidence",
+        "probabilities"
+      ],
+      "additionalProperties": true
+    },
+    "FreshnessDecision": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "uncertain": {
+          "type": "boolean"
+        },
+        "judgments": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/FreshnessJudgment"
+          }
+        },
+        "used_judgments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "scope",
+        "relation"
+      ],
+      "additionalProperties": true
+    },
+    "FreshnessFinding": {
+      "type": "object",
+      "properties": {
+        "scan_id": {
+          "type": "string"
+        },
+        "finding_id": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "affected_document_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FreshnessEvidence"
+          }
+        },
+        "decision": {
+          "$ref": "#/$defs/FreshnessDecision"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "reference_document_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "checked_at": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "policy": {
+          "type": "string"
+        },
+        "context_complete": {
+          "type": "boolean"
+        },
+        "review": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "validity": {
+          "type": "string"
+        },
+        "review_note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scan_id",
+        "finding_id",
+        "category",
+        "label",
+        "affected_document_id",
+        "evidence",
+        "decision",
+        "reason",
+        "reference_document_ids",
+        "checked_at",
+        "model",
+        "policy",
+        "context_complete",
+        "review",
+        "revision",
+        "validity"
+      ],
+      "additionalProperties": true
+    },
+    "FreshnessScan": {
+      "type": "object",
+      "properties": {
+        "scan_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "checked_at": {
+          "type": "string"
+        },
+        "document_ids": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reference_document_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "model": {
+          "type": "string"
+        },
+        "policy": {
+          "type": "string"
+        },
+        "documents_total": {
+          "type": "integer"
+        },
+        "documents_read": {
+          "type": "integer"
+        },
+        "passages_read": {
+          "type": "integer"
+        },
+        "passages_classified": {
+          "type": "integer"
+        },
+        "passages_matched": {
+          "type": "integer"
+        },
+        "pairs_total": {
+          "type": "integer"
+        },
+        "pairs_checked": {
+          "type": "integer"
+        },
+        "findings_total": {
+          "type": "integer"
+        },
+        "gaps": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "usage": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "current_filename": {
+          "type": "string"
+        },
+        "coverage_changed": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        },
+        "completed_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scan_id",
+        "status",
+        "revision",
+        "created_at",
+        "checked_at",
+        "document_ids",
+        "reference_document_ids",
+        "model",
+        "policy",
+        "documents_total",
+        "documents_read",
+        "passages_read",
+        "passages_classified",
+        "passages_matched",
+        "pairs_total",
+        "pairs_checked",
+        "findings_total",
+        "gaps",
+        "usage",
+        "current_filename"
+      ],
+      "additionalProperties": true
+    },
+    "FreshnessScanSummary": {
+      "type": "object",
+      "properties": {
+        "scan_id": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scan_id",
+        "created_at",
+        "status"
+      ],
+      "additionalProperties": true
+    },
+    "FreshnessPage": {
+      "type": "object",
+      "properties": {
+        "scan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FreshnessScan"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FreshnessFinding"
+          }
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_after": {
+          "type": "string"
+        },
+        "recent_scans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FreshnessScanSummary"
+          }
+        }
+      },
+      "required": [
+        "scan",
+        "findings",
+        "has_more",
+        "next_after",
+        "recent_scans"
+      ],
+      "additionalProperties": true
+    },
+    "RebuildDetail": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "filename",
+        "outcome",
+        "reason"
+      ],
+      "additionalProperties": true
+    },
+    "Rebuild": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "reset",
+            "unfiled",
+            "links"
+          ]
+        },
+        "current_filename": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "layout_revision": {
+          "type": "string"
+        },
+        "layout_scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "completed": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "skipped": {
+          "type": "integer"
+        },
+        "grouped": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unfiled": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "links_added": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RebuildDetail"
+          }
+        },
+        "failures": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "grouping": {
+          "type": "boolean"
+        },
+        "links": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "status",
+        "request_id",
+        "total",
+        "completed",
+        "failed",
+        "skipped",
+        "details",
+        "failures",
+        "folder",
+        "grouping",
+        "links"
+      ],
+      "additionalProperties": true
+    },
+    "CardPreview": {
+      "type": "object",
+      "properties": {
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "table": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required": [
+        "evidence"
+      ],
+      "additionalProperties": true
+    },
+    "Evaluation": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": true
+    },
+    "IndexingProgress": {
+      "type": "object",
+      "properties": {
+        "processing": {
+          "type": "boolean"
+        },
+        "queued_uploads": {
+          "type": "integer"
+        },
+        "retry_documents": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "processing",
+        "queued_uploads",
+        "retry_documents"
+      ],
+      "additionalProperties": true
+    },
+    "SearchResponse": {
+      "type": "object",
+      "properties": {
+        "matches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doc"
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "evaluation": {
+          "$ref": "#/$defs/Evaluation"
+        },
+        "answer": {
+          "$ref": "#/$defs/SearchAnswer"
+        },
+        "continue_search": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "indexing": {
+          "$ref": "#/$defs/IndexingProgress"
+        }
+      },
+      "required": [
+        "matches",
+        "evaluation"
+      ],
+      "additionalProperties": true
+    },
+    "LinkEvidence": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "target": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "link": {
+          "$ref": "#/$defs/Link"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "additionalProperties": true
+    },
+    "OrganizationDecision": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "folder",
+            "connection"
+          ]
+        },
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "evidence_revision": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "suggested": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "current": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "excerpt": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "target_document_id": {
+          "type": "string"
+        },
+        "target_version": {
+          "type": "string"
+        },
+        "target_evidence_revision": {
+          "type": "string"
+        },
+        "target_filename": {
+          "type": "string"
+        },
+        "target_excerpt": {
+          "type": "string"
+        },
+        "source_chunk_id": {
+          "type": "string"
+        },
+        "target_chunk_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "document_id",
+        "version",
+        "evidence_revision",
+        "filename",
+        "suggested",
+        "options",
+        "current",
+        "reason",
+        "excerpt",
+        "evidence_ids"
+      ],
+      "additionalProperties": true
+    },
+    "JevDecisionQueue": {
+      "type": "object",
+      "properties": {
+        "decisions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OrganizationDecision"
+          }
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "decisions",
+        "has_more"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

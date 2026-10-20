@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
 const source = await readFile(
-  new URL("../../src/readingTools.ts", import.meta.url),
+  new URL("../../src/features/reader/tools.ts", import.meta.url),
   "utf8",
 );
 const js = ts.transpileModule(source, {

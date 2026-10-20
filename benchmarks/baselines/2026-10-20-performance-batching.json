@@ -1,0 +1,2447 @@
+{
+  "date": "2026-10-19T22:20:04.396992+00:00",
+  "machine": {
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "memory_bytes": 51539607552
+  },
+  "runtime": {
+    "model": "google/embeddinggemma-2",
+    "revision": "2c791de4ddbe5cabd592cc93692f7acb67e52555",
+    "runtime": "torch",
+    "torch_version": "2.14.1",
+    "transformers_version": "5.19.0",
+    "quantization": "torchao-0.17.0-int8-group16/float32-text/bfloat16-vision",
+    "dimensions": 768,
+    "query_prefix": "task: search result | query: ",
+    "document_prefix": "title: {title} | text: {text}",
+    "pooling": "masked-mean",
+    "normalize": true,
+    "audio": false,
+    "max_tokens": 2048,
+    "mlx": "0.32.3",
+    "mlx_vlm": "3d87e88402f307efbf68e568971aa887ee7d9ed0"
+  },
+  "source_sha256": {
+    "benchmarks/batching.py": "f3a63d9d3892ae2eb201487fd7d5bfd706c46cb839462f2f2aa6a47b750dddde",
+    "app/__init__.py": "36221a28f387dfd7b6edef58f194f66deda63e6ee725f57dfb20fac3d7d9ed46",
+    "app/application.py": "69fd729fb11c9e3d83ee804d7da5d2a7aff14a042c06b3f0018f55180ccf394e",
+    "app/cache.py": "cb8366c3534f187597bf022168a8b6e3051aafcbdcaa3a7c830ffb478650c92c",
+    "app/contracts.py": "60f5293a4ed49ed0a257364c4592f9c7fdf251c23a36230f58cbcfc176c601e3",
+    "app/conversion_manager.py": "f63fb4837b9e53a6043e98299399dd3138b31542a12b4254836572bd57acdf76",
+    "app/conversion_worker.py": "8c6253d756d48237287b4115ff280ea651e56c5ab56f835b27e0cab93d29d246",
+    "app/embeddings.py": "245c4d10779f77cf7965bedc0f1b85a480f9e01c290dc073f04c708183be2bb5",
+    "app/evaluation.py": "1b2235d7ea6d886c0dfb4d3301ba3204ea313e46f8948129767e45b3975e93c1",
+    "app/evidence_revisions.py": "f21be3a47e2ead4cd7e519d7348a51f1c57e1923d276fa38980211f1c24c89e8",
+    "app/extraction_artifacts.py": "eaea2b00ef0f2ae8da4f33c23bec1676a511252dbbe5cf151dcf09e4162e7c01",
+    "app/folder_transfer.py": "81763a713a5c920f28e1a415a75e39c39a9559213f9b02f08ba9bcdfa599316e",
+    "app/ingest.py": "f927cd50602eff781a46d7417bf76a9c31935ed0ab4fe2a0d6df5bf661824472",
+    "app/jev.py": "fa7df64e7c4a9f2576d58aec112ae9463a349b6e25243c9d71d07317a4d5c138",
+    "app/jev_decisions.py": "11c257e6f89ac662de1e62acf20b8d9aaae6f76e325dda58ba4d2f99b5e6d623",
+    "app/jev_numeric.py": "26050d4ea2a96cd7bd90e47c50c357662fff69e05a0a8377a606a12188264572",
+    "app/jev_proof.py": "d3ed941f170426228acdda6301d42701e9a851c21abd2e560f5aea91c06db6e8",
+    "app/jev_shadow.py": "e1bb41f1141403d127dd43c43733245e488dd5410f001e29d33d68cb68621bd2",
+    "app/jev_topics.py": "b1a55eb20824f39ced6c73c7deb3445a2d383e0afe47e5c73cb8cc0824149b9f",
+    "app/library_service.py": "6f713a06bd027774faa296a811f87ec222fa2c721b2b714fadc6690dc2e59686",
+    "app/model_scheduling.py": "dc113deab0cf5d807143ca6c0cab8f3f1272694fb739c819f6ca01e512c8f70e",
+    "app/organization.py": "9f4ce94ad4807ea26a5850e8d9566d912fd8b3113c2b34def418c491c00f0325",
+    "app/organization_edits.py": "74709f2e2ce4f24623a953e70beaad39acb538f5317bf5a67cad79cec3205d10",
+    "app/organization_store.py": "fb2d25c250ab993aee0cd9303478aee0033f5ce10a558f7ecd359a1e5a3b29b6",
+    "app/pdf_thumbnail.py": "415ee7f0f7a4269ee9d188eae087fd2f5c44daf0a5d8ed4c15bbf544d95175d1",
+    "app/previews.py": "5c5286f65ac68f06f7827f25a774e94763110724f6bc0a11a6da72d6b16d0463",
+    "app/project_matcher.py": "8ae899f5b49acb9215009b7df43ffcedeafd9896851283742f2b0befd055ad99",
+    "app/rebuild.py": "2a25041ca6a2e56b6e98e0402e6cce3e8b828946b3fcd0c395d98261d5c1f251",
+    "app/relationships.py": "17df3a18eb5a1417e766e7d980d3aedaa8dbcbc9c1c1429f50bcdeafa4eb9265",
+    "app/retry.py": "fa3f66da9d9c432e241a0fbb0d5735eb816a7a64c3457551a49c6c3a6647c9ee",
+    "app/search.py": "e68de19797519b06f875811a026cf9807300537e4d620d1bdde21b0ac9c1a3b8",
+    "app/search_metrics.py": "563d4a851db7967f03ae0685629ccb0ae892e61342d375491626aac833b51105",
+    "app/search_projection.py": "c045ce50513b7dcf046800c99025a76d19e4b9bddbc1faffc17fc3ff018d129a",
+    "app/search_service.py": "3ad0c257d6d3f79f3807b87964f415f83db43d10b90a3a2b5bfae4bf9886d888",
+    "app/server.py": "2aa6b1b268e1a4e2a427667b609f7979bae46b6861d94af86228950e1daee5c2",
+    "app/storage.py": "10374d7ae0f23481afc5d4359860c7561137a6b088d2aafd03f0d98e0990e9d5",
+    "app/torch_quantization.py": "5a991a463fd956849e09f6ed444150f638a7536cf65f4df439ca858bef856755",
+    "app/transfer_service.py": "8a69489d22999697314aa9d80276321e6d315a5fe950bf25a5518c61e6bd02a9",
+    "app/ui.py": "a970150aa4546bf06d150d8de160b24f590f5b1a20342c3da673892761d752cb",
+    "app/wire_contracts.py": "c97ef9c36e147aac96eb100b668dbd0ae2b8f2ae6a97d9d4d4552fa7af40dc7b"
+  },
+  "scope": "Real inference only; conversion, OCR, index and provider excluded. Text batch timing clears bounded vectors before each group without unloading weights; cached query vectors are separate. Host RSS is process-lifetime high water.",
+  "trials": 3,
+  "samples": [
+    {
+      "kind": "text_batch",
+      "batch": 1,
+      "trial": 0,
+      "seconds": 0.37653433298692107,
+      "documents_per_second": 42.49280503341447,
+      "max_abs_difference": 0.0,
+      "min_cosine": 1.0,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 33,
+          "wait_seconds": 7.475004531443119e-05,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 16,
+            "bytes": 59520,
+            "hits": 0,
+            "misses": 32,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 32,
+            "evictions": 32,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 32
+          },
+          "epoch": 2
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1252868096
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 4,
+      "trial": 0,
+      "seconds": 0.19767766701988876,
+      "documents_per_second": 80.93984637318796,
+      "max_abs_difference": 1.2293457984924316e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 37,
+          "wait_seconds": 8.291611447930336e-05,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 4,
+            "bytes": 51744,
+            "hits": 0,
+            "misses": 36,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 36,
+            "evictions": 36,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 36
+          },
+          "epoch": 3
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1268629504
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 8,
+      "trial": 0,
+      "seconds": 0.21523566695395857,
+      "documents_per_second": 74.3371218461789,
+      "max_abs_difference": 1.1175870895385742e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 39,
+          "wait_seconds": 8.791615255177021e-05,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 2,
+            "bytes": 50448,
+            "hits": 0,
+            "misses": 38,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 38,
+            "evictions": 38,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 38
+          },
+          "epoch": 4
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1285439488
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 16,
+      "trial": 0,
+      "seconds": 0.11066891707014292,
+      "documents_per_second": 144.5753733169636,
+      "max_abs_difference": 1.1175870895385742e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 40,
+          "wait_seconds": 8.987414184957743e-05,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 1,
+            "bytes": 49800,
+            "hits": 0,
+            "misses": 39,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 39,
+            "evictions": 39,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 39
+          },
+          "epoch": 5
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 8,
+      "trial": 1,
+      "seconds": 0.11547025002073497,
+      "documents_per_second": 138.56382918653838,
+      "max_abs_difference": 1.1175870895385742e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 42,
+          "wait_seconds": 9.449897333979607e-05,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 2,
+            "bytes": 50448,
+            "hits": 0,
+            "misses": 41,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 41,
+            "evictions": 41,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 41
+          },
+          "epoch": 6
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 1,
+      "trial": 1,
+      "seconds": 0.3798837499925867,
+      "documents_per_second": 42.11814798688345,
+      "max_abs_difference": 0.0,
+      "min_cosine": 1.0,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 58,
+          "wait_seconds": 0.000129538937471807,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 16,
+            "bytes": 59520,
+            "hits": 0,
+            "misses": 57,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 57,
+            "evictions": 57,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 57
+          },
+          "epoch": 7
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 16,
+      "trial": 1,
+      "seconds": 0.1220178339863196,
+      "documents_per_second": 131.12837260980956,
+      "max_abs_difference": 1.1175870895385742e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 59,
+          "wait_seconds": 0.00013178889639675617,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 1,
+            "bytes": 49800,
+            "hits": 0,
+            "misses": 58,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 58,
+            "evictions": 58,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 58
+          },
+          "epoch": 8
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 4,
+      "trial": 1,
+      "seconds": 0.2943874999182299,
+      "documents_per_second": 54.350133767378765,
+      "max_abs_difference": 1.2293457984924316e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 63,
+          "wait_seconds": 0.00014120584819465876,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 4,
+            "bytes": 51744,
+            "hits": 0,
+            "misses": 62,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 62,
+            "evictions": 62,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 62
+          },
+          "epoch": 9
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 4,
+      "trial": 2,
+      "seconds": 0.31296758295502514,
+      "documents_per_second": 51.123505664480504,
+      "max_abs_difference": 1.2293457984924316e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 67,
+          "wait_seconds": 0.00015495577827095985,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 4,
+            "bytes": 51744,
+            "hits": 0,
+            "misses": 66,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 66,
+            "evictions": 66,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 66
+          },
+          "epoch": 10
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 8,
+      "trial": 2,
+      "seconds": 0.20619737496599555,
+      "documents_per_second": 77.59555621228735,
+      "max_abs_difference": 1.1175870895385742e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 69,
+          "wait_seconds": 0.00016070588026195765,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 2,
+            "bytes": 50448,
+            "hits": 0,
+            "misses": 68,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 68,
+            "evictions": 68,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 68
+          },
+          "epoch": 11
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 1,
+      "trial": 2,
+      "seconds": 0.8519778340123594,
+      "documents_per_second": 18.779831306935026,
+      "max_abs_difference": 0.0,
+      "min_cosine": 1.0,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 85,
+          "wait_seconds": 0.00020970555488020182,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 16,
+            "bytes": 59520,
+            "hits": 0,
+            "misses": 84,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 84,
+            "evictions": 84,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 84
+          },
+          "epoch": 12
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "text_batch",
+      "batch": 16,
+      "trial": 2,
+      "seconds": 0.1579929169965908,
+      "documents_per_second": 101.27036264761952,
+      "max_abs_difference": 1.1175870895385742e-07,
+      "min_cosine": 0.9999999403953552,
+      "exact_rank_parity": true,
+      "memory": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 86,
+          "wait_seconds": 0.00021228857804089785,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 1,
+            "bytes": 49800,
+            "hits": 0,
+            "misses": 85,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 1,
+            "evictions": 1,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 1
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 85,
+            "evictions": 85,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 85
+          },
+          "epoch": 13
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1319010304
+        }
+      },
+      "host_peak_bytes": 1494351872
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.07077591691631824
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.05401374993380159
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.05457425001077354
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.05425791593734175
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.051574917044490576
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.052413790952414274
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.054090125020593405
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.05483162507880479
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.052274332963861525
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.05138275003992021
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.035436625010333955
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.023874374921433628
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.038402500096708536
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.05027591704856604
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.05245945800561458
+    },
+    {
+      "kind": "uncached_query_vector",
+      "seconds": 0.05427191604394466
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0012078330619260669
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0009272079914808273
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0008125000167638063
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0008542919531464577
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.000818750006146729
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0007798329461365938
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0007957080379128456
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0009474999969825149
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0009027499472722411
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0007657089736312628
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0007685410091653466
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0007515000179409981
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.000756917055696249
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.00077104102820158
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0007667089812457561
+    },
+    {
+      "kind": "cached_query_vector",
+      "seconds": 0.0007695829262956977
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.09219970903359354
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.04845920798834413
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.08695949998218566
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.04833241691812873
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.09778712503612041
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.04818529193289578
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.08525466697756201
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.047337458934634924
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.11653637490235269
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.04820487508550286
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.08682720898650587
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.04804304090794176
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.09801058296579868
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.0481475000269711
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.08558354096021503
+    },
+    {
+      "kind": "interactive",
+      "seconds": 0.045955958077684045
+    },
+    {
+      "kind": "background",
+      "seconds": 0.054742416949011385
+    },
+    {
+      "kind": "background",
+      "seconds": 0.14902441704180092
+    },
+    {
+      "kind": "background",
+      "seconds": 0.14611908292863518
+    },
+    {
+      "kind": "background",
+      "seconds": 0.13482945901341736
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 1,
+      "trial": 0,
+      "seconds": 0.5727346669882536,
+      "images_per_second": 6.984036815920621,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 154,
+          "wait_seconds": 1.005538329249248,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1687896064
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 1,
+      "trial": 1,
+      "seconds": 0.5951456669718027,
+      "images_per_second": 6.721043640211053,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 158,
+          "wait_seconds": 1.00554578716401,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1687896064
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 1,
+      "trial": 2,
+      "seconds": 0.6938545419834554,
+      "images_per_second": 5.764897046815581,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 162,
+          "wait_seconds": 1.0055572033161297,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1687896064
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 2,
+      "trial": 0,
+      "seconds": 0.715743915992789,
+      "images_per_second": 5.58859098990972,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 164,
+          "wait_seconds": 1.0055635372409597,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1658552320
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 2,
+      "trial": 1,
+      "seconds": 0.5906997499987483,
+      "images_per_second": 6.771629749307454,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 166,
+          "wait_seconds": 1.0055679961806163,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1650163712
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 2,
+      "trial": 2,
+      "seconds": 0.5430926670087501,
+      "images_per_second": 7.365225573807192,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 168,
+          "wait_seconds": 1.0055718722287565,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1650163712
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 4,
+      "trial": 0,
+      "seconds": 0.8197146250167862,
+      "images_per_second": 4.879747021615099,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 169,
+          "wait_seconds": 1.0055739972740412,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1692123136
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 4,
+      "trial": 1,
+      "seconds": 0.5778091660467908,
+      "images_per_second": 6.922700841467927,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 170,
+          "wait_seconds": 1.0055759972892702,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1692123136
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 4,
+      "trial": 2,
+      "seconds": 0.5300571249099448,
+      "images_per_second": 7.54635644352406,
+      "min_cosine": 1.0,
+      "memory": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 171,
+          "wait_seconds": 1.0055782063864172,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1692123136
+        }
+      }
+    }
+  ],
+  "failures": [],
+  "input_sha256": "72b2d5cfdf5938207052fa2ab2c081c6f2b878887b61fcd85bca99eb3eaa085f",
+  "cold_query_seconds": 5.219945832970552,
+  "vector_cache_before_hit_series": {
+    "query": {
+      "entries": 1,
+      "bytes": 3714,
+      "hits": 0,
+      "misses": 17,
+      "evictions": 0
+    },
+    "documents": {
+      "entries": 0,
+      "bytes": 0,
+      "hits": 0,
+      "misses": 85,
+      "evictions": 0
+    },
+    "query_inflight": {
+      "entries": 0,
+      "bytes": 0,
+      "hits": 0,
+      "misses": 17,
+      "evictions": 17,
+      "inflight": 0,
+      "coalesced": 0,
+      "computations": 17
+    },
+    "documents_inflight": {
+      "entries": 0,
+      "bytes": 0,
+      "hits": 0,
+      "misses": 85,
+      "evictions": 85,
+      "inflight": 0,
+      "coalesced": 0,
+      "computations": 85
+    },
+    "epoch": 29
+  },
+  "vector_cache_after_hit_series": {
+    "query": {
+      "entries": 1,
+      "bytes": 3714,
+      "hits": 16,
+      "misses": 17,
+      "evictions": 0
+    },
+    "documents": {
+      "entries": 0,
+      "bytes": 0,
+      "hits": 0,
+      "misses": 85,
+      "evictions": 0
+    },
+    "query_inflight": {
+      "entries": 0,
+      "bytes": 0,
+      "hits": 0,
+      "misses": 17,
+      "evictions": 17,
+      "inflight": 0,
+      "coalesced": 0,
+      "computations": 17
+    },
+    "documents_inflight": {
+      "entries": 0,
+      "bytes": 0,
+      "hits": 0,
+      "misses": 85,
+      "evictions": 85,
+      "inflight": 0,
+      "coalesced": 0,
+      "computations": 85
+    },
+    "epoch": 29
+  },
+  "memory_passes": [
+    {
+      "kind": "text_batch",
+      "batch": 1,
+      "sampled_peak": {
+        "mps_active_bytes": 367261440,
+        "mps_driver_bytes": 1310539776,
+        "host_lifetime_peak_bytes": 1494351872
+      },
+      "retained": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 118,
+          "wait_seconds": 0.0003069124650210142,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 16,
+            "misses": 17,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 16,
+            "bytes": 59520,
+            "hits": 0,
+            "misses": 101,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 17,
+            "evictions": 17,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 17
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 101,
+            "evictions": 101,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 101
+          },
+          "epoch": 30
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1310523392
+        }
+      }
+    },
+    {
+      "kind": "text_batch",
+      "batch": 4,
+      "sampled_peak": {
+        "mps_active_bytes": 376705280,
+        "mps_driver_bytes": 1318846464,
+        "host_lifetime_peak_bytes": 1494351872
+      },
+      "retained": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 122,
+          "wait_seconds": 0.0003161214990541339,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 16,
+            "misses": 17,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 4,
+            "bytes": 51744,
+            "hits": 0,
+            "misses": 105,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 17,
+            "evictions": 17,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 17
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 105,
+            "evictions": 105,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 105
+          },
+          "epoch": 31
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1318813696
+        }
+      }
+    },
+    {
+      "kind": "text_batch",
+      "batch": 8,
+      "sampled_peak": {
+        "mps_active_bytes": 389942528,
+        "mps_driver_bytes": 1318846464,
+        "host_lifetime_peak_bytes": 1494351872
+      },
+      "retained": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 124,
+          "wait_seconds": 0.0003209965070709586,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 16,
+            "misses": 17,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 2,
+            "bytes": 50448,
+            "hits": 0,
+            "misses": 107,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 17,
+            "evictions": 17,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 17
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 107,
+            "evictions": 107,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 107
+          },
+          "epoch": 32
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1318813696
+        }
+      }
+    },
+    {
+      "kind": "text_batch",
+      "batch": 16,
+      "sampled_peak": {
+        "mps_active_bytes": 432945920,
+        "mps_driver_bytes": 1310457856,
+        "host_lifetime_peak_bytes": 1494351872
+      },
+      "retained": {
+        "loaded": true,
+        "vision": false,
+        "loads": 1,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 125,
+          "wait_seconds": 0.00032403855584561825,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 16,
+            "misses": 17,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 1,
+            "bytes": 49800,
+            "hits": 0,
+            "misses": 108,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 17,
+            "evictions": 17,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 17
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 108,
+            "evictions": 108,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 108
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 338973952,
+          "driver_bytes": 1310408704
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 1,
+      "sampled_peak": {
+        "mps_active_bytes": 728017920,
+        "mps_driver_bytes": 1692106752,
+        "host_lifetime_peak_bytes": 2454011904
+      },
+      "retained": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 175,
+          "wait_seconds": 1.005584746482782,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1692090368
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 2,
+      "sampled_peak": {
+        "mps_active_bytes": 766724352,
+        "mps_driver_bytes": 1690779648,
+        "host_lifetime_peak_bytes": 2454011904
+      },
+      "retained": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 177,
+          "wait_seconds": 1.005588412634097,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1683701760
+        }
+      }
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 4,
+      "sampled_peak": {
+        "mps_active_bytes": 856831488,
+        "mps_driver_bytes": 1683734528,
+        "host_lifetime_peak_bytes": 2454011904
+      },
+      "retained": {
+        "loaded": true,
+        "vision": true,
+        "loads": 2,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 2,
+          "completed": 178,
+          "wait_seconds": 1.0055904956534505,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 16,
+            "bytes": 59424,
+            "hits": 16,
+            "misses": 33,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 5,
+            "bytes": 101544,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 33,
+            "evictions": 33,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 33
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 112,
+            "evictions": 112,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 112
+          },
+          "epoch": 33
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 680130304,
+          "driver_bytes": 1683701760
+        }
+      }
+    }
+  ],
+  "single_image_preprocessing_parity": {
+    "exact": true,
+    "features": {
+      "input_ids": {
+        "shape": [
+          1,
+          257
+        ],
+        "dtype": "int64",
+        "sha256": "9903111bb2fe49e081b7732fc5409219ac4d30f31d944af63b5396977be7dc0c"
+      },
+      "attention_mask": {
+        "shape": [
+          1,
+          257
+        ],
+        "dtype": "int64",
+        "sha256": "0f2864fb2a2a7f541b48a2715ecaf9fb6a1220cd73d5e5a3d2e5dc6146316120"
+      },
+      "pixel_values": {
+        "shape": [
+          1,
+          2520,
+          768
+        ],
+        "dtype": "float32",
+        "sha256": "23e5909d6bf0a4978b5d7d66cd65e8670198a201f31f53e5c2f707c06f2e9780"
+      },
+      "image_position_ids": {
+        "shape": [
+          1,
+          2520,
+          2
+        ],
+        "dtype": "int64",
+        "sha256": "f498467ab191045b408ca274ff765be24fedcbf5cf4dcf21e0f5d08ec60daf3e"
+      }
+    }
+  },
+  "vision_load_and_first_image_seconds": 0.8616947080008686,
+  "summaries": [
+    {
+      "kind": "text_batch",
+      "batch": 1,
+      "n": 3,
+      "p50_seconds": 0.3798837499925867,
+      "p95_seconds": 0.3798837499925867,
+      "max_seconds": 0.8519778340123594
+    },
+    {
+      "kind": "text_batch",
+      "batch": 4,
+      "n": 3,
+      "p50_seconds": 0.2943874999182299,
+      "p95_seconds": 0.2943874999182299,
+      "max_seconds": 0.31296758295502514
+    },
+    {
+      "kind": "text_batch",
+      "batch": 8,
+      "n": 3,
+      "p50_seconds": 0.20619737496599555,
+      "p95_seconds": 0.20619737496599555,
+      "max_seconds": 0.21523566695395857
+    },
+    {
+      "kind": "text_batch",
+      "batch": 16,
+      "n": 3,
+      "p50_seconds": 0.1220178339863196,
+      "p95_seconds": 0.1220178339863196,
+      "max_seconds": 0.1579929169965908
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 1,
+      "n": 3,
+      "p50_seconds": 0.5951456669718027,
+      "p95_seconds": 0.5951456669718027,
+      "max_seconds": 0.6938545419834554
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 2,
+      "n": 3,
+      "p50_seconds": 0.5906997499987483,
+      "p95_seconds": 0.5906997499987483,
+      "max_seconds": 0.715743915992789
+    },
+    {
+      "kind": "vision_batch",
+      "batch": 4,
+      "n": 3,
+      "p50_seconds": 0.5778091660467908,
+      "p95_seconds": 0.5778091660467908,
+      "max_seconds": 0.8197146250167862
+    },
+    {
+      "kind": "uncached_query_vector",
+      "batch": 0,
+      "n": 16,
+      "p50_seconds": 0.052436624479014426,
+      "p95_seconds": 0.05483162507880479,
+      "max_seconds": 0.07077591691631824
+    },
+    {
+      "kind": "cached_query_vector",
+      "batch": 0,
+      "n": 16,
+      "p50_seconds": 0.0007877704920247197,
+      "p95_seconds": 0.0009474999969825149,
+      "max_seconds": 0.0012078330619260669
+    },
+    {
+      "kind": "interactive",
+      "batch": 0,
+      "n": 16,
+      "p50_seconds": 0.06685693748295307,
+      "p95_seconds": 0.09801058296579868,
+      "max_seconds": 0.11653637490235269
+    },
+    {
+      "kind": "background",
+      "batch": 0,
+      "n": 4,
+      "p50_seconds": 0.14047427097102627,
+      "p95_seconds": 0.14611908292863518,
+      "max_seconds": 0.14902441704180092
+    }
+  ],
+  "queue": {
+    "interactive_waiting": 0,
+    "background_waiting": 0,
+    "active": null,
+    "capacity": 32,
+    "high_water": 2,
+    "completed": 178,
+    "wait_seconds": 1.0055904956534505,
+    "interactive_burst": 4
+  },
+  "completed": true,
+  "idle_memory": {
+    "loaded": false,
+    "vision": false,
+    "loads": 2,
+    "queue": {
+      "interactive_waiting": 0,
+      "background_waiting": 0,
+      "active": null,
+      "capacity": 32,
+      "high_water": 2,
+      "completed": 179,
+      "wait_seconds": 1.005592328729108,
+      "interactive_burst": 4
+    },
+    "vector_caches": {
+      "query": {
+        "entries": 0,
+        "bytes": 0,
+        "hits": 16,
+        "misses": 33,
+        "evictions": 0
+      },
+      "documents": {
+        "entries": 0,
+        "bytes": 0,
+        "hits": 0,
+        "misses": 112,
+        "evictions": 0
+      },
+      "query_inflight": {
+        "entries": 0,
+        "bytes": 0,
+        "hits": 0,
+        "misses": 33,
+        "evictions": 33,
+        "inflight": 0,
+        "coalesced": 0,
+        "computations": 33
+      },
+      "documents_inflight": {
+        "entries": 0,
+        "bytes": 0,
+        "hits": 0,
+        "misses": 112,
+        "evictions": 112,
+        "inflight": 0,
+        "coalesced": 0,
+        "computations": 112
+      },
+      "epoch": 35
+    },
+    "idle_seconds": 60.0,
+    "torch_quantization": "int8",
+    "mps": {
+      "active_bytes": 0,
+      "driver_bytes": 64684032
+    }
+  }
+}

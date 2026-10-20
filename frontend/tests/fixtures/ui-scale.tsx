@@ -1,10 +1,10 @@
 // Development-only synthetic data. Not imported by the product entrypoint.
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
-import ConnectionMap from "../../src/components/ConnectionMap";
-import type { Doc, Link } from "../../src/api";
-import "../../src/styles.css";
-import "../../src/redesign.css";
+import ConnectionMap from "../../src/features/connections/components/ConnectionMap";
+import type { Doc, Link } from "../../src/shared/api/client";
+import "../../src/styles/styles.css";
+import "../../src/styles/redesign.css";
 const docs: Doc[] = Array.from({ length: 10000 }, (_, i) => ({
   document_id: `fixture-${i}`,
   version: "v1",

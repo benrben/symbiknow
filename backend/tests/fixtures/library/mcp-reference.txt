@@ -1,0 +1,229 @@
+# Symbiknow MCP protocol
+
+Symbiknow exposes ten MCP tools: `upload`, `download`, `search`, `upload_folder`, `download_folder`, `remove_file`, `scan_freshness`, `get_freshness_scan`, `cancel_freshness_scan` and `review_freshness_finding`. File transfers carry real bytes as base64 through the official MCP SDK. Use the running HTTP endpoint when the browser app already owns the library.
+
+## Manual document freshness review
+
+Call `scan_freshness` only when the user asks for a maintenance scan. Omit
+`document_ids` for the library; a scoped recheck still searches the captured library
+for relevant counterparts. Supply a stable `request_id` for retries. Optional
+`reference_document_ids` are user-selected authorities; do not infer them from
+dates, filenames or a document's claim to be authoritative.
+
+`get_freshness_scan` returns the latest scan by default or the supplied `scan_id`.
+It includes coverage gaps, progress, recent scan IDs and findings. Page with
+`next_after` → `after` (limit 1–100); optional `category` and `document_id` filters
+remain the same between pages. The returned `validity` must be checked before
+acting. After a source/version/extraction change or a new UTC check date, findings
+need rechecking. Results are suggestions, not verified truth. New findings include
+`decision.judgments` (choices, confidence and probability distributions) and
+`decision.used_judgments` (the checks used for that label). Low-confidence or
+underspecified comparisons appear in `gaps.uncertain_comparisons`, without a
+separate document label.
+
+Use `cancel_freshness_scan(scan_id)` to cancel remaining work; completed findings
+remain saved. `review_freshness_finding` records a user decision using `scan_id`,
+`finding_id`, `expected_revision`, `decision` (`confirmed`, `dismissed`,
+`historical`, `pending`) and optional `note` (at most 2,000 characters).
+These calls do not modify original documents. To fix content, use the existing
+version-guarded `upload`, then explicitly start a new scan.
+
+The current implementation compares library text; it does not fetch current web,
+repository or runtime references. Bounded retrieval and oversized context are
+reported as coverage gaps. A completed scan with no findings does not establish
+that all documents are current.
+
+Symbiknow / Development / MCP protocol
+
+## Connect to the running app
+
+The shared Streamable HTTP endpoint is `http://127.0.0.1:8765/mcp`. The repository's installed MCP SDK supports `Client("http://127.0.0.1:8765/mcp")`. Discover the tool schemas with `list_tools()` before calling tools.
+
+`client.py` provides reusable `call`, `upload_files` and `download_files` helpers. Its command-line entry point starts a stdio server; use its helper functions with an HTTP client session when the web server is already running. Starting another stdio owner against the same data directory is a conflict.
+
+## Agent guidance
+
+The server sends usage instructions in its MCP `initialize` response (`INSTRUCTIONS` in `app/server.py`): search before uploading, reuse UUID request IDs on retries, update with `document_id` plus `expected_version`, choose a search mode deliberately, and download when an excerpt does not show the needed fact. Tool schemas are typed: upload items require `filename` and `content_base64`, every field has a description, and `mode` is an enum. Malformed arguments are rejected by schema validation with the field name, before anything is stored.
+
+Agent-facing results add:
+
+- `index` on every upload item result, so batch errors map to their input.
+- `warnings` with `code: "possible_duplicate"` when a new upload (no `document_id`) shares a filename or identical bytes with existing documents. The upload is still stored as a new document; the warning names the existing IDs to update instead.
+- `current_version` and `hint` on an `Expected vN, found vM` conflict.
+- Plain not-found messages for unknown document IDs and versions.
+- `hints` on an empty first search page: an unknown or wrongly cased folder/group (with close names), uploads still being indexed, or a no-answer status limited to the evaluated candidates.
+
+## Upload
+
+The required outer argument is `files`, containing 1–32 items. Each file supplies `filename` and `content_base64`. Optional fields include `mime_type`, `source`, `request_id`, `document_id` and `expected_version`.
+
+```json
+{"files":[{"filename":"project-notes.md","mime_type":"text/markdown","request_id":"0e2f8790-d78a-4cc3-9aba-d54539141d01","content_base64":"IyBQcm9qZWN0IG5vdGVzCg=="}]}
+```
+
+A new upload request creates a new independent document. To update an existing document, provide its `document_id` and the latest `expected_version`. Matching filenames do not select an overwrite target. A replay of a committed UUID request returns the original committed result rather than another version. Reusing the request ID with different bytes or metadata is a conflict.
+
+Each item returns its own stored success or error, document ID, version, SHA-256 and indexing state. A stored file may still be pending, failed, empty or unsupported for indexing. Check the per-file result rather than only the outer MCP response.
+
+For a larger file, send sequential chunks with `offset`, `total_size`, a lowercase whole-file `sha256` and `final: true` on the final chunk. Preserve the request ID and metadata across retries. The default raw chunk limit is 262,144 bytes and the default whole-file limit is 268,435,456 bytes. The repository helper batches at most two small files per request to limit message size.
+
+## Download
+
+Each item requires `document_id`; `version`, `offset`, `length`, `history` and `include_versions` are optional.
+
+```json
+{"files":[{"document_id":"DOCUMENT_ID","version":"v1","offset":0,"length":262144,"history":true}]}
+```
+
+The response includes original filename, MIME, source, whole-file hash and size, pinned version, requested offset, returned byte count, EOF and base64 bytes. `history: true` also returns version metadata. Pin the first returned version for later ranges and verify the reconstructed whole-file SHA-256. The transfer helper checks the hash and refuses to overwrite an existing download destination.
+
+A length of one byte can retrieve the metadata and history without transferring a large original. It is still a ranged download, not a substitute for verifying the complete file when byte integrity matters.
+
+## Remove a file
+
+`remove_file` permanently deletes one document, **all its saved versions**, index entries and relationships through the same deletion service as the UI. Use it when the user requests removal. Supply the exact `document_id` and the current `expected_version` observed through search or download; a filename cannot identify a deletion target.
+
+```json
+{"document_id":"DOCUMENT_ID","expected_version":"v3"}
+```
+
+Success returns `{"deleted":"DOCUMENT_ID"}`. A changed version, unknown document, invalid ID or active organization rebuild returns an MCP tool error. Repeating a successful removal with the same ID/version succeeds safely, including after a server restart; a different version is rejected. The tool declares destructive, idempotent, non-read-only, local-world MCP annotations.
+
+## Search
+
+`query` is required. `mode` is `semantic`, `keyword`, `hybrid` or `answer`; `answer` means hybrid retrieval with Jev evaluation. Optional arguments are `limit` (1–100), `folder`, `group` and `evaluate`.
+
+```json
+{"query":"How are original versions preserved?","mode":"hybrid","limit":8,"evaluate":true,"folder":"Symbiknow"}
+```
+
+Results include `created_at`, the current stored version's saved timestamp (shown as Modified in the UI), in both full and compact projections. It is refreshed during current-head checks and is not the indexing time. Results identify document and version, evidence IDs and provenance, retrieval score basis, logical organization and relevance explanations. Folder and group scopes intersect; a parent folder includes descendants at path boundaries.
+
+Jev evaluates at most eight answerability candidates per search. With `mode="answer"` or `evaluate=true`, `matches` contains only accepted complete/partial answers or applicable premise corrections. Related, uncertain and unchecked candidates are not answer results. For ordinary matching files, use semantic/keyword/hybrid with `evaluate=false`.
+
+The `answer` object reports `status`, `candidate_count`, `evaluated_count`, `not_evaluated_count`, `answer_count`, `complete_count`, `partial_count`, `correction_count` and `needs_context_count`. Status is `answered`, `partial`, `corrected_premise`, `needs_context`, `no_answer_in_evaluated_candidates`, `no_candidates`, `not_evaluated`, `unavailable`, or `not_requested`. An empty answer list describes the evaluated candidate windows, not proof that no answer exists anywhere in the library. A provider outage is explicitly unavailable; it is never converted into a no-answer judgment. Accepted cached answers can remain available during a partial outage.
+
+Selected supporting passages must be real supplied IDs. Coverage uses an independent all-parts check; intermediate confidence can produce a supported partial answer, never an invented complete one. Passage applicability checks the requested checkpoint/time independently of document age. Independent document calls run with at most four simultaneous provider requests across searches, then cross-document consistency is checked. Provider failure leaves ordinary retrieval usable. Visual-only matches do not claim a text answer. Keywords are useful for exact identifiers and checking whether a freshly imported document has entered the index.
+
+Support, subject identity and applicability concern the question part addressed by
+each passage; a missing fact in another part does not invalidate useful partial
+evidence. Completeness asks whether the request can be answered, including an
+explicit **No** to a yes/no question. The independent completeness check can
+resolve a split direct/partial choice, but cannot promote a confident partial
+judgment to complete. Saying that a value is undocumented can answer
+whether it is documented, but does not supply the value itself. These are bounded
+model judgments with strict acceptance checks, not guarantees of answerability.
+Long documents can contain relevant facts outside the selected text windows;
+requesting full detail exposes the supplied evidence, not additional retrieval or
+the complete original.
+
+## Human routes
+
+Browsing, previews, rebuilds and other organization edits remain human UI routes. File removal is available through `remove_file` and the UI's delete confirmation; both share the same deletion service. Do not edit OCFL inventories or LanceDB rows to imitate an MCP operation.
+
+## Current evaluator and resource boundaries — 17 October 2026
+
+The current source declares prompt `project-membership-6/search-evidence-15` and policy `answer-routing-13`, with default model `jev-1.13.0`. Read source constants when comparing cached or historical judgments. A document request still assesses at most six supplied windows, eight documents per search, plus at most one cross-document comparison and four simultaneous provider calls shared across searches.
+
+Each judgment/comparison cache has a 512-entry and eight-MiB estimated-owned-byte budget. Continuation windows separately retain at most 16 windows/32 MiB for five minutes. These limits do not estimate process RSS. Upload/download still transfer exact bytes; version-pinned disk leases avoid repeated whole-original extraction for each range. Storage success, indexing state and hosted organization state remain independent.
+
+## Source references
+
+Tool functions and validation: `app/server.py`. Transfer implementation: `client.py`. HTTP sharing and owner-lifecycle regression: `tests/test_http_runtime.py`. Transfer/recovery regression: `tests/test_mcp.py`.
+
+## Compact continuation (review 9)
+
+`detail` defaults to `compact`; `full` retains diagnostic data for all eligible matches in the requested window. `limit` remains 1–100 and means the requested retrieval window, not the page size or a library-wide relevant-document count. Compact `page.window_count` counts eligible results within that bounded candidate window. Retrieval still examines at most `min(limit * 8, 800)` chunks. Equal document scores use document ID as the tie-breaker.
+
+Each compact text result keeps a useful UTF-8 excerpt (normally up to 384 bytes), identity/version, retrieval/decision fields and bounded evidence records. The excerpt is the region of the passage richest in rare query terms (numbers match whole), so an accepted answer's value is normally visible; `text_start` is its character offset in the stored passage. A passage with no query-term match keeps its opening. Compact `metrics` keep counters only; stage timings are in `detail=full`. Native visual results have an explicit visual basis and empty text. Citation IDs in compact role lists always have corresponding evidence records. For pathological citation counts, `match.omissions.citations` explicitly counts omitted roles; `detail=full` provides all diagnostics. Compact excerpts may be shorter than the evaluated windows and are never presented as complete originals.
+
+Passage selection preserves up to three ranked windows per returned document and adds bounded structural/adjacent context, at most six windows total. For numbered text chunks, one context slot prioritizes the first passage when it is not already ranked: this supplies introductory subject/mechanism context even when the highest-ranked passages occur later. It uses the existing exact identity/version passage batch, without another search, greater candidate depth, additional authoritative head reads or a larger provider budget. This is an inclusion safeguard rather than a guarantee that every answer-bearing passage is found; provider judgment still decides applicability and support.
+
+`page` reports `offset`, `returned_count`, `window_count`, `has_more` and `continuation`. Pass the token as the optional **existing search** argument `continuation`, repeating the identical query, filters, mode, limit, evaluate and detail arguments. Pages reuse the original order and judgments. Answer pages contain only accepted answers; `answer.not_evaluated_count` explicitly reports candidates outside the eight-document evaluation budget. Continuation does not perform retrieval, embeddings or provider calls.
+
+```json
+{"query":"Symbiknow","folder":"Symbiknow","mode":"keyword","limit":100,"detail":"compact","continuation":"TOKEN_FROM_PAGE"}
+```
+
+Tokens expire after five minutes, or earlier after process restart/eviction. At most 16 windows and 32 MiB of retained diagnostic data are kept in memory. This is a restart-on-change contract, not a frozen library snapshot: index/organization revisions invalidate tokens, and **every document and relationship in the retained bounded window** is checked again against authoritative OCFL heads and current evidence before each continuation is published. This also detects an OCFL commit before derived revisions are updated. Changed scopes, judgments, links or windows require a fresh search. Invalid, mismatched and expired tokens return explicit restart errors. No-progress pages never issue another token.
+
+Continuation refresh operates on a copy and compares its complete validated entries with the retained original window. This detects same-head extracted-text changes and relationship-target update/deletion before derived revision publication; a rejected refresh does not replace the comparison baseline.
+
+A first-page retrieval interrupted by concurrent ingestion or organization retries once, before Jev evaluation starts. A second snapshot change returns an actionable MCP error asking the caller to retry when the library settles. It never returns a mixed snapshot or loops indefinitely. Expected search-validation and continuation errors retain their explanation through the SDK's public `ToolError` contract. Unexpected exceptions remain sanitized.
+
+The compact structured JSON budget is 32 KiB, including page metadata and request metrics. The separate tested complete SDK `CallToolResult` budget is 128 KiB, including both JSON text and `structuredContent`. These are UTF-8 serialization budgets, not HTTP envelope or token-count guarantees. Normal pages budget whole useful entries before dropping entries; they do not erase every excerpt. An entry that cannot fit after bounded diagnostic truncation returns instructions to request full detail or a smaller limit.
+
+## Evidence decisions
+
+Raw `model_label`, Choice concentration and passage judgments are separate from `policy_label`, `coverage` and accepted citations. A negative answer is usable support. Premise correction requires that the question assumes a fact and applicable evidence explicitly denies it; silence does not qualify. `conflicting_chunk_ids` remains the compatible premise-correction field, with additive `premise_correction_status`. Actual inconsistency uses `evidence_disagreement` and document-local `disagreement_chunk_ids`. When multiple evaluated documents supply applicable evidence, one additional bounded comparison checks up to two windows per document. `evaluation.cross_document_assessment` reports its raw probabilities, compared IDs, status and scope; it establishes no library-wide agreement. `disagreement_scope` distinguishes the comparison performed. Accepted and possible local disagreement references retain corresponding compact evidence records or explicit omission counts.
+
+Provider evaluation uses at most eight document-scoped requests per search and six text windows per document, plus at most one cross-document comparison, with a shared four-call concurrency bound. Provider slots, embedding work and network calls never hold the judgment cache or publication locks. Cached judgments include document/evidence/version, filename context, model, prompt, policy and all semantic thresholds/context criteria; the comparison cache also binds its complete compared window set and window bound. Provider failures are not cached. Continuation reuses the same evaluated window rather than multiplying the eight-document budget. Final publication verifies every compared current window: if a counterpart head, scope or passage changed, dependent decisions become `not_evaluated` with reason `disagreement_evidence_changed`, and the comparison reports `unavailable` / `evidence_changed`. The retrieved current text remains available for a fresh search.
+
+
+Hybrid ranking retains rank fusion for Latin-script queries. Cross-script questions use LanceDB’s built-in weighted combination (0.7 semantic, 0.3 lexical), reducing the effect of a shared Latin project name on a question written in another script. This is tested on a small local corpus, not a general multilingual accuracy guarantee.
+
+Organization uses a separate bounded selection of owner-bearing passages from up to 128 sampled source chunks; topics and links retain their smaller evidence budgets. Canonical aliases are deduplicated before choosing an owner, generic/numbered labels are filtered, and lowercase project headings are eligible hypotheses. Filename and import source may corroborate substantive project context but never force assignment. Manual placement and original file versions remain separate from automatic metadata.
+
+## Folder transfers
+
+Added 19 October 2026. Both tools transfer bytes over the existing MCP transport; neither accepts a server filesystem directory to read or write.
+
+### upload_folder
+
+Required arguments: `folder`, `request_id` (UUID for the logical folder upload), and `files` (1–32 items per call). Each item requires `relative_path` (POSIX path such as `docs/notes.md`) and `content_base64`. Optional fields match file uploads: `mime_type`, `source`, `document_id`, `expected_version`, `offset`, `total_size`, `sha256`, `final`. Existing-document updates require both identity and expected version.
+
+```json
+{"folder":"Projects / Apollo","request_id":"73519d38-2ec9-4cb7-a049-4e8570040bf2","files":[{"relative_path":"docs/notes.md","content_base64":"IyBOb3Rlcwo="}]}
+```
+
+The filename is the last relative-path component. Parent components extend the destination folder and become durable manual assignments, preserved through indexing and later content updates. Folder names use the existing maximum of 12 levels / 200 characters per level. Relative paths reject absolute paths, parent/dot segments, backslashes, drive prefixes and ambiguous whitespace. Duplicate case-insensitive paths in a batch are rejected before storing files.
+
+Reuse the same folder UUID across batches and chunks. Each case-insensitive relative path derives its own stable upload UUID; changing its path spelling or metadata on retry is a conflict. Files over 256 KiB use sequential chunks with total size and whole-file SHA-256, just like `upload`. No filename matching or automatic overwrite occurs. Empty directories have no document representation and are not stored.
+
+Every item reports `stored`, `folder_assigned`, `document_id`, `version`, `relative_path`, its file request ID and any error. `complete` means every item in this call has both committed and completed placement; it does not describe unsent batches. A batch can partially succeed. If bytes commit but placement fails (for example during an organization job), `stored` remains true and `folder_assigned` is false: retry the identical folder request and bytes to finish placement without another content version. After placement completes, later retries do not undo subsequent manual moves; `folder_assignment: completed_for_upload` describes completion of the original placement.
+
+### Updating an existing folder member
+
+Use the member's document ID and last observed version from its earlier upload/download result. Start a new folder request UUID for changed content; keep that UUID for identical retries of this update. The target folder alone never identifies which document to update.
+
+```json
+{
+  "folder": "Projects / Apollo",
+  "request_id": "49ed6006-7e83-49ab-8911-e348b50f173b",
+  "files": [{
+    "relative_path": "docs/notes.md",
+    "document_id": "DOCUMENT_ID_FROM_PREVIOUS_RESULT",
+    "expected_version": "v1",
+    "content_base64": "IyBVcGRhdGVkIG5vdGVzCg=="
+  }]
+}
+```
+
+Replace the placeholder ID and version with actual values. An expected-version conflict leaves that item unstored; inspect the returned current version before reconciling and retrying with a new request UUID. Unmentioned files remain unchanged: a folder upload is not a directory mirror and does not delete missing members.
+
+### download_folder
+
+Required argument: exact library `folder`. The first call uses `offset: 0`; optional `length` is 1–262144 bytes by default limits. It includes all descendant folders at path boundaries. It returns `transfer_id`, normalized folder, ZIP filename/MIME, `file_count`, whole-archive `size`/`sha256`, expiry time, byte offset/count, `eof` and `content_base64`.
+
+```json
+{"folder":"Projects / Apollo","length":262144}
+```
+
+Continue with the same folder and returned `transfer_id`, advancing offset by `returned_bytes` until EOF. Verify the reconstructed ZIP size and SHA-256. The ten-minute snapshot pins the current stored versions at creation, so later library updates or moves do not change its bytes. An expired transfer must restart at offset zero. An unknown/empty folder returns an explicit error. Pending or unsupported files can be exported because originals do not depend on indexing success.
+
+For example, after a first range returns 262144 bytes with `eof: false`, the next request is:
+
+```json
+{
+  "folder": "Projects / Apollo",
+  "transfer_id": "TRANSFER_UUID_FROM_FIRST_RESPONSE",
+  "offset": 262144,
+  "length": 262144
+}
+```
+
+Use the actual returned transfer UUID and accumulated byte count, not these illustrative placeholders. Do not start a new transfer for each chunk. For a snapshot that fits in the first range, `eof` is already true and no continuation is needed.
+
+A snapshot accepts at most 1,000 files and 1 GiB of original bytes; choose a subfolder if either limit is exceeded. Up to four exports are retained for ten minutes. Archives stream from verified originals to disk without collecting whole files in memory; ZIP ranges remain bounded. Unsafe existing filename characters are replaced and case-insensitive or file/directory collisions receive suffixes so no member silently overwrites another. Paths are relative to the requested folder. A missing selected version aborts archive creation rather than publishing a partial success. Restarting the same server/library preserves an unexpired completed archive. Expired snapshots and interrupted temporary archives are cleaned on subsequent folder-download calls.
+
+The client helpers `upload_folder` and `download_folder`, and CLI `upload-folder` / `download-folder`, implement recursive local transfer and verified ZIP saving. Use `--url http://127.0.0.1:8765/mcp` before the subcommand when the app is running. The download helper saves a new ZIP and does not extract it or overwrite a destination.

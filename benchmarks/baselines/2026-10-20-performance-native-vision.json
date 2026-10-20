@@ -1,0 +1,2816 @@
+{
+  "date": "2026-10-19T22:59:21.097776+00:00",
+  "scope": "Synthetic native 10-page PDF and 59KB TXT, same pinned model and exact first-pair bytes. Each backend runs in a fresh process. All observations retained; no claimed robust PDF ingestion speedup.",
+  "reference_machine": {
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "processor": "arm",
+    "memory_bytes": 51539607552
+  },
+  "runtime": {
+    "model": "google/embeddinggemma-2",
+    "revision": "2c791de4ddbe5cabd592cc93692f7acb67e52555",
+    "runtime": "torch",
+    "torch_version": "2.14.1",
+    "transformers_version": "5.19.0",
+    "quantization": "torchao-0.17.0-int8-group16/float32-text/bfloat16-vision",
+    "dimensions": 768,
+    "query_prefix": "task: search result | query: ",
+    "document_prefix": "title: {title} | text: {text}",
+    "pooling": "masked-mean",
+    "normalize": true,
+    "audio": false,
+    "max_tokens": 2048,
+    "mlx": "0.32.3",
+    "mlx_vlm": "3d87e88402f307efbf68e568971aa887ee7d9ed0"
+  },
+  "first_pair_order": [
+    "baseline",
+    "current"
+  ],
+  "reverse_probe_order": [
+    "current",
+    "baseline"
+  ],
+  "input_hashes_match_first_pair": true,
+  "first_pair_ingestion": {
+    "current": {
+      "ingest_large.txt": {
+        "label": "ingest_large.txt",
+        "n": 1,
+        "successes": 1,
+        "errors": 0,
+        "median_seconds": 1.7497501249890774,
+        "p95_seconds": 1.7497501249890774,
+        "min_seconds": 1.7497501249890774,
+        "max_seconds": 1.7497501249890774,
+        "parent_peak_rss_bytes": 1575239680,
+        "child_peak_rss_bytes": 8781824,
+        "samples": [
+          {
+            "seconds": 1.7497501249890774,
+            "trace": {
+              "extract_and_chunk": {
+                "seconds": 0.3375300000188872,
+                "calls": 1
+              },
+              "text_embedding": {
+                "seconds": 1.3417434601578861,
+                "calls": 6
+              },
+              "index_write": {
+                "seconds": 0.029702041065320373,
+                "calls": 1
+              }
+            },
+            "status": "indexed",
+            "index_error": "",
+            "chunk_count": 24,
+            "searchable_text": true,
+            "searchable_visual": false
+          }
+        ],
+        "model_after_measurement": {
+          "loaded": true,
+          "vision": false,
+          "loads": 1,
+          "queue": {
+            "interactive_waiting": 0,
+            "background_waiting": 0,
+            "active": null,
+            "capacity": 32,
+            "high_water": 1,
+            "completed": 7,
+            "wait_seconds": 2.908497117459774e-05,
+            "interactive_burst": 4
+          },
+          "vector_caches": {
+            "query": {
+              "entries": 1,
+              "bytes": 3714,
+              "hits": 0,
+              "misses": 1,
+              "evictions": 0
+            },
+            "documents": {
+              "entries": 6,
+              "bytes": 77616,
+              "hits": 0,
+              "misses": 6,
+              "evictions": 0
+            },
+            "query_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 1,
+              "evictions": 1,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 1
+            },
+            "documents_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 6,
+              "evictions": 6,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 6
+            },
+            "epoch": 0
+          },
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 338973952,
+            "driver_bytes": 1339752448
+          }
+        }
+      },
+      "ingest_native-10-pages.pdf": {
+        "label": "ingest_native-10-pages.pdf",
+        "n": 1,
+        "successes": 1,
+        "errors": 0,
+        "median_seconds": 17.088229042012244,
+        "p95_seconds": 17.088229042012244,
+        "min_seconds": 17.088229042012244,
+        "max_seconds": 17.088229042012244,
+        "parent_peak_rss_bytes": 2063499264,
+        "child_peak_rss_bytes": 1194704896,
+        "samples": [
+          {
+            "seconds": 17.088229042012244,
+            "trace": {
+              "extract_and_chunk": {
+                "seconds": 5.953664749977179,
+                "calls": 1
+              },
+              "model_load": {
+                "seconds": 2.3234883338445798,
+                "calls": 2
+              },
+              "text_embedding": {
+                "seconds": 1.058788042049855,
+                "calls": 3
+              },
+              "image_embedding": {
+                "seconds": 9.845080709084868,
+                "calls": 10
+              },
+              "index_write": {
+                "seconds": 0.016917250002734363,
+                "calls": 1
+              }
+            },
+            "status": "indexed",
+            "index_error": "",
+            "chunk_count": 20,
+            "searchable_text": true,
+            "searchable_visual": true
+          }
+        ],
+        "model_after_measurement": {
+          "loaded": false,
+          "vision": false,
+          "loads": 3,
+          "queue": {
+            "interactive_waiting": 0,
+            "background_waiting": 0,
+            "active": null,
+            "capacity": 32,
+            "high_water": 1,
+            "completed": 21,
+            "wait_seconds": 9.32950060814619e-05,
+            "interactive_burst": 4
+          },
+          "vector_caches": {
+            "query": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 1,
+              "evictions": 0
+            },
+            "documents": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 9,
+              "evictions": 0
+            },
+            "query_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 1,
+              "evictions": 1,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 1
+            },
+            "documents_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 9,
+              "evictions": 9,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 9
+            },
+            "epoch": 2
+          },
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 0,
+            "driver_bytes": 16449536
+          }
+        }
+      }
+    },
+    "baseline": {
+      "ingest_large.txt": {
+        "label": "ingest_large.txt",
+        "n": 1,
+        "successes": 1,
+        "errors": 0,
+        "median_seconds": 1.7095005420269445,
+        "p95_seconds": 1.7095005420269445,
+        "min_seconds": 1.7095005420269445,
+        "max_seconds": 1.7095005420269445,
+        "parent_peak_rss_bytes": 1575075840,
+        "child_peak_rss_bytes": 8749056,
+        "samples": [
+          {
+            "seconds": 1.7095005420269445,
+            "trace": {
+              "ocfl_subprocess": {
+                "seconds": 0.031944373971782625,
+                "calls": 2
+              },
+              "extract_and_chunk": {
+                "seconds": 0.31854704197030514,
+                "calls": 1
+              },
+              "text_embedding": {
+                "seconds": 1.3142838740022853,
+                "calls": 6
+              },
+              "index_write": {
+                "seconds": 0.014656582963652909,
+                "calls": 1
+              }
+            },
+            "status": "indexed",
+            "index_error": "",
+            "chunk_count": 24,
+            "searchable_text": true,
+            "searchable_visual": false
+          }
+        ],
+        "model_after_measurement": {
+          "loaded": true,
+          "vision": false,
+          "loads": 1,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 338973952,
+            "driver_bytes": 1339752448
+          }
+        }
+      },
+      "ingest_native-10-pages.pdf": {
+        "label": "ingest_native-10-pages.pdf",
+        "n": 1,
+        "successes": 1,
+        "errors": 0,
+        "median_seconds": 10.195360542042181,
+        "p95_seconds": 10.195360542042181,
+        "min_seconds": 10.195360542042181,
+        "max_seconds": 10.195360542042181,
+        "parent_peak_rss_bytes": 2065055744,
+        "child_peak_rss_bytes": 1191641088,
+        "samples": [
+          {
+            "seconds": 10.195360542042181,
+            "trace": {
+              "ocfl_subprocess": {
+                "seconds": 0.036054834024980664,
+                "calls": 2
+              },
+              "extract_and_chunk": {
+                "seconds": 6.0689274170435965,
+                "calls": 1
+              },
+              "model_load": {
+                "seconds": 1.7989179160213098,
+                "calls": 2
+              },
+              "text_embedding": {
+                "seconds": 0.9664952919119969,
+                "calls": 3
+              },
+              "image_embedding": {
+                "seconds": 2.9306773759890348,
+                "calls": 10
+              },
+              "index_write": {
+                "seconds": 0.007786958944052458,
+                "calls": 1
+              }
+            },
+            "status": "indexed",
+            "index_error": "",
+            "chunk_count": 20,
+            "searchable_text": true,
+            "searchable_visual": true
+          }
+        ],
+        "model_after_measurement": {
+          "loaded": false,
+          "vision": false,
+          "loads": 3,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 0,
+            "driver_bytes": 83558400
+          }
+        }
+      }
+    }
+  },
+  "reverse_probe_ingestion": {
+    "current": {
+      "ingest_large.txt": {
+        "label": "ingest_large.txt",
+        "n": 1,
+        "successes": 1,
+        "errors": 0,
+        "median_seconds": 1.9203704169485718,
+        "p95_seconds": 1.9203704169485718,
+        "min_seconds": 1.9203704169485718,
+        "max_seconds": 1.9203704169485718,
+        "parent_peak_rss_bytes": 1538015232,
+        "child_peak_rss_bytes": 8749056,
+        "samples": [
+          {
+            "seconds": 1.9203704169485718,
+            "trace": {
+              "extract_and_chunk": {
+                "seconds": 0.3908286669757217,
+                "calls": 1
+              },
+              "preprocessing": {
+                "seconds": 0.01030524994712323,
+                "calls": 6
+              },
+              "model_inference": {
+                "seconds": 1.4312746230280027,
+                "calls": 6
+              },
+              "text_embedding": {
+                "seconds": 1.4451392490882427,
+                "calls": 6
+              },
+              "index_write": {
+                "seconds": 0.0378350829705596,
+                "calls": 1
+              }
+            },
+            "status": "indexed",
+            "index_error": "",
+            "chunk_count": 24,
+            "searchable_text": true,
+            "searchable_visual": false
+          }
+        ],
+        "model_after_measurement": {
+          "loaded": true,
+          "vision": false,
+          "loads": 1,
+          "queue": {
+            "interactive_waiting": 0,
+            "background_waiting": 0,
+            "active": null,
+            "capacity": 32,
+            "high_water": 1,
+            "completed": 7,
+            "wait_seconds": 3.495905548334122e-05,
+            "interactive_burst": 4
+          },
+          "vector_caches": {
+            "query": {
+              "entries": 1,
+              "bytes": 3714,
+              "hits": 0,
+              "misses": 1,
+              "evictions": 0
+            },
+            "documents": {
+              "entries": 6,
+              "bytes": 77616,
+              "hits": 0,
+              "misses": 6,
+              "evictions": 0
+            },
+            "query_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 1,
+              "evictions": 1,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 1
+            },
+            "documents_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 6,
+              "evictions": 6,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 6
+            },
+            "epoch": 0
+          },
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 338973952,
+            "driver_bytes": 1339752448
+          }
+        }
+      },
+      "ingest_native-10-pages.pdf": {
+        "label": "ingest_native-10-pages.pdf",
+        "n": 1,
+        "successes": 1,
+        "errors": 0,
+        "median_seconds": 13.135209542000666,
+        "p95_seconds": 13.135209542000666,
+        "min_seconds": 13.135209542000666,
+        "max_seconds": 13.135209542000666,
+        "parent_peak_rss_bytes": 2061959168,
+        "child_peak_rss_bytes": 1197211648,
+        "samples": [
+          {
+            "seconds": 13.135209542000666,
+            "trace": {
+              "extract_and_chunk": {
+                "seconds": 6.173789624939673,
+                "calls": 1
+              },
+              "model_load": {
+                "seconds": 2.1851141250226647,
+                "calls": 2
+              },
+              "preprocessing": {
+                "seconds": 0.047952250693924725,
+                "calls": 13
+              },
+              "model_inference": {
+                "seconds": 4.408005415927619,
+                "calls": 13
+              },
+              "text_embedding": {
+                "seconds": 1.2971809998853132,
+                "calls": 3
+              },
+              "image_embedding": {
+                "seconds": 5.434064667089842,
+                "calls": 10
+              },
+              "index_write": {
+                "seconds": 0.018199915997684002,
+                "calls": 1
+              }
+            },
+            "status": "indexed",
+            "index_error": "",
+            "chunk_count": 20,
+            "searchable_text": true,
+            "searchable_visual": true
+          }
+        ],
+        "model_after_measurement": {
+          "loaded": false,
+          "vision": false,
+          "loads": 3,
+          "queue": {
+            "interactive_waiting": 0,
+            "background_waiting": 0,
+            "active": null,
+            "capacity": 32,
+            "high_water": 1,
+            "completed": 21,
+            "wait_seconds": 0.00010379287414252758,
+            "interactive_burst": 4
+          },
+          "vector_caches": {
+            "query": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 1,
+              "evictions": 0
+            },
+            "documents": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 9,
+              "evictions": 0
+            },
+            "query_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 1,
+              "evictions": 1,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 1
+            },
+            "documents_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 9,
+              "evictions": 9,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 9
+            },
+            "epoch": 2
+          },
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 0,
+            "driver_bytes": 16449536
+          }
+        }
+      }
+    },
+    "baseline": {
+      "ingest_large.txt": {
+        "label": "ingest_large.txt",
+        "n": 1,
+        "successes": 1,
+        "errors": 0,
+        "median_seconds": 5.595457415911369,
+        "p95_seconds": 5.595457415911369,
+        "min_seconds": 5.595457415911369,
+        "max_seconds": 5.595457415911369,
+        "parent_peak_rss_bytes": 1545945088,
+        "child_peak_rss_bytes": 8749056,
+        "samples": [
+          {
+            "seconds": 5.595457415911369,
+            "trace": {
+              "extract_and_chunk": {
+                "seconds": 0.6689015839947388,
+                "calls": 1
+              },
+              "preprocessing": {
+                "seconds": 0.015406041988171637,
+                "calls": 6
+              },
+              "model_inference": {
+                "seconds": 4.803560581058264,
+                "calls": 6
+              },
+              "text_embedding": {
+                "seconds": 4.804406834067777,
+                "calls": 6
+              },
+              "index_write": {
+                "seconds": 0.018023082986474037,
+                "calls": 1
+              }
+            },
+            "status": "indexed",
+            "index_error": "",
+            "chunk_count": 24,
+            "searchable_text": true,
+            "searchable_visual": false
+          }
+        ],
+        "model_after_measurement": {
+          "loaded": true,
+          "vision": false,
+          "loads": 1,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 338973952,
+            "driver_bytes": 1337655296
+          }
+        }
+      },
+      "ingest_native-10-pages.pdf": {
+        "label": "ingest_native-10-pages.pdf",
+        "n": 1,
+        "successes": 1,
+        "errors": 0,
+        "median_seconds": 22.74100541707594,
+        "p95_seconds": 22.74100541707594,
+        "min_seconds": 22.74100541707594,
+        "max_seconds": 22.74100541707594,
+        "parent_peak_rss_bytes": 2106146816,
+        "child_peak_rss_bytes": 1193476096,
+        "samples": [
+          {
+            "seconds": 22.74100541707594,
+            "trace": {
+              "extract_and_chunk": {
+                "seconds": 10.501363708055578,
+                "calls": 1
+              },
+              "model_load": {
+                "seconds": 3.571109916898422,
+                "calls": 2
+              },
+              "preprocessing": {
+                "seconds": 0.05284658202435821,
+                "calls": 13
+              },
+              "model_inference": {
+                "seconds": 8.24799683096353,
+                "calls": 13
+              },
+              "text_embedding": {
+                "seconds": 2.7929887920618057,
+                "calls": 3
+              },
+              "image_embedding": {
+                "seconds": 9.168401832925156,
+                "calls": 10
+              },
+              "index_write": {
+                "seconds": 0.010220541968010366,
+                "calls": 1
+              }
+            },
+            "status": "indexed",
+            "index_error": "",
+            "chunk_count": 20,
+            "searchable_text": true,
+            "searchable_visual": true
+          }
+        ],
+        "model_after_measurement": {
+          "loaded": false,
+          "vision": false,
+          "loads": 3,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 0,
+            "driver_bytes": 16449536
+          }
+        }
+      }
+    }
+  },
+  "natural_idle": {
+    "current": {
+      "before": {
+        "process_rss_bytes": 1585152000,
+        "model": {
+          "loaded": true,
+          "vision": false,
+          "loads": 4,
+          "queue": {
+            "interactive_waiting": 0,
+            "background_waiting": 0,
+            "active": null,
+            "capacity": 32,
+            "high_water": 1,
+            "completed": 23,
+            "wait_seconds": 0.00011016789358109236,
+            "interactive_burst": 4
+          },
+          "vector_caches": {
+            "query": {
+              "entries": 1,
+              "bytes": 3714,
+              "hits": 0,
+              "misses": 2,
+              "evictions": 0
+            },
+            "documents": {
+              "entries": 1,
+              "bytes": 3720,
+              "hits": 0,
+              "misses": 10,
+              "evictions": 0
+            },
+            "query_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 2,
+              "evictions": 2,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 2
+            },
+            "documents_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 10,
+              "evictions": 10,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 10
+            },
+            "epoch": 2
+          },
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 338973952,
+            "driver_bytes": 1260093440
+          }
+        },
+        "vector_budgets": {
+          "query": {
+            "entries": 128,
+            "bytes": 1048576
+          },
+          "documents": {
+            "entries": 64,
+            "bytes": 8388608
+          }
+        }
+      },
+      "after": {
+        "process_rss_bytes": 1585070080,
+        "model": {
+          "loaded": false,
+          "vision": false,
+          "loads": 4,
+          "queue": {
+            "interactive_waiting": 0,
+            "background_waiting": 0,
+            "active": null,
+            "capacity": 32,
+            "high_water": 1,
+            "completed": 24,
+            "wait_seconds": 0.0001228759065270424,
+            "interactive_burst": 4
+          },
+          "vector_caches": {
+            "query": {
+              "entries": 1,
+              "bytes": 3714,
+              "hits": 0,
+              "misses": 2,
+              "evictions": 0
+            },
+            "documents": {
+              "entries": 1,
+              "bytes": 3720,
+              "hits": 0,
+              "misses": 10,
+              "evictions": 0
+            },
+            "query_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 2,
+              "evictions": 2,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 2
+            },
+            "documents_inflight": {
+              "entries": 0,
+              "bytes": 0,
+              "hits": 0,
+              "misses": 10,
+              "evictions": 10,
+              "inflight": 0,
+              "coalesced": 0,
+              "computations": 10
+            },
+            "epoch": 2
+          },
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 0,
+            "driver_bytes": 1769472
+          }
+        },
+        "vector_budgets": {
+          "query": {
+            "entries": 128,
+            "bytes": 1048576
+          },
+          "documents": {
+            "entries": 64,
+            "bytes": 8388608
+          }
+        }
+      },
+      "elapsed_seconds": 60.17148412496317,
+      "configured_seconds": 60.0
+    },
+    "baseline": {
+      "before": {
+        "process_rss_bytes": 1628078080,
+        "model": {
+          "loaded": true,
+          "vision": false,
+          "loads": 4,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 338973952,
+            "driver_bytes": 1260093440
+          }
+        },
+        "vector_budgets": {
+          "supported": false
+        }
+      },
+      "after": {
+        "process_rss_bytes": 1623343104,
+        "model": {
+          "loaded": false,
+          "vision": false,
+          "loads": 4,
+          "idle_seconds": 60.0,
+          "torch_quantization": "int8",
+          "mps": {
+            "active_bytes": 0,
+            "driver_bytes": 1769472
+          }
+        },
+        "vector_budgets": {
+          "supported": false
+        }
+      },
+      "elapsed_seconds": 60.21187941695098,
+      "configured_seconds": 60.0
+    }
+  },
+  "forced_cleanup": {
+    "current": {
+      "process_rss_bytes": 1617870848,
+      "model": {
+        "loaded": false,
+        "vision": false,
+        "loads": 5,
+        "queue": {
+          "interactive_waiting": 0,
+          "background_waiting": 0,
+          "active": null,
+          "capacity": 32,
+          "high_water": 1,
+          "completed": 86,
+          "wait_seconds": 0.0004874591249972582,
+          "interactive_burst": 4
+        },
+        "vector_caches": {
+          "query": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 2,
+            "evictions": 0
+          },
+          "documents": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 10,
+            "evictions": 0
+          },
+          "query_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 2,
+            "evictions": 2,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 2
+          },
+          "documents_inflight": {
+            "entries": 0,
+            "bytes": 0,
+            "hits": 0,
+            "misses": 10,
+            "evictions": 10,
+            "inflight": 0,
+            "coalesced": 0,
+            "computations": 10
+          },
+          "epoch": 3
+        },
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 0,
+          "driver_bytes": 5963776
+        }
+      },
+      "vector_budgets": {
+        "query": {
+          "entries": 128,
+          "bytes": 1048576
+        },
+        "documents": {
+          "entries": 64,
+          "bytes": 8388608
+        }
+      }
+    },
+    "baseline": {
+      "process_rss_bytes": 1654177792,
+      "model": {
+        "loaded": false,
+        "vision": false,
+        "loads": 5,
+        "idle_seconds": 60.0,
+        "torch_quantization": "int8",
+        "mps": {
+          "active_bytes": 0,
+          "driver_bytes": 5963776
+        }
+      },
+      "vector_budgets": {
+        "supported": false
+      }
+    }
+  },
+  "native_page_preprocessing": [
+    {
+      "page": 1,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "1a3b1c259fcc745ec09cebf312be99c0d7ea9a2f0e253a596908421c3302eb58"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 2,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "64dd9af6da31fe2c2f2b801a139308a68c339c7fab6b1b07ba7bda823056a448"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 3,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "e90b3347ae1a5f76c636e3867255047596714c6df9d4e6b2a4a8de86ea548aef"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 4,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "63a081d1daa65e4c094ab82bd96d3e1b05db6022f516ff5948b6d75570f594a2"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 5,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "dee5e962b31c26f610dc6704c5813c82675ab7be704089b2b301bf22cda561cc"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 6,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "bd93f898487f8d02918c1d49d16b321133479b96d0b9f3cd702b37866d651672"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 7,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "d146516944ba8ddbe0c265a5a86eb4154bc3923df972f389e77478d58405c965"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 8,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "d07d3d39d3442623c3258b36223774f5ba2a9d6ed1c259b2ed1532baae32a29d"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 9,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "0595c4acf71d2c8d9974809af7258741757bddf95cbf312b18bc0c9b4eb5f8ec"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    },
+    {
+      "page": 10,
+      "image_size": [
+        612,
+        792
+      ],
+      "exact": true,
+      "fields": {
+        "input_ids": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "9fd75870b98e282d081ec5604e98be6e746adfd07f7674afd7f3133eac46aac6"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            270
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            2160,
+            8
+          ],
+          "new_strides": [
+            2160,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "f90094d3f857916d475c57dddcfdff4ce8216d24247ab9e077a09251707ad80e"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            2520,
+            768
+          ],
+          "dtype": "float32",
+          "old_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "new_strides": [
+            7741440,
+            3072,
+            4
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "23904d54ed8181b324afe9b0b8c92fae20cdc1f4f25ce95f686347d989cbcebc"
+        },
+        "image_position_ids": {
+          "shape": [
+            1,
+            2520,
+            2
+          ],
+          "dtype": "int64",
+          "old_strides": [
+            40320,
+            16,
+            8
+          ],
+          "new_strides": [
+            40320,
+            16,
+            8
+          ],
+          "old_c_contiguous": true,
+          "new_c_contiguous": true,
+          "sha256": "5b2f1e361e5c275e82ad50d7f5c6338d5db064f4bde7f2d01465412b3e9917e3"
+        }
+      }
+    }
+  ],
+  "native_page_metadata_equal_across_backends": true,
+  "resident_comparison": {
+    "current": {
+      "samples": [
+        {
+          "label": "resident_archived_flat_0",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.786165166995488,
+          "p95_seconds": 5.786165166995488,
+          "min_seconds": 5.786165166995488,
+          "max_seconds": 5.786165166995488,
+          "parent_peak_rss_bytes": 2159247360,
+          "child_peak_rss_bytes": 1197211648,
+          "samples": [
+            {
+              "seconds": 5.786165166995488,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.0401277911150828,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.770170914940536,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.7860535411164165,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "queue": {
+              "interactive_waiting": 0,
+              "background_waiting": 0,
+              "active": null,
+              "capacity": 32,
+              "high_water": 1,
+              "completed": 35,
+              "wait_seconds": 0.0001950029982253909,
+              "interactive_burst": 4
+            },
+            "vector_caches": {
+              "query": {
+                "entries": 1,
+                "bytes": 3714,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 0
+              },
+              "documents": {
+                "entries": 1,
+                "bytes": 3720,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 0
+              },
+              "query_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 2,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 2
+              },
+              "documents_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 10,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 10
+              },
+              "epoch": 2
+            },
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 0,
+          "variant": "archived_flat"
+        },
+        {
+          "label": "resident_current_nested_0",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.370146583998576,
+          "p95_seconds": 5.370146583998576,
+          "min_seconds": 5.370146583998576,
+          "max_seconds": 5.370146583998576,
+          "parent_peak_rss_bytes": 2159247360,
+          "child_peak_rss_bytes": 1197211648,
+          "samples": [
+            {
+              "seconds": 5.370146583998576,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.03875166806392372,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.355914000771008,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.370103333727457,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "queue": {
+              "interactive_waiting": 0,
+              "background_waiting": 0,
+              "active": null,
+              "capacity": 32,
+              "high_water": 1,
+              "completed": 45,
+              "wait_seconds": 0.0002263369970023632,
+              "interactive_burst": 4
+            },
+            "vector_caches": {
+              "query": {
+                "entries": 1,
+                "bytes": 3714,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 0
+              },
+              "documents": {
+                "entries": 1,
+                "bytes": 3720,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 0
+              },
+              "query_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 2,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 2
+              },
+              "documents_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 10,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 10
+              },
+              "epoch": 2
+            },
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 0,
+          "variant": "current_nested"
+        },
+        {
+          "label": "resident_archived_flat_1",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.368971207994036,
+          "p95_seconds": 5.368971207994036,
+          "min_seconds": 5.368971207994036,
+          "max_seconds": 5.368971207994036,
+          "parent_peak_rss_bytes": 2159247360,
+          "child_peak_rss_bytes": 1197211648,
+          "samples": [
+            {
+              "seconds": 5.368971207994036,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.04472145880572498,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.350597790093161,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.368881539907306,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "queue": {
+              "interactive_waiting": 0,
+              "background_waiting": 0,
+              "active": null,
+              "capacity": 32,
+              "high_water": 1,
+              "completed": 55,
+              "wait_seconds": 0.00026262830942869186,
+              "interactive_burst": 4
+            },
+            "vector_caches": {
+              "query": {
+                "entries": 1,
+                "bytes": 3714,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 0
+              },
+              "documents": {
+                "entries": 1,
+                "bytes": 3720,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 0
+              },
+              "query_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 2,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 2
+              },
+              "documents_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 10,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 10
+              },
+              "epoch": 2
+            },
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 1,
+          "variant": "archived_flat"
+        },
+        {
+          "label": "resident_current_nested_1",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.484385416959412,
+          "p95_seconds": 5.484385416959412,
+          "min_seconds": 5.484385416959412,
+          "max_seconds": 5.484385416959412,
+          "parent_peak_rss_bytes": 2159247360,
+          "child_peak_rss_bytes": 1197211648,
+          "samples": [
+            {
+              "seconds": 5.484385416959412,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.053603252046741545,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.460597499739379,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.484303290955722,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "queue": {
+              "interactive_waiting": 0,
+              "background_waiting": 0,
+              "active": null,
+              "capacity": 32,
+              "high_water": 1,
+              "completed": 65,
+              "wait_seconds": 0.0003191262949258089,
+              "interactive_burst": 4
+            },
+            "vector_caches": {
+              "query": {
+                "entries": 1,
+                "bytes": 3714,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 0
+              },
+              "documents": {
+                "entries": 1,
+                "bytes": 3720,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 0
+              },
+              "query_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 2,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 2
+              },
+              "documents_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 10,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 10
+              },
+              "epoch": 2
+            },
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 1,
+          "variant": "current_nested"
+        },
+        {
+          "label": "resident_current_nested_2",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.299745208001696,
+          "p95_seconds": 5.299745208001696,
+          "min_seconds": 5.299745208001696,
+          "max_seconds": 5.299745208001696,
+          "parent_peak_rss_bytes": 2159247360,
+          "child_peak_rss_bytes": 1197211648,
+          "samples": [
+            {
+              "seconds": 5.299745208001696,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.058797000092454255,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.275052791694179,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.299650874105282,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "queue": {
+              "interactive_waiting": 0,
+              "background_waiting": 0,
+              "active": null,
+              "capacity": 32,
+              "high_water": 1,
+              "completed": 75,
+              "wait_seconds": 0.000381791265681386,
+              "interactive_burst": 4
+            },
+            "vector_caches": {
+              "query": {
+                "entries": 1,
+                "bytes": 3714,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 0
+              },
+              "documents": {
+                "entries": 1,
+                "bytes": 3720,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 0
+              },
+              "query_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 2,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 2
+              },
+              "documents_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 10,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 10
+              },
+              "epoch": 2
+            },
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 2,
+          "variant": "current_nested"
+        },
+        {
+          "label": "resident_archived_flat_2",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.585723666939884,
+          "p95_seconds": 5.585723666939884,
+          "min_seconds": 5.585723666939884,
+          "max_seconds": 5.585723666939884,
+          "parent_peak_rss_bytes": 2159247360,
+          "child_peak_rss_bytes": 1197211648,
+          "samples": [
+            {
+              "seconds": 5.585723666939884,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.0691461650421843,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.555932791088708,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.585624456987716,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "queue": {
+              "interactive_waiting": 0,
+              "background_waiting": 0,
+              "active": null,
+              "capacity": 32,
+              "high_water": 1,
+              "completed": 85,
+              "wait_seconds": 0.00044208415783941746,
+              "interactive_burst": 4
+            },
+            "vector_caches": {
+              "query": {
+                "entries": 1,
+                "bytes": 3714,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 0
+              },
+              "documents": {
+                "entries": 1,
+                "bytes": 3720,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 0
+              },
+              "query_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 2,
+                "evictions": 2,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 2
+              },
+              "documents_inflight": {
+                "entries": 0,
+                "bytes": 0,
+                "hits": 0,
+                "misses": 10,
+                "evictions": 10,
+                "inflight": 0,
+                "coalesced": 0,
+                "computations": 10
+              },
+              "epoch": 2
+            },
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 2,
+          "variant": "archived_flat"
+        }
+      ],
+      "summary": [
+        {
+          "variant": "archived_flat",
+          "n": 3,
+          "median_seconds": 5.585723666939884,
+          "max_seconds": 5.786165166995488,
+          "min_cosine": 1.0
+        },
+        {
+          "variant": "current_nested",
+          "n": 3,
+          "median_seconds": 5.370146583998576,
+          "max_seconds": 5.484385416959412,
+          "min_cosine": 1.0
+        }
+      ]
+    },
+    "baseline": {
+      "samples": [
+        {
+          "label": "resident_archived_flat_0",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.539011292043142,
+          "p95_seconds": 5.539011292043142,
+          "min_seconds": 5.539011292043142,
+          "max_seconds": 5.539011292043142,
+          "parent_peak_rss_bytes": 2193293312,
+          "child_peak_rss_bytes": 1193476096,
+          "samples": [
+            {
+              "seconds": 5.539011292043142,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.056002875324338675,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.53718037402723,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.538871664903127,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 0,
+          "variant": "archived_flat"
+        },
+        {
+          "label": "resident_current_nested_0",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.301000750041567,
+          "p95_seconds": 5.301000750041567,
+          "min_seconds": 5.301000750041567,
+          "max_seconds": 5.301000750041567,
+          "parent_peak_rss_bytes": 2193293312,
+          "child_peak_rss_bytes": 1193476096,
+          "samples": [
+            {
+              "seconds": 5.301000750041567,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.05587208294309676,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.298732873750851,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.300910042831674,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 0,
+          "variant": "current_nested"
+        },
+        {
+          "label": "resident_archived_flat_1",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.360098374891095,
+          "p95_seconds": 5.360098374891095,
+          "min_seconds": 5.360098374891095,
+          "max_seconds": 5.360098374891095,
+          "parent_peak_rss_bytes": 2193293312,
+          "child_peak_rss_bytes": 1193476096,
+          "samples": [
+            {
+              "seconds": 5.360098374891095,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.05232120689470321,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.358006666996516,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.360021086060442,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 1,
+          "variant": "archived_flat"
+        },
+        {
+          "label": "resident_current_nested_1",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 4.512380125001073,
+          "p95_seconds": 4.512380125001073,
+          "min_seconds": 4.512380125001073,
+          "max_seconds": 4.512380125001073,
+          "parent_peak_rss_bytes": 2193293312,
+          "child_peak_rss_bytes": 1193476096,
+          "samples": [
+            {
+              "seconds": 4.512380125001073,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.051336334086954594,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 4.510747290914878,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 4.512313999119215,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 1,
+          "variant": "current_nested"
+        },
+        {
+          "label": "resident_current_nested_2",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 3.989789917017333,
+          "p95_seconds": 3.989789917017333,
+          "min_seconds": 3.989789917017333,
+          "max_seconds": 3.989789917017333,
+          "parent_peak_rss_bytes": 2193293312,
+          "child_peak_rss_bytes": 1193476096,
+          "samples": [
+            {
+              "seconds": 3.989789917017333,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.054451500065624714,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 3.988276210031472,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 3.9897144169081002,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 2,
+          "variant": "current_nested"
+        },
+        {
+          "label": "resident_archived_flat_2",
+          "n": 1,
+          "successes": 1,
+          "errors": 0,
+          "median_seconds": 5.209699084050953,
+          "p95_seconds": 5.209699084050953,
+          "min_seconds": 5.209699084050953,
+          "max_seconds": 5.209699084050953,
+          "parent_peak_rss_bytes": 2193293312,
+          "child_peak_rss_bytes": 1193476096,
+          "samples": [
+            {
+              "seconds": 5.209699084050953,
+              "trace": {
+                "preprocessing": {
+                  "seconds": 0.055948332301341,
+                  "calls": 10
+                },
+                "model_inference": {
+                  "seconds": 5.2077821681741625,
+                  "calls": 10
+                },
+                "image_embedding": {
+                  "seconds": 5.209601414971985,
+                  "calls": 10
+                }
+              }
+            }
+          ],
+          "model_after_measurement": {
+            "loaded": true,
+            "vision": true,
+            "loads": 5,
+            "idle_seconds": 60.0,
+            "torch_quantization": "int8",
+            "mps": {
+              "active_bytes": 680130304,
+              "driver_bytes": 1633370112
+            }
+          },
+          "min_cosine": 1.0,
+          "trial": 2,
+          "variant": "archived_flat"
+        }
+      ],
+      "summary": [
+        {
+          "variant": "archived_flat",
+          "n": 3,
+          "median_seconds": 5.360098374891095,
+          "max_seconds": 5.539011292043142,
+          "min_cosine": 1.0
+        },
+        {
+          "variant": "current_nested",
+          "n": 3,
+          "median_seconds": 4.512380125001073,
+          "max_seconds": 5.301000750041567,
+          "min_cosine": 1.0
+        }
+      ]
+    }
+  },
+  "source_sha256": {
+    "current": {
+      "app/__init__.py": "36221a28f387dfd7b6edef58f194f66deda63e6ee725f57dfb20fac3d7d9ed46",
+      "app/application.py": "39034b9819f3a73d22c4ed21e5d0d936014da0595b2b1b72f54ed2e1687d758f",
+      "app/cache.py": "cb8366c3534f187597bf022168a8b6e3051aafcbdcaa3a7c830ffb478650c92c",
+      "app/contracts.py": "60f5293a4ed49ed0a257364c4592f9c7fdf251c23a36230f58cbcfc176c601e3",
+      "app/conversion_manager.py": "f63fb4837b9e53a6043e98299399dd3138b31542a12b4254836572bd57acdf76",
+      "app/conversion_worker.py": "8c6253d756d48237287b4115ff280ea651e56c5ab56f835b27e0cab93d29d246",
+      "app/embeddings.py": "245c4d10779f77cf7965bedc0f1b85a480f9e01c290dc073f04c708183be2bb5",
+      "app/evaluation.py": "1b2235d7ea6d886c0dfb4d3301ba3204ea313e46f8948129767e45b3975e93c1",
+      "app/evidence_revisions.py": "f21be3a47e2ead4cd7e519d7348a51f1c57e1923d276fa38980211f1c24c89e8",
+      "app/extraction_artifacts.py": "eaea2b00ef0f2ae8da4f33c23bec1676a511252dbbe5cf151dcf09e4162e7c01",
+      "app/folder_transfer.py": "0c8ab2b30a2527f74f5298d06946ba8a1e9db67fb6766ef73135548a53b0fc46",
+      "app/ingest.py": "f927cd50602eff781a46d7417bf76a9c31935ed0ab4fe2a0d6df5bf661824472",
+      "app/jev.py": "fa7df64e7c4a9f2576d58aec112ae9463a349b6e25243c9d71d07317a4d5c138",
+      "app/jev_decisions.py": "11c257e6f89ac662de1e62acf20b8d9aaae6f76e325dda58ba4d2f99b5e6d623",
+      "app/jev_numeric.py": "26050d4ea2a96cd7bd90e47c50c357662fff69e05a0a8377a606a12188264572",
+      "app/jev_proof.py": "d3ed941f170426228acdda6301d42701e9a851c21abd2e560f5aea91c06db6e8",
+      "app/jev_shadow.py": "e1bb41f1141403d127dd43c43733245e488dd5410f001e29d33d68cb68621bd2",
+      "app/jev_topics.py": "b1a55eb20824f39ced6c73c7deb3445a2d383e0afe47e5c73cb8cc0824149b9f",
+      "app/library_service.py": "2f99c6c73498ae470c1eace4ce67699f1ed97c81166a3f24ebb0df3ce34e7531",
+      "app/model_scheduling.py": "dc113deab0cf5d807143ca6c0cab8f3f1272694fb739c819f6ca01e512c8f70e",
+      "app/organization.py": "9f4ce94ad4807ea26a5850e8d9566d912fd8b3113c2b34def418c491c00f0325",
+      "app/organization_edits.py": "276201e1672cd4207e4e185f2ee6d106944f05f309506eac3112ed189e5ebd6b",
+      "app/organization_store.py": "88b1f949646923e3a01121883633bcdf5dadcb29189309cd7ec143f80375df1e",
+      "app/pdf_thumbnail.py": "415ee7f0f7a4269ee9d188eae087fd2f5c44daf0a5d8ed4c15bbf544d95175d1",
+      "app/previews.py": "5c5286f65ac68f06f7827f25a774e94763110724f6bc0a11a6da72d6b16d0463",
+      "app/project_matcher.py": "8ae899f5b49acb9215009b7df43ffcedeafd9896851283742f2b0befd055ad99",
+      "app/rebuild.py": "38d67b5c45a79b636c8da46df43c5f4c9805947281e6f056999f2a47ab1b1c38",
+      "app/relationships.py": "17df3a18eb5a1417e766e7d980d3aedaa8dbcbc9c1c1429f50bcdeafa4eb9265",
+      "app/retry.py": "fa3f66da9d9c432e241a0fbb0d5735eb816a7a64c3457551a49c6c3a6647c9ee",
+      "app/search.py": "4f516623ac53fdee058342b0bdbdc9f9704006b83edcbde2c4e5e170bdf2e4dc",
+      "app/search_metrics.py": "563d4a851db7967f03ae0685629ccb0ae892e61342d375491626aac833b51105",
+      "app/search_projection.py": "c045ce50513b7dcf046800c99025a76d19e4b9bddbc1faffc17fc3ff018d129a",
+      "app/search_service.py": "3ad0c257d6d3f79f3807b87964f415f83db43d10b90a3a2b5bfae4bf9886d888",
+      "app/server.py": "2aa6b1b268e1a4e2a427667b609f7979bae46b6861d94af86228950e1daee5c2",
+      "app/storage.py": "10374d7ae0f23481afc5d4359860c7561137a6b088d2aafd03f0d98e0990e9d5",
+      "app/torch_quantization.py": "5a991a463fd956849e09f6ed444150f638a7536cf65f4df439ca858bef856755",
+      "app/transfer_service.py": "8a69489d22999697314aa9d80276321e6d315a5fe950bf25a5518c61e6bd02a9",
+      "app/ui.py": "a970150aa4546bf06d150d8de160b24f590f5b1a20342c3da673892761d752cb",
+      "app/wire_contracts.py": "c97ef9c36e147aac96eb100b668dbd0ae2b8f2ae6a97d9d4d4552fa7af40dc7b"
+    },
+    "baseline": {
+      "app/__init__.py": "36221a28f387dfd7b6edef58f194f66deda63e6ee725f57dfb20fac3d7d9ed46",
+      "app/cache.py": "56af4f9554662b4067ac31fbeea075467a7de3ef6655f5b6aa5994aebedd2ae1",
+      "app/conversion_worker.py": "29b4cf3ff9320480d84fdb30735a99189b2bab044f8e8fdcbe88c3c9b73f3f1e",
+      "app/embeddings.py": "45b50ea6dd7d8e9bd1cc1288d4114f5ceb0e96a068ae04a88dc3a67053603684",
+      "app/evaluation.py": "1b2235d7ea6d886c0dfb4d3301ba3204ea313e46f8948129767e45b3975e93c1",
+      "app/folder_transfer.py": "48634064c28e068479c8a3e5c4f79bd761b4bd507ab53b2b062fb59629738a22",
+      "app/ingest.py": "bf32c90088f75e7b43fd1bbd69cdc01ee9e3aa539ce655181b982af4a15cd459",
+      "app/jev.py": "f43c9e69a122cb457ba323d34e882f42d958488a77ff28aa0fa7507addf92f5f",
+      "app/jev_decisions.py": "0202a02537aea35d24483aec363b8f39d63c93378a48c5875470206fdb5a1da2",
+      "app/jev_numeric.py": "66d973a47e1517ba106a5115236b30a5721ff86e06d15a903ccde7062d28754d",
+      "app/jev_proof.py": "44393b6b12bd7b97398cda04154b7c4b28e576e94b7dc2e14cf1a98b1ae1c6d8",
+      "app/jev_shadow.py": "e1bb41f1141403d127dd43c43733245e488dd5410f001e29d33d68cb68621bd2",
+      "app/jev_topics.py": "b1a55eb20824f39ced6c73c7deb3445a2d383e0afe47e5c73cb8cc0824149b9f",
+      "app/organization.py": "5d3aa3dac391a1a08a44b6e2fe230da737ecb6743436ea92b9da8a05785f8ba5",
+      "app/organization_edits.py": "aa9004d4ccd54423a1a0e0c285cfd8cb6e84a918300742ea9bbf80abd4e38e0a",
+      "app/pdf_thumbnail.py": "415ee7f0f7a4269ee9d188eae087fd2f5c44daf0a5d8ed4c15bbf544d95175d1",
+      "app/previews.py": "afb63525d3e0b6b60eb03d803d600ed5dd437a66f7cf0a231410c9c25642d85b",
+      "app/rebuild.py": "1294a05cb27332792b01c9c23cfbe8be120b9a9c8fe7469a783f1023f1e418ce",
+      "app/relationships.py": "17df3a18eb5a1417e766e7d980d3aedaa8dbcbc9c1c1429f50bcdeafa4eb9265",
+      "app/retry.py": "fa3f66da9d9c432e241a0fbb0d5735eb816a7a64c3457551a49c6c3a6647c9ee",
+      "app/search.py": "39800e7acac33e1772c127385c2c2b72c7b9d531c04208b10165dc8a4f3bab29",
+      "app/search_metrics.py": "563d4a851db7967f03ae0685629ccb0ae892e61342d375491626aac833b51105",
+      "app/search_projection.py": "c045ce50513b7dcf046800c99025a76d19e4b9bddbc1faffc17fc3ff018d129a",
+      "app/server.py": "f400f0d546adcf5aa3230317c74955a28bc47b5afdd63c464316aa9d5a641b76",
+      "app/storage.py": "ee6ee3f6b9f1f53d960a744aaa066f54178dd25ea53b6228e9094dfe7e6ce6a2",
+      "app/torch_quantization.py": "5a991a463fd956849e09f6ed444150f638a7536cf65f4df439ca858bef856755",
+      "app/ui.py": "bf3c956f23568fb84ad57ef72469ea7f1986d4d639e19210b0c96a93620aec07"
+    }
+  },
+  "executed_runner_sha256": {
+    "benchmarks/runtime.py": "7114f52668612ab70eabe8894ab62e3069fd457f1656e2424db9c4ddc873d512",
+    "benchmarks/supplemental.py": "dc752c33d356857fda353a62b83495108409196ba980d299f0644cc5c589887b",
+    "benchmarks/native_vision.py": "f88d2fd4e37785a3993cf9944b41be56a5d15453b2c750e19eaabdba7f22f760"
+  },
+  "raw_reports": {
+    "current": "outputs/performance-plan-review/native-followup/current/results.json",
+    "baseline": "outputs/performance-plan-review/native-followup/baseline/results.json"
+  },
+  "configuration_parameterization": {
+    "description": "After all measurements completed, only CLI configuration parameterization was added: --reference-pair and --historical-source replace the identical recorded session paths. Timing, fixture generation, model calls, preprocessing and idle observation logic did not change. No application source changed.",
+    "reference_pair": "outputs/performance-plan-review/paired-final/current/supplemental/results.json",
+    "historical_source": {
+      "path": "/private/tmp/symbiknow-baseline-qwqgchyv",
+      "commit": "a08db69e46d8308de11f89897340bbf67309a300"
+    },
+    "executed_runner_sha256": {
+      "benchmarks/runtime.py": "7114f52668612ab70eabe8894ab62e3069fd457f1656e2424db9c4ddc873d512",
+      "benchmarks/supplemental.py": "dc752c33d356857fda353a62b83495108409196ba980d299f0644cc5c589887b",
+      "benchmarks/native_vision.py": "f88d2fd4e37785a3993cf9944b41be56a5d15453b2c750e19eaabdba7f22f760"
+    },
+    "maintained_runner_sha256": {
+      "benchmarks/runtime.py": "6eef02154ff0c7d92f861c2f4c6a525fc3c113a7a3828a3b3822e19858a72fce",
+      "benchmarks/supplemental.py": "dc752c33d356857fda353a62b83495108409196ba980d299f0644cc5c589887b",
+      "benchmarks/native_vision.py": "533ffda0d8aa2f0511f8c640d124a2e189012514b7bffc2dcb68eab5372ad3be"
+    },
+    "executed_runner_snapshot_directory": "outputs/performance-plan-review/native-followup/executed-runners"
+  },
+  "findings": [
+    "All ten native pages have identical archived/current tensors, dtypes, strides, masks and contiguity. All resident comparison vector cosines are 1.0.",
+    "Counterbalanced resident measurements do not reproduce a regression from nested image preprocessing. Actual preprocessing is tens of milliseconds per complete native-document pass.",
+    "Whole ingestion timing changes direction across backend orders. First pair native PDF: baseline 10.195s/current 17.088s. Reverse probe: current 13.135s/baseline 22.741s. The observed variation does not establish a stable source-attributed regression or a robust PDF gain; no thermal or power cause was measured.",
+    "Natural idle unloads both backends after approximately 60 seconds with active MPS zero. Current bounded normalized vectors remain within declared budgets; explicit forced cleanup clears them. Host RSS is separately recorded and does not fall materially merely because MPS weights unload."
+  ],
+  "failures": {
+    "current": [],
+    "baseline": []
+  }
+}

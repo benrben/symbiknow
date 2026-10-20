@@ -1,6 +1,0 @@
-{
-  "source": "https://scikit-image.org/docs/0.25.x/api/skimage.data.html",
-  "tag": "v0.25.2",
-  "base": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/",
-  "note": "Standard scikit-image sample photos; see source per-image credits. No private library images."
-}

@@ -1,5 +1,0 @@
-{
-  "int8_query_float32_photos": 10,
-  "float32_query_int8_photos": 10,
-  "min_photo_cosine": 0.9998561143875122
-}

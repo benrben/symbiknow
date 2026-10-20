@@ -1,0 +1,1490 @@
+{
+  "manifest": {
+    "git_head": "a08db69e46d8308de11f89897340bbf67309a300",
+    "source_sha256": {
+      "app/server.py": "f400f0d546adcf5aa3230317c74955a28bc47b5afdd63c464316aa9d5a641b76",
+      "app/search.py": "39800e7acac33e1772c127385c2c2b72c7b9d531c04208b10165dc8a4f3bab29",
+      "app/storage.py": "ee6ee3f6b9f1f53d960a744aaa066f54178dd25ea53b6228e9094dfe7e6ce6a2",
+      "app/ingest.py": "bf32c90088f75e7b43fd1bbd69cdc01ee9e3aa539ce655181b982af4a15cd459",
+      "app/embeddings.py": "45b50ea6dd7d8e9bd1cc1288d4114f5ceb0e96a068ae04a88dc3a67053603684",
+      "app/organization.py": "5d3aa3dac391a1a08a44b6e2fe230da737ecb6743436ea92b9da8a05785f8ba5",
+      "app/jev.py": "f43c9e69a122cb457ba323d34e882f42d958488a77ff28aa0fa7507addf92f5f",
+      "app/jev_proof.py": "44393b6b12bd7b97398cda04154b7c4b28e576e94b7dc2e14cf1a98b1ae1c6d8",
+      "app/jev_numeric.py": "66d973a47e1517ba106a5115236b30a5721ff86e06d15a903ccde7062d28754d",
+      "app/rebuild.py": "1294a05cb27332792b01c9c23cfbe8be120b9a9c8fe7469a783f1023f1e418ce",
+      "app/ui.py": "bf3c956f23568fb84ad57ef72469ea7f1986d4d639e19210b0c96a93620aec07",
+      "scripts/benchmark-organization.py": "5384ac5466c1a66b5a208a588e4fa5fcc47870bffb1aa45dcebd8a72b1e63d4c",
+      "scripts/benchmark-review8.py": "2e73424b55a0d1838878df28a0d42241040bdb7bc9e0996742e11a2da541817e"
+    },
+    "limitations": [
+      "Synthetic isolated corpora; no live-library latency/capacity claim.",
+      "Model weights came from the existing local cache: cold means process/runtime cold, not first download or cold disk cache.",
+      "Main and supplemental timings ran sequentially; other user applications were not stopped.",
+      "Warm search modes were additionally shuffled/interleaved on a second 31-document corpus; use that comparison for modes.",
+      "Stage spans can be nested; do not add all raw trace timings.",
+      "Provider benchmarks used only synthetic evidence, three fresh answer calls and three single-document organization trials.",
+      "Rebuild contention uses real OCFL/LanceDB but deterministic vectors and mocked provider decisions.",
+      "HTTP measurements use in-process ASGI routes, excluding TCP/MCP transport and browser rendering.",
+      "No production 100k-document database, full 100k rebuild, multiuser soak, or exhaustive format/branch coverage was measured."
+    ],
+    "benchmark_harness_adjustments": [
+      "Legacy rebuild benchmark expected 40 matches from default compact response. Initial attempt stopped on that assertion before rebuild. Updated only the copied benchmark to request detail=full for its 40-result workload; pagination remains measured separately.",
+      "Original model smoke benchmark uses obsolete eager-model assumptions; new runner times actual lazy inference and production isolated conversion path.",
+      "Second legacy rebuild attempt encountered the current server's explicit library-changing retry response. Third runner records these separately from successful requests instead of aborting or treating them as successful latency samples."
+    ]
+  },
+  "timings": [
+    {
+      "operation": "Organization text-candidate preparation \u2014 100,000 documents / 100,000 named projects",
+      "n": 1,
+      "median_seconds": 47.812,
+      "min_seconds": 47.812,
+      "max_seconds": 47.812,
+      "scope": "Synthetic scaling test, three passages/document. Excludes database, extraction, model inference, hosted Jev and persistence.",
+      "source": "organization-100000-100000.json",
+      "raw": {
+        "phase": "prose_paths only; synthetic corpus",
+        "projects": 100000,
+        "documents": 100000,
+        "passages_per_document": 3,
+        "input_text_bytes": 60715332,
+        "assigned_documents": 100000,
+        "feature_budget": 8192,
+        "centroid_budget": 128,
+        "distinct_folder_labels": 100000,
+        "input_seconds": 0.244,
+        "candidate_seconds": 47.812,
+        "process_peak_rss_mib": 453.89,
+        "python": "3.12.15",
+        "platform": "darwin",
+        "limits": "Excludes LanceDB vectors, extraction, model memory, Jev calls, disk persistence and end-to-end rebuild; no quality labels."
+      },
+      "needs_optimization": "At scale",
+      "what_to_do": "Profile and reuse repeated project-scope/text cleaning work; rebuild only changed profiles. Consider a Rust helper only after measuring the remaining CPU hotspot."
+    },
+    {
+      "operation": "Organization text-candidate preparation \u2014 100,000 documents / 0 named projects",
+      "n": 1,
+      "median_seconds": 24.84,
+      "min_seconds": 24.84,
+      "max_seconds": 24.84,
+      "scope": "Synthetic scaling test, three passages/document. Excludes database, extraction, model inference, hosted Jev and persistence.",
+      "source": "organization-100000-0.json",
+      "raw": {
+        "phase": "prose_paths only; synthetic corpus",
+        "projects": 0,
+        "documents": 100000,
+        "passages_per_document": 3,
+        "input_text_bytes": 61970166,
+        "assigned_documents": 100000,
+        "feature_budget": 8192,
+        "centroid_budget": 128,
+        "distinct_folder_labels": 2,
+        "input_seconds": 0.19,
+        "candidate_seconds": 24.84,
+        "process_peak_rss_mib": 683.98,
+        "python": "3.12.15",
+        "platform": "darwin",
+        "limits": "Excludes LanceDB vectors, extraction, model memory, Jev calls, disk persistence and end-to-end rebuild; no quality labels."
+      },
+      "needs_optimization": "At scale",
+      "what_to_do": "Profile and reuse repeated project-scope/text cleaning work; rebuild only changed profiles. Consider a Rust helper only after measuring the remaining CPU hotspot."
+    },
+    {
+      "operation": "Organization rebuild with concurrent reads \u2014 79 documents, total",
+      "n": 1,
+      "median_seconds": 20.473470958066173,
+      "min_seconds": 20.473470958066173,
+      "max_seconds": 20.473470958066173,
+      "scope": "Real OCFL/LanceDB; deterministic fixture vectors and mocked Jev. Includes contention from continuous searches/listings.",
+      "source": "rebuild-benchmark.json",
+      "raw": {
+        "files": 79,
+        "rebuild_wall_seconds": 20.473470958066173,
+        "compact_first_page_79": {
+          "count": 3,
+          "min_ms": 1826.4086249982938,
+          "p50_ms": 1850.3303329925984,
+          "p95_ms": 1850.3303329925984,
+          "max_ms": 1862.2047499520704
+        },
+        "compact_continuation_79": {
+          "count": 3,
+          "min_ms": 862.8858330193907,
+          "p50_ms": 925.6088749971241,
+          "p95_ms": 925.6088749971241,
+          "max_ms": 941.3176249945536
+        },
+        "model": "deterministic fixture vectors; organization mocked",
+        "real_components": [
+          "OCFL originals",
+          "LanceDB retrieval/publication",
+          "full reset/rebuild worker"
+        ],
+        "idle_keyword": {
+          "count": 5,
+          "min_ms": 877.1825840231031,
+          "p50_ms": 886.1395419808105,
+          "p95_ms": 887.5921670114622,
+          "max_ms": 937.4850000021979
+        },
+        "active_keyword": {
+          "count": 4,
+          "min_ms": 1131.9908330915496,
+          "p50_ms": 1264.7217505145818,
+          "p95_ms": 1393.3537090197206,
+          "max_ms": 4413.353500072844
+        },
+        "active_keyword_retry_required": {
+          "count": 10,
+          "min_ms": 1134.3956249766052,
+          "p50_ms": 1185.1231044856831,
+          "p95_ms": 1252.326791989617,
+          "max_ms": 1292.9327499587089
+        },
+        "active_keyword_attempts": 14,
+        "active_keyword_retry_count": 10,
+        "active_library": {
+          "count": 14,
+          "min_ms": 7.859166944399476,
+          "p50_ms": 33.10662449803203,
+          "p95_ms": 34.45870894938707,
+          "max_ms": 46.93195899017155
+        },
+        "reset_clear_ms": 3368.1703750044107,
+        "rebuild_completed": 79,
+        "limits": "Direct backend requests, not browser/network/provider latency; no real-model or live 79-file timing claim."
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype staged organization updates with a brief atomic publication step; shorten lock holds and measure retry frequency. Preserve freshness validation."
+    },
+    {
+      "operation": "Index one-page PNG \u2014 first image",
+      "n": 1,
+      "median_seconds": 15.91240779205691,
+      "min_seconds": 15.91240779205691,
+      "max_seconds": 15.91240779205691,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "ingest_france.png",
+        "n": 1,
+        "median_seconds": 15.91240779205691,
+        "min_seconds": 15.91240779205691,
+        "max_seconds": 15.91240779205691
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Benchmark reusable conversion workers and fewer text/vision model reloads, with bounded memory and unchanged extraction quality."
+    },
+    {
+      "operation": "Index one-page PNG \u2014 repeated workload",
+      "n": 1,
+      "median_seconds": 15.762226375052705,
+      "min_seconds": 15.762226375052705,
+      "max_seconds": 15.762226375052705,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "ingest_repeat_france.png",
+        "n": 1,
+        "median_seconds": 15.762226375052705,
+        "min_seconds": 15.762226375052705,
+        "max_seconds": 15.762226375052705
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Benchmark reusable conversion workers and fewer text/vision model reloads, with bounded memory and unchanged extraction quality."
+    },
+    {
+      "operation": "Index one-page scanned PDF \u2014 first PDF",
+      "n": 1,
+      "median_seconds": 15.570748458034359,
+      "min_seconds": 15.570748458034359,
+      "max_seconds": 15.570748458034359,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "ingest_france.pdf",
+        "n": 1,
+        "median_seconds": 15.570748458034359,
+        "min_seconds": 15.570748458034359,
+        "max_seconds": 15.570748458034359
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Benchmark reusable conversion workers and fewer text/vision model reloads, with bounded memory and unchanged extraction quality."
+    },
+    {
+      "operation": "Index one-page scanned PDF \u2014 repeated workload",
+      "n": 1,
+      "median_seconds": 14.266565833007917,
+      "min_seconds": 14.266565833007917,
+      "max_seconds": 14.266565833007917,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "ingest_repeat_france.pdf",
+        "n": 1,
+        "median_seconds": 14.266565833007917,
+        "min_seconds": 14.266565833007917,
+        "max_seconds": 14.266565833007917
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Benchmark reusable conversion workers and fewer text/vision model reloads, with bounded memory and unchanged extraction quality."
+    },
+    {
+      "operation": "Store and index 24 short text files \u2014 total",
+      "n": 1,
+      "median_seconds": 12.984634000109509,
+      "min_seconds": 12.984634000109509,
+      "max_seconds": 12.984634000109509,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "ingest_24_text_documents_total",
+        "n": 1,
+        "median_seconds": 12.984634000109509,
+        "min_seconds": 12.984634000109509,
+        "max_seconds": 12.984634000109509
+      },
+      "needs_optimization": "Medium",
+      "what_to_do": "Benchmark bounded batches across small files for embeddings and index publication; retain per-file commit and version checks."
+    },
+    {
+      "operation": "Index 10-page text PDF \u2014 20 text/visual chunks",
+      "n": 1,
+      "median_seconds": 11.685768625000492,
+      "min_seconds": 11.685768625000492,
+      "max_seconds": 11.685768625000492,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "ingest_native-10-pages.pdf",
+        "n": 1,
+        "median_seconds": 11.685768625000492,
+        "min_seconds": 11.685768625000492,
+        "max_seconds": 11.685768625000492
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Benchmark reusable conversion workers and fewer text/vision model reloads, with bounded memory and unchanged extraction quality."
+    },
+    {
+      "operation": "Embedding query \u2014 first inference in new process",
+      "n": 1,
+      "median_seconds": 5.080605042050593,
+      "min_seconds": 5.080605042050593,
+      "max_seconds": 5.080605042050593,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "embedding_query_cold",
+        "n": 1,
+        "median_seconds": 5.080605042050593,
+        "min_seconds": 5.080605042050593,
+        "max_seconds": 5.080605042050593
+      },
+      "needs_optimization": "Medium",
+      "what_to_do": "Offer optional model prewarming and tune idle retention; measure startup latency against the extra retained memory."
+    },
+    {
+      "operation": "Index tiny Markdown document",
+      "n": 1,
+      "median_seconds": 4.284112291061319,
+      "min_seconds": 4.284112291061319,
+      "max_seconds": 4.284112291061319,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "ingest_policy.md",
+        "n": 1,
+        "median_seconds": 4.284112291061319,
+        "min_seconds": 4.284112291061319,
+        "max_seconds": 4.284112291061319
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Measure worker/import startup separately; prototype a reusable worker or lighter conversion path with equivalent text, headings and provenance."
+    },
+    {
+      "operation": "Index tiny HTML document",
+      "n": 1,
+      "median_seconds": 4.108019375009462,
+      "min_seconds": 4.108019375009462,
+      "max_seconds": 4.108019375009462,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "ingest_policy.html",
+        "n": 1,
+        "median_seconds": 4.108019375009462,
+        "min_seconds": 4.108019375009462,
+        "max_seconds": 4.108019375009462
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Measure worker/import startup separately; prototype a reusable worker or lighter conversion path with equivalent text, headings and provenance."
+    },
+    {
+      "operation": "Organization rebuild reset/clear \u2014 79 documents",
+      "n": 1,
+      "median_seconds": 3.3681703750044107,
+      "min_seconds": 3.3681703750044107,
+      "max_seconds": 3.3681703750044107,
+      "scope": "Controlled rebuild suite; real storage/database, fixture model and mocked organization.",
+      "source": "rebuild-benchmark.json",
+      "raw": null,
+      "needs_optimization": "High",
+      "what_to_do": "Prototype staged organization updates with a brief atomic publication step; shorten lock holds and measure retry frequency. Preserve freshness validation."
+    },
+    {
+      "operation": "Organization text-candidate preparation \u2014 10,000 documents / 0 named projects",
+      "n": 1,
+      "median_seconds": 3.261,
+      "min_seconds": 3.261,
+      "max_seconds": 3.261,
+      "scope": "Synthetic scaling test, three passages/document. Excludes database, extraction, model inference, hosted Jev and persistence.",
+      "source": "organization-10000-0.json",
+      "raw": {
+        "phase": "prose_paths only; synthetic corpus",
+        "projects": 0,
+        "documents": 10000,
+        "passages_per_document": 3,
+        "input_text_bytes": 6170394,
+        "assigned_documents": 10000,
+        "feature_budget": 8192,
+        "centroid_budget": 128,
+        "distinct_folder_labels": 2,
+        "input_seconds": 0.013,
+        "candidate_seconds": 3.261,
+        "process_peak_rss_mib": 249.28,
+        "python": "3.12.15",
+        "platform": "darwin",
+        "limits": "Excludes LanceDB vectors, extraction, model memory, Jev calls, disk persistence and end-to-end rebuild; no quality labels."
+      },
+      "needs_optimization": "At scale",
+      "what_to_do": "Profile and reuse repeated project-scope/text cleaning work; rebuild only changed profiles. Consider a Rust helper only after measuring the remaining CPU hotspot."
+    },
+    {
+      "operation": "Index 59,488-byte plain text \u2014 24 chunks",
+      "n": 1,
+      "median_seconds": 2.0358848749892786,
+      "min_seconds": 2.0358848749892786,
+      "max_seconds": 2.0358848749892786,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "ingest_large.txt",
+        "n": 1,
+        "median_seconds": 2.0358848749892786,
+        "min_seconds": 2.0358848749892786,
+        "max_seconds": 2.0358848749892786
+      },
+      "needs_optimization": "Medium",
+      "what_to_do": "Tune existing embedding batches and batch index writes where safe; compare throughput and peak memory on representative text sizes."
+    },
+    {
+      "operation": "Compact keyword search \u2014 first page of 79-result window",
+      "n": 3,
+      "median_seconds": 1.8503303329925984,
+      "min_seconds": 1.8264086249982938,
+      "max_seconds": 1.8622047499520704,
+      "scope": "Controlled rebuild suite; real storage/database, fixture model and mocked organization.",
+      "source": "rebuild-benchmark.json",
+      "raw": {
+        "count": 3,
+        "min_ms": 1826.4086249982938,
+        "p50_ms": 1850.3303329925984,
+        "p95_ms": 1850.3303329925984,
+        "max_ms": 1862.2047499520704
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Hybrid search \u2014 compact 31-result window (fits one page)",
+      "n": 5,
+      "median_seconds": 1.4852925000013784,
+      "min_seconds": 1.4706787910545245,
+      "max_seconds": 1.5344762919703498,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_hybrid_compact_first_page",
+        "n": 5,
+        "median_seconds": 1.4852925000013784,
+        "min_seconds": 1.4706787910545245,
+        "max_seconds": 1.5344762919703498
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Hybrid search \u2014 full 31-result window",
+      "n": 5,
+      "median_seconds": 1.4345566669944674,
+      "min_seconds": 1.3554118339670822,
+      "max_seconds": 1.5512430410599336,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_hybrid_full_31_results",
+        "n": 5,
+        "median_seconds": 1.4345566669944674,
+        "min_seconds": 1.3554118339670822,
+        "max_seconds": 1.5512430410599336
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Successful keyword search during rebuild \u2014 79 documents / 40-result window",
+      "n": 4,
+      "median_seconds": 1.2647217505145818,
+      "min_seconds": 1.1319908330915496,
+      "max_seconds": 4.413353500072844,
+      "scope": "Controlled rebuild suite; real storage/database, fixture model and mocked organization.",
+      "source": "rebuild-benchmark.json",
+      "raw": {
+        "count": 4,
+        "min_ms": 1131.9908330915496,
+        "p50_ms": 1264.7217505145818,
+        "p95_ms": 1393.3537090197206,
+        "max_ms": 4413.353500072844
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype staged organization updates with a brief atomic publication step; shorten lock holds and measure retry frequency. Preserve freshness validation."
+    },
+    {
+      "operation": "Organization text-candidate preparation \u2014 1,000 documents / 0 named projects",
+      "n": 1,
+      "median_seconds": 1.231,
+      "min_seconds": 1.231,
+      "max_seconds": 1.231,
+      "scope": "Synthetic scaling test, three passages/document. Excludes database, extraction, model inference, hosted Jev and persistence.",
+      "source": "organization-1000-0.json",
+      "raw": {
+        "phase": "prose_paths only; synthetic corpus",
+        "projects": 0,
+        "documents": 1000,
+        "passages_per_document": 3,
+        "input_text_bytes": 615144,
+        "assigned_documents": 1000,
+        "feature_budget": 8192,
+        "centroid_budget": 128,
+        "distinct_folder_labels": 2,
+        "input_seconds": 0.001,
+        "candidate_seconds": 1.231,
+        "process_peak_rss_mib": 209.56,
+        "python": "3.12.15",
+        "platform": "darwin",
+        "limits": "Excludes LanceDB vectors, extraction, model memory, Jev calls, disk persistence and end-to-end rebuild; no quality labels."
+      },
+      "needs_optimization": "At scale",
+      "what_to_do": "Profile and reuse repeated project-scope/text cleaning work; rebuild only changed profiles. Consider a Rust helper only after measuring the remaining CPU hotspot."
+    },
+    {
+      "operation": "Search during rebuild \u2014 rejected with explicit retry-required response",
+      "n": 10,
+      "median_seconds": 1.1851231044856831,
+      "min_seconds": 1.1343956249766052,
+      "max_seconds": 1.2929327499587089,
+      "scope": "Controlled rebuild suite; real storage/database, fixture model and mocked organization.",
+      "source": "rebuild-benchmark.json",
+      "raw": {
+        "count": 10,
+        "min_ms": 1134.3956249766052,
+        "p50_ms": 1185.1231044856831,
+        "p95_ms": 1252.326791989617,
+        "max_ms": 1292.9327499587089
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype staged organization updates with a brief atomic publication step; shorten lock holds and measure retry frequency. Preserve freshness validation."
+    },
+    {
+      "operation": "Organization \u2014 retrieve related-document candidates",
+      "n": 5,
+      "median_seconds": 1.0516217920230702,
+      "min_seconds": 0.9785710839787498,
+      "max_seconds": 1.0843264589784667,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "organization_neighbors",
+        "n": 5,
+        "median_seconds": 1.0516217920230702,
+        "min_seconds": 0.9785710839787498,
+        "max_seconds": 1.0843264589784667
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Reduce OCFL process launches and repeated candidate validation within a protected snapshot; retain authoritative version checks."
+    },
+    {
+      "operation": "Compact keyword search \u2014 continuation of 79-result window",
+      "n": 3,
+      "median_seconds": 0.9256088749971241,
+      "min_seconds": 0.8628858330193907,
+      "max_seconds": 0.9413176249945536,
+      "scope": "Controlled rebuild suite; real storage/database, fixture model and mocked organization.",
+      "source": "rebuild-benchmark.json",
+      "raw": {
+        "count": 3,
+        "min_ms": 862.8858330193907,
+        "p50_ms": 925.6088749971241,
+        "p95_ms": 925.6088749971241,
+        "max_ms": 941.3176249945536
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Hybrid search \u2014 latency per request with four concurrent requests",
+      "n": 20,
+      "median_seconds": 0.9006036870414391,
+      "min_seconds": 0.4782957499846816,
+      "max_seconds": 1.2077504589688033,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_hybrid_4_concurrent_per_request",
+        "n": 20,
+        "median_seconds": 0.9006036870414391,
+        "min_seconds": 0.4782957499846816,
+        "max_seconds": 1.2077504589688033
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Keyword search before rebuild \u2014 79 documents / 40-result window",
+      "n": 5,
+      "median_seconds": 0.8861395419808105,
+      "min_seconds": 0.8771825840231031,
+      "max_seconds": 0.9374850000021979,
+      "scope": "Controlled rebuild suite; real storage/database, fixture model and mocked organization.",
+      "source": "rebuild-benchmark.json",
+      "raw": {
+        "count": 5,
+        "min_ms": 877.1825840231031,
+        "p50_ms": 886.1395419808105,
+        "p95_ms": 887.5921670114622,
+        "max_ms": 937.4850000021979
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Embedding query \u2014 reload after forced unload",
+      "n": 1,
+      "median_seconds": 0.8648267920361832,
+      "min_seconds": 0.8648267920361832,
+      "max_seconds": 0.8648267920361832,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "embedding_reload_query",
+        "n": 1,
+        "median_seconds": 0.8648267920361832,
+        "min_seconds": 0.8648267920361832,
+        "max_seconds": 0.8648267920361832
+      },
+      "needs_optimization": "Medium",
+      "what_to_do": "Offer optional model prewarming and tune idle retention; measure startup latency against the extra retained memory."
+    },
+    {
+      "operation": "Jev organize one document \u2014 three hosted calls per trial",
+      "n": 3,
+      "median_seconds": 0.8210144999902695,
+      "min_seconds": 0.8012174579780549,
+      "max_seconds": 0.8396945830900222,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "jev_organize_one_document",
+        "n": 3,
+        "median_seconds": 0.8210144999902695,
+        "min_seconds": 0.8012174579780549,
+        "max_seconds": 0.8396945830900222
+      },
+      "needs_optimization": "Medium",
+      "what_to_do": "Evaluate whether the three provider calls can be combined without changing decisions; reuse decisions only with matching evidence and policy versions."
+    },
+    {
+      "operation": "Keyword search \u2014 first in initial sequence, eight results",
+      "n": 1,
+      "median_seconds": 0.7854642909951508,
+      "min_seconds": 0.7854642909951508,
+      "max_seconds": 0.7854642909951508,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_keyword_first",
+        "n": 1,
+        "median_seconds": 0.7854642909951508,
+        "min_seconds": 0.7854642909951508,
+        "max_seconds": 0.7854642909951508
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Folder upload \u2014 commit three short files (indexing excluded)",
+      "n": 1,
+      "median_seconds": 0.765579416998662,
+      "min_seconds": 0.765579416998662,
+      "max_seconds": 0.765579416998662,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "upload_folder_3_files",
+        "n": 1,
+        "median_seconds": 0.765579416998662,
+        "min_seconds": 0.765579416998662,
+        "max_seconds": 0.765579416998662
+      },
+      "needs_optimization": "Medium",
+      "what_to_do": "Profile repeated commit and folder-publication work; batch safe metadata updates while preserving per-file durability and idempotent retries."
+    },
+    {
+      "operation": "Semantic search \u2014 first in initial sequence, eight results",
+      "n": 1,
+      "median_seconds": 0.7072258329717442,
+      "min_seconds": 0.7072258329717442,
+      "max_seconds": 0.7072258329717442,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_semantic_first",
+        "n": 1,
+        "median_seconds": 0.7072258329717442,
+        "min_seconds": 0.7072258329717442,
+        "max_seconds": 0.7072258329717442
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Semantic search \u2014 warm initial sequence, eight results",
+      "n": 10,
+      "median_seconds": 0.6825338125345297,
+      "min_seconds": 0.40112666692584753,
+      "max_seconds": 0.7313723750412464,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_semantic_warm_8_results",
+        "n": 10,
+        "median_seconds": 0.6825338125345297,
+        "min_seconds": 0.40112666692584753,
+        "max_seconds": 0.7313723750412464
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Keyword search \u2014 warm initial sequence, eight results",
+      "n": 10,
+      "median_seconds": 0.5774962294963188,
+      "min_seconds": 0.5403786669485271,
+      "max_seconds": 0.7702359160175547,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_keyword_warm_8_results",
+        "n": 10,
+        "median_seconds": 0.5774962294963188,
+        "min_seconds": 0.5403786669485271,
+        "max_seconds": 0.7702359160175547
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Index short plain text \u2014 first file",
+      "n": 1,
+      "median_seconds": 0.5260577499866486,
+      "min_seconds": 0.5260577499866486,
+      "max_seconds": 0.5260577499866486,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "ingest_france.txt",
+        "n": 1,
+        "median_seconds": 0.5260577499866486,
+        "min_seconds": 0.5260577499866486,
+        "max_seconds": 0.5260577499866486
+      },
+      "needs_optimization": "Medium",
+      "what_to_do": "Tune existing embedding batches and batch index writes where safe; compare throughput and peak memory on representative text sizes."
+    },
+    {
+      "operation": "Answer search \u2014 fresh hosted Jev judgment, three results",
+      "n": 3,
+      "median_seconds": 0.510992250056006,
+      "min_seconds": 0.45541087503079325,
+      "max_seconds": 0.5124281250173226,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "answer_search_uncached_provider",
+        "n": 3,
+        "median_seconds": 0.510992250056006,
+        "min_seconds": 0.45541087503079325,
+        "max_seconds": 0.5124281250173226
+      },
+      "needs_optimization": "Medium",
+      "what_to_do": "Improve reuse of existing version-bound judgments; test bounded request batching only if judgment quality is preserved. Remote latency will remain."
+    },
+    {
+      "operation": "Semantic search \u2014 shuffled warm trials, 31 documents / eight results",
+      "n": 10,
+      "median_seconds": 0.45531870803097263,
+      "min_seconds": 0.43020270799752325,
+      "max_seconds": 0.47306816605851054,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "interleaved_search_semantic_31_docs_8_results",
+        "n": 10,
+        "median_seconds": 0.45531870803097263,
+        "min_seconds": 0.43020270799752325,
+        "max_seconds": 0.47306816605851054
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Hybrid search \u2014 shuffled warm trials, 31 documents / eight results",
+      "n": 10,
+      "median_seconds": 0.4546326249255799,
+      "min_seconds": 0.4206744999391958,
+      "max_seconds": 0.46832554205320776,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "interleaved_search_hybrid_31_docs_8_results",
+        "n": 10,
+        "median_seconds": 0.4546326249255799,
+        "min_seconds": 0.4206744999391958,
+        "max_seconds": 0.46832554205320776
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Keyword search \u2014 shuffled warm trials, 31 documents / eight results",
+      "n": 10,
+      "median_seconds": 0.41081199946347624,
+      "min_seconds": 0.3869931660592556,
+      "max_seconds": 0.42162216594442725,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "interleaved_search_keyword_31_docs_8_results",
+        "n": 10,
+        "median_seconds": 0.41081199946347624,
+        "min_seconds": 0.3869931660592556,
+        "max_seconds": 0.42162216594442725
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Hybrid search \u2014 first in initial sequence, eight results",
+      "n": 1,
+      "median_seconds": 0.37295195809565485,
+      "min_seconds": 0.37295195809565485,
+      "max_seconds": 0.37295195809565485,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_hybrid_first",
+        "n": 1,
+        "median_seconds": 0.37295195809565485,
+        "min_seconds": 0.37295195809565485,
+        "max_seconds": 0.37295195809565485
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Hybrid search \u2014 warm initial sequence, eight results",
+      "n": 10,
+      "median_seconds": 0.362337208527606,
+      "min_seconds": 0.35417945904191583,
+      "max_seconds": 0.3812203749548644,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "search_hybrid_warm_8_results",
+        "n": 10,
+        "median_seconds": 0.362337208527606,
+        "min_seconds": 0.35417945904191583,
+        "max_seconds": 0.3812203749548644
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype batched or in-process OCFL head reads to avoid one subprocess per check. Preserve final freshness checks; measure lock waits under concurrency."
+    },
+    {
+      "operation": "Store original bytes only \u2014 france.pdf",
+      "n": 1,
+      "median_seconds": 0.26470062497537583,
+      "min_seconds": 0.26470062497537583,
+      "max_seconds": 0.26470062497537583,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "store_france.pdf",
+        "n": 1,
+        "median_seconds": 0.26470062497537583,
+        "min_seconds": 0.26470062497537583,
+        "max_seconds": 0.26470062497537583
+      },
+      "needs_optimization": "Low / bulk use",
+      "what_to_do": "Keep single-file behavior for now; reduce repeated process startup in bulk operations without removing durability or integrity checks."
+    },
+    {
+      "operation": "Store original bytes only \u2014 france.png",
+      "n": 1,
+      "median_seconds": 0.19120412494521588,
+      "min_seconds": 0.19120412494521588,
+      "max_seconds": 0.19120412494521588,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "store_france.png",
+        "n": 1,
+        "median_seconds": 0.19120412494521588,
+        "min_seconds": 0.19120412494521588,
+        "max_seconds": 0.19120412494521588
+      },
+      "needs_optimization": "Low / bulk use",
+      "what_to_do": "Keep single-file behavior for now; reduce repeated process startup in bulk operations without removing durability or integrity checks."
+    },
+    {
+      "operation": "Folder ZIP \u2014 first export of three files",
+      "n": 1,
+      "median_seconds": 0.19105979101732373,
+      "min_seconds": 0.19105979101732373,
+      "max_seconds": 0.19105979101732373,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "download_folder_zip_first",
+        "n": 1,
+        "median_seconds": 0.19105979101732373,
+        "min_seconds": 0.19105979101732373,
+        "max_seconds": 0.19105979101732373
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Upload API \u2014 commit one short file (indexing excluded)",
+      "n": 3,
+      "median_seconds": 0.19091524998657405,
+      "min_seconds": 0.18805320898536593,
+      "max_seconds": 0.19725429103709757,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "upload_api_single_text",
+        "n": 3,
+        "median_seconds": 0.19091524998657405,
+        "min_seconds": 0.18805320898536593,
+        "max_seconds": 0.19725429103709757
+      },
+      "needs_optimization": "Low / bulk use",
+      "what_to_do": "Keep single-file behavior for now; reduce repeated process startup in bulk operations without removing durability or integrity checks."
+    },
+    {
+      "operation": "PDF page preview \u2014 first render",
+      "n": 1,
+      "median_seconds": 0.18814633297733963,
+      "min_seconds": 0.18814633297733963,
+      "max_seconds": 0.18814633297733963,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "pdf_page_first",
+        "n": 1,
+        "median_seconds": 0.18814633297733963,
+        "min_seconds": 0.18814633297733963,
+        "max_seconds": 0.18814633297733963
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Keep on-demand rendering and existing preview caching; pre-render only if first-preview latency becomes a user problem."
+    },
+    {
+      "operation": "Answer search \u2014 cached judgment, three results",
+      "n": 5,
+      "median_seconds": 0.1875840830616653,
+      "min_seconds": 0.18064541707281023,
+      "max_seconds": 0.19116150005720556,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "answer_search_cached_provider",
+        "n": 5,
+        "median_seconds": 0.1875840830616653,
+        "min_seconds": 0.18064541707281023,
+        "max_seconds": 0.19116150005720556
+      },
+      "needs_optimization": "Local work only",
+      "what_to_do": "Keep the existing judgment cache and optimize local OCFL checks; this workload already makes zero provider calls."
+    },
+    {
+      "operation": "Store original bytes only \u2014 policy.html",
+      "n": 1,
+      "median_seconds": 0.17909520806279033,
+      "min_seconds": 0.17909520806279033,
+      "max_seconds": 0.17909520806279033,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "store_policy.html",
+        "n": 1,
+        "median_seconds": 0.17909520806279033,
+        "min_seconds": 0.17909520806279033,
+        "max_seconds": 0.17909520806279033
+      },
+      "needs_optimization": "Low / bulk use",
+      "what_to_do": "Keep single-file behavior for now; reduce repeated process startup in bulk operations without removing durability or integrity checks."
+    },
+    {
+      "operation": "Store original bytes only \u2014 france.txt",
+      "n": 1,
+      "median_seconds": 0.1718771670712158,
+      "min_seconds": 0.1718771670712158,
+      "max_seconds": 0.1718771670712158,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "store_france.txt",
+        "n": 1,
+        "median_seconds": 0.1718771670712158,
+        "min_seconds": 0.1718771670712158,
+        "max_seconds": 0.1718771670712158
+      },
+      "needs_optimization": "Low / bulk use",
+      "what_to_do": "Keep single-file behavior for now; reduce repeated process startup in bulk operations without removing durability or integrity checks."
+    },
+    {
+      "operation": "Store original bytes only \u2014 policy.md",
+      "n": 1,
+      "median_seconds": 0.16677945794072002,
+      "min_seconds": 0.16677945794072002,
+      "max_seconds": 0.16677945794072002,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "store_policy.md",
+        "n": 1,
+        "median_seconds": 0.16677945794072002,
+        "min_seconds": 0.16677945794072002,
+        "max_seconds": 0.16677945794072002
+      },
+      "needs_optimization": "Low / bulk use",
+      "what_to_do": "Keep single-file behavior for now; reduce repeated process startup in bulk operations without removing durability or integrity checks."
+    },
+    {
+      "operation": "Index maintenance \u2014 31 documents",
+      "n": 1,
+      "median_seconds": 0.1658821249147877,
+      "min_seconds": 0.1658821249147877,
+      "max_seconds": 0.1658821249147877,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "index_maintenance",
+        "n": 1,
+        "median_seconds": 0.1658821249147877,
+        "min_seconds": 0.1658821249147877,
+        "max_seconds": 0.1658821249147877
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Keep maintenance off interactive request paths; remeasure with a substantially larger real index."
+    },
+    {
+      "operation": "Unload embedding model",
+      "n": 1,
+      "median_seconds": 0.16216208296827972,
+      "min_seconds": 0.16216208296827972,
+      "max_seconds": 0.16216208296827972,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "embedding_forced_unload",
+        "n": 1,
+        "median_seconds": 0.16216208296827972,
+        "min_seconds": 0.16216208296827972,
+        "max_seconds": 0.16216208296827972
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Avoid unnecessary unload/reload cycles; preserve memory-pressure cleanup."
+    },
+    {
+      "operation": "Store second version of an existing short file",
+      "n": 1,
+      "median_seconds": 0.15111316600814462,
+      "min_seconds": 0.15111316600814462,
+      "max_seconds": 0.15111316600814462,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "save_new_version",
+        "n": 1,
+        "median_seconds": 0.15111316600814462,
+        "min_seconds": 0.15111316600814462,
+        "max_seconds": 0.15111316600814462
+      },
+      "needs_optimization": "Low / bulk use",
+      "what_to_do": "Keep single-file behavior for now; reduce repeated process startup in bulk operations without removing durability or integrity checks."
+    },
+    {
+      "operation": "HTTP route search \u2014 in-process ASGI, two-document corpus",
+      "n": 5,
+      "median_seconds": 0.15082949993666261,
+      "min_seconds": 0.1379164579557255,
+      "max_seconds": 0.15256400010548532,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "http_asgi_search_warm_2_docs",
+        "n": 5,
+        "median_seconds": 0.15082949993666261,
+        "min_seconds": 0.1379164579557255,
+        "max_seconds": 0.15256400010548532
+      },
+      "needs_optimization": "Backend only",
+      "what_to_do": "Optimize shared OCFL version checks first; the measured HTTP-route overhead is small."
+    },
+    {
+      "operation": "Direct backend search \u2014 same two-document corpus",
+      "n": 5,
+      "median_seconds": 0.14929279207717627,
+      "min_seconds": 0.14857420802582055,
+      "max_seconds": 0.15095695899799466,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "direct_search_warm_2_docs",
+        "n": 5,
+        "median_seconds": 0.14929279207717627,
+        "min_seconds": 0.14857420802582055,
+        "max_seconds": 0.15095695899799466
+      },
+      "needs_optimization": "Backend only",
+      "what_to_do": "Optimize shared OCFL version checks first; the measured HTTP-route overhead is small."
+    },
+    {
+      "operation": "Embedding query \u2014 warm, initial 10-query sequence",
+      "n": 10,
+      "median_seconds": 0.14602699998067692,
+      "min_seconds": 0.13067204097751528,
+      "max_seconds": 0.1584509169915691,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "embedding_query_warm",
+        "n": 10,
+        "median_seconds": 0.14602699998067692,
+        "min_seconds": 0.13067204097751528,
+        "max_seconds": 0.1584509169915691
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Keep existing inference for now; test bounded batching for throughput. Embedding is only about 8% of measured warm hybrid-search time."
+    },
+    {
+      "operation": "Embed four short texts as one batch",
+      "n": 5,
+      "median_seconds": 0.1334679169813171,
+      "min_seconds": 0.1161522080656141,
+      "max_seconds": 0.13971650006715208,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "embedding_document_batch_4",
+        "n": 5,
+        "median_seconds": 0.1334679169813171,
+        "min_seconds": 0.1161522080656141,
+        "max_seconds": 0.13971650006715208
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Keep existing inference for now; test bounded batching for throughput. Embedding is only about 8% of measured warm hybrid-search time."
+    },
+    {
+      "operation": "Embed one short text",
+      "n": 5,
+      "median_seconds": 0.12600400007795542,
+      "min_seconds": 0.05558849999215454,
+      "max_seconds": 0.1679577500326559,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "embedding_document_batch_1",
+        "n": 5,
+        "median_seconds": 0.12600400007795542,
+        "min_seconds": 0.05558849999215454,
+        "max_seconds": 0.1679577500326559
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Keep existing inference for now; test bounded batching for throughput. Embedding is only about 8% of measured warm hybrid-search time."
+    },
+    {
+      "operation": "Document detail \u2014 full",
+      "n": 10,
+      "median_seconds": 0.11349047953262925,
+      "min_seconds": 0.09598887502215803,
+      "max_seconds": 0.11694691691081971,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "document_detail_full",
+        "n": 10,
+        "median_seconds": 0.11349047953262925,
+        "min_seconds": 0.09598887502215803,
+        "max_seconds": 0.11694691691081971
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Reuse the planned batched OCFL access where applicable; keep version and original-byte integrity checks."
+    },
+    {
+      "operation": "Download original plus two-version history",
+      "n": 5,
+      "median_seconds": 0.11121566698420793,
+      "min_seconds": 0.10607866593636572,
+      "max_seconds": 0.14721237495541573,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "download_with_history_2_versions",
+        "n": 5,
+        "median_seconds": 0.11121566698420793,
+        "min_seconds": 0.10607866593636572,
+        "max_seconds": 0.14721237495541573
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Reuse the planned batched OCFL access where applicable; keep version and original-byte integrity checks."
+    },
+    {
+      "operation": "Image thumbnail \u2014 first render",
+      "n": 1,
+      "median_seconds": 0.11116429104004055,
+      "min_seconds": 0.11116429104004055,
+      "max_seconds": 0.11116429104004055,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "image_thumbnail_first",
+        "n": 1,
+        "median_seconds": 0.11116429104004055,
+        "min_seconds": 0.11116429104004055,
+        "max_seconds": 0.11116429104004055
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Keep on-demand rendering and existing preview caching; pre-render only if first-preview latency becomes a user problem."
+    },
+    {
+      "operation": "Document detail \u2014 summary",
+      "n": 10,
+      "median_seconds": 0.07005162496352568,
+      "min_seconds": 0.06818620802368969,
+      "max_seconds": 0.07118283305317163,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "document_detail_summary",
+        "n": 10,
+        "median_seconds": 0.07005162496352568,
+        "min_seconds": 0.06818620802368969,
+        "max_seconds": 0.07118283305317163
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Reuse the planned batched OCFL access where applicable; keep version and original-byte integrity checks."
+    },
+    {
+      "operation": "Delete isolated two-version test document",
+      "n": 1,
+      "median_seconds": 0.047243042034097016,
+      "min_seconds": 0.047243042034097016,
+      "max_seconds": 0.047243042034097016,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "delete_isolated_document",
+        "n": 1,
+        "median_seconds": 0.047243042034097016,
+        "min_seconds": 0.047243042034097016,
+        "max_seconds": 0.047243042034097016
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Download original short file",
+      "n": 10,
+      "median_seconds": 0.041265896055847406,
+      "min_seconds": 0.03981187497265637,
+      "max_seconds": 0.06392520805820823,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "original_download",
+        "n": 10,
+        "median_seconds": 0.041265896055847406,
+        "min_seconds": 0.03981187497265637,
+        "max_seconds": 0.06392520805820823
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Reuse the planned batched OCFL access where applicable; keep version and original-byte integrity checks."
+    },
+    {
+      "operation": "Read one-file version history",
+      "n": 10,
+      "median_seconds": 0.040428917040117085,
+      "min_seconds": 0.03914533311035484,
+      "max_seconds": 0.04133112507406622,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "storage_history",
+        "n": 10,
+        "median_seconds": 0.040428917040117085,
+        "min_seconds": 0.03914533311035484,
+        "max_seconds": 0.04133112507406622
+      },
+      "needs_optimization": "Low",
+      "what_to_do": "Reuse the planned batched OCFL access where applicable; keep version and original-byte integrity checks."
+    },
+    {
+      "operation": "Library listing during rebuild \u2014 79 documents",
+      "n": 14,
+      "median_seconds": 0.03310662449803203,
+      "min_seconds": 0.007859166944399476,
+      "max_seconds": 0.04693195899017155,
+      "scope": "Controlled rebuild suite; real storage/database, fixture model and mocked organization.",
+      "source": "rebuild-benchmark.json",
+      "raw": {
+        "count": 14,
+        "min_ms": 7.859166944399476,
+        "p50_ms": 33.10662449803203,
+        "p95_ms": 34.45870894938707,
+        "max_ms": 46.93195899017155
+      },
+      "needs_optimization": "High",
+      "what_to_do": "Prototype staged organization updates with a brief atomic publication step; shorten lock holds and measure retry frequency. Preserve freshness validation."
+    },
+    {
+      "operation": "Initialize OCFL storage",
+      "n": 1,
+      "median_seconds": 0.024558000033721328,
+      "min_seconds": 0.024558000033721328,
+      "max_seconds": 0.024558000033721328,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "storage_initialize",
+        "n": 1,
+        "median_seconds": 0.024558000033721328,
+        "min_seconds": 0.024558000033721328,
+        "max_seconds": 0.024558000033721328
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Image thumbnail \u2014 cached",
+      "n": 5,
+      "median_seconds": 0.020635541062802076,
+      "min_seconds": 0.01918654190376401,
+      "max_seconds": 0.021058999933302402,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "image_thumbnail_cached",
+        "n": 5,
+        "median_seconds": 0.020635541062802076,
+        "min_seconds": 0.01918654190376401,
+        "max_seconds": 0.021058999933302402
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Read one current OCFL file version",
+      "n": 20,
+      "median_seconds": 0.020352687512058765,
+      "min_seconds": 0.02003033400978893,
+      "max_seconds": 0.021262540947645903,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "storage_head_check",
+        "n": 20,
+        "median_seconds": 0.020352687512058765,
+        "min_seconds": 0.02003033400978893,
+        "max_seconds": 0.021262540947645903
+      },
+      "needs_optimization": "High in aggregate",
+      "what_to_do": "Replace repeated CLI launches with batched or in-process authoritative reads; one call is small, but searches repeat it 16 times."
+    },
+    {
+      "operation": "PDF page preview \u2014 cached",
+      "n": 5,
+      "median_seconds": 0.019845709088258445,
+      "min_seconds": 0.019569500000216067,
+      "max_seconds": 0.02009795804042369,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "pdf_page_cached",
+        "n": 5,
+        "median_seconds": 0.019845709088258445,
+        "min_seconds": 0.019569500000216067,
+        "max_seconds": 0.02009795804042369
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Organization \u2014 vector folder candidates, 31 documents",
+      "n": 5,
+      "median_seconds": 0.009255500044673681,
+      "min_seconds": 0.00893533299677074,
+      "max_seconds": 0.009417542023584247,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "organization_embedding_candidates_31_docs",
+        "n": 5,
+        "median_seconds": 0.009255500044673681,
+        "min_seconds": 0.00893533299677074,
+        "max_seconds": 0.009417542023584247
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Library listing \u2014 first request",
+      "n": 1,
+      "median_seconds": 0.00861987506505102,
+      "min_seconds": 0.00861987506505102,
+      "max_seconds": 0.00861987506505102,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "library_list_first",
+        "n": 1,
+        "median_seconds": 0.00861987506505102,
+        "min_seconds": 0.00861987506505102,
+        "max_seconds": 0.00861987506505102
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Organization \u2014 text folder candidates, 31 documents",
+      "n": 5,
+      "median_seconds": 0.0071419160813093185,
+      "min_seconds": 0.007052541011944413,
+      "max_seconds": 0.43310983304399997,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "organization_prose_paths_31_docs",
+        "n": 5,
+        "median_seconds": 0.0071419160813093185,
+        "min_seconds": 0.007052541011944413,
+        "max_seconds": 0.43310983304399997
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "HTTP route library listing \u2014 in-process ASGI, two documents",
+      "n": 5,
+      "median_seconds": 0.004898332990705967,
+      "min_seconds": 0.00464054208714515,
+      "max_seconds": 0.010913999984040856,
+      "scope": "Supplemental suite: real model, larger inputs; shuffled searches use 31 documents",
+      "source": "supplemental/results.json",
+      "raw": {
+        "label": "http_asgi_library_2_docs",
+        "n": 5,
+        "median_seconds": 0.004898332990705967,
+        "min_seconds": 0.00464054208714515,
+        "max_seconds": 0.010913999984040856
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Fetch document evidence",
+      "n": 10,
+      "median_seconds": 0.003243937448132783,
+      "min_seconds": 0.0028357499977573752,
+      "max_seconds": 0.004120000055991113,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "document_evidence",
+        "n": 10,
+        "median_seconds": 0.003243937448132783,
+        "min_seconds": 0.0028357499977573752,
+        "max_seconds": 0.004120000055991113
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Library listing \u2014 warm",
+      "n": 10,
+      "median_seconds": 0.0031649164739064872,
+      "min_seconds": 0.002958750003017485,
+      "max_seconds": 0.004024208057671785,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "library_list_warm",
+        "n": 10,
+        "median_seconds": 0.0031649164739064872,
+        "min_seconds": 0.002958750003017485,
+        "max_seconds": 0.004024208057671785
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Folder ZIP \u2014 reuse prepared export",
+      "n": 5,
+      "median_seconds": 9.250000584870577e-05,
+      "min_seconds": 8.833303581923246e-05,
+      "max_seconds": 0.0002521249698475003,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "download_folder_zip_cached",
+        "n": 5,
+        "median_seconds": 9.250000584870577e-05,
+        "min_seconds": 8.833303581923246e-05,
+        "max_seconds": 0.0002521249698475003
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    },
+    {
+      "operation": "Organization \u2014 repeated-text detection, 31 documents",
+      "n": 5,
+      "median_seconds": 7.416598964482546e-05,
+      "min_seconds": 7.162499241530895e-05,
+      "max_seconds": 0.0006957500008866191,
+      "scope": "Initial suite: real INT8/MPS, isolated 31-document corpus unless stated",
+      "source": "results.json",
+      "raw": {
+        "label": "organization_common_lines_31_docs",
+        "n": 5,
+        "median_seconds": 7.416598964482546e-05,
+        "min_seconds": 7.162499241530895e-05,
+        "max_seconds": 0.0006957500008866191
+      },
+      "needs_optimization": "Not now",
+      "what_to_do": "Keep current behavior and monitor at larger scale; this measurement does not identify a priority bottleneck."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
-  testDir: "tests",
+  testDir: "tests/e2e",
   testMatch: "quality-gate.spec.ts",
   fullyParallel: true,
   workers: 3,

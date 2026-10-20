@@ -1,0 +1,153 @@
+{
+  "provenance": "Pinned retrieved passage text from external review10 actual HTTP responses. Candidate order replay is deterministic test control; no claim of provider/model retrieval quality.",
+  "query": "Are previous Symbiknow document versions kept using Git?",
+  "document_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8",
+  "version": "v2",
+  "filename": "Symbiknow README.md",
+  "receipts": {
+    "05-new-neutral-git.json": {
+      "sha256": "e7cca3e7d2101f45d7cee5663d8a8f4c62f011690f96cf39275a51df0a42bc63",
+      "args": {
+        "query": "Are previous Symbiknow document versions kept using Git?",
+        "folder": "Symbiknow",
+        "mode": "hybrid",
+        "limit": 8,
+        "evaluate": true,
+        "detail": "full"
+      },
+      "retrieval": {
+        "mode": "hybrid",
+        "score": 0.03109932504594326,
+        "score_kind": "_relevance_score",
+        "rank": 1
+      },
+      "evidence_ids": [
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t5",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t8",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t7",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t4",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t6",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t9"
+      ],
+      "supporting_ids": []
+    },
+    "14-neutral-limit40.json": {
+      "sha256": "3fe39dd4f6b50bcd4642aa59e7e8acc0df18b3fe4d41540ade63b68d1939fc71",
+      "args": {
+        "query": "Are previous Symbiknow document versions kept using Git?",
+        "folder": "Symbiknow",
+        "mode": "hybrid",
+        "limit": 40,
+        "evaluate": true,
+        "detail": "full"
+      },
+      "retrieval": {
+        "mode": "hybrid",
+        "score": 0.03109932504594326,
+        "score_kind": "_relevance_score",
+        "rank": 1
+      },
+      "evidence_ids": [
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t5",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t8",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t4",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t6",
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t7"
+      ],
+      "supporting_ids": [
+        "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0"
+      ]
+    }
+  },
+  "evidence": [
+    {
+      "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t5",
+      "text": "Symbiknow\nSample tool arguments\nSingle and bulk operations both use a\n```\nfiles\n```\narray. Preserve the UUID request ID when retrying an upload. Supply\n```\ndocument_id\n```\nto update a document; otherwise the request ID determines a stable new identity. Identical files with different upload request IDs retain independent identities. Identical updates still get new versions.\n```\n{\n  \"name\": \"upload\",\n  \"arguments\": {\n    \"files\": [{\n      \"filename\": \"notes.txt\",\n      \"mime_type\": \"text/plain\",\n      \"source\": \"/notes/notes.txt\",\n      \"request_id\": \"6be4ba0b-38ac-4b51-9ec1-1d4f1896857d\",\n      \"content_base64\": \"SGVsbG8gU3ltYmlrbm93Cg==\"\n    }]\n  }\n}\n```\nUpdates may include\n```\nexpected_version: \"v1\"\n```\nfor optimistic concurrency. A replay of a committed request returns the original version even after later updates. Reusing that request ID with different bytes or metadata is an error.\n```\n{\"name\":\"download\",\"arguments\":{\"files\":[{\"document_id\":\"DOCUMENT_ID\",\"version\":\"v1\"}]}}\n```\nDownloads include actual\n```\ncontent_base64\n```\n, original filename/MIME/source, the pinned version, whole-file SHA-256, range offset, returned size, and EOF. Continue ranges using that returned version. Use\n```\nhistory: true\n```\non a download item to list all version metadata along with the requested byte range.\n```\n{\"name\":\"search\",\"arguments\":{\"query\":\"What did we decide?\",\"mode\":\"hybrid\",\"limit\":8,\"evaluate\":true}}\n```",
+      "basis": "text",
+      "provenance": {
+        "pages": [],
+        "headings": [
+          "Symbiknow",
+          "Sample tool arguments"
+        ]
+      }
+    },
+    {
+      "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t8",
+      "text": "Symbiknow\nProcessing and recovery\nOriginal bytes are committed before conversion/model initialization. The single ingestion worker reconciles committed OCFL heads with LanceDB metadata after startup and when uploads arrive. Indexing retries replace derived chunks, never create file versions. Publication follows complete chunk writes. Search verifies hits against current OCFL heads and excludes old content while a newer version is pending.\nSearch reports worker activity, queued upload items, and known retry counts, rather than a complete stored-file count. Download reports the requested version's indexing status. Superseded relationship endpoints are omitted; affected linked sources are queued for fresh organization when an update is indexed.\nMarkdown, UTF-8 TXT, HTML, PDFs, and common image formats are supported. Docling's existing structural/token chunker preserves headings and page provenance. PDFs include extracted text and page-image representations; images include native visual embeddings and available OCR. Unsupported formats remain downloadable with an explicit\n```\nunsupported\n```\nindexing status. Encrypted PDFs, unavailable model/OCR assets, malformed input, and extraction errors keep originals and report failures.\nJev organization is metadata, never a filesystem move. Full rebuilds prepare shared subject folders from headings, named projects and shared prose topics, then rank memberships with stored chunk embeddings and Jev. Subject paths provide parent/child navigation and descendant filters. Links preserve both endpoint versions and supplied evidence IDs. Judgments are validated against the offered choices and passages. Exact duplicate links are verified with SHA-256, independently of semantic neighbor rank; model passage similarity alone cannot label different files duplicates. Duplicate judgments never merge document identities. Candidate names exclude document types and test boilerplate. Project scope is retained for new topics as well as existing folders. Symmetric related/duplicate links display once per document/version pair; support and contradiction directions remain distinct.\nUse a folder's action menu to delete its organization and move its documents to Unfiled, preserving their history. Use Document actions → Delete document to permanently delete a document and all versions after confirmation. A latest-version guard protects newer uploads from stale selections. Interrupted purges recover at startup; deleted identities cannot be restored by replaying an old upload request.",
+      "basis": "text",
+      "provenance": {
+        "pages": [],
+        "headings": [
+          "Symbiknow",
+          "Processing and recovery"
+        ]
+      }
+    },
+    {
+      "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t7",
+      "text": "Symbiknow\nFile transfer client\n```\nuv run python backend/symbiknow/cli/client.py upload notes.txt photo.png\nuv run python backend/symbiknow/cli/client.py upload notes.txt --document-id DOCUMENT_ID --expected-version v1\nuv run python backend/symbiknow/cli/client.py download DOCUMENT_ID --version v1 --output-dir downloads\nuv run python backend/symbiknow/cli/client.py search \"What did we decide?\" --evaluate\n```\nThe client starts its own stdio server, so stop an existing server using the same data directory first. Prefer an agent's long-lived connection for background indexing. For a transfer-only session use\n```\nbackend/symbiknow/cli/client.py --storage-only upload ...\n```\n. Use\n```\n--data-dir PATH\n```\nbefore the command for an isolated repository.\nFor retries across CLI invocations, pass one\n```\n--request-id UUID\n```\nper input file. Without explicit IDs, a fresh CLI invocation is a fresh upload.\nThe transfer client batches at most two small files per call and uses 256 KiB raw chunks for larger files, with SHA-256 verification and version-pinned downloads. It preserves filenames in metadata and prefixes downloaded filenames with document and version IDs to avoid collisions. It refuses to overwrite an existing output. Partial upload state is kept in\n```\ndata/temp\n```\n; repeat chunks with the same request ID, offset, total size, and whole-file SHA-256 to resume. The default maximum file size is 256 MiB. Completed transfer receipts persist for idempotence.",
+      "basis": "text",
+      "provenance": {
+        "pages": [],
+        "headings": [
+          "Symbiknow",
+          "File transfer client"
+        ]
+      }
+    },
+    {
+      "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t4",
+      "text": "Symbiknow\nAlternative: connect a stdio MCP agent\nUse a long-lived stdio session. Substitute your actual absolute project path:\n```\n{\n  \"mcpServers\": {\n    \"symbiknow\": {\n      \"command\": \"/Users/benreich/Projects/symbiknow/.venv/bin/python\",\n      \"args\": [\"-m\", \"symbiknow.api.mcp\"],\n      \"cwd\": \"/Users/benreich/Projects/symbiknow\",\n      \"env\": {\n        \"SYMBIKNOW_DATA_DIR\": \"/Users/benreich/Projects/symbiknow/data\"\n      }\n    }\n  }\n}\n```\nOnly one server may own a data directory. Each MCP client host has its own message limits; SDK interoperability does not establish the limits of every agent host. Base64 is present in protocol responses. The CLI suppresses it in printed download summaries, but the host must control what enters the agent's context.",
+      "basis": "text",
+      "provenance": {
+        "pages": [],
+        "headings": [
+          "Symbiknow",
+          "Alternative: connect a stdio MCP agent"
+        ]
+      }
+    },
+    {
+      "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t6",
+      "text": "Symbiknow\nSample tool arguments\nModes are\n```\nsemantic\n```\n,\n```\nkeyword\n```\n,\n```\nhybrid\n```\n, and\n```\nanswer\n```\n(hybrid with Jev evaluation). Optional\n```\nfolder\n```\nand\n```\ngroup\n```\nfilters use logical metadata. Results identify the exact document and OCFL version, evidence IDs, passage/page provenance, score kind, and relevance explanation. Jev adds direct/partial/related/unrelated/uncertain judgments and IDs of supplied supporting passages. Pure visual matches have no text answerability claim. Jev may decline to assign a relationship.",
+      "basis": "text",
+      "provenance": {
+        "pages": [],
+        "headings": [
+          "Symbiknow",
+          "Sample tool arguments"
+        ]
+      }
+    },
+    {
+      "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t9",
+      "text": "Symbiknow\nValidate and back up\n```\nuv run pytest -q\nuv run ruff check app backend/symbiknow/cli/client.py tests scripts\n```\nTests exercise real rocfl and LanceDB, actual SDK stdio transfers, historical byte integrity, conflicts/replays, parent-process interruption, indexing recovery, stale hit rejection, formats/provenance, and Jev SDK response validation. Unit retrieval tests use an explicitly labeled injected test embedder; production never uses it. Live model/provider checks are separate from reproducible offline tests.\nLive checks and the repeatable synthetic benchmark:\n```\nuv run python scripts/checks/mcp.py\nuv run python benchmarks/probes/library.py --output benchmark.json\n```\nAfter a large indexing batch, stop the daemon and run LanceDB's built-in maintenance:\n```\nuv run python -c 'from symbiknow.search.index import maintain_index; print(maintain_index(\"data\"))'\n```\nUse your actual data-directory path. This creates scalar indexes, a cosine IVF-SQ index when at least 1,024 chunks exist, and compacts derived tables. New fragments remain searchable before maintenance. ANN trades exact ranking for speed and needs corpus quality measurements; the five-file benchmark uses exact vector scanning.\nStop the server before backing up. Copy the\n**complete data directory**\n(including\n```\nfiles\n```\n,\n```\nindex\n```\n, and\n```\ntemp\n```\n), then restore to a separate directory and compare old and current download hashes. OCFL originals are authoritative; the search index can be rebuilt by removing only the derived\n```\nindex\n```\ndirectory while stopped and restarting. Never remove or rewrite the OCFL files/inventories manually.\nrocfl update commits rename the new version directory then copy root inventory files. A killed Python parent leaves the child rocfl process holding the storage lock so it can finish, which is tested. Killing rocfl itself, power loss, or disk failure during that upstream commit can still require OCFL validation and recovery from backup. No stronger crash durability guarantee is claimed.",
+      "basis": "text",
+      "provenance": {
+        "pages": [],
+        "headings": [
+          "Symbiknow",
+          "Validate and back up"
+        ]
+      }
+    },
+    {
+      "evidence_id": "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t0",
+      "text": "Symbiknow\nOne Python application for local agent file memory. Original bytes and independent document histories live in an OCFL repository managed by\n**rocfl 1.7.0**\n, without Git. LanceDB holds two derived tables. Docling converts and chunks supported files;\n**EmbeddingGemma 2**\nembeds text and native images. Hosted\n**TypeSafe Jev**\njudges evidence and selects logical folders, groups, and versioned relationships.\nThe MCP server exposes exactly\n**upload**\n,\n**download**\n, and\n**search**\n. Files travel as base64 bytes through the official Python MCP SDK, including historical versions. An upload can be stored successfully while indexing is pending or has failed.",
+      "basis": "text",
+      "provenance": {
+        "pages": [],
+        "headings": [
+          "Symbiknow"
+        ]
+      }
+    }
+  ],
+  "limit8_ranked_ids": [
+    "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t5",
+    "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t8",
+    "ee07d919-4fb8-5af5-848e-69efc0e03aa8:v2:t7"
+  ]
+}

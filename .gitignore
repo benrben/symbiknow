@@ -16,6 +16,7 @@ downloads/
 .venv/
 .mcp-venv/
 .uv-cache/
+native/ocfl-reader/target/
 
 # Python caches and coverage
 __pycache__/
@@ -36,12 +37,16 @@ node_modules/
 dist/
 frontend/dist-*/
 *.tsbuildinfo
-frontend/test-results/
+frontend/test-results*/
 frontend/playwright-report/
 
-# Local generated reports and captures; keep reproducible memory research
+# Local generated reports and captures
 *.log
 /output/
 /screenshots/
-/outputs/*
-!/outputs/memory-research/
+/outputs/
+
+# All generated measurements belong outside maintained source
+/artifacts/
+frontend/quality-test-results/
+frontend/mobile-test-results/

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
 const source = await readFile(
-  new URL("../../src/browsePresentation.ts", import.meta.url),
+  new URL("../../src/features/library/presentation.ts", import.meta.url),
   "utf8",
 );
 const { outputText } = ts.transpileModule(source, {
@@ -112,7 +112,7 @@ test("metadata-only cards have no misleading preview and short source prose is p
 const browseURL =
   "data:text/javascript;base64," + Buffer.from(outputText).toString("base64");
 const mapSource = await readFile(
-  new URL("../../src/mapPresentation.ts", import.meta.url),
+  new URL("../../src/features/connections/presentation.ts", import.meta.url),
   "utf8",
 );
 const mapJS = ts
@@ -122,8 +122,8 @@ const mapJS = ts
       module: ts.ModuleKind.ES2022,
     },
   })
-  .outputText.replace('"./browsePresentation"', JSON.stringify(browseURL))
-  .replace("'./browsePresentation'", JSON.stringify(browseURL));
+  .outputText.replace('"../library/presentation"', JSON.stringify(browseURL))
+  .replace("'../library/presentation'", JSON.stringify(browseURL));
 const { currentMapLinks, mapSample, mapGroup, selectedMapLinks } = await import(
   "data:text/javascript;base64," + Buffer.from(mapJS).toString("base64")
 );

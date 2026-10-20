@@ -1,9 +1,0 @@
-{
-  "model": "google/embeddinggemma-2",
-  "device": "mps:0",
-  "dimension": 768,
-  "red_score": 0.7506754399953252,
-  "blue_score": 0.6795440208776068,
-  "red_ranks_first": true,
-  "evidence_basis": "native image pixels, no OCR/caption"
-}

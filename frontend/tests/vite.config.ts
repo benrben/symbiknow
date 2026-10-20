@@ -1,5 +1,5 @@
 import { defineConfig, mergeConfig } from "vite";
-import appConfig from "../vite.config";
+import appConfig from "../vite.config.ts";
 
 export default mergeConfig(
   appConfig,

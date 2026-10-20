@@ -1,0 +1,162 @@
+# Symbiknow architecture
+
+Symbiknow keeps original files and their independent versions in an OCFL repository, then builds a replaceable search index over their content. One Python application owns storage writes, one ingestion worker and the embedding runtime. The human interface and MCP clients share that application.
+
+Symbiknow / Development / Runtime architecture
+
+## Components
+
+| Component | Responsibility |
+| --- | --- |
+| `app/server.py` | MCP transport, validated application configuration, owner lifecycle and ingestion scheduling. |
+| `app/application.py`, `app/contracts.py` | Library-scoped composition, immutable domain results/references, original/evidence interfaces and protected snapshots. |
+| `app/search_service.py`, `app/library_service.py`, `app/transfer_service.py` | Sole search, browse/detail/connections/deletion and upload/download command implementations shared by adapters and jobs. |
+| `app/wire_contracts.py` | Canonical response schemas; generated TypeScript and JSON schema are checked for drift. |
+| `app/storage.py` | Native rocfl 1.7.0 operations for original bytes, metadata, versions, integrity and explicit deletion. |
+| `app/ingest.py` | Docling conversion, OCR, structural chunking, embedding and publication of current-version representations. |
+| `app/embeddings.py` | Pinned model descriptor, guarded index compatibility and one serialized text/vision/idle model owner. |
+| `app/torch_quantization.py` | Pinned TorchAO INT8 group-16 text weight compression with float32 arithmetic on tested MPS. |
+| `app/conversion_manager.py`, `app/conversion_worker.py` | One bounded reusable Docling lane, deadlines, job isolation, parent liveness and failure restart. |
+| `app/extraction_artifacts.py` | Atomic complete Docling artifacts with exact source/configuration dependencies and bounded retention. |
+| `app/retry.py` | Durable per-version indexing backoff and permanent-failure pause. |
+| `app/previews.py` | Shared bounded/coalesced preview work and disk-cache pruning. |
+| `app/cache.py` | Shared dependency keys, entry/byte-aware LRU, bounded in-flight coalescing and private result ownership. |
+| `app/search_projection.py`, `app/search_metrics.py` | Compact result budgets, pagination projection and request instrumentation. |
+| `app/search.py` | LanceDB documents/chunks, keyword/vector/hybrid retrieval, organization filters and stale-hit rejection. |
+| `app/jev.py` | TypeSafe Jev decisions over supplied text evidence and bounded choices. |
+| `app/organization.py` | Representative evidence, boilerplate filtering, project and subject candidates, and stored-vector candidate ranking. |
+| `app/rebuild.py` | Durable selective folder/group/link rebuild requests, progress, skipped outcomes and retry. |
+| `app/organization_edits.py` | Schema-one durable manual folder overrides, atomic publication and recovery. |
+| `app/evaluation.py` | Per-class answerability and pairwise grouping metrics without exact-name scoring. |
+| `app/pdf_thumbnail.py` | Bounded first-page PDF thumbnail subprocess using existing PDFium. |
+| `app/relationships.py` | Presentation keys for symmetric relationships while preserving stored evidence. |
+| `app/ui.py` | Loopback human API, static frontend, previews, connections and deletion routes. |
+| `frontend/src` | React Overview/List/Cards, readable Map/optional Freeform map, focused reader, search, history and confirmations. |
+| `client.py` | Official MCP SDK byte-transfer helper with batching, chunks and integrity checks. |
+
+The dependency graph is pinned in `pyproject.toml` and `uv.lock`. The current implementation adds UI and organization modules beyond the six-module layout in the original developer plan.
+
+## Data layout
+
+`data/files` is managed by rocfl using OCFL 1.1 and the hashed n-tuple storage extension. One document ID identifies one OCFL object. Each committed version contains `original` and `metadata.json`; user filenames remain metadata, rather than filesystem paths controlled by uploads.
+
+`data/index` contains the embedded LanceDB `documents` and `chunks` tables. Document rows record the current storage version, indexed version, completed evidence revision, indexing status and metadata. Earlier source organization columns remain only for bootstrap compatibility. Chunk rows record evidence IDs, text or visual basis, provenance, embedding model and vectors. Schema 2 removes obsolete chunk folder/group columns and their scalar index using Lance metadata commits without copying vector data. Reindexing replaces derived chunks without creating a new storage version.
+
+`data/temp/evidence-revisions` binds completed chunk publications to streamed text/provenance/vector/processing digests. A same-head reindex changes the evidence revision, invalidates dependent automatic organization and continuations, and preserves manual placement. Organization dependencies include every offered neighbor, including rejected link candidates.
+
+`data/temp` holds incoming chunk files and receipts, organization rebuild state, deletion receipts, cached thumbnails and a manual organization revision. Verified original leases use a bounded `temp/transfers` disk cache; request lookup receipts, per-version retry state, organization publication manifests/stages and the checkpoint-bound rebuild journal also live under `temp`. `index/embedding-runtime.json` and any measured compatibility receipt protect vector compatibility. Model assets use the configured Hugging Face cache. Backups must retain the full data directory, including recovery receipts.
+
+## Upload and indexing
+
+Upload validates a file's base64 bytes and request identity, commits it through rocfl, registers the new head and schedules processing. Storage success is returned before indexing or organization must finish. A single worker converts the committed bytes, embeds bounded batches and publishes the document as indexed only after the corresponding chunks are written.
+
+Text uses Docling's structural/token chunker. PDF extraction retains text/structure without keeping Docling page images; visual embeddings render and release one PDFium page at a time. Production conversion is isolated in a bounded child, and vectors spool through small Arrow batches before publication. Images have native visual embeddings and available OCR. OCR failure may still leave a native image searchable. Empty, unsupported and failed extraction outcomes keep original bytes downloadable.
+
+The worker then asks Jev to organize the document and judge links to nearby documents using representative text. Native image vectors contain no text for Jev to inspect; they do not establish a text answer.
+
+## Version and publication rules
+
+Current search checks the indexed version and the committed OCFL head before returning evidence. Uploading v2 immediately invalidates v1 representations for current search, while explicit downloads can still pin v1. Each completed extraction also has a durable evidence revision: bounded Arrow batches hash exact evidence text, canonical provenance, evidence IDs, vectors and extraction/embedding configuration before an fsynced completion receipt binds that revision to the document. A preparing receipt revokes the prior completion before any chunk mutation; an interrupted write cannot be published indexed until a successful retry completes. Re-extraction under the same storage head therefore invalidates earlier automatic decisions. Organization publications bind their source epoch and a compact epoch map for every offered neighbor, including context that did not become a link. Display and filtering validate both; incoming dependencies are invalidated and scheduled through an injected callback without additional provider work during preparation. Legacy empty epochs remain compatible only until the first reindex. Explicit manual placement remains authoritative.
+
+Automatic organization is published through `app/organization_store.py`. A schema 2 fsynced manifest selects one Lance organization table and immutable table version; folders, groups, relationships and the canonical project roster share that publication. The small manifest references an immutable catalog artifact; ordinary placement edits reuse its pointer. A separate 128 MiB catalog cache includes exact-name and identity indexes, so validation does not scan or repeatedly parse the registry. Catalog records are immutable and artifacts remain leased while active consumers or the bounded cache reference them. Readers checkout the selected version on independent handles. Source metadata, evidence text and vectors remain in their existing tables. A narrow initial migration copies earlier organization columns and project records into this owner; the former chunk-filter publisher and repair implementation have been removed.
+
+Additive organization review stages decisions and exact original evidence dependencies durably. Validation streams bounded batches into an IPC artifact, then builds a complete organization-only generation table and its indexes while readers use the published table. Final publication compares the storage mutation token and index/organization/manual revisions under the shared snapshot locks before switching the manifest. Explicit **Reset** instead publishes its initial clear before taxonomy scanning: selected folders/groups/labels become the literal temporary `New` folder when grouping is checked; selected captured manual assignments are removed; selected outgoing and incoming links are removed when links are checked. Unchecked organization and outside scope are preserved. The catalog is rebuilt from unaffected rows, so selected old project names/aliases cannot steer regeneration and `New` is never a project. Each reviewed file then publishes immediately through the same validated organization publisher, making actual filters, lists and maps advance during the job. Files reviewed without an accepted project finish Unfiled; failed files remain New until retry. Originals, hashes and versions are unchanged. Storage changes its durable token before each supported original mutation, so interrupted or superseded work cannot authorize publication.
+
+The manual ledger remains authoritative in display, filtering and relationships. Placements survive reindexing and additive review. Explicit Reset removes only captured assignment revisions; manual edits made after its start always win. Its initial boundary journal first makes the new Lance version/catalog durable, then records the prepared publication and captured manual changes before applying either public fact. Recovery completes that same boundary idempotently; an interruption before preparation rolls back without changing the ledger. A retained reset request marker and checkpoint recheck prevent concurrent starters from clearing already reviewed files again. Per-file decision/evidence receipts precede publication and completion checkpoints, so restart replays a paid decision without a second provider call; final completion revalidates source and all supporting original passages. Invalidated work returns to New and is reported failed; retry leaves already published successes intact. Active older reset jobs whose completed IDs represented unpublished preparation restart selected review through this one progressive path; their inherited manual assignments are conservatively preserved because those jobs never captured assignment revisions and cannot distinguish later user edits. A subsequent explicit new Reset captures and clears its selected prior assignments normally. Terminal checkpoints precede staged-evidence cleanup, with failed paid receipts retained for retry and superseded jobs discarded on a fresh request. Weakly tracked pinned handles lease old generations, including an eight-handle cache; cleanup drops only unleased tables/versions.
+
+Document analysis uses bounded shared caches keyed by exact evidence/provenance, analysis policy and project vocabulary. ProjectNames computes its dependency digest once per immutable catalog. An Aho-Corasick alias matcher is preprocessed with the catalog and scans document context in O(text length + actual alias occurrences), including overlapping aliases. Its single-codepoint normalization uses the pinned CPython regex case tables to preserve the former re.I Unicode and word-boundary policy exactly; text casefold expansion would change that policy. Matcher memory is included in the catalog budget. Corpus clustering also binds the complete affected project scope. Candidate vector aggregation stays in bounded Arrow/NumPy batches. Named folder/group filters use the pinned organization index plus manual exceptions and bounded source-version/evidence validation; an unfiled filter must also scan metadata for newly registered sources. Scope cache entries bind library, published revisions and the authoritative original-mutation revision. Manual placement is read once per bounded overlay batch, avoiding per-document filesystem probes while preserving one ledger snapshot. Organization cache ceilings are 16 MiB for manifest snapshots, 128 MiB for catalog records plus their indexes, 16 MiB each for stable analysis and scope clustering, 8 MiB for scope membership and 4 MiB for naming vocabulary; these are retention ceilings, not measured peak process memory. Very broad scopes still produce membership filters proportional to their identity count and require capacity measurements.
+
+Before upgrading an existing library, retain a stopped-daemon backup of its index and durable `temp` ledgers with the OCFL repository. Rollback uses a matching release and that compatible backup, followed by original/index reconciliation. The current application contains no selectable historical publisher.
+
+The isolated [catalog profile](../benchmarks/organization-catalog-100k.json) covers 1k/10k/100k distinct projects with one alias per project. The 100k case has 2.4 million pattern characters and 222,234 shared-prefix matcher states: cold catalog preparation took 838 ms; warm catalog lookup, identity lookup, full candidate preparation and raw matching had medians of 44.7, 0.334, 24.0 and 6.37 microseconds respectively. Its retained catalog/index footprint was 93.94 MB under the 128 MiB budget; setup-inclusive process high-water memory was 397.59 MB. The first 1k candidate measurement includes a 527 ms initial scikit-learn import; later cold candidate calls were below 0.2 ms. These bounds describe this declared registry shape, not unlimited aliases or maximum-length unrelated names. An oversized catalog remains correct but is not retained by the bounded cache; larger patterns and highly overlapping aliases need their own capacity profile.
+
+The [broad-scope profile](../benchmarks/organization-scope-100k.json) reads the retained 100k-document fixture without original mutations. Overlay reads one authoritative manual-ledger snapshot per bounded batch; it does not resolve/stat that ledger once per document. The original profiled scope construction took 7.86 seconds, including 5.82 seconds in 100k manual lookups. The final maintained profile took 1.96 seconds; its 1.9 MB membership SQL counted 100k matches in 0.155 seconds. Full Library navigation from All to the 50k-document Project scope took 1.43 then 1.20 seconds; a repeated Project page took 0.219 seconds, returning 60 rows with exact totals. These numbers include cProfile instrumentation. Shared aggregate results retain exact group-specific folder counts across folder navigation. The remaining membership SQL scales with matching identities; this measurement supports the declared 100k fixture rather than unlimited scope sizes.
+
+## Runtime boundaries
+
+The HTTP server normally binds to `127.0.0.1:8765`. UI mutations enforce local Host, matching Origin and the `X-Symbiknow-UI` header. HTTP MCP sessions share the owner lock and worker; they do not start a second storage process. A stdio server is an alternative owner and must not run against the same data directory concurrently.
+
+Embeddings run locally. Jev organization and evaluated search send selected text evidence to the configured hosted TypeSafe API. Secrets stay in the local environment; `.env` is not project documentation.
+
+## Resource ownership
+
+Text-only embedding work excludes vision; image work replaces the weights under the same model lock. The example selects INT8 text on MPS, with bfloat16 vision; the supported CPU/CUDA fallback is explicitly unquantized. Idle expiry unloads weights after inference finishes while bounded normalized vectors may remain. Explicit forced unload, heavy conversion and heavy vision job boundaries clear vectors and advance their cache epoch. Heavy OCR conversion first releases cached embedding weights. Runtime descriptors bind model revision, precision, dimensions and preprocessing; configuration changes do not automatically migrate an existing index.
+
+Original transfers use verified version-pinned disk leases. Browser uploads hash incrementally in a worker; ZIP preparation returns a short-lived native download URL. Preview jobs share two workers and eight waiting slots. Jev judgment caches and continuation windows have independent entry/byte budgets. These bound particular allocations; the full extracted structure and library metadata can still grow with content.
+
+## Search presentation and preview ownership — 18 October fixes
+`app/search.py` includes the stored-version `created_at` in retrieval; `SearchService.refresh` refreshes it with current metadata and `search_projection.py` preserves it for compact MCP results. The UI and MCP therefore share timestamp provenance. `frontend/src/searchPresentation.ts` sorts loaded search results by filename, type or timestamp without reretrieval; App owns a search-specific column/direction pair separate from server-paged browse sorting.
+
+App captures the invoking preview control, and DocumentInspector delegates close-focus restoration through its callback. The restoration checks that the opener is visible and connected before falling back to an available Open file control or search. `redesign.css` allows the toolbar to wrap and grow above its 64px minimum. Targeted evidence is recorded in `VALIDATION.md`.
+
+## Source references
+
+The executable behavior is defined in `app/`, `client.py` and `frontend/src/`. `README.md` provides setup and transfer examples, `UI.md` describes human-interface behavior, and `VALIDATION.md` records the measured checks and their limits.
+
+The dated [shared services and performance plan](performance-reuse-plan.md) records implementation phases, evidence and remaining measurement gates. This architecture describes the maintained owners.
+
+## Manual freshness review — 20 October 2026
+
+`ApplicationContext.freshness` is the sole service for user-started document maintenance
+scans. HTTP and the four MCP freshness tools are thin adapters. Ingestion, search,
+Reset and ordinary reads never start a scan. The existing worker interleaves one
+unit of an explicit job with ingestion/rebuild work; storage-only mode runs a worker
+that handles only these explicit jobs and reports unreadable/index-disabled coverage.
+
+`freshness_store.py` owns the schema-3 SQLite ledger under `data/freshness`, with a
+single-active-job constraint, durable checkpoints, paginated findings and revisioned
+review decisions. Transactions publish a comparison, its finding and counters
+together. This directory is durable application data and belongs in consistent
+backups. Copied extracted spans are validated derived evidence; originals remain in
+OCFL. Deletion purges copied scan text before removing index rows so existing deletion
+recovery repeats cleanup. Old findings retain redacted audit metadata.
+
+`Evidence.batches` exposes complete ordered evidence traversal from the existing
+index without vectors or sampling. Exact source offsets anchor each span.
+`freshness_judgments.py` supplies maintenance-specific questions to `jev._call`;
+it does not load another model or create another SDK concurrency owner. A bounded
+100,000-entry successful-result cache binds exact evidence, context, model, policy and
+comparison date. The Jev owner leases up to four reusable SDK clients and cleans them up on shutdown. Freshness packs independent questions by request size, keeps pair-specific probabilities/confidence, and checkpoints successful subrequests before proceeding. Named A/B fields avoid positional ambiguity while the complete document context remains available. Candidate discovery reruns for every explicit scan, including
+unchanged files, because the corpus may contain a new replacement.
+
+Groups of at least eight pairs first run the same subject question; only confidently
+different subjects (0.9 floor) skip detailed review. All others receive the existing
+six checks, with complete document context. Up to two independent context groups
+run concurrently within one service work unit and the shared four-call provider
+bound. Thread-local metrics merge at the coordinator; cache/publication transactions
+retain the same owner. Cancelled jobs remain cancelled, and completed subrequests
+survive failures in other groups. Progress separates searched passages, processed
+candidates, screened-out subjects and detailed reviews.
+
+The service revalidates original heads, derived revisions and focus text before
+publishing or displaying a finding. Result pages share one protected snapshot and
+batched dependency resolution. UTC date changes conservatively mark old findings as
+needing recheck, without model work. Manual folders are not evidence dependencies.
+The generated wire contracts describe progress, findings and reviews. The browser
+uses its existing data client, upload/version guards and original reader; it stores
+no scan text in browser preferences. Limits and unproven quality/capacity targets are
+documented in [document-freshness-design.md](document-freshness-design.md).
+
+## Folder transfer ownership — 19 October 2026
+`app/folder_transfer.py` implements the two additive MCP tools registered by `app/server.py`. Uploads delegate original/version commits to the shared `TransferService.upload`, derive a per-path UUID from a folder request UUID, and apply manual placement through `organization_edits`. Durable folder-request bindings and per-file completion receipts live under `temp/folder-uploads`; retain these with the library for retry semantics. No second storage or indexing path is introduced.
+
+Folder downloads capture a bounded metadata selection under the existing locks and stream verified version-pinned originals into temporary ZIPs. Completed archives, hashes and expiry metadata live under `temp/folder-exports`, survive restart until expiry, and are independent of subsequent document updates. Limits bound file count, source bytes, retained snapshots and response ranges. Empty directories are not represented. `client.py` supplies filesystem traversal and byte transfer on the client side.
+
+
+## Authoritative reads and shared snapshots — 20 October 2026
+
+`Originals` delegates committed metadata and heads to one persistent pinned native rocfl reader. Install it with `scripts/install-ocfl-reader.sh`; application startup rejects an incompatible protocol. It uses the same rocfl 1.7.0 repository API as `rocfl cat`, without an application OCFL parser or cross-request head cache. Requests deduplicate at most 800 references; helpers are bounded to eight library roots and serialize framed requests, restart after death/timeouts and close on shutdown. Explicit 16 MiB response limits split a batch; exceptional historical singleton records stream in bounded 64 KiB frames to request-owned temporary storage. New metadata commits have a 16 MiB serialized ceiling checked after idempotent receipt replay and before original mutation. Original commit, log/list, validation and byte streams still use rocfl for distinct supported work.
+
+Candidate validation and final validation remain separate reads. `SnapshotCoordinator` acquires application write, application index, shared index and cross-process storage snapshot locks in that order. Each distinct original is read once within that protected final snapshot, including link and judgment dependencies; the immutable snapshot becomes unusable when its context ends. Source version and exact evidence revision/content are checked after provider latency. Immutable domain results leave the critical section; HTTP/MCP project private wire objects.
+
+The composition root reads its main environment settings once, validates immutable `ApplicationSettings` and constructs library-owned queues, events, retry/attempt/status state and services. Programmatic settings injection is validated explicitly; switching an isolated library creates new state. Transport aliases do not become domain dependencies. Architecture checks recursively scan application modules for transport imports, unauthorized database/model/native access and retired APIs; CI also verifies generated contracts.
+
+## Reuse, scheduling and browser data
+
+Conversion has one lane with eight active/waiting jobs, at most sixteen jobs per child, a 512 MiB peak-RSS recycle threshold and a 15-second idle lifetime. Heavy PDF/image conversion releases model weights and recycles its child before embedding. Complete successful Docling artifacts retain all structure/coordinates under exact source, converter, OCR and schema identities; atomic publication checks the still-current original under the storage snapshot. Retention is 256 entries/256 MiB. Corrupt or incompatible artifacts recompute through the same converter. Deletion removes document artifacts and prevents late publication.
+
+The model manager remains the sole model owner. Normalized query vectors retain at most 128 entries/1 MiB; document batches retain 64 entries/8 MiB, with 32 in-flight computations. Exact input, full runtime descriptor, effective text/vision mode and an unload epoch bind reuse. Every consumer receives its own vector storage. Fair bounded model scheduling reserves interactive capacity and permits waiting background work after at most four interactive turns. Default text/image batch sizes remain four/one; measured larger batches are experiments, without reduced precision, dimensions or evidence.
+
+`frontend/src/api.ts` owns bounded card/detail reuse and coalesces exact GET and read-only POST requests. Shared work has private cancellation and private response objects. A monotonic client epoch rejects old in-flight responses and old library revisions after invalidation. Source/index/extraction/organization publications refresh cards even when the OCFL version is unchanged; nonfinal upload chunks and search requests do not invalidate content. Retained responses are bounded to 128 entries/8 MiB and in-flight work to 128 entries. Text never enters browser preference storage. Library listing bodies, aggregate views and revision tokens share a protected cross-process snapshot. Listing metadata remains a derived index view; opening detail/search/transfers validates authoritative originals. Global counts and exact group/folder joint counts are reused across folder navigation, with folder scopes derived privately from that revision-bound aggregate. Browse and detail history remain paginated; download history returns explicit `versions_page` metadata and accepts pinned history offsets/limits.
+
+Saved map coordinates with older compact spacing remain a narrow data-format migration consumed by the same `DocumentNode` renderer, with Reflow/Undo preserving manual positions. This is retained user data compatibility, not an alternative domain implementation.

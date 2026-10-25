@@ -18,6 +18,7 @@ import {
   selectedMapLinks,
 } from "../presentation";
 import Markdown from "../../reader/components/Markdown";
+import ConnectionProvenance from "./ConnectionProvenance";
 
 function LinkEvidence(p: {
   link: Link;
@@ -102,6 +103,7 @@ function LinkEvidence(p: {
           {l.relation}
         </dd>
       </dl>
+      <ConnectionProvenance link={l} />
       <button
         className="primary map-evidence-toggle"
         aria-expanded={expanded}

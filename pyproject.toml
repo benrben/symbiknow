@@ -18,6 +18,8 @@ dependencies = [
   "Pillow==12.3.0",
   "starlette==1.7.0",
   "uvicorn==0.54.0",
+  "websockets==16.1.1",
+  "httpx==0.28.1",
   "torchao==0.17.0",
 ]
 

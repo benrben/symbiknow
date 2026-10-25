@@ -113,6 +113,14 @@ def pinned_corpus(tmp_path, monkeypatch):
         def distance_type(self, *args):
             return self
 
+        def nprobes(self, n):
+            assert n == 32
+            return self
+
+        def refine_factor(self, n):
+            assert n == 10
+            return self
+
         def limit(self, n):
             limits.append(n)
             return self

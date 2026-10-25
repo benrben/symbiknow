@@ -83,7 +83,7 @@ async function fixture(page: Page, count = 40) {
     }),
   );
   const requests: any[] = [];
-  await page.route("**/api/search", (route) => {
+  await page.route(/\/api\/(?:search|ask)$/, (route) => {
     requests.push(route.request().postDataJSON());
     return route.fulfill({
       json: {
@@ -107,6 +107,9 @@ async function fixture(page: Page, count = 40) {
       },
     });
   });
+  await page.route("**/api/original-ready?*", (route) =>
+    route.fulfill({ json: { ready: true } }),
+  );
   await page.route("**/api/original?*", (route) =>
     route.fulfill({
       contentType: "text/plain",
@@ -150,38 +153,55 @@ for (const size of [
         .click();
       await expect(page.locator(".react-flow__node-folder")).toHaveCount(9);
       await expect(page.locator(".react-flow__node-document")).toHaveCount(40);
-      const geometry = await page.locator(".canvas").evaluate((el) => {
-        const box = el.getBoundingClientRect();
-        const frames = [...el.querySelectorAll(".react-flow__node-folder")].map(
-          (n) => n.getBoundingClientRect(),
-        );
-        const nodes = [
-          ...el.querySelectorAll(".react-flow__node-document"),
-        ].map((n) => n.getBoundingClientRect());
-        return {
-          zoom: Number(getComputedStyle(el).getPropertyValue("--canvas-zoom")),
-          width: box.width,
-          columns: new Set(frames.map((r) => Math.round(r.x))).size,
-          inside: nodes.every(
-            (r) =>
-              r.left >= box.left - 1 &&
-              r.right <= box.right + 1 &&
-              r.top >= box.top &&
-              r.bottom <= box.bottom,
-          ),
-          overlap: frames.some((a, i) =>
-            frames
-              .slice(i + 1)
-              .some(
-                (b) =>
-                  a.left < b.right - 1 &&
-                  a.right > b.left + 1 &&
-                  a.top < b.bottom - 1 &&
-                  a.bottom > b.top + 1,
-              ),
-          ),
-        };
-      });
+      const measureGeometry = () =>
+        page.locator(".canvas").evaluate((el) => {
+          const box = el.getBoundingClientRect();
+          const frames = [
+            ...el.querySelectorAll(".react-flow__node-folder"),
+          ].map((n) => n.getBoundingClientRect());
+          const nodes = [
+            ...el.querySelectorAll(".react-flow__node-document"),
+          ].map((n) => n.getBoundingClientRect());
+          return {
+            zoom: Number(
+              getComputedStyle(el).getPropertyValue("--canvas-zoom"),
+            ),
+            width: box.width,
+            height: box.height,
+            bounds: box.toJSON(),
+            extent: {
+              left: Math.min(...nodes.map((r) => r.left)),
+              right: Math.max(...nodes.map((r) => r.right)),
+              top: Math.min(...nodes.map((r) => r.top)),
+              bottom: Math.max(...nodes.map((r) => r.bottom)),
+            },
+            columns: new Set(frames.map((r) => Math.round(r.x))).size,
+            inside: nodes.every(
+              (r) =>
+                r.left >= box.left - 1 &&
+                r.right <= box.right + 1 &&
+                r.top >= box.top &&
+                r.bottom <= box.bottom,
+            ),
+            overlap: frames.some((a, i) =>
+              frames
+                .slice(i + 1)
+                .some(
+                  (b) =>
+                    a.left < b.right - 1 &&
+                    a.right > b.left + 1 &&
+                    a.top < b.bottom - 1 &&
+                    a.bottom > b.top + 1,
+                ),
+            ),
+          };
+        });
+      await expect
+        .poll(async () => (await measureGeometry()).inside, {
+          message: JSON.stringify(await measureGeometry()),
+        })
+        .toBe(true);
+      const geometry = await measureGeometry();
       expect(geometry.overlap).toBe(false);
       expect(geometry.inside).toBe(true);
       if (geometry.width >= 848)

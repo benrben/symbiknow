@@ -1,4 +1,8 @@
-import { chooseView, openSearchOptions } from "../support/ui-controls";
+import {
+  chooseView,
+  openSearchOptions,
+  splitReader,
+} from "../support/ui-controls";
 import { test, expect } from "../support/coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -6,7 +10,7 @@ const shots = path.resolve("../artifacts/desktop-redesign");
 async function mutate(page: any, action: string, data: any) {
   const r = await page.request.post("/api/" + action, {
     headers: {
-      Origin: `http://127.0.0.1:${process.env.SYMBIKNOW_UI_PORT || "8766"}`,
+      Origin: `http://127.0.0.1:${process.env.SYMBIKNOW_DEV_PORT || "5174"}`,
       "X-Symbiknow-UI": "1",
     },
     data,
@@ -145,7 +149,7 @@ test("folder tree keyboard, subtree rename, move and durable manual assignment",
   await page.reload();
   const tree = page.getByRole("tree", { name: "Folders", exact: true });
   const root = tree.getByRole("treeitem", {
-    name: "Tree, 1 files",
+    name: "Tree, 1 file",
     exact: true,
   });
   await root.focus();
@@ -153,14 +157,14 @@ test("folder tree keyboard, subtree rename, move and durable manual assignment",
   await expect(root).toHaveAttribute("aria-expanded", "true");
   await root.press("ArrowRight");
   const parent = tree.getByRole("treeitem", {
-    name: "Tree / Parent, 1 files",
+    name: "Tree / Parent, 1 file",
     exact: true,
   });
   await expect(parent).toBeFocused();
   await parent.press("ArrowRight");
   await parent.press("ArrowRight");
   const child = tree.getByRole("treeitem", {
-    name: "Tree / Parent / Child, 1 files",
+    name: "Tree / Parent / Child, 1 file",
     exact: true,
   });
   await expect(child).toBeFocused();
@@ -235,6 +239,7 @@ test("search scope reruns once; view changes reuse judgments; collapsed matches 
   await page
     .getByRole("button", { name: /^All files \d+$/, exact: true })
     .click();
+  await chooseView(page, "Canvas");
   await expect(
     page
       .locator(".canvas")
@@ -356,8 +361,9 @@ test("desktop panes, grid, long Unicode paths and truthful reset failure", async
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBeTruthy();
-    await openSearchOptions(page);
+    await splitReader(page);
     await expect(page.getByLabel("Search mode")).toBeVisible();
+    await openSearchOptions(page);
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Import", exact: true }),
@@ -418,13 +424,19 @@ test("desktop panes, grid, long Unicode paths and truthful reset failure", async
     }),
   );
   await page.reload();
-  await expect(
-    page.getByRole("region", { name: "Jev activity" }),
-  ).toContainText("1 reviewed · 1 skipped · 1 failed");
+  await page
+    .getByRole("button", { name: "Library actions", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Show review status", exact: true })
+    .click();
+  const status = page.getByLabel("Review status", { exact: true });
+  await status.locator("summary").first().click();
+  await expect(status).toContainText("1 reviewed · 1 skipped · 1 failed");
   await page.getByText("View files needing attention", { exact: true }).click();
-  await expect(
-    page.getByRole("region", { name: "Jev activity" }),
-  ).toContainText("failed.md · Jev unavailable");
+  await expect(page.getByLabel("Review status", { exact: true })).toContainText(
+    "failed.md · Jev unavailable",
+  );
   await page.screenshot({ path: path.join(shots, "reset-failure.png") });
 });
 
@@ -587,6 +599,9 @@ test("changed folder parents and growing frames repair positions without overlap
       },
     });
   });
+  await page.route("**/api/neighborhood?*", (route) =>
+    route.fulfill({ json: { documents: docs, links: [] } }),
+  );
   await page.goto("/");
   await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();

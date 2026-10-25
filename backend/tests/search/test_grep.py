@@ -17,7 +17,8 @@ def test_real_grep_flags_and_evidence_mapping():
 
 @pytest.mark.parametrize("command", ['cat /etc/passwd', 'grep -r "cache" /tmp', 'grep -f /etc/passwd', 'grep cache ; touch bad', 'grep cache | cat', 'grep cache > output', 'grep --include=* cache', 'grep -e', 'grep ""', 'grep -FE cache'])
 def test_no_file_or_shell_operands(command):
-    with pytest.raises(ValueError): parse_command(command)
+    with pytest.raises(ValueError):
+        parse_command(command)
 
 def test_substitutions_are_literal_and_cannot_execute(tmp_path):
     marker = tmp_path / "should-not-exist"
@@ -26,12 +27,22 @@ def test_substitutions_are_literal_and_cannot_execute(tmp_path):
     assert not marker.exists()
 
 def test_bad_pattern_and_timeout_are_actionable(monkeypatch):
-    with pytest.raises(ValueError, match="Invalid grep pattern"): rows('grep -E "["', ["text"])
+    with pytest.raises(ValueError, match="Invalid grep pattern"):
+        rows('grep -E "["', ["text"])
     def timeout(*args, **kwargs): raise subprocess.TimeoutExpired(args[0], 3)
     monkeypatch.setattr(subprocess, "run", timeout)
-    with pytest.raises(ValueError, match="too long"): rows('grep "text"', ["text"])
+    with pytest.raises(ValueError, match="too long"):
+        rows('grep "text"', ["text"])
 
-def test_scope_limits_never_silently_truncate(monkeypatch):
-    import symbiknow.search.grep as grep
-    monkeypatch.setattr(grep, "MAX_BYTES", 3)
-    with pytest.raises(ValueError, match="narrower"): rows('grep "a"', ["aaaa"])
+def test_large_scope_streams_past_old_row_limit_and_stops_at_result_window():
+    visits = []
+    def batches():
+        for i in range(170):
+            visits.append(i)
+            yield pa.RecordBatch.from_pylist([
+                {"document_id": str(i * 128 + n), "text": "found" if i == 160 else "absent"}
+                for n in range(128)])
+    result = matching_rows('grep "found"', batches(), 1)
+    assert len(result) == 8
+    assert result[0]["document_id"] == str(160 * 128)
+    assert visits[-1] == 160

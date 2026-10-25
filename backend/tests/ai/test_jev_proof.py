@@ -79,10 +79,66 @@ def test_second_check_retains_disclaimer_and_binds_actual_passage_text():
     assert not accepted and answer["status"] == "no_answer_in_evaluated_candidates"
     assert len(requests) == 2
     assert requests[0]["state"]["documents"] == requests[1]["state"]["documents"]
-    assert (
-        requests[1]["questions"]["cite_0_1"]["instructions"]["target_original_passage"]["text"]
-        == doc["evidence"][1]["text"]
-    )
+    # The citation names its exact versioned target; the bytes live once in state.
+    cite = requests[1]["questions"]["cite_0_1"]["instructions"]
+    target = requests[1]["state"]["documents"][0]["evidence"][1]
+    assert "documents[0].evidence[1]" in cite and target["chunk_id"] in cite
+    assert target["text"] == doc["evidence"][1]["text"] and target["text"] not in cite
+    assert "cannot donate" in requests[1]["state"]["criteria"]["citation"]
+
+
+def test_long_documents_are_judged_on_ranked_windows_within_budget():
+    # Retrieval keeps up to twelve windows per document; eight such documents
+    # used to fail closed before any judgment. Each now enters with its best window.
+    docs = [document(f"d{n}", tuple(f"Document {n} passage {i}. " + "x" * 2300 for i in range(12)))
+            for n in range(8)]
+    requests = []
+    with sdk({"coverage": "complete", "proof_0_0": "answer"}, requests=requests) as client:
+        result = jev.judge_matches("Which passage answers?", docs, client=client)
+    assert result["status"] == "evaluated" and requests
+    sent = requests[0]["state"]["documents"]
+    assert [d["document_id"] for d in sent] == [d["document_id"] for d in docs]
+    assert all(d["evidence"][0]["chunk_id"].endswith(":t0") for d in sent)  # Best rank first.
+    assert sum(len(e["text"]) for d in sent for e in d["evidence"]) <= jev_proof.MAX_CONTEXT_TEXT
+    for original, supplied in zip(docs, sent):
+        assert sum(len(e["text"]) for e in supplied["evidence"]) <= jev_proof.MAX_DOCUMENT_TEXT
+        scope = supplied["context_scope"]
+        assert scope["sampled"] and scope["available_windows"] == 12
+        kept = {e["chunk_id"] for e in supplied["evidence"]}
+        assert kept.isdisjoint(scope["omitted_chunk_ids"])
+        assert len(kept) + len(scope["omitted_chunk_ids"]) == 12
+    judged = result["matches"][0]["jev"]
+    assert judged["status"] == "evaluated" and not judged["evaluated_evidence_complete"]
+    assert judged["context_scope"]["sampled"]
+
+
+def test_windows_are_filled_breadth_first_across_candidates():
+    docs = [document("long", tuple(f"Long {i}. " + "y" * 2300 for i in range(12))),
+            *[document(f"short{n}", (f"Short {n}.",)) for n in range(3)]]
+    fitted = jev_proof.fit_search_windows(docs, "question")
+    assert [len(m["evidence"]) for m in fitted] == [6, 1, 1, 1]  # 16,000 per document.
+    assert [e["evidence_id"] for e in fitted[0]["evidence"]] == [f"long:v1:t{i}" for i in range(6)]
+    assert all("context_scope" not in m for m in fitted[1:])
+
+
+def test_documents_within_budget_are_sent_unchanged():
+    docs = [document(), document("d1", ("Enabled is false.",))]
+    assert jev_proof.fit_search_windows(docs, "Can guests export?") == docs
+
+
+def test_every_question_sent_is_decoded_and_never_repeats_passage_text():
+    requests = []
+    doc = document(texts=("This entire document is fictional.", "The keeper is Noa."))
+    with sdk({"coverage": "missing"}, confidence=0.7, requests=requests) as client:
+        jev.judge_matches("Who is the real keeper?", [doc, document("d1")], client=client)
+    first, verify = requests
+    passages = ["0_0", "0_1", "1_0"]
+    assert set(first["questions"]) == {"coverage", *(f"proof_{p}" for p in passages)}
+    assert set(verify["questions"]) == {"coverage", *(f"cite_{p}" for p in passages)}
+    texts = [e["text"] for d in first["state"]["documents"] for e in d["evidence"]]
+    for request in requests:
+        for question in request["questions"].values():
+            assert not any(text in json.dumps(question) for text in texts)
 
 
 @pytest.mark.parametrize("confidence", [0.7, 0.99])
@@ -134,17 +190,13 @@ def test_partial_and_premise_correction_keep_public_status():
         assert jev.answer_results(result["matches"], result)[1]["status"] == status
 
 
-@pytest.mark.parametrize("mutation", ["duplicate", "wrong_version", "too_many", "too_large"])
-def test_invalid_or_over_budget_evidence_never_reaches_provider(monkeypatch, mutation):
+@pytest.mark.parametrize("mutation", ["duplicate", "wrong_version"])
+def test_invalid_evidence_never_reaches_provider(monkeypatch, mutation):
     d = document()
     if mutation == "duplicate":
         d["evidence"] *= 2
-    elif mutation == "wrong_version":
-        d["evidence"][0]["evidence_id"] = "d0:v0:t0"
-    elif mutation == "too_many":
-        d = document(texts=tuple("claim" for _ in range(13)))
     else:
-        d = document(texts=tuple("x" * 2400 for _ in range(8)))
+        d["evidence"][0]["evidence_id"] = "d0:v0:t0"
 
     def forbidden(*a, **kw):
         pytest.fail("Provider called for invalid context")
@@ -153,6 +205,19 @@ def test_invalid_or_over_budget_evidence_never_reaches_provider(monkeypatch, mut
     result = jev.judge_matches("Who is the keeper?", [d])
     assert result["status"] in {"not_evaluated", "unavailable"}
     assert not jev.answer_results(result["matches"], result)[0]
+
+
+@pytest.mark.parametrize("texts", [tuple(f"claim {i}" for i in range(13)), tuple("x" * 2400 for _ in range(8))],
+                         ids=["too_many", "too_large"])
+def test_over_budget_evidence_is_fitted_never_sent_whole(texts):
+    requests = []
+    with sdk(requests=requests) as client:
+        result = jev.judge_matches("Who is the keeper?", [document(texts=texts)], client=client)
+    assert result["status"] == "evaluated" and requests
+    supplied = requests[0]["state"]["documents"][0]
+    assert len(supplied["evidence"]) <= jev_proof.MAX_PASSAGES
+    assert sum(len(e["text"]) for e in supplied["evidence"]) <= jev_proof.MAX_DOCUMENT_TEXT
+    assert supplied["context_scope"]["omitted_chunk_ids"]
 
 
 def test_cache_covers_uncited_context_versions_and_cannot_be_mutated(monkeypatch):
@@ -211,9 +276,11 @@ def test_large_link_context_retained_with_bounded_claim_pairs():
             source, source["evidence"], neighbors, links_only=True, client=client
         )
     assert result["status"] == "evaluated"
-    assert len(requests) == 1
+    assert len(requests) == 2
     assert all(len(d["evidence"]) == 12 for d in requests[0]["state"]["documents"])
     assert sum(k.startswith("pair_") for k in requests[0]["questions"]) <= 45
+    assert requests[1]["state"]["documents"] == requests[0]["state"]["documents"]
+    assert sum(k.startswith("context_") for k in requests[1]["questions"]) <= 45
 
 
 @pytest.mark.parametrize("passages", [12, 128])

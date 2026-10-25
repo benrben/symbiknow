@@ -236,3 +236,33 @@ def test_legacy_empty_evidence_epoch_only_applies_until_first_reindex(context):
     assert search.get_document_status(root, doc["document_id"])["folder"] == "Legacy"
     reextract(root, doc, "provenance")
     assert search.get_document_status(root, doc["document_id"])["folder"] == ""
+
+
+def test_neighbor_update_reorganizes_dependents_with_a_ready_projection(context):
+    # Reported: an appended decision log hid fifteen dependent decisions as
+    # Unfiled, and nothing ever reviewed them again.
+    from symbiknow.ai import jev
+    from symbiknow.organization import readmodel
+    root, monkeypatch, _ = context
+    monkeypatch.setattr(server, "STORAGE_ONLY", False)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "fixture")
+    source, log = indexed(root, name="plan.txt"), indexed(root, name="log.txt")
+    epoch = search.get_document_status(root, log["document_id"])["evidence_revision"]
+    search.save_organization(root, source["document_id"], "v1", {
+        **decision("Atlas / Plans"), "dependency_evidence_revisions": {log["document_id"]: epoch}})
+    work = server.application().work
+    while jobs := work.claim("ingest", 32):  # Earlier upload work is complete.
+        for job in jobs:
+            work.finish(job, remove=True)
+    readmodel.rebuild(root)
+    assert readmodel.ready(root)
+    reviewed = []
+    monkeypatch.setattr(jev, "organize_document",
+                        lambda document, *a, **k: reviewed.append(document["document_id"]) or decision("Atlas / Fresh"))
+    storage.save_file(root, b"log appended with a new decision", "log.txt", document_id=log["document_id"])
+    for _ in range(4):
+        for job in work.claim("ingest", 32):
+            server.reconcile_once([job["id"]])
+            work.finish(job, remove=True)
+    assert source["document_id"] in reviewed
+    assert search.get_document_status(root, source["document_id"])["folder"] == "Atlas / Fresh"

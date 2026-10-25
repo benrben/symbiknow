@@ -50,7 +50,8 @@ def classify(document, names, client=None):
     )
     probabilities = {name: jev._probability(response, name) for name in descriptions}
     return [
-        name for name, p in probabilities.items() if p >= (0.75 if name in DEFINITIONS else 0.8)
+        name for name, p in probabilities.items()
+        if p >= (jev.TOPIC_PROBABILITY if name in DEFINITIONS else jev.OTHER_TOPIC_PROBABILITY)
     ], dict(
         status="evaluated",
         model=response.model,

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import base64
 import json
-import shutil
+import logging
+import re
 import threading
 import time
 import uuid
@@ -13,12 +14,64 @@ from pathlib import Path
 
 from symbiknow.organization import edits as organization_edits
 from symbiknow.library import storage
+from symbiknow.transfers import exports
 
 MAX_EXPORT_FILES = 1000
 MAX_EXPORT_BYTES = 1024**3
 EXPORT_TTL = 600
 EXPORT_SLOTS = 4
-_EXPORT_LOCK = threading.RLock()
+_EXPORT_LOCK = exports.LOCK
+_UPLOAD_LOCK = threading.RLock()
+
+
+def staged_input(data_dir, identity):
+    if not isinstance(identity, str) or not re.fullmatch(r"[0-9a-f]{64}", identity):
+        raise ValueError("Invalid staged folder upload identity")
+    return Path(data_dir) / "temp" / "folder-upload-jobs" / (identity + ".json")
+
+
+def upload_sources(payload):
+    """Stable original identities, including new files not yet committed."""
+    request = uuid.UUID(payload["request_id"])
+    sources = set()
+    for item in payload["files"]:
+        identity = item.get("document_id")
+        if not identity:
+            relative = "/".join(relative_parts(item["relative_path"])).casefold()
+            file_request = str(uuid.uuid5(request, relative))
+            identity = str(uuid.uuid5(uuid.NAMESPACE_URL, "symbiknow:upload:" + file_request))
+        sources.add(identity)
+    return sources
+
+
+def cleanup_staged(context, *, now=None):
+    """Expire inactive folder input bytes; job and upload receipts stay durable."""
+    from symbiknow.transfers.staging import IDLE_SECONDS
+    now = time.time() if now is None else now
+    removed = 0
+    # The adapter renews input mtime under this lock before retry admission.
+    with context.write_lock:
+        active = context.work.active_inputs("folder-upload")
+        for file in (context.DATA_DIR / "temp" / "folder-upload-jobs").glob("*.json"):
+            if not re.fullmatch(r"[0-9a-f]{64}", file.stem) or file.is_symlink() or file.stem in active:
+                continue
+            try:
+                if now - file.stat().st_mtime >= IDLE_SECONDS:
+                    file.unlink(missing_ok=True)
+                    removed += 1
+            except OSError:
+                logging.getLogger(__name__).warning("Could not expire folder upload %s", file.stem, exc_info=True)
+    return removed
+
+
+def purge_staged_document(data_dir, identity):
+    for path in (Path(data_dir) / "temp" / "folder-upload-jobs").glob("*.json"):
+        try:
+            sources = upload_sources(json.loads(path.read_text()))
+        except (ValueError, KeyError, TypeError, FileNotFoundError):
+            continue
+        if identity in sources:
+            path.unlink(missing_ok=True)
 
 
 def relative_parts(value):
@@ -39,10 +92,10 @@ def relative_parts(value):
     return parts
 
 
-def upload_folder(folder, files, request_id):
+def upload_folder(folder, files, request_id, *, context=None):
     from symbiknow.core.application import current_application
 
-    server = current_application()
+    server = context or current_application()
 
     server.transfers._batch(files)
     root = organization_edits.normalize(folder)
@@ -55,7 +108,7 @@ def upload_folder(folder, files, request_id):
         raise ValueError("Duplicate relative paths in this batch")
     destinations = [organization_edits.normalize(" / ".join([root, *p[:-1]])) for p in paths]
     results = []
-    with server.write_lock:
+    with _UPLOAD_LOCK:
         journal = server.DATA_DIR / "temp" / "folder-uploads" / identity
         binding = journal / "folder.json"
         if binding.exists():
@@ -152,10 +205,10 @@ def _archive_parts(value):
     return clean if clean and clean not in {".", ".."} else "document"
 
 
-def _snapshot(folder):
+def _snapshot(folder, context=None):
     from symbiknow.core.application import current_application
 
-    server = current_application()
+    server = context or current_application()
     from symbiknow.search.index import browse_documents
 
     with server.snapshots.read() as snapshot:
@@ -177,12 +230,12 @@ def _snapshot(folder):
         return result
 
 
-def _create_export(root, folder):
+def _create_export(root, folder, context=None):
     from symbiknow.core.application import current_application
 
-    server = current_application()
+    server = context or current_application()
 
-    rows = _snapshot(folder)
+    rows = _snapshot(folder, server)
     token = str(uuid.uuid4())
     archive_path = root / f"{token}.zip"
     names = set()
@@ -208,15 +261,11 @@ def _create_export(root, folder):
                         + [f"{Path(filename).stem} ({suffix}){Path(filename).suffix}"]
                     )
                 names.add(candidate.casefold())
-                with storage.verified_file(server.DATA_DIR, row["document_id"], row["version"]) as (
-                    source,
-                    _,
-                ):
-                    with (
-                        source.open("rb") as src,
-                        archive.open(candidate, "w", force_zip64=True) as dest,
-                    ):
-                        shutil.copyfileobj(src, dest, length=1024 * 1024)
+                storage.prepare_ranges(server.DATA_DIR, row["document_id"], row["version"])
+                with storage.verified_ranges(server.DATA_DIR, row["document_id"], row["version"]) as (reader, meta):
+                    with archive.open(candidate, "w", force_zip64=True) as dest:
+                        for offset in range(0, meta["size"], server.MAX_CHUNK):
+                            dest.write(reader.read(offset, server.MAX_CHUNK))
                 manifest.append(
                     {
                         "path": candidate,
@@ -235,17 +284,19 @@ def _create_export(root, folder):
             "file_count": len(rows),
             "files": manifest,
         }
-        organization_edits.atomic(root / f"{token}.json", state)
+        with storage.read_snapshot(server.DATA_DIR), _EXPORT_LOCK:
+            exports.validate(server.DATA_DIR, state)
+            organization_edits.atomic(root / f"{token}.json", state)
         return state
     except Exception:
         archive_path.unlink(missing_ok=True)
         raise
 
 
-def download_folder(folder, transfer_id=None, offset=0, length=None):
+def download_folder(folder, transfer_id=None, offset=0, length=None, *, context=None, on_snapshot=None):
     from symbiknow.core.application import current_application
 
-    server = current_application()
+    server = context or current_application()
 
     folder = organization_edits.normalize(folder)
     length = server.MAX_CHUNK if length is None else length
@@ -258,7 +309,23 @@ def download_folder(folder, transfer_id=None, offset=0, length=None):
     if transfer_id is not None:
         transfer_id = server.transfers._request_id(transfer_id)
     root = server.DATA_DIR / "temp" / "folder-exports"
-    with _EXPORT_LOCK:
+    if transfer_id is None:
+        with _EXPORT_LOCK:
+            root.mkdir(parents=True, exist_ok=True)
+            now = time.time()
+            for path in root.glob("*"):
+                if path.suffix in {".zip", ".json", ".tmp", ".pending"} and now - path.stat().st_mtime > EXPORT_TTL:
+                    path.unlink(missing_ok=True)
+            if len(list(root.glob("*.zip"))) + len(list(root.glob("*.pending"))) >= EXPORT_SLOTS:
+                raise ValueError("Four folder exports are retained; reuse a transfer or retry after expiry")
+            reservation = root / (str(uuid.uuid4()) + ".pending")
+            reservation.touch()
+        try:
+            # Existing transfers remain readable during hashing/compression.
+            transfer_id = _create_export(root, folder, server)["transfer_id"]
+        finally:
+            reservation.unlink(missing_ok=True)
+    with storage.read_snapshot(server.DATA_DIR), _EXPORT_LOCK:
         root.mkdir(parents=True, exist_ok=True)
         for path in root.glob("*"):
             if (
@@ -278,7 +345,14 @@ def download_folder(folder, transfer_id=None, offset=0, length=None):
                 raise ValueError(
                     "Four folder exports are retained; reuse a transfer or retry after expiry"
                 )
-            state = _create_export(root, folder)
+            state = _create_export(root, folder, server)
+        try:
+            exports.validate(server.DATA_DIR, state)
+        except (FileNotFoundError, ValueError):
+            exports._discard(root / f"{state['transfer_id']}.json")
+            raise ValueError("An exported file was deleted; restart the folder export") from None
+        if on_snapshot:
+            on_snapshot([item["document_id"] for item in state["files"]])
         if offset > state["size"]:
             raise ValueError("offset is beyond the archive size")
         with (root / f"{state['transfer_id']}.zip").open("rb") as handle:

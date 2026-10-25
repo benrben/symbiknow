@@ -1,4 +1,8 @@
-import { chooseView, setSearchMode, setAnswerChecking } from "../support/ui-controls";
+import {
+  chooseView,
+  setSearchMode,
+  setAnswerChecking,
+} from "../support/ui-controls";
 import { test, expect } from "../support/coverage";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -57,7 +61,7 @@ async function fixture(page: any) {
   };
 }
 
-for (const mode of ["hybrid", "keyword", "semantic"]) {
+for (const mode of ["semantic", "exact", "grep", "ask"]) {
   test(`many folders retain all search matches, ranks and readable judgments in ${mode}`, async ({
     page,
   }) => {
@@ -67,7 +71,7 @@ for (const mode of ["hybrid", "keyword", "semantic"]) {
       route.fulfill({ json: library }),
     );
     const requests: any[] = [];
-    await page.route("**/api/search", (route) => {
+    await page.route(/\/api\/(?:search|ask)$/, (route) => {
       requests.push(route.request().postDataJSON());
       return route.fulfill({
         json: {
@@ -82,9 +86,13 @@ for (const mode of ["hybrid", "keyword", "semantic"]) {
     await page
       .getByRole("button", { name: /^Canvas review \d+$/, exact: true })
       .click();
-    await setSearchMode(page, mode);
-    await setAnswerChecking(page, true);
-    await page.getByLabel("Search your knowledge").fill("Canvasrevieweight");
+    await setSearchMode(page, mode === "ask" ? "semantic" : mode);
+    await setAnswerChecking(page, mode === "ask");
+    await page
+      .getByLabel("Search your knowledge")
+      .fill(
+        mode === "grep" ? "grep -F Canvasrevieweight" : "Canvasrevieweight",
+      );
     await page.getByLabel("Search your knowledge").press("Enter");
     await expect(page.locator(".file-row")).toHaveCount(18);
     const files = await page
@@ -157,6 +165,13 @@ for (const mode of ["hybrid", "keyword", "semantic"]) {
         "#" + (docs.findIndex((d) => d.document_id === card.id) + 1),
       );
     const calls = requests.length;
+    const groups = page.getByRole("navigation", {
+      name: "Folder groups at low zoom",
+    });
+    if (await groups.isVisible())
+      await groups
+        .getByRole("button", { name: /^Topic 0\s*2 matches$/ })
+        .click();
     await page
       .locator(".canvas")
       .getByRole("button", { name: "Collapse Topic 0", exact: true })
@@ -176,7 +191,7 @@ for (const mode of ["hybrid", "keyword", "semantic"]) {
     await page.mouse.wheel(0, 250);
     await expect(viewport).not.toHaveAttribute("style", before!);
     await expect(page.getByLabel("Search your knowledge")).toHaveValue(
-      "Canvasrevieweight",
+      mode === "grep" ? "grep -F Canvasrevieweight" : "Canvasrevieweight",
     );
     expect(requests.length).toBe(calls);
     await expect(
@@ -200,10 +215,19 @@ test("revision churn queues one refresh without canceling a slow search and keep
       json: { ...library, organization_revision: "revision-" + revisions++ },
     }),
   );
+  await page.route("**/api/progress", (route) =>
+    route.fulfill({
+      json: {
+        index_revision: library.index_revision,
+        organization_revision: "revision-" + revisions,
+        processing: false,
+      },
+    }),
+  );
   let releaseFirst!: () => void, releaseNext!: () => void;
   const first = new Promise<void>((resolve) => (releaseFirst = resolve));
   const next = new Promise<void>((resolve) => (releaseNext = resolve));
-  await page.route("**/api/search", async (route) => {
+  await page.route(/\/api\/(?:search|ask)$/, async (route) => {
     const n = ++requests;
     await (n === 1 ? first : next);
     await route.fulfill({

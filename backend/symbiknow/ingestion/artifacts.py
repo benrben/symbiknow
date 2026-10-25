@@ -18,7 +18,7 @@ from symbiknow.core.cache import dependency_key
 
 
 EXTRACTION_SCHEMA = 1
-CONVERTER_REVISION = "docling-structure-2"
+CONVERTER_REVISION = "docling-structure-3-inert-source-office"
 
 
 def extraction_descriptor():

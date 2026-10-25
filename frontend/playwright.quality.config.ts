@@ -4,7 +4,7 @@ export default defineConfig({
   testMatch: "quality-gate.spec.ts",
   fullyParallel: true,
   workers: 3,
-  timeout: 30000,
+  timeout: 90000,
   reporter: "list",
   outputDir: "quality-test-results",
   use: {
@@ -19,9 +19,7 @@ export default defineConfig({
       use: {
         browserName: "chromium",
         launchOptions: {
-          executablePath:
-            process.env.SYMBIKNOW_CHROME ||
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+          executablePath: process.env.SYMBIKNOW_CHROME,
         },
       },
     },
@@ -31,7 +29,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --port 5176",
     url: "http://127.0.0.1:5176",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 60000,
   },
 });

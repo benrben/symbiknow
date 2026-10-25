@@ -58,17 +58,27 @@ def test_agent_facing_contract(tmp_path):
         async with Client(server_parameters(str(tmp_path), storage_only=True)) as client:
             assert "search first" in client.instructions.casefold()
             tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+            for name in (
+                "scan_freshness", "get_freshness_scan", "cancel_freshness_scan",
+                "review_freshness_finding",
+            ):
+                assert name not in tools
+                assert name not in client.instructions
+                response = await client.call_tool(name, {})
+                assert response.is_error
+                assert name in response.content[0].text
             upload_item = tools["upload"].input_schema["properties"]["files"]["items"]
             if "$ref" in upload_item:
                 upload_item = tools["upload"].input_schema["$defs"][upload_item["$ref"].split("/")[-1]]
             assert set(upload_item["required"]) == {"filename", "content_base64"}
             assert "expected_version" in upload_item["properties"]
             mode = tools["search"].input_schema["properties"]["mode"]
-            assert set(mode["enum"]) == {"hybrid", "keyword", "semantic", "answer"}
+            assert set(mode["enum"]) == {"hybrid", "keyword", "semantic", "answer", "grep"}
 
             async def upload(*items):
-                response = await client.call_tool("upload", {"files": list(items)})
-                return response.structured_content["files"]
+                from symbiknow.cli.client import call
+                response = await call(client, "upload", {"files": list(items)})
+                return response["files"]
 
             first = (await upload({"filename": "plan.md", "content_base64": b64("one")}))[0]
             second = (await upload({"filename": "plan.md", "content_base64": b64("two")}))[0]
@@ -104,8 +114,9 @@ def test_agent_facing_contract(tmp_path):
             invalid = await client.call_tool("upload", {"files": [{"filename": "x.txt"}]})
             assert invalid.is_error and "content_base64" in invalid.content[0].text
 
-            result = await client.call_tool("search", {"query": "plan", "folder": "Projects"})
-            assert any("No folder named 'Projects'" in hint for hint in result.structured_content["hints"])
-            assert not any(k.endswith("_seconds") for k in result.structured_content["metrics"])
+            from symbiknow.cli.client import call
+            result = await call(client, "search", {"query": "plan", "folder": "Projects"})
+            assert any("No folder named 'Projects'" in hint for hint in result["hints"])
+            assert not any(k.endswith("_seconds") for k in result["metrics"])
 
     asyncio.run(exercise())

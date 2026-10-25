@@ -40,6 +40,16 @@ test("a context limit is not a negative answer", () => {
   assert.match(message.body, /exceeds the answer-checking limit/);
   assert.match(message.body, /does not mean the answer is missing/);
 });
+test("files withheld for likely credentials are not a negative answer", () => {
+  const message = emptySearchMessage(
+    { status: "not_evaluated", reason: "sensitive_content" },
+    true,
+    false,
+  );
+  assert.equal(message.title, "Answer was not checked");
+  assert.match(message.body, /may contain credentials/);
+  assert.match(message.body, /does not mean the answer is missing/);
+});
 test("unchecked, unavailable and genuine negative judgments stay distinct", () => {
   assert.equal(
     emptySearchMessage({ status: "not_evaluated" }, true, false).title,

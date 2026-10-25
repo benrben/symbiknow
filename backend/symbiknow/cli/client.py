@@ -47,6 +47,25 @@ async def call(session, name: str, arguments: dict, retries: int = 2) -> dict:
             value = response.structured_content
             if not isinstance(value, dict):
                 raise ValueError("MCP server did not return structured content")
+            if name != "get_job" and "job_id" in value:
+                delay = .15
+                while value["status"] not in {"completed", "failed"} or "result" not in value:
+                    await asyncio.sleep(delay)
+                    delay = min(3, delay * 1.5)
+                    detail = arguments.get("detail", "compact") if name in {"search", "ask"} else "full"
+                    value = await call(session, "get_job", {"job_id": value["job_id"], "detail": detail})
+                if value["status"] == "failed" and not value.get("result"):
+                    raise ValueError(value.get("error", "Job failed"))
+                return value["result"]
+            if name in {"download", "upload"}:
+                for i, item in enumerate(value.get("files", [])):
+                    if "job_id" in item:
+                        delay = .15
+                        while item["status"] not in {"completed", "failed"} or "result" not in item:
+                            await asyncio.sleep(delay)
+                            delay = min(3, delay * 1.5)
+                            item = await call(session, "get_job", {"job_id": item["job_id"], "detail": "full"})
+                        value["files"][i] = {**(item.get("result") or {"stored": False, "error": item["error"]}), "index": i}
             return value
         except (OSError, TimeoutError):
             if attempt == retries:
@@ -341,6 +360,10 @@ async def _main(args) -> None:
                 {key: value for key, value in item.items() if key != "content_base64"}
                 for item in result
             ]
+        elif args.command in {"list-documents", "get-taxonomy", "list-jev-decisions", "get-organization-history", "list-jobs"}:
+            options = {key: value for key, value in vars(args).items()
+                       if key not in {"command", "url", "data_dir", "storage_only"} and value is not None}
+            result = await call(session, args.command.replace("-", "_"), options)
         else:
             result = await call(
                 session,
@@ -382,6 +405,19 @@ def main() -> None:
         "--mode", choices=["semantic", "keyword", "hybrid", "answer"], default="hybrid"
     )
     search.add_argument("--evaluate", action="store_true")
+    for name in ("list-documents", "get-taxonomy", "list-jev-decisions", "get-organization-history", "list-jobs"):
+        command = commands.add_parser(name, help="Read bounded library metadata; continue with --cursor")
+        command.add_argument("--limit", type=int, default=50)
+        command.add_argument("--cursor")
+        if name == "list-documents":
+            for option in ("folder", "topic", "project", "status"):
+                command.add_argument("--" + option)
+        elif name == "get-taxonomy":
+            command.add_argument("--dimension", choices=["all", "projects", "folders", "topics", "statuses"], default="all")
+        elif name == "get-organization-history":
+            command.add_argument("document_id")
+        elif name == "list-jobs":
+            command.add_argument("--status", choices=["queued", "running", "completed", "failed"])
     asyncio.run(_main(parser.parse_args()))
 
 

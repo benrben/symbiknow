@@ -40,7 +40,8 @@ test("bounded desktop metadata benchmark", async ({ page }) => {
     .getByRole("button", { name: /^All files \d+$/, exact: true })
     .click();
   start = Date.now();
-  await setSearchMode(page, "keyword");
+  await setSearchMode(page, "exact");
+  await page.getByLabel("Match case", { exact: true }).uncheck();
   await page.getByLabel("Search your knowledge").fill("keep every version");
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(page.locator(".results-list .file-row").first()).toBeVisible();
@@ -52,20 +53,18 @@ test("bounded desktop metadata benchmark", async ({ page }) => {
     page.locator(".react-flow__node-document").first(),
   ).toBeVisible();
   report.canvas_initial_ms = Date.now() - start;
-  await page
-    .getByRole("button", { name: "Load more files", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Next page", exact: true }).click();
   await expect(page.locator(".browse-footer")).toContainText(
-    `Showing 120 of ${Number(process.env.SYMBIKNOW_METADATA_ROWS) + 7}`,
+    `Showing 60 of ${Number(process.env.SYMBIKNOW_METADATA_ROWS) + 7}`,
   );
   await expect(page.locator(".canvas-hint")).toContainText(
     `${Number(process.env.SYMBIKNOW_METADATA_ROWS) + 7} files in this scope`,
   );
   const cards = await page.locator(".react-flow__node-document").count();
-  expect(cards).toBeLessThanOrEqual(100);
+  expect(cards).toBeLessThanOrEqual(60);
   report.rendered_preview_cards = cards;
-  report.loaded_metadata_rows = 120;
-  report.preview_limit = 100;
+  report.loaded_metadata_rows = 60;
+  report.preview_limit = 60;
   start = Date.now();
   await page.getByRole("button", { name: "Zoom in", exact: true }).click();
   report.zoom_interaction_ms = Date.now() - start;

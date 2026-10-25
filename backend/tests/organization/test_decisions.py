@@ -136,12 +136,12 @@ def test_http_and_mcp_share_queue(pending, monkeypatch):
     monkeypatch.setattr(mcp, "application", lambda: context)
     client = TestClient(http.create_app(), base_url="http://127.0.0.1")
     queue = client.get("/api/jev-decisions").json()
-    assert queue == mcp.list_jev_decisions()
+    assert queue == context.decisions.list()
     decision = queue["decisions"][0]
     response = client.post("/api/jev-decision", json={"decision_id": decision["id"], "action": "skip"},
                            headers={"Origin": "http://127.0.0.1", "X-Symbiknow-UI": "1"})
     assert response.status_code == 200 and response.json()["actor"] == "user"
-    link = mcp.list_jev_decisions()["decisions"][0]
+    link = client.get("/api/jev-decisions").json()["decisions"][0]
     assert mcp.resolve_jev_decision(link["id"], "change", "supports")["actor"] == "agent"
     assert client.get("/api/jev-decisions").json()["decisions"] == []
 
@@ -175,9 +175,9 @@ def test_real_stdio_decision_tools_discovery_and_validation(tmp_path):
         async with Client(server_parameters(str(tmp_path / "isolated"), storage_only=True)) as session:
             tools = {tool.name: tool for tool in (await session.list_tools()).tools}
             assert tools["list_jev_decisions"].annotations.read_only_hint
+            assert (await call(session, "list_jev_decisions", {}))["decisions"] == []
             assert not tools["resolve_jev_decision"].annotations.destructive_hint
             assert set(tools["resolve_jev_decision"].input_schema["required"]) == {"decision_id", "action"}
-            assert await call(session, "list_jev_decisions", {}) == {"decisions": [], "has_more": False}
             with pytest.raises(ValueError):
                 await call(session, "resolve_jev_decision", {"decision_id": "missing", "action": "accept"})
     asyncio.run(exercise())
@@ -212,3 +212,18 @@ def test_same_connection_is_one_question_and_skip_covers_both_directions(pending
     assert len(links) == 1
     context.decisions.resolve(links[0]["id"], "skip")
     assert all(p["kind"] == "folder" for p in ApplicationContext(context.DATA_DIR).decisions.list()["decisions"])
+
+
+def test_actionable_queue_fallback_continuation_and_revision_guard(pending):
+    context, _, _, _, _ = pending
+    first = context.decisions.list(limit=1)
+    second = context.decisions.list(limit=1, after=first["next_cursor"])
+    assert len(first["decisions"]) == len(second["decisions"]) == 1
+    assert first["decisions"][0]["id"] != second["decisions"][0]["id"]
+    assert not second["has_more"]
+    context.decisions.resolve(first["decisions"][0]["id"], "skip")
+    with pytest.raises(ValueError, match="restart"):
+        context.decisions.list(limit=1, after=first["next_cursor"])
+    entry = context.catalog.history(first["decisions"][0]["document_id"])["entries"][0]
+    assert entry["action"] == "skip" and entry["actor"] == "user"
+    assert entry["timestamp"] and entry["version"] == "v1"

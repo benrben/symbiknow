@@ -1,3 +1,4 @@
+import { chooseView } from "../support/ui-controls";
 import { test, expect } from "@playwright/test";
 import { fixture, openGuide, audit } from "../support/quality-fixture";
 
@@ -27,13 +28,13 @@ test("reader literal search, keyboard shortcuts, position restoration and paged 
     .locator(".inspector-content")
     .evaluate((el) => el.scrollTop);
   expect(scroll).toBeGreaterThan(1000);
-  await page.getByRole("button", { name: "Read Note 01", exact: true }).click();
+  await page.getByRole("button", { name: "Read Note 01.md", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Note 01.md", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Read Guide", exact: true }).click();
+  await page.getByRole("button", { name: "Read Guide.md", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Resumed · Back to top", exact: true }),
+    page.getByRole("button", { name: "Back to top", exact: true }),
   ).toBeVisible();
   await expect
     .poll(() =>
@@ -42,10 +43,10 @@ test("reader literal search, keyboard shortcuts, position restoration and paged 
     .toBeGreaterThan(scroll - 100);
   await page.getByRole("button", { name: "Next files", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Read Note 69", exact: true }),
+    page.getByRole("button", { name: "Read Note 69.md", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Resumed · Back to top", exact: true })
+    .getByRole("button", { name: "Back to top", exact: true })
     .click();
   await expect
     .poll(() =>
@@ -58,15 +59,20 @@ test("map coverage, filtered files, evidence retry and keyboard focus restoratio
   page,
 }) => {
   const state = await fixture(page);
-  await page.getByRole("button", { name: "Map", exact: true }).click();
+  await chooseView(page, "Map");
   await expect(page.locator(".map-context-bar")).toContainText("60 of 70");
   await page.getByRole("button", { name: "Load more", exact: true }).click();
-  await expect(page.locator(".map-context-bar")).toContainText("70 of 70");
+  await expect(page.locator(".map-context-bar")).toContainText("10 of 70");
   await page.getByRole("searchbox", { name: "Find map files" }).fill("Note 69");
   await expect(page.locator(".map-file-node")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Clear map search", exact: true })
     .click();
+  await chooseView(page, "List");
+  await page
+    .getByRole("button", { name: "Previous page", exact: true })
+    .click();
+  await chooseView(page, "Map");
   const source = page.getByRole("button", {
     name: "Select map file Guide v2",
     exact: true,
@@ -114,8 +120,6 @@ for (const theme of ["Dark", "Light"])
       })
       .click();
     await audit(page, theme + " filters");
-    await page.getByText("Search options", { exact: true }).click();
-    await audit(page, theme + " advanced filters");
     await page.keyboard.press("Escape");
     await expect(
       page.getByRole("button", {
@@ -147,15 +151,18 @@ for (const theme of ["Dark", "Light"])
       .click();
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await page
-      .getByRole("button", { name: "Review history", exact: true })
+      .getByRole("button", { name: "Library actions", exact: true })
+      .click();
+    await page
+      .getByRole("menuitem", { name: "Review history", exact: true })
       .click();
     await audit(page, theme + " history");
     await page.keyboard.press("Escape");
     for (const view of ["List", "Cards"]) {
-      await page.getByRole("button", { name: view, exact: true }).click();
+      await chooseView(page, view);
       await audit(page, theme + " " + view);
     }
-    await page.getByRole("button", { name: "Map", exact: true }).click();
+    await chooseView(page, "Map");
     await page
       .getByRole("button", { name: "Select map file Guide v2", exact: true })
       .click();
@@ -206,7 +213,7 @@ test("phone reflow, navigation, search recovery and accessible reader controls",
   await page
     .getByRole("button", { name: "Back to browsing", exact: true })
     .click();
-  await expect(page.getByLabel("Folder overview")).toBeVisible();
+  await expect(page.getByLabel("Files in this space")).toBeVisible();
 });
 
 for (const width of [320, 640])
@@ -217,9 +224,7 @@ for (const width of [320, 640])
     await fixture(page);
     await page.goto("about:blank");
     await page.goto("/");
-    await expect(
-      page.getByRole("button", { name: "Overview", exact: true }),
-    ).toBeVisible();
+    await expect(page.getByLabel("Files in this space")).toBeVisible();
     await page.keyboard.press("Tab");
     await expect(
       page.getByRole("link", { name: "Skip to content" }),
@@ -257,4 +262,29 @@ for (const width of [320, 640])
       )
       .toBe(true);
     await audit(page, `${width}px reader`);
+  });
+
+for (const width of [320, 390, 640, 768])
+  test(`reader Download remains reachable without overlapping launchers at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await fixture(page);
+    await openGuide(page);
+    const download = page.getByRole("link", {
+      name: "Download v2",
+      exact: true,
+    });
+    await expect(download).toBeVisible();
+    await download.click({ trial: true });
+    expect(
+      await download.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          box.x + box.width / 2,
+          box.y + box.height / 2,
+        );
+        return hit === el || el.contains(hit);
+      }),
+    ).toBe(true);
   });

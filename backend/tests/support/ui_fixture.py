@@ -110,6 +110,7 @@ def main():
         server.STORAGE_ONLY = False
         os.environ["TYPESAFE_API_KEY"] = "browser-fixture-not-a-real-key"
         embedder = BrowserEmbedder()
+        embeddings.get_embedder = lambda: embedder
         search.get_embedder = lambda: embedder
         ingest.get_embedder = lambda: embedder
         # Background ingestion uses the same injected fake as initial seeding;

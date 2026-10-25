@@ -45,43 +45,39 @@ def parse_command(command: str) -> list[str]:
 
 
 def matching_rows(command: str, batches, limit: int):
-    """Read a bounded scope completely before returning any matches."""
+    """Stream bounded passage batches; only the result window stays in memory.
+
+    Called by the durable search worker. A large corpus costs worker time but
+    never enlarges a request's memory or holds the index publication lock.
+    """
     argv = parse_command(command)
-    rows, lines, owners = [], [], []
-    size = 0
+    output, counts = [], {}
     for batch in batches:
+        rows, lines, owners = [], [], []
         for row in batch.to_pylist():
             rows.append(row)
-            if len(rows) > MAX_ROWS:
-                raise ValueError("Grep scope is too large; choose a narrower folder or topic")
-            text = row.get("text") or ""
-            # grep is line oriented. Every output line maps to its original evidence tuple.
-            chunk_lines = text.splitlines()
-            size += len(text.encode("utf-8")) + len(chunk_lines)
-            if size > MAX_BYTES or len(lines) + len(chunk_lines) > MAX_LINES:
-                raise ValueError("Grep scope is too large; choose a narrower folder or topic")
+            chunk_lines = (row.get("text") or "").splitlines()
             lines.extend(chunk_lines)
             owners.extend([len(rows) - 1] * len(chunk_lines))
-    if not lines:
-        return []
-    try:
-        result = subprocess.run(argv, input="\n".join(lines) + "\n", capture_output=True,
-                                text=True, encoding="utf-8", errors="replace", timeout=3,
-                                check=False)
-    except subprocess.TimeoutExpired as exc:
-        raise ValueError("Grep took too long; simplify the pattern or narrow the scope") from exc
-    if result.returncode not in (0, 1):
-        raise ValueError("Invalid grep pattern; check the expression and flags")
-    indexes = {owners[int(line.split(":", 1)[0]) - 1]
-               for line in result.stdout.splitlines() if line.split(":", 1)[0].isdigit()}
-    output, counts = [], {}
-    for index in sorted(indexes):
-        row = rows[index]
-        identity = row["document_id"]
-        if counts.get(identity, 0) >= 8:
+        if not lines:
             continue
-        counts[identity] = counts.get(identity, 0) + 1
-        output.append(row)
-        if len(output) >= min(limit * 8, 800):
-            break
+        try:
+            result = subprocess.run(argv, input="\n".join(lines) + "\n", capture_output=True,
+                                    text=True, encoding="utf-8", errors="replace", timeout=3,
+                                    check=False)
+        except subprocess.TimeoutExpired as exc:
+            raise ValueError("Grep took too long; simplify the pattern") from exc
+        if result.returncode not in (0, 1):
+            raise ValueError("Invalid grep pattern; check the expression and flags")
+        indexes = {owners[int(line.split(":", 1)[0]) - 1]
+                   for line in result.stdout.splitlines() if line.split(":", 1)[0].isdigit()}
+        for index in sorted(indexes):
+            row = rows[index]
+            identity = row["document_id"]
+            if counts.get(identity, 0) >= 8:
+                continue
+            counts[identity] = counts.get(identity, 0) + 1
+            output.append(row)
+            if len(output) >= min(limit * 8, 800):
+                return output
     return output

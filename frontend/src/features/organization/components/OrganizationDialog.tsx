@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { api, folderCounts, type Doc } from "../../../shared/api/client";
+import "./organization.css";
 export type OrganizationTarget =
   | { action: "rename-folder" | "move-folder"; folder: string }
   | { action: "move-documents"; docs: Doc[] };
@@ -36,7 +37,7 @@ export default function OrganizationDialog(p: {
       <Dialog.Portal>
         <Dialog.Overlay className="overlay" />
         <Dialog.Content
-          className="reset-dialog"
+          className="reset-dialog organization-dialog"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             input.current?.focus();

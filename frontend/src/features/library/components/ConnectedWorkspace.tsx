@@ -8,22 +8,24 @@ export function ConnectedWorkspace(p: {
   onOpen: (doc: Doc) => void; onFolder: (folder: string) => void;
   onMap: () => void; selected?: Doc; group?: string;
 }) {
+  const [previewExpanded, setPreviewExpanded] = useState(false);
+  useEffect(() => setPreviewExpanded(false), [p.featured?.document_id, p.featured?.version]);
   return <div className="connected-workspace">
     {!!p.folders.length && <section className="space-section" aria-label="Folders in this space">
       <div className="section-caption"><h2>Your spaces</h2><span>Folders that keep things together</span></div>
       <div className="space-shelves">{p.folders.map(([path, count]) =>
         <button key={path} className="space-tile" onClick={() => p.onFolder(path)} title={path}>
-          <Folder size={20} /><strong>{path.split(" / ").at(-1)}</strong><small>{count} files</small><ArrowUpRight size={14} />
+          <Folder size={20} /><strong>{path.split(" / ").at(-1)}</strong><small>{count} {count === 1 ? "file" : "files"}</small><ArrowUpRight size={14} />
         </button>)}</div>
     </section>}
-    {p.featured && <section className="focus-document" aria-label="Featured file">
+    {p.featured && <section className={`focus-document${previewExpanded ? " preview-expanded" : ""}`} aria-label="Featured file">
       <div className="focus-copy">
         <span className="eyebrow"><span className="live-dot" />{p.selected ? "In focus" : "From your library"}</span>
         <h2>{title(p.featured)}</h2>
         <p>{p.featured.folder || "Unfiled"} <span>· {kind(p.featured)} · {p.featured.version}</span></p>
-        <div className="focus-actions"><button className="primary" onClick={() => p.onOpen(p.featured!)}>Open file <ArrowUpRight size={15}/></button><button onClick={p.onMap}><Network size={15} /> Explore map</button></div>
+        <div className="focus-actions"><button className="primary" onClick={() => p.onOpen(p.featured!)}>Open file <ArrowUpRight size={15}/></button><button title="Open the connections map around this file" onClick={p.onMap}><Network size={15} /> Map this file</button><button className="focus-preview-toggle" aria-expanded={previewExpanded} onClick={() => setPreviewExpanded(value => !value)}>{previewExpanded ? "Hide preview" : "Show preview"}</button></div>
       </div>
-      <ContentCard key={p.featured.document_id + p.featured.version} doc={p.featured} />
+      {previewExpanded && <ContentCard key={p.featured.document_id + p.featured.version} doc={p.featured} />}
     </section>}
     <section className="working-files" aria-label="Files in this space">
       <div className="section-caption"><h2>{p.group ? `Files about ${p.group}` : "Your files"}</h2><span>Select to explore · Double-click to read</span></div>

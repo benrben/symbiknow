@@ -11,11 +11,14 @@ from pathlib import Path
 
 from symbiknow.embeddings.runtime import get_embedder
 from symbiknow.search.index import INDEX_LOCK, mark_pending, put_chunks, set_document_status
+from symbiknow.ingestion.source_text import LITERAL_MIMES, LITERAL_SUFFIXES, OFFICE_MIMES
 
 
 def supported(metadata):
     mime = metadata.get("mime_type", "").split(";", 1)[0]
-    return mime in {
+    return mime in LITERAL_MIMES | set(OFFICE_MIMES) | {
+        "image/svg+xml",
+        "text/csv",
         "text/plain",
         "text/markdown",
         "text/x-markdown",
@@ -32,6 +35,12 @@ def supported(metadata):
         Path(metadata["filename"]).suffix.lower()
         in {
             ".txt",
+            ".py",
+            ".sh",
+            ".svg",
+            ".docx",
+            ".xlsx",
+            ".csv",
             ".md",
             ".markdown",
             ".html",
@@ -50,9 +59,14 @@ def supported(metadata):
 
 
 def _converter():
+    from docling.datamodel.accelerator_options import AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions
-    from docling.document_converter import DocumentConverter, ImageFormatOption, PdfFormatOption
+    from docling.datamodel.backend_options import MsExcelBackendOptions, MsWordBackendOptions
+    from docling.document_converter import (
+        DocumentConverter, ExcelFormatOption, ImageFormatOption, PdfFormatOption, WordFormatOption,
+    )
+    from symbiknow.ingestion.office import TextExcelBackend, TextWordBackend
 
     options = PdfPipelineOptions()
     options.generate_page_images = False
@@ -60,12 +74,21 @@ def _converter():
     # Pinned Docling 2.137 exposes these controls. Keep OCR and tables enabled.
     options.ocr_batch_size = options.layout_batch_size = options.table_batch_size = 1
     options.queue_max_size = 4
+    # On MPS each conversion claims a 1 GiB allocator heap; CPU costs about a second per file.
+    options.accelerator_options = AcceleratorOptions(device=os.getenv("SYMBIKNOW_CONVERSION_DEVICE", "cpu"))
     options.document_timeout = float(os.getenv("SYMBIKNOW_CONVERSION_TIMEOUT", "300"))
     return DocumentConverter(
-        allowed_formats=[InputFormat.MD, InputFormat.HTML, InputFormat.PDF, InputFormat.IMAGE],
+        allowed_formats=[InputFormat.MD, InputFormat.HTML, InputFormat.PDF, InputFormat.IMAGE,
+                         InputFormat.DOCX, InputFormat.XLSX, InputFormat.CSV],
         format_options={
             InputFormat.PDF: PdfFormatOption(pipeline_options=options),
             InputFormat.IMAGE: ImageFormatOption(pipeline_options=options),
+            InputFormat.DOCX: WordFormatOption(
+                backend=TextWordBackend, backend_options=MsWordBackendOptions(render_chart_images=False),
+            ),
+            InputFormat.XLSX: ExcelFormatOption(
+                backend=TextExcelBackend, backend_options=MsExcelBackendOptions(render_chart_images=False),
+            ),
         },
     )
 
@@ -127,7 +150,8 @@ def extract_units(metadata, content, embedder, *, isolated=False, artifact_store
     filename = metadata["filename"]
     suffix = Path(filename).suffix.lower()
     mime = metadata.get("mime_type", "").split(";", 1)[0]
-    image = mime.startswith("image/") or suffix in {
+    svg = suffix == ".svg" or mime == "image/svg+xml"
+    image = not svg and (mime.startswith("image/") or suffix in {
         ".png",
         ".jpg",
         ".jpeg",
@@ -136,16 +160,21 @@ def extract_units(metadata, content, embedder, *, isolated=False, artifact_store
         ".bmp",
         ".tif",
         ".tiff",
-    }
+    })
     visual = VisualUnits(content, image=image)
     heavy = image or mime == "application/pdf" or suffix == ".pdf"
 
     def convert_document():
+        from symbiknow.ingestion.source_text import literal_text, svg_text, validate_office
+
         warnings = []
-        if mime == "text/plain" or suffix == ".txt":
-            text = (content.read_bytes() if isinstance(content, Path) else content).decode("utf-8-sig")
+        office = suffix in {".docx", ".xlsx"} or mime in OFFICE_MIMES
+        if office:
+            validate_office(content)
+        if svg or (not office and (mime in LITERAL_MIMES or suffix in LITERAL_SUFFIXES)):
+            text = svg_text(content) if svg else literal_text(content)
             doc = DoclingDocument(name=filename)
-            # Plain TXT remains literal text rather than interpreting Markdown syntax.
+            # Source files are literal UTF-8; their code is never evaluated.
             doc.add_text(label=DocItemLabel.PARAGRAPH, text=text)
             return doc, warnings
         if isolated:
@@ -158,7 +187,7 @@ def extract_units(metadata, content, embedder, *, isolated=False, artifact_store
             with tempfile.TemporaryDirectory(prefix="symbiknow-convert-") as directory:
                 root = Path(directory)
                 # User filenames can never alias worker outputs or overwrite a lease.
-                source = root / ("input" + suffix)
+                source = root / ("input" + (OFFICE_MIMES.get(mime, suffix) if office else suffix))
                 if isinstance(content, Path):
                     source.symlink_to(content.resolve())
                 else:
@@ -188,7 +217,7 @@ def extract_units(metadata, content, embedder, *, isolated=False, artifact_store
             doc, warnings = artifact_store.document(metadata, digest, convert_document)
         else:
             doc, warnings = convert_document()
-        if not image:
+        if not image and (mime == "application/pdf" or suffix == ".pdf"):
             visual.pages = sorted(doc.pages)
     except Exception as exc:
         if not image:
@@ -200,7 +229,8 @@ def extract_units(metadata, content, embedder, *, isolated=False, artifact_store
     if tokenizer is None:
         tokenizer = HuggingFaceTokenizer(tokenizer=embedder.tokenizer, max_tokens=512)
     chunking = {}
-    if image or mime == "application/pdf" or suffix == ".pdf":
+    structured_table = suffix in {".docx", ".xlsx", ".csv"} or mime in set(OFFICE_MIMES) | {"text/csv"}
+    if image or mime == "application/pdf" or suffix == ".pdf" or structured_table:
         from docling_core.transforms.chunker.hierarchical_chunker import (
             ChunkingDocSerializer,
             ChunkingSerializerProvider,
@@ -215,6 +245,12 @@ def extract_units(metadata, content, embedder, *, isolated=False, artifact_store
                 serializer.params = serializer.params.model_copy(
                     update={"traverse_pictures": True, "layers": set(ContentLayer)}
                 )
+                if structured_table:
+                    from docling_core.transforms.serializer.markdown import MarkdownTableSerializer
+
+                    # Preserve corner header cells too: the default triplet
+                    # serializer omits them when the first column is a row header.
+                    serializer.table_serializer = MarkdownTableSerializer()
                 return serializer
 
         chunking = {
@@ -296,7 +332,7 @@ def index_document(data_dir, metadata, content: bytes | Path, embedder=None, *, 
     with INDEX_LOCK:
         if current_version(data_dir, metadata["document_id"]) != str(metadata["version"]):
             return {**metadata, "status": "superseded", "indexed_version": ""}
-        mark_pending(data_dir, metadata)
+        mark_pending(data_dir, metadata, on_invalidate=on_invalidate)
         if not supported(metadata):
             return set_document_status(
                 data_dir,

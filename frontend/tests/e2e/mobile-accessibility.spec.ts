@@ -1,3 +1,4 @@
+import { chooseView } from "../support/ui-controls";
 import { test, expect, type Page } from "@playwright/test";
 import { fixture, audit } from "../support/quality-fixture";
 
@@ -80,8 +81,11 @@ test("touch reader survives rotation and a reduced keyboard viewport", async ({
   page,
 }, testInfo) => {
   await fixture(page);
-  const origin = page.getByRole("button", { name: "Open Guide", exact: true });
-  await origin.tap();
+  const origin = page.getByRole("button", {
+    name: "Select Guide.md",
+    exact: true,
+  });
+  await origin.dblclick();
   const close = page.getByRole("button", {
     name: /^(Back to library|Close inspector)$/,
   });
@@ -103,6 +107,14 @@ test("touch reader survives rotation and a reduced keyboard viewport", async ({
   await find.fill("a+b?");
   await expect(page.locator(".reader-tools output")).toHaveText("1 / 1");
   await reflow(page);
+  const download = page.getByRole("link", { name: "Download v2", exact: true });
+  await download.scrollIntoViewIfNeeded();
+  await download.click({ trial: true });
+  expect(await download.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    return hit === el || el.contains(hit);
+  })).toBe(true);
   await close.tap();
   await expect(origin).toBeFocused();
   await page.setViewportSize(size);
@@ -139,7 +151,7 @@ test("touch filters trap focus, dismiss, and recover from empty search", async (
   await page
     .getByRole("button", { name: "Back to browsing", exact: true })
     .tap();
-  await expect(page.getByLabel("Folder overview")).toBeVisible();
+  await expect(page.getByLabel("Files in this space")).toBeVisible();
   await reflow(page);
 });
 
@@ -147,7 +159,7 @@ test("touch list, cards and map keep selection and reader focus usable", async (
   page,
 }) => {
   await fixture(page);
-  await page.getByRole("button", { name: "List", exact: true }).tap();
+  await chooseView(page, "List");
   await page
     .getByRole("button", { name: "Select Guide.md", exact: true })
     .tap();
@@ -155,7 +167,7 @@ test("touch list, cards and map keep selection and reader focus usable", async (
     page.getByRole("button", { name: "Select Guide.md", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await reflow(page);
-  await page.getByRole("button", { name: "Cards", exact: true }).tap();
+  await chooseView(page, "Cards");
   const preview = page.getByRole("button", {
     name: "Preview Guide",
     exact: true,
@@ -165,7 +177,7 @@ test("touch list, cards and map keep selection and reader focus usable", async (
     .getByRole("button", { name: "Back to library", exact: true })
     .tap();
   await expect(preview).toBeFocused();
-  await page.getByRole("button", { name: "Map", exact: true }).tap();
+  await chooseView(page, "Map");
   await page.getByRole("searchbox", { name: "Find map files" }).fill("Guide");
   await page
     .getByRole("button", { name: "Select map file Guide v2", exact: true })

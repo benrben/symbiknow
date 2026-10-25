@@ -196,12 +196,13 @@ export default function ReaderTools(p: {
       {resumed && !query && (
         <button
           className="resume-reading"
+          title="You were taken back to where you stopped reading"
           onClick={() => {
             p.content.current?.closest(".inspector-content")?.scrollTo(0, 0);
             setResumed(false);
           }}
         >
-          Resumed · Back to top
+          Back to top
         </button>
       )}
     </div>

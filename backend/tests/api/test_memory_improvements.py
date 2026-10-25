@@ -210,7 +210,7 @@ def test_version_pinned_stream_is_extracted_once_and_leases_survive_eviction(tmp
     calls = []
 
     def run(args, **kwargs):
-        if "original" in args and "cat" in args:
+        if "original" in args and "ls" in args:
             calls.append(1)
         return original(args, **kwargs)
 
@@ -347,9 +347,7 @@ def test_manual_readers_cannot_mutate_shared_snapshot(tmp_path):
     assert organization_edits.override(tmp_path, "d")["folder"] == "Atlas"
     assert organization_edits.assignment_ids(tmp_path) == frozenset({"d"})
     assert organization_edits.summary(tmp_path) == {"revision": "r1"}
-    organization_edits.atomic(
-        organization_edits.path(tmp_path), {"schema": 1, "assignments": {}, "revision": "r2"}
-    )
+    organization_edits.clear(tmp_path, ["d"])
     assert not organization_edits.assignment_ids(tmp_path)
     assert len(organization_edits._SNAPSHOTS) <= 4
 

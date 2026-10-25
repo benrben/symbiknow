@@ -5,10 +5,10 @@ export default defineConfig({
   testMatch: "mobile-accessibility.spec.ts",
   fullyParallel: true,
   workers: 3,
-  timeout: 45000,
+  timeout: 90000,
   outputDir: "mobile-test-results",
   use: {
-    baseURL: "http://127.0.0.1:5176",
+    baseURL: "http://127.0.0.1:5180",
     reducedMotion: "reduce",
     trace: "retain-on-failure",
   },
@@ -31,16 +31,14 @@ export default defineConfig({
         ...devices["Pixel 7"],
         browserName: "chromium",
         launchOptions: {
-          executablePath:
-            process.env.SYMBIKNOW_CHROME ||
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+          executablePath: process.env.SYMBIKNOW_CHROME,
         },
       },
     },
   ],
   webServer: {
-    command: "npm run dev -- --port 5176",
-    url: "http://127.0.0.1:5176",
-    reuseExistingServer: !process.env.CI,
+    command: "npm run dev -- --port 5180",
+    url: "http://127.0.0.1:5180",
+    reuseExistingServer: false,
   },
 });

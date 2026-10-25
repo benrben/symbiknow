@@ -8,7 +8,7 @@ from symbiknow.core.cache import ByteLRU, CoalescingCache, dependency_key, reuse
 from symbiknow.ai.jev import ContextBudgetError
 from symbiknow.search.metrics import add
 
-VERSION = "joint-proof-2"
+VERSION = "joint-proof-4-fitted-windows/qualified-links-2/explicit-anchor-windows-1"
 MAX_PASSAGES = 12
 MAX_DOCUMENT_TEXT = 16000
 MAX_CONTEXT_TEXT = 50000
@@ -18,11 +18,11 @@ _LOCK = threading.RLock()
 _FLIGHTS = CoalescingCache(max_entries=0, max_bytes=0, max_inflight=32)
 
 
-def organization_windows(evidence, budget=MAX_DOCUMENT_TEXT):
+def organization_windows(evidence, budget=MAX_DOCUMENT_TEXT, *, priority_ids=()):
     """Sample original windows for long-file organization, never cleaned claim text.
 
     Search proof inputs are not sampled here: exceeding their budget fails closed.
-    Organization already receives a bounded sample from document_evidence().
+    Explicit reference anchors take priority over the ordinary document sample.
     """
     from symbiknow.ai import jev
 
@@ -30,14 +30,12 @@ def organization_windows(evidence, budget=MAX_DOCUMENT_TEXT):
     # Stored IDs sort lexically (t10 before t2). Sampling must use actual text
     # order to retain the last supplied passage rather than, for example, t99.
     ordinals = [re.search(r":t(\d+)$", str(r.get("evidence_id", r.get("chunk_id")))) for r in rows]
-    needs_sample = (
-        len(rows) > MAX_PASSAGES
-        or sum(len(jev._evidence({"evidence": [r]})[0]["text"]) for r in rows) > budget
-    )
-    if needs_sample and all(ordinals):
+    if rows and all(ordinals):
         rows = [r for _, r in sorted(zip([int(m[1]) for m in ordinals], rows), key=lambda p: p[0])]
     anchors = {r.get("evidence_id", r.get("chunk_id")) for r in jev.representative_evidence(rows)}
-    priority = [0, len(rows) - 1]
+    priority = [i for ref in priority_ids for i, row in enumerate(rows)
+                if row.get("evidence_id", row.get("chunk_id")) == ref]
+    priority += [0, len(rows) - 1]
     priority += [
         i for i, r in enumerate(rows) if r.get("evidence_id", r.get("chunk_id")) in anchors
     ]
@@ -51,12 +49,64 @@ def organization_windows(evidence, budget=MAX_DOCUMENT_TEXT):
         if used + size <= budget:
             selected.add(i)
             used += size
-    return [r for i, r in enumerate(rows) if i in selected], dict(
+    chosen = [r for i, r in enumerate(rows) if i in selected]
+    windows = [jev._evidence({"evidence": [r]})[0] for r in chosen]
+    return chosen, dict(
         available_windows=len(rows),
         selected_windows=len(selected),
         sampled=len(selected) != len(rows),
+        supplied_ranges=[dict(chunk_id=w["chunk_id"], text_start=w["text_start"] + r.get("text_start", 0),
+                              text_end=w["text_end"] + r.get("text_start", 0),
+                              original_text_length=r.get("original_text_length", len(r["text"])),
+                              truncated=bool(w["truncated"] or r.get("truncated")))
+                         for r, w in zip(chosen, windows)],
+        omitted_chunk_ids=[r.get("evidence_id", r.get("chunk_id")) for i, r in enumerate(rows) if i not in selected],
         scope="Selected original text windows; not a whole-file verification",
     )
+
+
+def fit_search_windows(matches, query):
+    """Choose retrieved windows breadth-first by retrieval rank within proof budgets.
+
+    Retrieval keeps up to twelve windows per document, more than one joint proof
+    can carry for several long documents. Every candidate's best-ranked window
+    enters first, then every candidate's next one, so each document is judged on
+    its strongest evidence. Omitted windows are named in context_scope and the
+    judgment covers only the selected windows; it is never a whole-document check.
+    """
+    from symbiknow.ai import jev
+
+    plans = []
+    for match in matches[: jev.MAX_MATCHES]:
+        raw = match.get("evidence", [])
+        if isinstance(raw, (str, dict)):
+            raw = [{"text": raw}] if isinstance(raw, str) else [raw]
+        if not raw and match.get("text"):
+            raw = [match]
+        rows = [(row, windows[0]) for row in raw if isinstance(row, dict)
+                for windows in [jev._evidence({"evidence": [row]}, query)] if windows]
+        plans.append((match, rows, []))
+    total, used = 0, [0] * len(plans)
+    for depth in range(max((len(rows) for _, rows, _ in plans), default=0)):
+        for i, (_, rows, chosen) in enumerate(plans):
+            if depth >= len(rows) or len(chosen) >= MAX_PASSAGES:
+                continue
+            size = len(rows[depth][1]["text"])
+            if used[i] + size <= MAX_DOCUMENT_TEXT and total + size <= MAX_CONTEXT_TEXT:
+                chosen.append(rows[depth][0])
+                used[i] += size
+                total += size
+    fitted = []
+    for match, rows, chosen in plans:
+        if len(chosen) == len(rows):
+            fitted.append(match)
+            continue
+        kept = {id(row) for row in chosen}
+        fitted.append(dict(match, evidence=chosen, context_scope=dict(
+            available_windows=len(rows), selected_windows=len(chosen), sampled=True,
+            omitted_chunk_ids=[window["chunk_id"] for row, window in rows if id(row) not in kept],
+            scope="Selected retrieved windows by retrieval rank; not a whole-document check")))
+    return fitted
 
 
 class Provider:
@@ -94,6 +144,14 @@ def documents(matches, query=None):
             if not windows:
                 continue
             window = windows[0]
+            base = original.get("text_start", 0)
+            if type(base) is not int or base < 0:
+                raise ValueError("Evidence needs a valid original text offset")
+            window["text_start"] += base
+            window["text_end"] += base
+            window["original_text_length"] = original.get("original_text_length", base + len(original.get("text", "")))
+            window["truncated"] = bool(window["truncated"] or original.get("truncated")
+                                       or base or window["text_end"] < window["original_text_length"])
             ref = window["chunk_id"]
             if (
                 not isinstance(ref, str)
@@ -109,12 +167,16 @@ def documents(matches, query=None):
         ):
             raise ContextBudgetError("Document context budget")
         if evidence:
+            positions = [re.search(r":([tv])(\d+)$", e["chunk_id"]) for e in evidence]
+            if all(positions):
+                evidence = [e for _, e in sorted(zip([(m[1], int(m[2])) for m in positions], evidence), key=lambda pair: pair[0])]
             docs.append(
                 dict(
                     document_id=identity[0],
                     version=identity[1],
                     filename=str(match.get("filename", ""))[:240],
                     evidence=evidence,
+                    **{key: match[key] for key in ("candidate_source", "references", "context_scope") if key in match},
                 )
             )
     if sum(len(e["text"]) for d in docs for e in d["evidence"]) > MAX_CONTEXT_TEXT:
@@ -131,6 +193,8 @@ def dependencies(docs):
             text_start=e["text_start"],
             text_end=e["text_end"],
             sha256=hashlib.sha256(e["text"].encode()).hexdigest(),
+            truncated=e["truncated"],
+            original_text_length=e.get("original_text_length", e["text_end"]),
         )
         for d in docs
         for e in d["evidence"]
@@ -139,17 +203,19 @@ def dependencies(docs):
 
 def search_decision(query, docs, provider):
     from symbiknow.ai import decisions as rules
+    from symbiknow.ai import jev
 
     row = dict(action="search", question=query, _documents=docs)
     response = provider.system_one(
-        state=dict(user_question=query, documents=docs, policy=rules.POLICY),
+        state=rules.search_state(query, docs),
         questions=rules.build_questions(row, docs),
     )
     first = rules.decode(row, docs, response)
-    if min([first["confidence"], *[r["confidence"] for r in first["roles"].values()]]) >= 0.8:
+    confidences = [first["confidence"], *[r["confidence"] for r in first["roles"].values()]]
+    if min(confidences) >= jev.PROOF_CONFIDENCE:
         return first
     second = rules.verify_search(row, provider)
-    if second["confidence"] >= 0.6:
+    if second["confidence"] >= jev.VERIFY_CONFIDENCE:
         return second
     # The first pass already failed its acceptance gate. An uncertain check
     # cannot revive that preliminary answer (or establish a negative answer).
@@ -162,7 +228,7 @@ def judge(query, matches, *, client=None, cache_namespace=None):
     try:
         if len(query) > 4000:
             raise ContextBudgetError("Question budget")
-        docs = documents(matches, query)
+        docs = documents(fit_search_windows(matches, query), query)
         if not docs:
             return dict(
                 status="not_evaluated",
@@ -252,7 +318,9 @@ def judge(query, matches, *, client=None, cache_namespace=None):
             if citations
             else "no_joint_proof",
             evaluated_evidence=doc["evidence"],
-            evaluated_evidence_complete=not any(e["truncated"] for e in doc["evidence"]),
+            evaluated_evidence_complete=not any(e["truncated"] for e in doc["evidence"])
+            and "context_scope" not in doc,
+            **({"context_scope": doc["context_scope"]} if "context_scope" in doc else {}),
             basis=sorted({e["basis"] for e in doc["evidence"]}),
             verification_dependencies=deps if citations else [],
             context_policy=VERSION,
@@ -275,21 +343,60 @@ def judge(query, matches, *, client=None, cache_namespace=None):
     )
 
 
+def _reference_source_windows(evidence, neighbors):
+    """Keep one exact stored reference per target inside the bounded source window."""
+    from symbiknow.ai import jev
+
+    by_id = {row.get("evidence_id", row.get("chunk_id")): row for row in evidence}
+    anchors, ranges = {}, {}
+    for neighbor in neighbors:
+        if neighbor.get("candidate_source") != "explicit_reference":
+            continue
+        for reference in neighbor.get("references", []):
+            identity = reference.get("source_evidence_id")
+            row = by_id.get(identity)
+            start, end = reference.get("start"), reference.get("end")
+            if (row is not None and type(start) is int and type(end) is int
+                    and 0 <= start < end <= len(row.get("text", ""))
+                    and row["text"][start:end] == reference.get("reference_text")):
+                anchors[neighbor["document_id"]] = identity
+                ranges.setdefault(identity, []).append((start, end))
+                break
+        if neighbor["document_id"] not in anchors:
+            raise ValueError("Explicit reference needs its exact source evidence span")
+    prepared = []
+    for identity, row in by_id.items():
+        if identity in ranges and len(row["text"]) > jev.MAX_TEXT:
+            first, last = min(start for start, _ in ranges[identity]), max(end for _, end in ranges[identity])
+            if last - first > jev.MAX_TEXT:
+                raise ContextBudgetError("Explicit reference anchors need separate link batches")
+            start = max(0, first - 400, last - jev.MAX_TEXT)
+            prepared.append(dict(row, text=row["text"][start:start + jev.MAX_TEXT], text_start=start,
+                                 original_text_length=len(row["text"]), truncated=True))
+        else:
+            prepared.append(row)
+    return prepared, anchors
+
+
 def links(document, evidence, neighbors, client=None):
     from symbiknow.ai import decisions as rules
 
     budget = min(MAX_DOCUMENT_TEXT, MAX_CONTEXT_TEXT // (len(neighbors) + 1))
+    source_evidence, reference_anchors = _reference_source_windows(evidence, neighbors)
     inputs, scopes = [], []
-    for item in [dict(document, evidence=evidence), *neighbors]:
-        selected, scope = organization_windows(item.get("evidence", []), budget)
-        inputs.append(dict(item, evidence=selected))
+    for position, item in enumerate([dict(document, evidence=source_evidence), *neighbors]):
+        selected, scope = organization_windows(item.get("evidence", []), budget,
+                                               priority_ids=reference_anchors.values() if position == 0 else ())
+        inputs.append(dict(item, evidence=selected, context_scope=scope))
         scopes.append(dict(document_id=item["document_id"], **scope))
     docs = documents(inputs)
     if not docs or docs[0]["document_id"] != document["document_id"]:
         raise ValueError("Missing source text")
+    if not set(reference_anchors.values()) <= {row["chunk_id"] for row in docs[0]["evidence"]}:
+        raise ContextBudgetError("Explicit reference anchors need separate link batches")
     pairs = len(docs[0]["evidence"]) * sum(len(d["evidence"]) for d in docs[1:])
-    row = dict(action="links", document=document, neighbors=neighbors, _documents=docs)
-    if pairs > MAX_LINK_PAIRS:
+    row = dict(action="links", document=document, neighbors=neighbors, _documents=docs, context_scope=scopes)
+    if pairs > MAX_LINK_PAIRS or reference_anchors:
         # Bound semantic candidate pairs while preserving every supplied window
         # as context. The original representative selector chooses claim anchors.
         from symbiknow.ai import jev
@@ -302,17 +409,20 @@ def links(document, evidence, neighbors, client=None):
             for ni, n in enumerate(docs[1:], 1)
             for si, s in enumerate(docs[0]["evidence"])
             for ti, t in enumerate(n["evidence"])
-            if s["chunk_id"] in selected[0] and t["chunk_id"] in selected[ni]
+            if s["chunk_id"] in ({reference_anchors[n["document_id"]]}
+                                  if n["document_id"] in reference_anchors else selected[0])
+            and t["chunk_id"] in selected[ni]
         }
         if len(row["pair_keys"]) > MAX_LINK_PAIRS:
             raise ContextBudgetError("Link pair budget")
     provider = Provider(client)
     response = provider.system_one(
-        state=dict(documents=docs, policy=rules.POLICY), questions=rules.build_questions(row, docs)
+        state=rules.link_state(docs), questions=rules.build_questions(row, docs)
     )
-    result = rules.decode(row, docs, response)
-    if any(link.get("confidence", 1) < 0.8 for link in result["links"]):
-        result = rules.verify_links(row, provider)
+    rules.decode(row, docs, response)
+    # Confidence is not a proof. Every semantic pair faces the same independent
+    # subject, context, and exact-claim verification before publication.
+    result = rules.verify_links(row, provider)
     by_id = {d["document_id"]: d for d in docs}
     for link in result["links"]:
         link.update(
@@ -341,3 +451,53 @@ def links(document, evidence, neighbors, client=None):
         model=provider.model,
         context_assessment=scopes,
     )
+
+
+def identity_proof(document, evidence, neighbor):
+    """Byte identity is the explicit duplicate criterion, not a model opinion."""
+    from symbiknow.ai.link_evidence import span
+    digest = document.get("sha256", "")
+    if not re.fullmatch(r"[0-9a-f]{64}", digest) or neighbor.get("sha256") != digest:
+        raise ValueError("Duplicate proof requires matching SHA-256 originals")
+    inputs, scopes = [], []
+    for item in [dict(document, evidence=evidence), neighbor]:
+        selected, scope = organization_windows(item.get("evidence", []))
+        inputs.append(dict(item, evidence=selected))
+        scopes.append(dict(document_id=item["document_id"], **scope))
+    docs = documents(inputs)
+    if len(docs) != 2:
+        raise ValueError("Duplicate endpoints need source evidence")
+    source, target = [span(doc, doc["evidence"][0]) for doc in docs]
+    return dict(policy=VERSION, criterion="sha256_identity", source=source, target=target,
+                source_context=source, target_context=target, context=dependencies(docs),
+                context_scope=scopes, identity={"sha256": digest}, checks={"byte_identity": True})
+
+
+def make_reviewed_proof(source, target, source_chunk, target_chunk, *, relation,
+                        actor, reason, source_range=None, target_range=None):
+    """Represent an explicit human-reviewed correction without a model call.
+
+    Chunks contain evidence_id/chunk_id and full original text. Optional ranges
+    are (start, end) character offsets into those original chunks. Authorization
+    and current source/evidence/manual guards belong to the correction service.
+    """
+    from symbiknow.ai.link_evidence import link_proof, span
+    if not actor or not reason:
+        raise ValueError("A reviewed proof needs its actor and reason")
+    docs = documents([dict(source, evidence=[source_chunk]), dict(target, evidence=[target_chunk])])
+    if len(docs) != 2 or any(d["evidence"][0]["truncated"] for d in docs):
+        raise ValueError("Review needs complete bounded original claim context")
+    windows = [d["evidence"][0] for d in docs]
+    claims = []
+    for doc, window, bounds in zip(docs, windows, (source_range, target_range)):
+        start, end = bounds or (window["text_start"], window["text_end"])
+        if type(start) is not int or type(end) is not int or not window["text_start"] <= start < end <= window["text_end"]:
+            raise ValueError("Reviewed claim is outside its original chunk")
+        claims.append(span(doc, window, start - window["text_start"], end - window["text_start"]))
+    result = link_proof(docs, *windows, *claims, relation, {"human_review": True})
+    result["review"] = {"actor": actor, "reason": reason}
+    return result
+
+
+# Publication owners resolve authoritative passages and call this shared guard.
+from symbiknow.ai.link_evidence import validate_link_proof  # noqa: E402,F401

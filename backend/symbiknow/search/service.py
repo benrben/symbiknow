@@ -21,6 +21,7 @@ class SearchService:
         folder: str | None = None,
         group: str | None = None,
         evaluate: bool = False,
+        on_retrieved=None,
     ) -> DomainResult:
         """Retrieve current-version evidence and relevance explanations; optionally judge with Jev.
 
@@ -81,6 +82,8 @@ class SearchService:
 
                     add("retrieval_retries", 1)
         candidate_epochs = {match["document_id"]: match.get("evidence_revision", "") for match in matches}
+        if on_retrieved:
+            on_retrieved(matches)
         evaluation = {"status": "not_requested"}
         if evaluate:
             from symbiknow.ai.jev import judge_matches

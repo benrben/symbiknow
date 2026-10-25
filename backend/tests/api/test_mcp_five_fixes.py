@@ -223,20 +223,17 @@ def test_actual_mcp_discovery_schema_json_text_and_full_diagnostics(tmp_path, mo
                 "upload_folder",
                 "download_folder",
                 "remove_file",
-                "scan_freshness",
-                "get_freshness_scan",
-                "cancel_freshness_scan",
-                "review_freshness_finding",
                 "ask",
-                "list_jev_decisions",
+                "list_documents", "get_taxonomy", "list_jev_decisions", "get_organization_history", "list_jobs",
                 "resolve_jev_decision",
+                "get_job",
             }
             schema = next(t.input_schema for t in tools if t.name == "search")
             assert schema["properties"]["detail"]["default"] == "compact"
             assert schema["properties"]["detail"]["enum"] == ["compact", "full"]
             responses = []
             for arguments in ({"query": "Q"}, {"query": "Q", "detail": "full"}):
-                response = await client.call_tool("search", arguments)
+                response = await client.call_tool("search", {**arguments, "mode": "keyword"})
                 assert not response.is_error
                 assert json.loads(response.content[0].text) == response.structured_content
                 responses.append(response.structured_content)

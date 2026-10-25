@@ -1,9 +1,7 @@
 """Isolated originals/indexes, deterministic provider; never calls hosted Jev."""
-import asyncio
 import threading
 
 import pytest
-from mcp import Client
 
 from symbiknow.freshness import service as freshness
 from symbiknow.freshness import judgments as freshness_judgments
@@ -12,7 +10,6 @@ from symbiknow.api import mcp as server
 from symbiknow.library import storage
 from symbiknow.core.application import ApplicationContext
 from symbiknow.freshness.store import encode
-from symbiknow.cli.client import call
 from tests.api.test_ui_api import context as context, indexed, mutate
 
 REAL_COMPARE_MANY = freshness_judgments.compare_many
@@ -36,6 +33,44 @@ def finish(service, limit=100):
         if not service.process_one():
             return service.get()
     pytest.fail("Scan failed to terminate")
+
+
+def test_scan_includes_unregistered_originals_without_enumerating_on_start(library):
+    root, patch, _, service, *_ = library
+    storage.save_file(root, b"Not yet registered", "pending.txt")
+    original = storage.iter_documents
+    calls = []
+
+    def inventory(*args, **kwargs):
+        calls.append(True)
+        yield from original(*args, **kwargs)
+
+    patch.setattr(storage, "iter_documents", inventory)
+    service.start()
+    assert not calls
+    result = finish(service)["scan"]
+    assert calls and result["documents_total"] == 3
+    assert result["status"] == "partial"
+    assert result["gaps"]["unreadable_or_changed_documents"] == 1
+
+
+def test_documents_with_likely_credentials_are_withheld_from_hosted_comparison(library):
+    import json
+
+    root, patch, _, service, *_ = library
+    key = "sk-ant-" + "api03-" + "Zq7Rk2Lm9Xw4Tn8Vb3Hc"  # Assembled; never a stored literal.
+    indexed(root, name="deploy-notes.txt",
+            content=f"Atlas current production retention is 60 days.\nATLAS_KEY={key}\n".encode())
+    sent = []
+    patch.setattr(freshness_judgments, "classify",
+                  lambda ps, filename: sent.append(json.dumps(ps)) or {p["id"]: "claim" for p in ps})
+    patch.setattr(freshness_judgments, "compare",
+                  lambda *args: sent.append(json.dumps(args)) or {"scope": "same", "relation": "incompatible"})
+    service.start()
+    scan = finish(service)["scan"]
+    assert scan["gaps"]["sensitive_content_withheld"] == 1
+    assert scan["documents_read"] == 2 and scan["pairs_checked"] == 1
+    assert sent and not any(key in request for request in sent)
 
 
 def test_manual_scan_evidence_review_reuse_and_original_integrity(library):
@@ -70,6 +105,31 @@ def test_manual_scan_evidence_review_reuse_and_original_integrity(library):
     assert storage.read_file(root, a["document_id"])[0].endswith(b"30 days.\n")
     assert storage.read_file(root, b["document_id"])[0].endswith(b"90 days.\n")
     assert len(storage.version_page(root, a["document_id"])["versions"]) == 1
+
+
+def test_agent_review_previews_current_finding_and_rejects_stale_approval(library):
+    from symbiknow.api.agents.symbiknow import ProductTools
+
+    _, _, _, service, _, _ = library
+    service.start()
+    finding = finish(service)["findings"][0]
+    product = ProductTools(service.context)
+    args = {
+        "scan_id": finding["scan_id"],
+        "finding_id": finding["finding_id"],
+        "expected_revision": finding["revision"],
+        "decision": "historical",
+    }
+    preview = product.preview("review_freshness_finding", args)
+    assert preview["finding"] == finding
+    assert service.get()["findings"][0]["review"] == "pending"
+    receipt = product.write("review_freshness_finding", args, preview)
+    assert receipt["finding_id"] == finding["finding_id"]
+    assert receipt["review"] == "historical" and receipt["revision"] == finding["revision"] + 1
+
+    with pytest.raises(ValueError, match="Read a current finding"):
+        product.write("review_freshness_finding", args, preview)
+    assert service.get()["findings"][0]["review"] == "historical"
 
 
 def test_current_reference_is_explicit_and_does_not_change_conflict_without_one(library):
@@ -169,8 +229,10 @@ def test_restart_resumes_saved_manual_job_and_paid_result_cache(library):
     calls = []
     patch.setattr(freshness_judgments, "classify", lambda ps, filename: calls.append(filename) or {p["id"]: "claim" for p in ps})
     service.start()
-    for _ in range(3):
+    for _ in range(10):
         service.process_one()
+        if calls:
+            break
     assert len(calls) == 1
     page = finish(ApplicationContext(root).freshness)
     assert page["scan"]["status"] in {"completed", "partial"}
@@ -559,24 +621,20 @@ def test_policy_requires_scope_before_a_warning(scope, relation, expected):
     assert freshness_judgments.label({"scope": scope, "relation": relation})[0] == expected
 
 
-def test_http_mcp_share_job_review_and_pagination(library):
+def test_http_job_review_and_pagination(library):
     _, _, client, service, a, _ = library
     response = mutate(client, "freshness", {"request_id": "ui"})
     assert response.status_code == 200, response.text
     finish(service)
-    async def check():
-        async with Client(server.mcp) as session:
-            tools = {t.name for t in (await session.list_tools()).tools}
-            assert {"scan_freshness", "get_freshness_scan", "cancel_freshness_scan", "review_freshness_finding"} <= tools
-            page = await call(session, "get_freshness_scan", {"document_id": a["document_id"]})
-            assert page["scan"]["scan_id"] == response.json()["scan_id"]
-            f = page["findings"][0]
-            await call(session, "review_freshness_finding", {
-                "scan_id": f["scan_id"], "finding_id": f["finding_id"], "expected_revision": 1, "decision": "historical",
-            })
-            assert client.get("/api/freshness").json()["findings"][0]["review"] == "historical"
-            assert (await call(session, "scan_freshness", {"request_id": "ui"}))["scan_id"] == response.json()["scan_id"]
-    asyncio.run(check())
+    page = client.get("/api/freshness", params={"document_id": a["document_id"]}).json()
+    assert page["scan"]["scan_id"] == response.json()["scan_id"]
+    f = page["findings"][0]
+    reviewed = mutate(client, "freshness-review", {
+        "scan_id": f["scan_id"], "finding_id": f["finding_id"], "expected_revision": 1, "decision": "historical",
+    })
+    assert reviewed.status_code == 200, reviewed.text
+    assert client.get("/api/freshness").json()["findings"][0]["review"] == "historical"
+    assert mutate(client, "freshness", {"request_id": "ui"}).json()["scan_id"] == response.json()["scan_id"]
     assert client.get("/api/freshness?category=unknown").status_code == 400
     assert client.get("/api/freshness?limit=101").status_code == 400
 

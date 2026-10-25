@@ -1,5 +1,5 @@
-.jev-presence { position: fixed; z-index: 35; left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); transform: translateX(-50%); height: 46px; min-width: 46px; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 30px; border: 1px solid var(--border); color: var(--accent); background: var(--surface); box-shadow: 0 8px 28px #1028581c; padding: 0 13px; }
-.jev-presence.has-decisions { padding: 0 18px; border-color: var(--accent); }
+.jev-presence { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 6px; border-radius: 8px; border: 1px solid var(--border); color: var(--accent); background: var(--surface); padding: 8px 10px; white-space: nowrap; }
+.jev-presence.has-decisions { border-color: var(--accent); }
 .jev-presence span { font-size: 12px; color: var(--text-secondary); border-left: 1px solid var(--border); padding-left: 10px; }
 .jev-presence strong { font-size: 13px; }
 .jev-decision-panel { position: fixed; z-index: 45; left: 50%; bottom: 82px; transform: translateX(-50%); width: min(440px, calc(100vw - 28px)); max-height: calc(100dvh - 108px); overflow: auto; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 24px 80px #10285830; outline: none; }
@@ -30,5 +30,8 @@
 .jev-problem { font-size: 12px; line-height: 1.5; padding: 12px; background: var(--surface-subtle); }
 .jev-presence:focus-visible, .jev-decision-panel :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .jev-review-details { margin: 0 20px; }.jev-review-details summary { font-size: 12px; cursor: pointer; }
-main { padding-bottom: 85px; }
 @media (max-width: 520px) { .jev-decision-body { padding: 16px; }.jev-decision-panel { bottom: 78px; }.jev-decision-body > h2 { font-size: 21px; } }
+.jev-decision-hint { font-size: 11px; line-height: 1.5; color: var(--text-secondary); margin: 16px 0 0; }
+.jev-decision-hint + .jev-decision-actions { margin-top: 10px; }
+.jev-receipt { display: flex; gap: 6px; align-items: flex-start; margin: 0; padding: 10px 20px; font-size: 12px; line-height: 1.5; color: var(--success); background: var(--surface-subtle); border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.jev-receipt svg { flex-shrink: 0; margin-top: 3px; }

@@ -15,6 +15,8 @@ const screenshots = path.resolve(
 test("reference screens, canvas links, history, keyboard and responsive layouts", async ({
   page,
 }) => {
+  // This reference flow captures multiple viewports and waits for real durable jobs.
+  test.setTimeout(90000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
@@ -86,9 +88,7 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
   await expect(
     page.getByRole("heading", { name: "Search results" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Map", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".app")).toHaveClass(/map-view/);
   await expect(page.getByLabel("Folder canvas")).toBeVisible();
   await chooseView(page, "List");
   await expect(page.locator(".results-list .file-row").first()).toBeVisible();
@@ -112,7 +112,7 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
   await expect(page.locator(".results-list .file-row").first()).toContainText(
     "storage-decisions",
   );
-  await page.locator(".results-list .file-row").first().dblclick();
+  await page.locator(".results-list .file-select").first().press("Enter");
   await expect(
     page.getByRole("heading", { name: "Keep every version" }),
   ).toBeVisible();
@@ -127,13 +127,19 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
   await expect(page.getByText("Supports answer", { exact: true })).toHaveCount(
     0,
   );
-  for (const mode of ["Semantic", "Keyword", "Hybrid"]) {
+  for (const mode of ["Semantic", "Exact", "Grep"]) {
     const response = page.waitForResponse(
       (r) =>
         r.url().endsWith("/api/search") &&
-        r.request().postDataJSON().mode === mode.toLowerCase(),
+        r.request().postDataJSON().mode ===
+          (mode === "Exact" ? "grep" : mode.toLowerCase()),
     );
     await setSearchMode(page, mode.toLowerCase());
+    if (mode === "Grep")
+      await page
+        .getByLabel("Search your knowledge")
+        .fill('grep -F "Each update is saved"');
+    await page.getByLabel("Search your knowledge").press("Enter");
     await response;
   }
   await chooseView(page, "Canvas");
@@ -149,7 +155,7 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
       name: /^Select storage\-decisions(?:\.[^.]+)?$/,
       exact: true,
     })
-    .click();
+    .press("Enter");
   await page.getByRole("tab", { name: "Versions", exact: true }).click();
   await page.getByRole("button", { name: /v2.*storage-decisions.md/ }).click();
   await expect(
@@ -174,9 +180,9 @@ test("reference screens, canvas links, history, keyboard and responsive layouts"
   await page.setViewportSize({ width: 1102, height: 808 });
   await chooseView(page, "List");
   await page.reload();
-  await expect(
-    page.getByRole("button", { name: "List", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("File layout", { exact: true })).toHaveValue(
+    "list",
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -231,7 +237,9 @@ test("bulk uploads, explicit update, history bytes and unsupported file", async 
   await page
     .getByRole("button", { name: /^(Back to library|Close inspector)$/ })
     .click();
-  await page.getByRole("button", { name: "Select unsupported.bin", exact: true }).press("Enter");
+  await page
+    .getByRole("button", { name: "Select unsupported.bin", exact: true })
+    .press("Enter");
   await expect(
     page.getByText("This format has no browser preview.", { exact: false }),
   ).toBeVisible();
@@ -243,7 +251,7 @@ test("obsolete search responses cannot replace current results", async ({
   await page.goto("/");
   await chooseView(page, "List");
   let released: () => void = () => {};
-  await page.route("**/api/search", async (route) => {
+  await page.route(/\/api\/(?:search|ask)$/, async (route) => {
     const data = route.request().postDataJSON();
     if (data.query === "obsolete") {
       await new Promise<void>((r) => (released = r));
@@ -303,7 +311,7 @@ test("HTML preview is sandboxed and cannot execute scripts or fetch remote asset
     .getByRole("button", { name: "Back to library", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "All files", exact: true }),
+    page.getByRole("heading", { name: "Your knowledge", exact: true }),
   ).toBeVisible();
 });
 
@@ -315,7 +323,7 @@ test("search failure can retry the same query; Jev outage keeps retrieval usable
   await setAnswerChecking(page, false);
   await expectAnswerChecking(page, false);
   let fail = true;
-  await page.route("**/api/search", async (route) => {
+  await page.route(/\/api\/(?:search|ask)$/, async (route) => {
     if (fail) {
       fail = false;
       await route.fulfill({
@@ -329,11 +337,28 @@ test("search failure can retry the same query; Jev outage keeps retrieval usable
   await expect(page.getByText("Temporary retrieval failure")).toBeVisible();
   await page.getByRole("button", { name: "Retry search" }).click();
   await expect(page.locator(".results-list .file-row").first()).toBeVisible();
-  await page.unroute("**/api/search");
-  await page.route("**/api/search", async (route) => {
+  await page.unroute(/\/api\/(?:search|ask)$/);
+  await page.route(/\/api\/(?:search|ask)$/, async (route) => {
     const response = await route.fetch();
-    const body = await response.json();
+    let body = await response.json();
+    while (body.job_id) {
+      if (body.status === "failed")
+        throw new Error(body.error || "Fixture search failed");
+      if (body.status === "completed" && body.result) {
+        body = body.result;
+        break;
+      }
+      await page.waitForTimeout(50);
+      body = await (
+        await page.request.get(`/api/job?id=${encodeURIComponent(body.job_id)}`)
+      ).json();
+    }
     body.evaluation = { status: "unavailable" };
+    body.answer = {
+      status: "unavailable",
+      candidate_count: body.matches.length,
+      evaluated_count: 0,
+    };
     body.matches = body.matches.map((d: Record<string, unknown>) => {
       delete d.jev;
       return d;
@@ -343,7 +368,7 @@ test("search failure can retry the same query; Jev outage keeps retrieval usable
   await setAnswerChecking(page);
   await expect(
     page.getByText(
-      "Answer checking is unavailable. Retry, or turn off Check answers to browse related files.",
+      "Answer checking is unavailable. Retry, or switch to Search to browse related files.",
     ),
   ).toBeVisible();
   await expect(page.locator(".results-list .file-row").first()).toBeVisible();
@@ -398,7 +423,9 @@ test("dev proxy preserves same-origin uploads and rejects foreign origins", asyn
   page,
   request,
 }) => {
-  await page.goto("http://127.0.0.1:5174/");
+  await page.goto(
+    `http://127.0.0.1:${process.env.SYMBIKNOW_DEV_PORT || "5174"}/`,
+  );
   const chooser = page.waitForEvent("filechooser");
   await page
     .getByRole("button", { name: "Import", exact: true })
@@ -421,17 +448,22 @@ test("dev proxy preserves same-origin uploads and rejects foreign origins", asyn
   ).toBeVisible();
   await expect
     .poll(async () => {
-      const reply = await request.get("http://127.0.0.1:5174/api/library");
+      const reply = await request.get(
+        `http://127.0.0.1:${process.env.SYMBIKNOW_DEV_PORT || "5174"}/api/library`,
+      );
       const library = await reply.json();
       return library.documents.some(
         (d: { filename: string }) => d.filename === "AGENTS.md",
       );
     })
     .toBe(true);
-  const blocked = await request.post("http://127.0.0.1:5174/api/upload", {
-    headers: { Origin: "http://evil.example", "X-Symbiknow-UI": "1" },
-    data: { files: [] },
-  });
+  const blocked = await request.post(
+    `http://127.0.0.1:${process.env.SYMBIKNOW_DEV_PORT || "5174"}/api/upload`,
+    {
+      headers: { Origin: "http://evil.example", "X-Symbiknow-UI": "1" },
+      data: { files: [] },
+    },
+  );
   expect(blocked.status()).toBe(403);
   await expect
     .poll(async () =>
@@ -563,20 +595,22 @@ test("query, verdicts and selection survive Files and Map switches", async ({
   await page.getByLabel("Search your knowledge").fill("keep every version");
   await page.getByLabel("Search your knowledge").press("Enter");
   await expect(page.locator(".results-list .file-row").first()).toBeVisible();
+  await expect(page.getByText(/^(Finding useful evidence…|Refreshing search results…)$/)).toHaveCount(0);
   const names = await page
     .locator(".results-list .file-description > strong")
     .allTextContents();
-  await page.locator(".results-list .file-row").first().dblclick();
+  await page.locator(".results-list .file-select").first().press("Enter");
   const selected = await page.locator(".inspector-heading h2").textContent();
   const verdicts = await page
     .locator(".results-list .judgment")
     .allTextContents();
   await chooseView(page, "Canvas");
   await expect(page.getByLabel("Folder canvas")).toBeVisible();
+  const refreshed = page.waitForResponse(r => /\/api\/(?:search|ask)$/.test(r.url()));
   await page.getByLabel("Search your knowledge").press("Enter");
-  await expect(
-    page.getByRole("button", { name: "Map", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await refreshed;
+  await expect(page.getByText(/^(Finding useful evidence…|Refreshing search results…)$/)).toHaveCount(0);
+  await expect(page.locator(".app")).toHaveClass(/map-view/);
   await expect(page.getByLabel("Folder canvas")).toBeVisible();
   await chooseView(page, "List");
   expect(
@@ -779,7 +813,7 @@ test("scoped counts, representative cards, matched snippets and symmetric edge f
       contentType: "text/plain",
     }),
   );
-  await page.route("**/api/search", (route) =>
+  await page.route(/\/api\/(?:search|ask)$/, (route) =>
     route.fulfill({
       json: {
         status: "completed",
@@ -813,7 +847,9 @@ test("scoped counts, representative cards, matched snippets and symmetric edge f
     }),
   );
   await page.goto("/");
-  await expect(page.getByText("2 files", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: /^2 files$/ }),
+  ).toBeVisible();
   const cardA = page.getByRole("button", {
     name: /^Select neutral\-a(?:\.[^.]+)?$/,
     exact: true,
@@ -868,9 +904,7 @@ test("scoped counts, representative cards, matched snippets and symmetric edge f
   const before = cardARequests;
   await page.getByLabel("Search your knowledge").fill("refund window");
   await page.getByLabel("Search your knowledge").press("Enter");
-  await expect(
-    page.getByRole("button", { name: "Map", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".app")).toHaveClass(/map-view/);
   await expect(cardNode).toContainText(
     "Refund requests are accepted within fourteen days",
   );
@@ -883,11 +917,11 @@ for (const view of ["List", "Canvas"] as const) {
     page,
   }) => {
     await page.goto("/");
-    await chooseView(page, view);
     await page
       .locator(".sidebar")
       .getByRole("button", { name: /^Research \d+$/, exact: true })
       .click();
+    await chooseView(page, view);
     const input = page.getByLabel("Search your knowledge");
     await input.fill("keep every version");
     await input.press("Enter");
@@ -908,12 +942,9 @@ for (const view of ["List", "Canvas"] as const) {
     await expect(
       page.getByRole("button", { name: /^Clear folder scope(?:: .+)?$/ }),
     ).toContainText("Research");
-    await expect(
-      page.getByRole("button", {
-        name: view === "Canvas" ? "Map" : view,
-        exact: true,
-      }),
-    ).toHaveAttribute("aria-pressed", "true");
+    if (view === "Canvas")
+      await expect(page.locator(".app")).toHaveClass(/map-view/);
+    else await expect(page.getByLabel("File layout")).toHaveValue("list");
     if (view === "List") await expect(page.locator(".file-row")).toHaveCount(2);
     else await expect(page.getByLabel("Folder canvas")).toBeVisible();
     await input.fill("keep every version");

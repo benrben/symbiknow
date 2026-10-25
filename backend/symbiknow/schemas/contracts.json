@@ -278,6 +278,9 @@
         "evaluated_count": {
           "type": "integer"
         },
+        "withheld_count": {
+          "type": "integer"
+        },
         "values": {
           "type": "array",
           "items": {
@@ -310,6 +313,35 @@
         },
         "target_chunk_id": {
           "type": "string"
+        },
+        "reviewed_by": {
+          "type": "string"
+        },
+        "reviewed_at": {
+          "type": "string"
+        },
+        "decision_id": {
+          "type": "string"
+        },
+        "correction_id": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "proof": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "additional_evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
         }
       },
       "required": [
@@ -342,6 +374,35 @@
         },
         "target_chunk_id": {
           "type": "string"
+        },
+        "reviewed_by": {
+          "type": "string"
+        },
+        "reviewed_at": {
+          "type": "string"
+        },
+        "decision_id": {
+          "type": "string"
+        },
+        "correction_id": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "proof": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "additional_evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
         },
         "source_document_id": {
           "type": "string"
@@ -384,6 +445,9 @@
         "truncated": {
           "type": "boolean"
         },
+        "original_text_length": {
+          "type": "integer"
+        },
         "location": {
           "$ref": "#/$defs/Provenance"
         }
@@ -413,6 +477,12 @@
           "type": "integer"
         },
         "text_end": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "original_text_length": {
           "type": "integer"
         },
         "evidence_revision": {
@@ -661,6 +731,9 @@
     "OrganizationChange": {
       "type": "object",
       "properties": {
+        "all_documents": {
+          "type": "boolean"
+        },
         "kind": {
           "type": "string"
         },
@@ -690,6 +763,29 @@
     "Library": {
       "type": "object",
       "properties": {
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "taxonomy_has_more": {
+          "type": "boolean"
+        },
+        "taxonomy_next_after": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "organization_reset": {
           "$ref": "#/$defs/OrganizationReset"
         },
@@ -1662,6 +1758,22 @@
     "JevDecisionQueue": {
       "type": "object",
       "properties": {
+        "revision": {
+          "type": "string"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_after": {
+          "type": "string"
+        },
         "decisions": {
           "type": "array",
           "items": {
@@ -1675,6 +1787,724 @@
       "required": [
         "decisions",
         "has_more"
+      ],
+      "additionalProperties": true
+    },
+    "AgentProvider": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "untested": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "installed",
+        "available",
+        "version",
+        "reason",
+        "untested"
+      ],
+      "additionalProperties": true
+    },
+    "AgentModel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "default": {
+          "type": "boolean"
+        },
+        "efforts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "default_effort": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "default",
+        "efforts",
+        "default_effort"
+      ],
+      "additionalProperties": true
+    },
+    "AgentSession": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "effort": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "token",
+        "provider",
+        "model",
+        "model_name",
+        "effort"
+      ],
+      "additionalProperties": true
+    },
+    "AgentEvent": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer"
+        },
+        "timestamp": {
+          "type": "integer"
+        },
+        "automatic": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "preview": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "result": {},
+        "ok": {
+          "type": "boolean"
+        },
+        "expires_at": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type",
+        "session_id",
+        "run_id",
+        "seq"
+      ],
+      "additionalProperties": true
+    },
+    "JobResponse": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "completed",
+            "failed"
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "job_id",
+        "status"
+      ],
+      "additionalProperties": true
+    },
+    "InventoryProject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "InventoryDocument": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "mime_type": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "source_filename": {
+          "type": "string"
+        },
+        "stored": {
+          "type": "boolean"
+        },
+        "storage_status": {
+          "type": "string"
+        },
+        "indexing_status": {
+          "type": "string"
+        },
+        "searchable": {
+          "type": "boolean"
+        },
+        "searchable_text": {
+          "type": "boolean"
+        },
+        "searchable_visual": {
+          "type": "boolean"
+        },
+        "indexing_error": {
+          "type": "string"
+        },
+        "project": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InventoryProject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "folder": {
+          "type": "string"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "organization_status": {
+          "type": "string"
+        },
+        "evidence_revision": {
+          "type": "string"
+        },
+        "folder_origin": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "version",
+        "filename",
+        "mime_type",
+        "size",
+        "sha256",
+        "created_at",
+        "source_filename",
+        "stored",
+        "storage_status",
+        "indexing_status",
+        "searchable",
+        "searchable_text",
+        "searchable_visual",
+        "indexing_error",
+        "project",
+        "folder",
+        "topics",
+        "groups",
+        "organization_status",
+        "evidence_revision",
+        "folder_origin"
+      ],
+      "additionalProperties": true
+    },
+    "InventoryPage": {
+      "type": "object",
+      "properties": {
+        "documents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InventoryDocument"
+          }
+        },
+        "count": {
+          "type": "integer"
+        },
+        "total_originals": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "documents",
+        "count",
+        "total_originals",
+        "revision",
+        "has_more",
+        "next_cursor",
+        "filters",
+        "scope"
+      ],
+      "additionalProperties": true
+    },
+    "TaxonomyFacet": {
+      "type": "object",
+      "properties": {
+        "dimension": {
+          "enum": [
+            "projects",
+            "folders",
+            "topics",
+            "statuses"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "definition": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "dimension",
+        "id",
+        "name",
+        "count",
+        "definition"
+      ],
+      "additionalProperties": true
+    },
+    "TaxonomyPage": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TaxonomyFacet"
+          }
+        },
+        "revision": {
+          "type": "string"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "has_more",
+        "next_cursor",
+        "semantics"
+      ],
+      "additionalProperties": true
+    },
+    "OrganizationHistoryEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "actor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "document_id": {
+          "type": "string"
+        },
+        "evidence_revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {},
+        "effective_owner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InventoryProject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "automatic_owner_suggestion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InventoryProject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_document_id": {
+          "type": "string"
+        },
+        "target_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "action",
+        "actor",
+        "timestamp",
+        "reason",
+        "version",
+        "document_id"
+      ],
+      "additionalProperties": true
+    },
+    "OrganizationHistoryPage": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "current": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OrganizationHistoryEntry"
+          }
+        },
+        "revision": {
+          "type": "string"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "document_id",
+        "current",
+        "entries",
+        "revision",
+        "has_more",
+        "next_cursor",
+        "limitations"
+      ],
+      "additionalProperties": true
+    },
+    "RecoverableJob": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "job_id",
+        "status",
+        "created_at",
+        "kind",
+        "error"
+      ],
+      "additionalProperties": true
+    },
+    "RecoverableJobPage": {
+      "type": "object",
+      "properties": {
+        "jobs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecoverableJob"
+          }
+        },
+        "revision": {
+          "type": "string"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobs",
+        "revision",
+        "has_more",
+        "next_cursor",
+        "scope"
       ],
       "additionalProperties": true
     }

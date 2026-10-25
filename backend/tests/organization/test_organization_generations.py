@@ -36,16 +36,17 @@ def test_overlay_reads_one_current_manual_ledger_snapshot_per_bounded_batch(cont
     path = organization_edits.path(root)
     organization_edits.atomic(path, {"schema": 1, "assignments": {"1": {"folder": "Manual"}}})
     calls = []
-    state = organization_edits._state
+    state = organization_edits._database
     def measured(root):
         calls.append(root)
         return state(root)
-    monkeypatch.setattr(organization_edits, "_state", measured)
+    monkeypatch.setattr(organization_edits, "_database", measured)
     monkeypatch.setattr(organization_store, "published_table", lambda root: None)
     result = organization_store.overlay(root, rows, columns=["folder"])
     assert result[1]["folder"] == "Manual" and result[2]["folder"] == "Automatic"
     assert len(calls) == 1 and rows[1]["folder"] == "Automatic"
-    organization_edits.atomic(path, {"schema": 1, "assignments": {"1": {"folder": "Changed"}}})
+    with state(root) as db:
+        db.execute("UPDATE assignments SET payload=? WHERE id='1'", (json.dumps({"folder": "Changed"}),))
     assert organization_store.overlay(root, rows, columns=["folder"])[1]["folder"] == "Changed"
     assert len(calls) == 2
 

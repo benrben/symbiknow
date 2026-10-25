@@ -190,7 +190,7 @@ export function reconcilePresentation(library: import("../api/client").Library) 
       if (nextName !== name) localStorage.removeItem(name);
     } else {
       if (manualChanged && change?.kind === "move")
-        for (const identity of change.document_ids) {
+        for (const identity of change.all_documents ? Object.keys(positions) : change.document_ids) {
           delete positions[identity];
           delete overviewPositions[identity];
           delete folderById[identity];

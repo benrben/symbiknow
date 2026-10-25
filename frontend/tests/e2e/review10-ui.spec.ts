@@ -11,6 +11,7 @@ const pinned = JSON.parse(
   ),
 );
 const out = path.resolve("../artifacts/review10-followup/ui");
+
 async function capture(page: Page, name: string, value?: unknown) {
   await fs.mkdir(out, { recursive: true });
   await page.screenshot({ path: path.join(out, name + ".png") });
@@ -74,7 +75,7 @@ async function fixture(page: Page) {
     });
   });
   const searches: any[] = [];
-  await page.route("**/api/search", (route) => {
+  await page.route(/\/api\/(?:search|ask)$/, (route) => {
     const args = route.request().postDataJSON();
     searches.push(args);
     const p = pinned.find((p) => p.query === args.query) || pinned[0];
@@ -101,6 +102,7 @@ async function fixture(page: Page) {
       },
     });
   });
+  await page.route("**/api/original-ready?*", route => route.fulfill({ json: { ready: true } }));
   await page.route("**/api/original?*", (route) =>
     route.fulfill({
       contentType: "text/plain",
@@ -280,8 +282,8 @@ test("legacy124-pitch upgrade offers reversible reflow, retains16collision histo
     .click();
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Map", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.locator(".app"),
+  ).toHaveClass(/map-view/);
   await page
     .getByRole("button", { name: /^Symbiknow \d+$/, exact: true })
     .click();
@@ -289,6 +291,8 @@ test("legacy124-pitch upgrade offers reversible reflow, retains16collision histo
   // the upgraded map and the persisted undo snapshot rather than fresh layout.
   await page.getByLabel("Search your knowledge").fill(pinned[0].query);
   await page.getByLabel("Search your knowledge").press("Enter");
+  // Folder navigation opens the file workspace; explicitly return to the saved map.
+  await chooseView(page, "Canvas");
   await expect(
     page.getByRole("button", { name: "Undo", exact: true }),
   ).toBeVisible();

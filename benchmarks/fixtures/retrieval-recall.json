@@ -1,0 +1,146 @@
+{
+  "provenance": {
+    "author_labeled": true,
+    "independent_gold": false,
+    "frozen_utc": "2026-10-25",
+    "frozen_before_any_run": true,
+    "corpus": [
+      "backend/tests/fixtures/library",
+      "backend/tests/fixtures/ordinary-prose",
+      "backend/tests/fixtures/review-4"
+    ],
+    "description": "Paraphrased questions over the isolated test-fixture corpus. Gold is an exact quote; every corpus document containing it counts as gold. Small corpus: document-level recall@8 is near-trivial; passage visibility to the judge is the informative signal. Not a measure of large-library recall."
+  },
+  "cases": [
+    {
+      "id": "ocfl-versions",
+      "query": "How must OCFL object content be organized over time?",
+      "gold_quote": "be stored as a sequence of one or more versions"
+    },
+    {
+      "id": "ocfl-version-names",
+      "query": "What naming convention must OCFL version directories follow?",
+      "gold_quote": "either a non-padded"
+    },
+    {
+      "id": "ntuple-depth",
+      "query": "How deep below the storage root does the hashed n-tuple layout put each object by default?",
+      "gold_quote": "object root will be 4 directories removed from the OCFL storage root"
+    },
+    {
+      "id": "pdf-reader-limits",
+      "query": "What limits apply to rendered PDF reader page images?",
+      "gold_quote": "Reader images are bounded to 1,400 pixels per edge"
+    },
+    {
+      "id": "peak-rss",
+      "query": "What was the peak process memory with the model, Docling and five files?",
+      "gold_quote": "4,887 MiB (4.77 GiB)"
+    },
+    {
+      "id": "capacity-100k",
+      "query": "Has capacity for a hundred thousand documents been validated?",
+      "gold_quote": "100,000-document capacity is unvalidated"
+    },
+    {
+      "id": "upload-batch",
+      "query": "How many files can a single upload request carry?",
+      "gold_quote": "containing 1–32 items"
+    },
+    {
+      "id": "python-version",
+      "query": "Which Python version has been tested?",
+      "gold_quote": "Python 3.12 tested"
+    },
+    {
+      "id": "node-version",
+      "query": "Which Node version is available for running the frontend tools?",
+      "gold_quote": "Node 22.23.3"
+    },
+    {
+      "id": "download-range",
+      "query": "How do I continue a download after the first byte range?",
+      "gold_quote": "262144 bytes with `eof: false`"
+    },
+    {
+      "id": "freshness-cache",
+      "query": "How large is the freshness successful-result cache?",
+      "gold_quote": "100,000-entry successful-result cache"
+    },
+    {
+      "id": "data-dir-env",
+      "query": "Which environment variable selects the library data directory?",
+      "gold_quote": "`SYMBIKNOW_DATA_DIR` selects the library"
+    },
+    {
+      "id": "rebuild-persist",
+      "query": "Where are organization rebuild requests persisted?",
+      "gold_quote": "data/temp/organization-rebuild.json"
+    },
+    {
+      "id": "folder-delete",
+      "query": "What happens to documents when a folder is deleted?",
+      "gold_quote": "moving their documents to Unfiled while preserving original bytes"
+    },
+    {
+      "id": "embedding-model",
+      "query": "Which embedding model was used in the performance evidence?",
+      "gold_quote": "google/embeddinggemma-2"
+    },
+    {
+      "id": "memory-followup",
+      "query": "How much did matched server and child peak memory fall in the memory follow-up?",
+      "gold_quote": "matched server/child peak fell from 6.06 to 3.98 GiB"
+    },
+    {
+      "id": "candidate-prep",
+      "query": "How long did synthetic 100,000-document candidate preparation take for an unscoped corpus?",
+      "gold_quote": "21.529 seconds at 682.75 MiB peak RSS"
+    },
+    {
+      "id": "build-step-2",
+      "query": "What does step 2 of the original build plan cover?",
+      "gold_quote": "Make upload and download work"
+    },
+    {
+      "id": "int8-runtime",
+      "query": "Which document describes the PyTorch INT8 runtime?",
+      "gold_quote": "selected PyTorch INT8 runtime"
+    },
+    {
+      "id": "vela-refund",
+      "query": "How long after the invoice can a Vela Labs customer request a refund?",
+      "gold_quote": "within fourteen days of the invoice date"
+    },
+    {
+      "id": "beacon-returns",
+      "query": "How long does Beacon Studio accept product returns?",
+      "gold_quote": "seven days after delivery"
+    },
+    {
+      "id": "nacre-returns",
+      "query": "How long does Nacre accept product returns?",
+      "gold_quote": "twenty-one days after delivery"
+    },
+    {
+      "id": "nacre-signin",
+      "query": "What must a new Nacre employee register before signing in?",
+      "gold_quote": "register a passkey before signing in"
+    },
+    {
+      "id": "vela-leaver",
+      "query": "When does Vela Labs disable a departing employee's account?",
+      "gold_quote": "disables the company account on the departure date"
+    },
+    {
+      "id": "rosemary-water",
+      "query": "When should the Oak Garden rosemary be watered?",
+      "gold_quote": "Water only when the upper soil has dried"
+    },
+    {
+      "id": "vela-duplicate",
+      "query": "How does Vela Labs correct a duplicate invoice?",
+      "gold_quote": "issuing a credit note against the original invoice"
+    }
+  ]
+}

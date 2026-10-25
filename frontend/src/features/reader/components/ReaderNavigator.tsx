@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Folder, Search } from "lucide-react";
 import { DocumentIcon as FileText } from "../../../shared/components/KnowledgeIcons";
 import { contextualTitle } from "../../library/presentation";
@@ -17,13 +17,15 @@ export default function ReaderNavigator(p: {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
+  const cursors = useRef<(string | undefined)[]>([undefined]);
   const [retry, setRetry] = useState(0);
   const folder = p.doc.folder || "";
   useEffect(() => {
     setPage(0);
+    cursors.current = [undefined];
     setQuery("");
     setResult(undefined);
-  }, [folder, p.search, p.group]);
+  }, [folder, p.search, p.group, p.revision]);
   useEffect(() => {
     if (p.search) return;
     const c = new AbortController();
@@ -36,13 +38,22 @@ export default function ReaderNavigator(p: {
     });
     if (p.group) params.set("group", p.group);
     // Pages remain bounded while every file in a large folder stays reachable.
-    params.set("offset", String(page * 60));
+    const cursor = cursors.current[page];
+    if (cursor) params.set("cursor", cursor);
     api<Library>("library?" + params, undefined, c.signal)
       .then((r) => {
-        if (!c.signal.aborted) setResult(r);
+        if (!c.signal.aborted) {
+          cursors.current[page + 1] = r.next_cursor || undefined;
+          setResult(r);
+        }
       })
       .catch((e) => {
-        if (!c.signal.aborted) setError(e.message);
+        if (!c.signal.aborted) {
+          if (page > 0 && /cursor/i.test(e.message)) {
+            cursors.current = [undefined];
+            setPage(0);
+          } else setError(e.message);
+        }
       })
       .finally(() => {
         if (!c.signal.aborted) setBusy(false);
@@ -92,7 +103,7 @@ export default function ReaderNavigator(p: {
           <button
             key={d.document_id}
             title={d.filename}
-            aria-label={`Read ${title(d)}`}
+            aria-label={`Read ${d.filename}`}
             aria-current={
               d.document_id === p.doc.document_id ? "page" : undefined
             }
@@ -115,7 +126,7 @@ export default function ReaderNavigator(p: {
             Previous files
           </button>
           <button
-            disabled={busy || !result?.has_more}
+            disabled={busy || !result?.has_more || !cursors.current[page + 1]}
             onClick={() => setPage((n) => n + 1)}
           >
             Next files

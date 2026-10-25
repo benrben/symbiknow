@@ -34,16 +34,15 @@ def test_folder_stdio_round_trip_restart_and_snapshot(tmp_path):
         async with Client(server_parameters(str(data), storage_only=True)) as client:
             tools = {t.name: t for t in (await client.list_tools()).tools}
             assert set(tools) == {
+                "ask",
+                "list_documents", "get_taxonomy", "list_jev_decisions", "get_organization_history", "list_jobs",
+                "resolve_jev_decision", "get_job",
                 "upload",
                 "download",
                 "search",
                 "upload_folder",
                 "download_folder",
                 "remove_file",
-                "scan_freshness",
-                "get_freshness_scan",
-                "cancel_freshness_scan",
-                "review_freshness_finding",
             }
             assert set(tools["upload_folder"].input_schema["required"]) == {
                 "folder",
@@ -242,7 +241,7 @@ def test_path_file_directory_collision_and_failed_export_cleanup(isolated, monke
         assert not any(a.startswith(b + "/") for a in names for b in names)
     before = set((isolated / "temp" / "folder-exports").glob("*"))
     monkeypatch.setattr(
-        storage, "verified_file", lambda *a: (_ for _ in ()).throw(FileNotFoundError("deleted"))
+        storage, "verified_ranges", lambda *a: (_ for _ in ()).throw(FileNotFoundError("deleted"))
     )
     with pytest.raises(FileNotFoundError):
         server.download_folder("Root")

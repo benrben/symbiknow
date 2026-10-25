@@ -6,7 +6,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       // Preserve the browser's Host and Origin for the backend's same-origin check.
-      "/api": { target: "http://127.0.0.1:8765", changeOrigin: false },
+      "/api": { target: "http://127.0.0.1:8765", changeOrigin: false, ws: true },
     },
   },
 });

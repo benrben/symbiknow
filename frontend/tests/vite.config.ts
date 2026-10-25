@@ -4,6 +4,12 @@ import appConfig from "../vite.config.ts";
 export default mergeConfig(
   appConfig,
   defineConfig({
-    server: { proxy: { "/api": { target: "http://127.0.0.1:8766" } } },
+    server: {
+      proxy: {
+        "/api": {
+          target: `http://127.0.0.1:${process.env.SYMBIKNOW_UI_PORT || "8766"}`,
+        },
+      },
+    },
   }),
 );

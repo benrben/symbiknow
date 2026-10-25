@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useId } from "react";
-import { Folder, Clock3, HardDrive, MoreHorizontal, ChevronRight, ChevronDown } from "lucide-react";
+import { Folder, Clock3, HardDrive, MoreHorizontal, ChevronRight, ChevronDown, Pencil, FolderInput, Trash2 } from "lucide-react";
 import { LibraryIcon as FileText, UnfiledIcon as Inbox } from "../../../shared/components/KnowledgeIcons";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { folderCounts } from "../../../shared/api/client";
@@ -20,6 +20,8 @@ export function Logo() {
 }
 export default function Sidebar(p: {
   folders: Record<string, number>;
+  onNextTaxonomy?: () => void;
+  onFirstTaxonomy?: () => void;
   folder?: string;
   recent: boolean;
   libraryId?: string;
@@ -156,6 +158,10 @@ export default function Sidebar(p: {
           <small aria-hidden="true"> {counts[""] || 0}</small>
         </button>
         <h2>Folders</h2>
+        {(p.onNextTaxonomy || p.onFirstTaxonomy) && <div>
+          {p.onFirstTaxonomy && <button onClick={p.onFirstTaxonomy}>First folders</button>}
+          {p.onNextTaxonomy && <button onClick={p.onNextTaxonomy}>Next folders and groups</button>}
+        </div>}
         <input
           className="sidebar-folder-search"
           type="search"
@@ -188,7 +194,7 @@ export default function Sidebar(p: {
                 }}
                 className={"folder-nav-row " + (p.folder === f ? "active" : "")}
                 title={f}
-                aria-label={`${f}, ${counts[f]} files`}
+                aria-label={`${f}, ${counts[f]} ${counts[f] === 1 ? "file" : "files"}`}
                 style={{ paddingLeft: 8 + Math.min(depth - 1, 5) * 12 }}
                 onFocus={() => setFocused(f)}
                 onKeyDown={(e) => {
@@ -282,19 +288,21 @@ export default function Sidebar(p: {
                         disabled={p.busy}
                         onSelect={() => p.onEdit("rename-folder", f)}
                       >
-                        Rename…
+                        <Pencil size={14} aria-hidden="true" /> Rename…
                       </Menu.Item>
                       <Menu.Item
                         disabled={p.busy}
                         onSelect={() => p.onEdit("move-folder", f)}
                       >
-                        Move to…
+                        <FolderInput size={14} aria-hidden="true" /> Move to…
                       </Menu.Item>
+                      <Menu.Separator className="menu-separator" />
                       <Menu.Item
+                        className="menu-danger"
                         disabled={p.busy}
                         onSelect={() => p.onDelete(f, counts[f])}
                       >
-                        Remove folder…
+                        <Trash2 size={14} aria-hidden="true" /> Remove folder…
                       </Menu.Item>
                     </Menu.Content>
                   </Menu.Portal>

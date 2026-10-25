@@ -1,0 +1,132 @@
+[
+  {
+    "filename": "Crazyidea myai Jev Finder.md",
+    "evidence": [
+      {
+        "text": "myai Jev Finder (2026-10-23)\nJev is our decision model: Qwen3.5-4B-Base 4-bit + the joint adapter (checkpoint 1000,\n```\nresults/joint_qwen35_colab_v1/local_checkpoint_1000/checkpoint-001000-226707\n```\n; the int4 export is not supported by qwrun). It answers with a probability, not text. Jev Finder asks it, for every window of every library document, \"Does this document answer the question: ...?\" (a Jev Noul) and brings back the documents it says yes to.",
+        "evidence_id": "619d7cda-4db0-5609-ab94-23a3b60bdeaf:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea myai Living Library.md",
+    "evidence": [
+      {
+        "text": "myai Living Library (2026-10-23)\n\"WOW 1\": every library document becomes an expert agent that has read it once. A question wakes the experts most likely to know; each reads only the question and answers from its whole document; a chief merges the answers with sources. Page: playground\n```\n/library\n```\n; code:\n```\nplayground/agent/playground/library.py\n```\n.",
+        "evidence_id": "68d7671a-c757-571e-9e07-372b785b5658:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea myai app overview.md",
+    "evidence": [
+      {
+        "text": "myai: the app (overview, 2026-10-23)\nmyai is the user-facing name of qwrun, our from-scratch Rust + Metal LLM engine for Apple Silicon (source:\n```\n/Users/benreich/Projects/crazyidea/runner\n```\n, binaries\n```\nmyai\n```\nand\n```\nqwrun\n```\n). Goal: faster than MLX and less RAM, with every limit measured on the device, never hand-set.",
+        "evidence_id": "67ab9cb0-fab1-590c-9253-14a18b96954e:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea myai engine changes 2026-10-21 to 23.md",
+    "evidence": [
+      {
+        "text": "myai engine changes, 2026-10-21 to 2026-10-23\nRepository\n```\n/Users/benreich/Projects/crazyidea/runner\n```\n(main). Every number is measured on the M5 Pro.",
+        "evidence_id": "413ca8ca-6135-50e6-803c-0b89f29adef6:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea myai playground.md",
+    "evidence": [
+      {
+        "text": "myai playground (2026-10-23)\nA local web app (\n```\n/Users/benreich/Projects/crazyidea/playground\n```\n,\n```\n./start.sh\n```\n, http://localhost:3000) with one page per thing myai does well. Every page is a chat.\n**Chat** `/`, What you do = Talk to a LangChain deep agent (todos, files in `workspace/` , subagents). MCP servers are chips in the message box, picked per message; \"Manage\" adds servers.. **Chat** `/`, What it shows = Live speed, agents, memory, model calls; workspace files.. **Living Library** `/library`, What you do = Ask the chief. The best-matching experts (4/8/16/all) wake, answer at once, and the chief merges them with sources. Follow-ups work.. **Living Library** `/library`, What it shows = Every document with its expert agents lighting up (asleep, thinking, relevant, not picked), match score, each expert's answer, SSD use, t",
+        "evidence_id": "bbfec942-c978-546c-91db-16df5119771a:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea qwrun MLX llama.cpp comparison 2026-10-20.md",
+    "evidence": [
+      {
+        "text": "qwrun vs MLX vs llama.cpp — 2026-10-20\n**qwrun writes 19–35% faster than the installed llama.cpp on these three deployed 4-bit variants, but remains 2–5% behind stock MLX.**\nPrompt reading is faster than llama.cpp and modestly faster than MLX, with a clear 25% lead over MLX on Qwen3-0.6B. Single-session model resources are broadly similar to MLX; the much smaller process footprint is not a measure of total RAM.\nAll results below are measured on this M5 Pro, 20-core GPU, 48 GiB Mac. Main stayed clean at\n```\nc0aa57ba2f355f753c3e1a97b7cac516f8bc2b48\n```\n. Installed packages: MLX 0.32.4, mlx-lm 0.32.2, llama.cpp 0.6.0_1, ggml 0.26.0. No engine code or branch was changed for this comparison.",
+        "evidence_id": "8459ab7f-b578-53f2-a5f1-f3e79039d811:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea qwrun batched streaming v1 results 2026-10-20.md",
+    "evidence": [
+      {
+        "text": "Batched streaming decode: measured results\nOne layer read now serves the whole batch. The practical result is a streaming option for many agents, with lower tracked service allocations and a throughput tradeoff. The table shows three-run medians for\n**64 agents reading uncached private model layers**\n. Whole-call rates include prompt admission after the model loader returns; they are service rates, not full cold-start latency. Per-agent rates are totals divided by 64.\nqwen35-4b-base-q4, Decode tok/s: total / agent = 397.33 / 6.21. qwen35-4b-base-q4, Whole-call useful tok/s: total / agent = 270.01 / 4.22. qwen35-4b-base-q4, Tracked service peak GB: stream / resident = 6.173 / 8.056. qwen35-9b-q4, Decode tok/s: total / agent = 203.03 / 3.17. qwen35-9b-q4, Whole-call useful tok/s: total / agent = 139.87 / 2.19. qwen35-9b-q4, Tracked service ",
+        "evidence_id": "1fc6ba88-7663-5331-a3aa-10c5678fe7ac:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea qwrun decision log 2026-10-21.md",
+    "evidence": [
+      {
+        "text": "Crazyidea qwrun decision log — 21 October 2026 (updated 23 October 2026)\nNewest decisions first. Entries from 21-23 October cover the myai app, the playground and the engine work behind it.\nThis is a new record for the completed five-task qwrun run. The historical document ID\n```\nf98cc5a0-15d1-5e70-8312-9a683f421680\n```\nwas unavailable during publication; Symbiknow reported that it was deleted or never uploaded. Searches found no replacement record. Earlier remote history has not been reconstructed or overwritten. The reviewed current-work record follows unchanged.",
+        "evidence_id": "db6d308c-6902-50ab-bf18-82fc585327ab:v2:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea qwrun decode fusion results 2026-10-20.md",
+    "evidence": [
+      {
+        "text": "Decode launch fusion\n**Status:**\nmerged and built on clean main\n```\nc0aa57ba2f355f753c3e1a97b7cac516f8bc2b48\n```\n. Main is frozen for the following comparisons. Candidate head:\n```\n48af5c53aef7b800ff43d22d7380dfe9778ad4ff\n```\n.\nThe useful change is to do several small operations in one GPU launch. It does not change weight formats, precision, model math, or generated tokens. This is a modest speed improvement, not a new bandwidth breakthrough.\nTwo fusions were present in the unfinished branch:\n- **Attention:** normalize Q and K, apply RoPE, and write K/V to their cache pages in one launch instead of three. This removes 56 launches per token on Qwen3-0.6B, 32 on Llama-1B, and 16 on Qwen3.5.\n- **Linear attention:** normalize Q/K and calculate the gated-delta gates in one launch instead of three. This removes another 48 launches per token on",
+        "evidence_id": "2ed6850f-5a85-5356-9944-504aa0acdf67:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea qwrun final comparison and streaming results 2026-10-20.md",
+    "evidence": [
+      {
+        "text": "qwrun: final comparison and batched streaming\nFusion, the three-engine comparison and the complete seven-model, multi-agent and shared-prefix suite are finished. Batched streaming passed its correctness, 144 production and 48 overlap checks. Two independent full-manifest checks validated all 266 streaming sweep workers, 14 support checks, 68 preparation shapes, source/binary identities, tuning epoch and saved outputs.\nMachine: M5 Pro, 20-core GPU, 48 GiB RAM. The measured main build is clean\n```\nc0aa57ba2f355f753c3e1a97b7cac516f8bc2b48\n```\n. MLX is 0.32.4 and mlx-lm is 0.32.2. Streaming is isolated in\n```\nrunner_stream2\n```\nand is\n**not merged**\n.",
+        "evidence_id": "a96dcaab-5f5e-5a0b-9f8c-2205f21b79f7:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea qwrun final seven-model benchmarks 2026-10-20.md",
+    "evidence": [
+      {
+        "text": "Final qwrun head-to-head, multi-agent and prefix results\nFrozen main:\n```\nc0aa57ba2f355f753c3e1a97b7cac516f8bc2b48\n```\n. MLX\n```\n0.32.4\n```\n, mlx_lm\n```\n0.32.2\n```\n. Device: Apple M5 Pro, 20-core GPU, 48 GiB unified RAM.\nThis report uses only the 561 accepted final-suite cells: 191 head-to-head (including 14 f32 references and 9 adapter cells), 322 multi-agent (including 7 single-session reference sets), and 48 prefix cells. Every accepted worker command used\n```\ngpu_lock.py\n```\n, exited successfully, and retained source/package identities and hashed output artifacts. Rejected attempts remain on disk and are excluded. The report builder rechecks those receipts and recomputes output comparisons from saved artifacts.\nPreparation used\n```\nQWRUN_RETUNE=1\n```\n; benchmark cells do not force retuning. Existing cached plans must stay unchanged wi",
+        "evidence_id": "7bb47678-4c0e-5ae2-ae5a-f8a21b47fea6:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea qwrun parallel jobs results 2026-10-21.md",
+    "evidence": [
+      {
+        "text": "Crazyidea qwrun parallel jobs — 21 October 2026\nThis is a new record for the completed five-task qwrun run. The historical document ID\n```\ndc810e1a-0fbd-5e11-94cc-4f4fcbd1eff4\n```\nwas unavailable during publication; Symbiknow reported that it was deleted or never uploaded. Searches found no replacement record. Earlier remote history has not been reconstructed or overwritten. The reviewed current-work record follows unchanged.",
+        "evidence_id": "33ad3659-efaf-5ed0-af70-4e6df097e727:v1:t0",
+        "basis": "text"
+      }
+    ]
+  },
+  {
+    "filename": "Crazyidea qwrun speed plan 2026-10-21.md",
+    "evidence": [
+      {
+        "text": "Crazyidea qwrun speed plan — 21 October 2026\nThis is a new record for the completed five-task qwrun run. The historical document ID\n```\n8cd46358-cef7-5e1e-930d-f1f4e087ff03\n```\nwas unavailable during publication; Symbiknow reported that it was deleted or never uploaded. Searches found no replacement record. Earlier remote history has not been reconstructed or overwritten. The reviewed current-work record follows unchanged.",
+        "evidence_id": "0cf883da-809a-551c-9d7a-456aaf16b49b:v1:t0",
+        "basis": "text"
+      }
+    ]
+  }
+]

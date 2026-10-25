@@ -27,6 +27,21 @@ def context(tmp_path, monkeypatch):
     return tmp_path, monkeypatch, TestClient(ui.create_app(), base_url="http://127.0.0.1")
 
 
+def prepared_preview(client, action, params):
+    """Read the public job then fetch its completed binary artifact."""
+    response = client.get(action, params=params)
+    if response.status_code != 202:
+        return response
+    job = response.json()
+    while job["status"] in {"queued", "running"}:
+        server.application().jobs.process_one()
+        job = client.get("/api/job", params={"id": job["job_id"]}).json()
+    if job["status"] == "failed":
+        import httpx
+        return httpx.Response(400, json={"error": job["error"]})
+    return client.get(action, params=params)
+
+
 def add(root, name="notes.txt", content=b"cat rests", **kwargs):
     meta = storage.save_file(root, content, name, **kwargs)
     search.register_document(root, meta)
@@ -41,12 +56,36 @@ def indexed(root, **kwargs):
 
 
 def mutate(client, action, body, **kwargs):
-    return client.post(
+    response = client.post(
         "/api/" + action,
         json=body,
         headers={"Origin": "http://127.0.0.1", "X-Symbiknow-UI": "1"},
         **kwargs,
     )
+    # Exercise submission and job reads separately, using the same domain worker
+    # as the lifespan. These unit clients deliberately do not start live threads.
+    if response.status_code != 200 or action == "rebuild":
+        return response
+    value = response.json()
+    def finished(job):
+        while job["status"] in {"queued", "running"} or "result" not in job:
+            server.application().jobs.process_one()
+            job = client.get("/api/job", params={"id": job["job_id"]}).json()
+        return job
+    import httpx
+    if "job_id" in value:
+        job = finished(value)
+        if job["status"] == "failed":
+            return httpx.Response(400, json=job.get("result") or {"error": job["error"]})
+        value = job["result"]
+        if action == "bulk-download":
+            return client.get(value["url"])
+    for index, item in enumerate(value.get("files", [])):
+        if "job_id" in item:
+            job = finished(item)
+            value["files"][index] = {**(job.get("result") or {"stored": False, "error": job["error"]}), "index": index}
+    return httpx.Response(200, json=value)
+
 
 
 def decision(folder="Fresh", groups=None, links=None):
@@ -323,14 +362,14 @@ def test_version_keyed_thumbnail_is_derived_and_original_bytes_survive(context):
     buffer = BytesIO()
     Image.new("RGB", (800, 800), "red").save(buffer, "PNG")
     metadata = add(root, "photo.png", buffer.getvalue())
-    response = client.get("/api/thumbnail", params={"id": metadata["document_id"], "version": "v1"})
+    response = prepared_preview(client, "/api/thumbnail", params={"id": metadata["document_id"], "version": "v1"})
     assert response.headers["content-type"] == "image/jpeg"
     with Image.open(BytesIO(response.content)) as image:
         assert image.width <= 264 and image.height <= 340
     assert storage.read_file(root, metadata["document_id"])[0] == buffer.getvalue()
     assert len(list((root / "temp" / "thumbnails").glob("*.jpg"))) == 1
     assert (
-        client.get("/api/thumbnail", params={"id": "../../secret", "version": "v1"}).status_code
+        prepared_preview(client, "/api/thumbnail", params={"id": "../../secret", "version": "v1"}).status_code
         == 400
     )
 
@@ -733,7 +772,7 @@ def test_canvas_card_skips_boilerplate_and_search_excerpt_uses_supporting_match(
             ]
         },
     )
-    result = mutate(client, "search", {"query": "refund window"}).json()
+    result = mutate(client, "search", {"query": "refund window", "mode": "keyword"}).json()
     assert result["matches"][0]["excerpt"] == "Refunds are accepted within fourteen days."
     assert result["matches"][0]["evidence"] == [first, support]
     assert storage.read_file(root, doc["document_id"])[0] == b"Original bytes remain exact."
@@ -1028,7 +1067,7 @@ def test_pdf_first_page_thumbnail_uses_existing_renderer_without_changing_bytes(
     document.close()
     original = buffer.getvalue()
     metadata = add(root, "first-page.pdf", original, mime_type="application/pdf")
-    r = client.get("/api/thumbnail", params={"id": metadata["document_id"], "version": "v1"})
+    r = prepared_preview(client, "/api/thumbnail", params={"id": metadata["document_id"], "version": "v1"})
     assert r.status_code == 200
     with Image.open(BytesIO(r.content)) as image:
         assert image.width <= 264 and image.height <= 340
@@ -1052,21 +1091,21 @@ def test_pdf_reader_pages_are_bounded_version_pinned_and_cacheable(context):
     original = buffer.getvalue()
     metadata = add(root, "two-pages.pdf", original, mime_type="application/pdf")
     params = {"id": metadata["document_id"], "version": "v1", "page": "2"}
-    response = client.get("/api/pdf-page", params=params)
+    response = prepared_preview(client, "/api/pdf-page", params=params)
     assert response.status_code == 200
     assert response.headers["x-pdf-page-count"] == "2"
     with Image.open(BytesIO(response.content)) as image:
         assert image.width > image.height and max(image.size) <= 1400
-    assert client.get("/api/pdf-page", params=params).content == response.content
+    assert prepared_preview(client, "/api/pdf-page", params=params).content == response.content
     for invalid in ("0", "-1", "3", "10001", "oops"):
-        assert client.get("/api/pdf-page", params={**params, "page": invalid}).status_code == 400
-    assert client.get("/api/pdf-page", params={**params, "version": ""}).status_code == 400
+        assert prepared_preview(client, "/api/pdf-page", params={**params, "page": invalid}).status_code == 400
+    assert prepared_preview(client, "/api/pdf-page", params={**params, "version": ""}).status_code == 400
     assert client.get("/api/download", params=params).content == original
     other = add(root, "plain.txt", b"not a PDF")
-    assert client.get("/api/pdf-page", params={**params, "id": other["document_id"]}).status_code == 400
+    assert prepared_preview(client, "/api/pdf-page", params={**params, "id": other["document_id"]}).status_code == 400
     new = storage.save_file(root, b"new bytes", "two-pages.txt", document_id=metadata["document_id"], expected_version="v1")
     search.register_document(root, new)
-    assert client.get("/api/pdf-page", params=params).content == response.content
+    assert prepared_preview(client, "/api/pdf-page", params=params).content == response.content
 
 
 def test_csv_card_returns_bounded_literal_cells_for_the_requested_version(context):
@@ -1122,3 +1161,29 @@ def test_all_metadata_sorts_and_recent_order_cover_both_directions_and_pages(con
         for i in range(3)
     ]
     assert recent == [doc["document_id"] for doc in reversed(documents)]
+
+
+def test_original_http_ranges_are_bounded_and_pin_preparation(context):
+    root, _, client = context
+    body = bytes(range(256)) * 2048
+    saved = add(root, 'ranges.bin', body)
+    params = {'id': saved['document_id'], 'version': 'v1'}
+    response = client.get('/api/original', params=params, headers={'Range': 'bytes=262140-262155'})
+    assert response.status_code == 206 and response.content == body[262140:262156]
+    assert response.headers['content-range'] == f'bytes 262140-262155/{len(body)}'
+    suffix = client.get('/api/download', params=params, headers={'Range': 'bytes=-9'})
+    assert suffix.status_code == 206 and suffix.content == body[-9:]
+    invalid = client.get('/api/download', params=params, headers={'Range': 'bytes=999999-'})
+    assert invalid.status_code == 416
+    changed = client.get('/api/download', params=params, headers={'Range': 'bytes=1-3', 'If-Range': '"different"'})
+    assert changed.status_code == 200 and changed.content == body
+    with storage._range_db(root) as db:
+        db.execute('DELETE FROM files')
+    queued = client.get('/api/original', params={'id': saved['document_id']})
+    assert queued.status_code == 202
+    job_id = queued.json()['job_id']
+    storage.save_file(root, b'new head', 'ranges.bin', document_id=saved['document_id'])
+    server.application().jobs.process_one()
+    completed = client.get('/api/job', params={'id': job_id}).json()
+    assert completed['status'] == 'completed' and completed['result']['version'] == 'v1'
+    assert client.get('/api/download', params=params, headers={'Range': 'bytes=1-3'}).content == body[1:4]

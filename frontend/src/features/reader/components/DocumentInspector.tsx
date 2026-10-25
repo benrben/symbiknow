@@ -1,3 +1,4 @@
+import { readOriginalText, downloadOriginal } from "../../../shared/api/client";
 import { useEffect, useState, useRef, useId } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import * as Menu from "@radix-ui/react-dropdown-menu";
@@ -7,8 +8,27 @@ import ReaderTools from "./ReaderTools";
 import PdfPreview from "./PdfPreview";
 import { useAppearance } from "../../appearance/preferences";
 import DOMPurify from "dompurify";
-import { ArrowLeft, Info, X, Download, ExternalLink, MoreHorizontal, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
-import { VersionsIcon, EvidenceIcon, DocumentIcon as FileText, ConnectionsIcon as Link2 } from "../../../shared/components/KnowledgeIcons";
+import {
+  ArrowLeft,
+  Info,
+  X,
+  Download,
+  ExternalLink,
+  MoreHorizontal,
+  FilePlus2,
+  FolderInput,
+  History,
+  Trash2,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
+import {
+  VersionsIcon,
+  EvidenceIcon,
+  DocumentIcon as FileText,
+  ConnectionsIcon as Link2,
+} from "../../../shared/components/KnowledgeIcons";
 import FreshnessReview from "../../freshness/components/FreshnessReview";
 import {
   api,
@@ -28,16 +48,39 @@ import {
 import { contextualTitle } from "../../library/presentation";
 import { searchEvidence, passagePreview } from "../../search/evidence";
 import { Judgment } from "../../library/components/FileList";
+import ConnectionProvenance from "../../connections/components/ConnectionProvenance";
+import OrganizationHistory from "../../organization/components/OrganizationHistory";
+import { readPreview } from "../preview";
+
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function namedValue(value: unknown, field = "name"): string | undefined {
+  if (typeof value === "string" && value.trim()) return value;
+  const row = record(value);
+  const label = row?.[field];
+  return typeof label === "string" && label.trim() ? label : undefined;
+}
+
 export function Preview({
   doc,
   highlights = [],
   libraryId,
+  active = true,
 }: {
   doc: Doc;
   highlights?: string[];
   libraryId?: string;
+  active?: boolean;
 }) {
   const dataRevision = useDataRevision();
+  const [visibleRevision, setVisibleRevision] = useState(dataRevision);
+  useEffect(() => {
+    if (active) setVisibleRevision(dataRevision);
+  }, [active, dataRevision]);
   const [text, setText] = useState("");
   const proseRef = useRef<HTMLDivElement>(null);
   const outlineId = useId();
@@ -47,27 +90,27 @@ export function Preview({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [table, setTable] = useState<string[][]>();
+  const [imageUrl, setImageUrl] = useState("");
+  useEffect(
+    () => () => {
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
+    },
+    [imageUrl],
+  );
   const { theme } = useAppearance();
   const k = kind(doc);
+  // Original bytes are immutable at a pinned version. Only extracted card
+  // previews need another read when the evidence/index revision changes.
+  const extractionRevision = k === "CSV" || k === "Word" ? visibleRevision : "";
   useEffect(() => {
     setText("");
     setTable(undefined);
+    setImageUrl("");
     setError("");
     setLoading(true);
     const c = new AbortController();
     if (["Text", "Markdown", "HTML"].includes(k)) {
-      if ((doc.size || 0) > 2 * 1024 * 1024) {
-        setError(
-          "This text file is too large for an inline preview. Download the original to read it.",
-        );
-        setLoading(false);
-        return;
-      }
-      fetch(fileUrl(doc), { signal: c.signal })
-        .then((r) => {
-          if (!r.ok) throw new Error("Preview unavailable");
-          return r.text();
-        })
+      readOriginalText(doc, c.signal)
         .then(setText)
         .catch((e) => {
           if (e.name !== "AbortError") setError(e.message);
@@ -92,9 +135,21 @@ export function Preview({
         .finally(() => {
           if (!c.signal.aborted) setLoading(false);
         });
+    } else if (k === "Image") {
+      readPreview(fileUrl(doc), c.signal)
+        .then((response) => response.blob())
+        .then((blob) => {
+          if (!c.signal.aborted) setImageUrl(URL.createObjectURL(blob));
+        })
+        .catch((e) => {
+          if (!c.signal.aborted) setError(e.message);
+        })
+        .finally(() => {
+          if (!c.signal.aborted) setLoading(false);
+        });
     } else setLoading(false);
     return () => c.abort();
-  }, [doc.document_id, doc.version, k, doc.size, dataRevision]);
+  }, [doc.document_id, doc.version, k, extractionRevision]);
   useEffect(() => {
     const root = proseRef.current;
     if (!root || loading || error || k !== "Markdown") {
@@ -121,7 +176,15 @@ export function Preview({
     return (
       <p role="status">
         {error} Metadata, history and download remain available.
-        <a href={fileUrl(doc, true)}>Download original</a>
+        <a
+          href={fileUrl(doc, true)}
+          onClick={(e) => {
+            e.preventDefault();
+            void downloadOriginal(doc);
+          }}
+        >
+          Download original
+        </a>
       </p>
     );
   if (loading)
@@ -134,7 +197,7 @@ export function Preview({
     return (
       <img
         className="image-preview"
-        src={fileUrl(doc)}
+        src={imageUrl}
         alt={doc.filename}
         onError={() => setError("Image preview failed.")}
       />
@@ -338,10 +401,13 @@ export default function DocumentInspector(p: {
   expanded?: boolean;
   onExpand?: () => void;
   initialTab?: string;
+  onTabChange?: (tab: string) => void;
   evidenceNavigation?: {
     sequence: number;
     document_id: string;
     version: string;
+    evidence_id?: string;
+    agent?: boolean;
   };
   onVersion: (v: string) => void;
   onMove: (d: Doc) => void;
@@ -372,9 +438,45 @@ export default function DocumentInspector(p: {
   useEffect(() => {
     // Keep row/card focus available for range selection and keyboard browsing.
   }, [p.doc.document_id]);
-  const [detail, setDetail] = useState<Detail>();
-  const [version, setVersion] = useState(p.doc.version);
-  const [tab, setTab] = useState("preview");
+  const [loadedDetail, setDetail] = useState<Detail>();
+  const [versionSelection, setVersionSelection] = useState({
+    id: p.doc.document_id,
+    source: p.doc.version,
+    version: p.doc.version,
+    request: p.evidenceNavigation?.sequence,
+  });
+  const evidenceRequest = p.evidenceNavigation;
+  const requestedVersion =
+    evidenceRequest?.document_id === p.doc.document_id &&
+    evidenceRequest.version === p.match?.version &&
+    evidenceRequest.sequence !== versionSelection.request
+      ? evidenceRequest.version
+      : undefined;
+  // A different selection must never paint or request the previous file's version.
+  const version =
+    requestedVersion ||
+    (versionSelection.id === p.doc.document_id &&
+    versionSelection.source === p.doc.version
+      ? versionSelection.version
+      : p.doc.version);
+  const setVersion = (value: string) =>
+    setVersionSelection({
+      id: p.doc.document_id,
+      source: p.doc.version,
+      version: value,
+      request: p.evidenceNavigation?.sequence,
+    });
+  const detail =
+    loadedDetail?.document.document_id === p.doc.document_id &&
+    loadedDetail.document.version === version
+      ? loadedDetail
+      : undefined;
+  const [localTab, setLocalTab] = useState(p.initialTab || "preview");
+  const tab = p.onTabChange ? p.initialTab || "preview" : localTab;
+  const setTab = (value: string) => {
+    setLocalTab(value);
+    p.onTabChange?.(value);
+  };
   const [history, setHistory] = useState<{
     versions: Doc[];
     has_more: boolean;
@@ -428,18 +530,27 @@ export default function DocumentInspector(p: {
     }
   }
   useEffect(() => {
-    if ((tab === "history" || historyOpen) && !history) void loadHistory();
-  }, [tab, historyOpen, history]);
+    if (!p.hidden && (tab === "history" || historyOpen) && !history)
+      void loadHistory();
+  }, [tab, historyOpen, history, p.hidden]);
   const [error, setError] = useState("");
+  const [indexRetry, setIndexRetry] = useState<{
+    busy: boolean;
+    error?: string;
+  }>({ busy: false });
+  const indexRetryGeneration = useRef(0);
+  useEffect(() => {
+    setIndexRetry({ busy: false });
+    return () => {
+      indexRetryGeneration.current++;
+    };
+  }, [p.doc.document_id, version]);
   const [linkDetail, setLinkDetail] = useState<{
     source: Evidence[];
     target: Evidence[];
     link: Link;
   }>();
   const [linkError, setLinkError] = useState("");
-  useEffect(() => {
-    setVersion(p.doc.version);
-  }, [p.doc.document_id, p.doc.version]);
   useEffect(
     () => setTab(p.initialTab || "preview"),
     [p.doc.document_id, p.initialTab],
@@ -455,6 +566,7 @@ export default function DocumentInspector(p: {
     }
   }, [p.evidenceNavigation?.sequence]);
   useEffect(() => {
+    if (p.hidden) return;
     const c = new AbortController();
     setDetail((old) =>
       old?.document.document_id === p.doc.document_id &&
@@ -497,11 +609,12 @@ export default function DocumentInspector(p: {
     p.refreshKey,
     retry,
     ["details", "connections", "evidence"].includes(tab),
+    p.hidden,
   ]);
   useEffect(() => {
     setLinkDetail(undefined);
     setLinkError("");
-    if (!p.link) return;
+    if (!p.link || p.hidden) return;
     setTab("connections");
     const l = p.link,
       c = new AbortController();
@@ -515,13 +628,28 @@ export default function DocumentInspector(p: {
         if (e.name !== "AbortError") setLinkError(e.message);
       });
     return () => c.abort();
-  }, [p.link]);
+  }, [p.link, p.hidden]);
   const doc =
     detail?.document.document_id === p.doc.document_id &&
     detail.document.version === version
       ? detail.document
-      : { ...p.doc, version };
+      : history?.versions.find(
+          (item) =>
+            item.document_id === p.doc.document_id && item.version === version,
+        ) || { ...p.doc, version };
   const historical = detail && version !== detail.current_version;
+  const previewIdentity = `${p.libraryId || ""}:${doc.document_id}:${doc.version}`;
+  const [openedPreview, setOpenedPreview] = useState<string>();
+  useEffect(() => {
+    if (!p.hidden && tab === "preview") setOpenedPreview(previewIdentity);
+    else
+      setOpenedPreview((previous) =>
+        previous === previewIdentity ? previous : undefined,
+      );
+  }, [p.hidden, previewIdentity, tab]);
+  // A selected row stays mounted behind the library. Keep an opened original
+  // warm, but do not load another file until the reader is actually opened.
+  const renderPreview = !p.hidden || openedPreview === previewIdentity;
   const matched =
     p.match?.document_id === doc.document_id &&
     p.match?.version === version &&
@@ -532,7 +660,18 @@ export default function DocumentInspector(p: {
   const evidenceRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (tab === "evidence" && matched && detail) {
-      const frame = requestAnimationFrame(() => evidenceRef.current?.focus());
+      const frame = requestAnimationFrame(() => {
+        const request = p.evidenceNavigation;
+        if (request?.agent && request.evidence_id) {
+          const passage = document.getElementById(
+            "evidence-" + request.evidence_id,
+          );
+          if (passage && evidenceRef.current?.contains(passage)) {
+            passage.dataset.agentHighlight = "true";
+            passage.scrollIntoView({ block: "nearest" });
+          }
+        } else evidenceRef.current?.focus();
+      });
       return () => cancelAnimationFrame(frame);
     }
     if (!matched && tab === "evidence") setTab("preview");
@@ -573,12 +712,12 @@ export default function DocumentInspector(p: {
         </div>
         <button
           className="reader-expand"
-          aria-label={p.expanded ? "Split view" : "Expand reader"}
-          title={p.expanded ? "Split view" : "Expand reader"}
+          aria-label={p.expanded ? "Show file list" : "Expand reader"}
+          title={p.expanded ? "Show the file list beside this document" : "Expand reader"}
           onClick={p.onExpand}
         >
           {p.expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-          <span>{p.expanded ? "Split view" : "Expand reader"}</span>
+          <span>{p.expanded ? "Show file list" : "Expand reader"}</span>
         </button>
         <button
           ref={closeRef}
@@ -591,7 +730,13 @@ export default function DocumentInspector(p: {
             p.onClose();
           }}
         >
-          {p.expanded ? <><ArrowLeft size={16} /> Back to library</> : <X size={20} />}
+          {p.expanded ? (
+            <>
+              <ArrowLeft size={16} /> Back to library
+            </>
+          ) : (
+            <X size={20} />
+          )}
         </button>
       </div>
       <div className="inspector-meta">
@@ -604,7 +749,7 @@ export default function DocumentInspector(p: {
         </span>
         <Menu.Root>
           <Menu.Trigger asChild>
-            <button className="icon" aria-label="Document actions">
+            <button className="icon" aria-label="Document actions" title="Document actions">
               <MoreHorizontal />
             </button>
           </Menu.Trigger>
@@ -618,7 +763,7 @@ export default function DocumentInspector(p: {
                   })
                 }
               >
-                Update file…
+                <FilePlus2 size={14} aria-hidden="true" /> Update file…
               </Menu.Item>
               <Menu.Item
                 disabled={p.busy || !!historical}
@@ -629,12 +774,14 @@ export default function DocumentInspector(p: {
                   })
                 }
               >
-                Move to…
+                <FolderInput size={14} aria-hidden="true" /> Move to…
               </Menu.Item>
               <Menu.Item onSelect={() => setTab("history")}>
-                View versions
+                <History size={14} aria-hidden="true" /> View versions
               </Menu.Item>
+              <Menu.Separator className="menu-separator" />
               <Menu.Item
+                className="menu-danger"
                 disabled={p.busy}
                 onSelect={() =>
                   p.onDelete({
@@ -643,7 +790,7 @@ export default function DocumentInspector(p: {
                   })
                 }
               >
-                Delete document…
+                <Trash2 size={14} aria-hidden="true" /> Delete document…
               </Menu.Item>
             </Menu.Content>
           </Menu.Portal>
@@ -659,11 +806,17 @@ export default function DocumentInspector(p: {
             "details",
           ].map((t) => (
             <Tabs.Trigger key={t} value={t}>
-              {t === "history" ? <VersionsIcon size={16} />
-                : t === "preview" ? <FileText size={16} />
-                : t === "evidence" ? <EvidenceIcon size={16} />
-                : t === "connections" ? <Link2 size={16} />
-                : <Info className="tab-icon" size={16} aria-hidden="true" />}
+              {t === "history" ? (
+                <VersionsIcon size={16} />
+              ) : t === "preview" ? (
+                <FileText size={16} />
+              ) : t === "evidence" ? (
+                <EvidenceIcon size={16} />
+              ) : t === "connections" ? (
+                <Link2 size={16} />
+              ) : (
+                <Info className="tab-icon" size={16} aria-hidden="true" />
+              )}
               {t === "history"
                 ? "Versions"
                 : t === "preview"
@@ -677,121 +830,124 @@ export default function DocumentInspector(p: {
           ))}
         </Tabs.List>
         <div className="inspector-content" ref={readingContent}>
+          {/* The original is pinned by ID/version and does not depend on links or metadata. */}
+          <Tabs.Content value="preview">
+            {matched && (
+              <section className="search-context" aria-label="Search context">
+                <Judgment
+                  doc={matched}
+                  evaluate={p.evaluate}
+                  unavailable={p.unavailable}
+                />
+                <small>
+                  {version} ·{" "}
+                  {rows.filter((r) => r.priority < 3).length
+                    ? "Evaluated evidence available"
+                    : "Retrieved passages"}
+                </small>
+                {p.evaluate &&
+                  matched.jev?.cross_document_assessment_status ===
+                    "unavailable" && (
+                    <small>
+                      Supporting passages retained · Source comparison
+                      unavailable
+                    </small>
+                  )}
+                <details className="result-explanation">
+                  <summary>Why this result?</summary>
+                  <p>
+                    {p.evaluate &&
+                    matched.jev?.status === "evaluated" &&
+                    matched.jev.explanation
+                      ? matched.jev.explanation
+                      : `Search returned ${rows.length} passage${rows.length === 1 ? "" : "s"} from this saved version. Open Evidence to inspect the matching text and its source location.`}
+                  </p>
+                </details>
+                <button onClick={() => setTab("evidence")}>
+                  View evidence
+                </button>
+              </section>
+            )}
+            {renderPreview && (
+              <Preview
+                key={doc.document_id + ":" + doc.version}
+                libraryId={p.libraryId}
+                active={!p.hidden}
+                doc={doc}
+                highlights={
+                  p.evaluate && !historical
+                    ? matched?.evidence
+                        ?.filter((e) =>
+                          matched.jev?.supporting_chunk_ids?.includes(
+                            e.evidence_id,
+                          ),
+                        )
+                        .map((e) => e.text)
+                    : []
+                }
+              />
+            )}
+            {historical && detail && (
+              <p className="notice">
+                Original {version}. Current organization and links are shown
+                only for the latest version.
+                <button
+                  onClick={() => {
+                    setVersion(detail.current_version);
+                    p.onVersion(detail.current_version);
+                  }}
+                >
+                  Back to current version
+                </button>
+              </p>
+            )}
+            {!historical && detail && !!detail.connections.length && (
+              <section className="connected-files">
+                <h3>Related documents</h3>
+                {detail.connections.slice(0, 5).map((l) => (
+                  <button key={linkKey(l)} onClick={() => p.onLink(l)}>
+                    <FileText size={22} />
+                    <span>
+                      <strong>
+                        {(l.source_document_id === doc.document_id
+                          ? l.target_filename
+                          : l.source_filename
+                        ).replace(/\.[^.]+$/, "")}
+                      </strong>
+                      <small>
+                        {l.relation}
+                        {["supports", "contradicts"].includes(l.relation)
+                          ? l.source_document_id === doc.document_id
+                            ? " · Outgoing"
+                            : " · Incoming"
+                          : ""}
+                      </small>
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                ))}
+                <button
+                  className="link-button"
+                  onClick={() => setTab("connections")}
+                >
+                  Why linked?
+                </button>
+              </section>
+            )}
+          </Tabs.Content>
           {error ? (
             <div role="alert">
-              {error}
+              Document details unavailable: {error}
               <button onClick={() => setRetry((n) => n + 1)}>
-                Retry preview
+                Retry details
               </button>
             </div>
           ) : !detail ? (
-            <p role="status">Loading document…</p>
+            tab !== "preview" ? (
+              <p role="status">Loading document details…</p>
+            ) : null
           ) : (
             <>
-              <Tabs.Content value="preview">
-                {matched && (
-                  <section
-                    className="search-context"
-                    aria-label="Search context"
-                  >
-                    <Judgment
-                      doc={matched}
-                      evaluate={p.evaluate}
-                      unavailable={p.unavailable}
-                    />
-                    <small>
-                      {version} ·{" "}
-                      {rows.filter((r) => r.priority < 3).length
-                        ? "Evaluated evidence available"
-                        : "Retrieved passages"}
-                    </small>
-                    {p.evaluate &&
-                      matched.jev?.cross_document_assessment_status ===
-                        "unavailable" && (
-                        <small>
-                          Supporting passages retained · Source comparison
-                          unavailable
-                        </small>
-                      )}
-                    <details className="result-explanation">
-                      <summary>Why this result?</summary>
-                      <p>
-                        {p.evaluate &&
-                        matched.jev?.status === "evaluated" &&
-                        matched.jev.explanation
-                          ? matched.jev.explanation
-                          : `Search returned ${rows.length} passage${rows.length === 1 ? "" : "s"} from this saved version. Open Evidence to inspect the matching text and its source location.`}
-                      </p>
-                    </details>
-                    <button onClick={() => setTab("evidence")}>
-                      View evidence
-                    </button>
-                  </section>
-                )}
-                <Preview
-                  key={doc.document_id + ":" + doc.version}
-                  libraryId={p.libraryId}
-                  doc={doc}
-                  highlights={
-                    p.evaluate && !historical
-                      ? matched?.evidence
-                          ?.filter((e) =>
-                            matched.jev?.supporting_chunk_ids?.includes(
-                              e.evidence_id,
-                            ),
-                          )
-                          .map((e) => e.text)
-                      : []
-                  }
-                />
-                {historical && (
-                  <p className="notice">
-                    Original {version}. Current organization and links are shown
-                    only for the latest version.
-                    <button
-                      onClick={() => {
-                        setVersion(detail.current_version);
-                        p.onVersion(detail.current_version);
-                      }}
-                    >
-                      Back to current version
-                    </button>
-                  </p>
-                )}
-                {!historical && !!detail.connections.length && (
-                  <section className="connected-files">
-                    <h3>Related documents</h3>
-                    {detail.connections.slice(0, 5).map((l) => (
-                      <button key={linkKey(l)} onClick={() => p.onLink(l)}>
-                        <FileText size={22} />
-                        <span>
-                          <strong>
-                            {(l.source_document_id === doc.document_id
-                              ? l.target_filename
-                              : l.source_filename
-                            ).replace(/\.[^.]+$/, "")}
-                          </strong>
-                          <small>
-                            {l.relation}
-                            {["supports", "contradicts"].includes(l.relation)
-                              ? l.source_document_id === doc.document_id
-                                ? " · Outgoing"
-                                : " · Incoming"
-                              : ""}
-                          </small>
-                        </span>
-                        <ChevronRight size={16} />
-                      </button>
-                    ))}
-                    <button
-                      className="link-button"
-                      onClick={() => setTab("connections")}
-                    >
-                      Why linked?
-                    </button>
-                  </section>
-                )}
-              </Tabs.Content>
               <Tabs.Content value="evidence">
                 {matched && (
                   <section
@@ -896,16 +1052,35 @@ export default function DocumentInspector(p: {
                 {detail.indexing_error && (
                   <p className="secondary">{detail.indexing_error}</p>
                 )}
+                {indexRetry.error && (
+                  <p role="alert">Indexing retry failed: {indexRetry.error}</p>
+                )}
                 {detail.organization?.status === "failed" && (
                   <button
-                    onClick={() =>
-                      void api("retry-index", {
-                        document_id: doc.document_id,
-                        expected_version: doc.version,
-                      }).then(() => setRetry((n) => n + 1))
-                    }
+                    disabled={indexRetry.busy}
+                    onClick={async () => {
+                      if (indexRetry.busy) return;
+                      const generation = ++indexRetryGeneration.current;
+                      setIndexRetry({ busy: true });
+                      try {
+                        await api("retry-index", {
+                          document_id: doc.document_id,
+                          expected_version: doc.version,
+                        });
+                        if (generation === indexRetryGeneration.current) {
+                          setIndexRetry({ busy: false });
+                          setRetry((n) => n + 1);
+                        }
+                      } catch (error) {
+                        if (generation === indexRetryGeneration.current)
+                          setIndexRetry({
+                            busy: false,
+                            error: (error as Error).message,
+                          });
+                      }
+                    }}
                   >
-                    Retry indexing
+                    {indexRetry.busy ? "Retrying indexing…" : "Retry indexing"}
                   </button>
                 )}
                 <dl className="document-details">
@@ -930,7 +1105,17 @@ export default function DocumentInspector(p: {
                     <>
                       <dt>Folder</dt>
                       <dd>{detail.organization?.folder || "Unfiled"}</dd>
-                      <dt>Groups</dt>
+                      <dt>Project</dt>
+                      <dd>
+                        {namedValue(
+                          detail.organization_review?.effective_owner,
+                        ) ||
+                          namedValue(
+                            detail.organization_review?.canonical_project,
+                          ) ||
+                          "Unassigned"}
+                      </dd>
+                      <dt>Topics</dt>
                       <dd>{detail.organization?.groups?.join(", ") || "—"}</dd>
                     </>
                   )}
@@ -956,6 +1141,10 @@ export default function DocumentInspector(p: {
                               "Pending"}
                   </dd>
                 </dl>
+                <OrganizationHistory
+                  key={doc.document_id}
+                  documentId={doc.document_id}
+                />
                 {!historical && (
                   <details className="why-here">
                     <summary>Why this folder?</summary>
@@ -969,6 +1158,56 @@ export default function DocumentInspector(p: {
                             ? "Jev selected this folder from content candidates using the passages below."
                             : "No assignment passage IDs were recorded for this older organization result. Current extracted passages are shown for reference."}
                     </p>
+                    {namedValue(
+                      detail.organization_review?.effective_owner,
+                    ) && (
+                      <p>
+                        Effective project:{" "}
+                        {namedValue(
+                          detail.organization_review?.effective_owner,
+                        )}
+                      </p>
+                    )}
+                    {namedValue(
+                      detail.organization_review?.automatic_owner_suggestion,
+                    ) && (
+                      <p>
+                        Automatic project suggestion:{" "}
+                        {namedValue(
+                          detail.organization_review
+                            ?.automatic_owner_suggestion,
+                        )}
+                      </p>
+                    )}
+                    {Object.prototype.hasOwnProperty.call(
+                      detail.organization_review || {},
+                      "manual_folder_override",
+                    ) && (
+                      <p>
+                        Manual folder placement:{" "}
+                        {namedValue(
+                          detail.organization_review?.manual_folder_override,
+                          "folder",
+                        ) || "None recorded"}
+                      </p>
+                    )}
+                    {Array.isArray(
+                      detail.organization_review?.correction_provenance,
+                    ) &&
+                      (() => {
+                        const provenance = detail.organization_review
+                          .correction_provenance as unknown[];
+                        const reason = [...provenance]
+                          .reverse()
+                          .map((item) => record(item)?.reason)
+                          .find(
+                            (item): item is string =>
+                              typeof item === "string" && !!item.trim(),
+                          );
+                        return reason ? (
+                          <p>Project correction reason: {reason}</p>
+                        ) : null;
+                      })()}
                     {typeof detail.organization_review?.project_scope ===
                       "string" && (
                       <p>
@@ -1052,12 +1291,53 @@ export default function DocumentInspector(p: {
                               version.
                             </p>
                           )}
+                        <ConnectionProvenance
+                          link={p.link}
+                          showClaims={false}
+                        />
                         {linkError ? (
                           <p role="alert">{linkError}</p>
                         ) : !linkDetail ? (
                           <p role="status">Loading supporting passages…</p>
                         ) : (
                           <>
+                            {(() => {
+                              const extra = p.link?.additional_evidence?.[0];
+                              const proof = record(
+                                p.link?.proof ?? extra?.proof,
+                              );
+                              const sourceClaim = namedValue(
+                                proof?.source,
+                                "text",
+                              );
+                              const targetClaim = namedValue(
+                                proof?.target,
+                                "text",
+                              );
+                              return sourceClaim && targetClaim ? (
+                                <details className="link-claim-proof">
+                                  <summary>
+                                    {extra
+                                      ? "Additional checked reference"
+                                      : "Claims used for this connection"}
+                                  </summary>
+                                  <p className="secondary">
+                                    The connection was checked against these
+                                    passages:
+                                  </p>
+                                  <p>
+                                    <strong>Source claim</strong>
+                                    <br />
+                                    {sourceClaim}
+                                  </p>
+                                  <p>
+                                    <strong>Target claim</strong>
+                                    <br />
+                                    {targetClaim}
+                                  </p>
+                                </details>
+                              ) : null;
+                            })()}
                             <h4>Source passage</h4>
                             {linkDetail.source.map((e) => (
                               <EvidencePassage key={e.evidence_id} e={e} />
@@ -1132,14 +1412,19 @@ export default function DocumentInspector(p: {
           </button>
         )}
         <div>
-          <button className="open-file" onClick={() => p.onOpen(true)}>
+          <button className="open-file" title="Preview the original file" onClick={() => p.onOpen(true)}>
             <ExternalLink size={18} />
             Open file
           </button>
           <a
             className="button icon"
             aria-label={"Download " + version}
+            title={"Download the original " + version}
             href={fileUrl(doc, true)}
+            onClick={(e) => {
+              e.preventDefault();
+              void downloadOriginal(doc);
+            }}
           >
             <Download size={20} />
           </a>
@@ -1167,8 +1452,15 @@ export default function DocumentInspector(p: {
             >
               <X />
             </Dialog.Close>
-            <Preview doc={doc} />
-            <a className="button" href={fileUrl(doc, true)}>
+            <Preview key={doc.document_id + ":" + doc.version} doc={doc} />
+            <a
+              className="button"
+              href={fileUrl(doc, true)}
+              onClick={(e) => {
+                e.preventDefault();
+                void downloadOriginal(doc);
+              }}
+            >
               <Download size={18} />
               Download {version}
             </a>

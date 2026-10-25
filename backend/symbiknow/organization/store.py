@@ -41,8 +41,11 @@ def manifest(root):
 
 def revision(root):
     from symbiknow.organization.edits import summary
+    from symbiknow.organization import corrections, projects
     value = manifest(root)
-    return ((value or {}).get("revision", ""), summary(root).get("revision", ""))
+    generation = ":".join(filter(None, [(value or {}).get("revision", ""),
+                                       corrections.revision(root), projects.revision(root)]))
+    return (generation, summary(root).get("revision", ""))
 
 
 @lru_cache(maxsize=8)
@@ -156,6 +159,7 @@ def publish(root, rows, *, remove=(), reset=None):
         token = str(uuid.uuid4())
         existing_projects = catalog(root, current)
         projects = {}
+        changed_ids = []
         atomic(_path(root, "publication"), {"schema": 1, "base": current, "revision": token})
         if remove:
             from symbiknow.search.index import _literal
@@ -165,6 +169,7 @@ def publish(root, rows, *, remove=(), reset=None):
             iterator = iter(rows)
             while batch := list(islice(iterator, 256)):
                 for row in batch:
+                    changed_ids.append(row["document_id"])
                     project = json.loads(row["organization_json"]).get("canonical_project")
                     if project and existing_projects.by_id.get(project["id"]) != project:
                         projects[project["id"]] = project
@@ -179,6 +184,8 @@ def publish(root, rows, *, remove=(), reset=None):
                                            "version": table.version, "revision": token,
                                            "publications": current.get("publications", 0) + 1,
                                            "catalog": _catalog_reference(root, current, catalog_updates, replace=reset_catalog)}
+        if current.get("read_projection"):
+            prepared["read_projection"] = current["read_projection"]
         if current.get("reset_request"):
             prepared["reset_request"] = current["reset_request"]
         if reset is not None:
@@ -189,19 +196,21 @@ def publish(root, rows, *, remove=(), reset=None):
             from symbiknow.organization.edits import reset_expected
             reset_expected(root, reset["assignments"], reset["request_id"])
         atomic(_path(root, "published"), prepared)
+        from symbiknow.organization import readmodel
+        readmodel.refresh(root, [*changed_ids, *remove])
         _path(root, "publication").unlink(missing_ok=True)
         if (current.get("publications", 0) + 1) % 32 == 0:
             prune(root)
         return token
 
 
-def overlay(root, rows, columns=None):
+def overlay(root, rows, columns=None, *, publication_table=None):
     """Bind source and neighbor evidence epochs before applying manual placement."""
     from symbiknow.search.index import _literal, _table
     from symbiknow.organization.edits import overrides
     binding = {"document_id", "version", "evidence_revision", "evidence_dependencies_json"}
     fields = [name for name in FIELDS if name not in binding and (columns is None or name in columns)]
-    table = published_table(root) if fields else None
+    table = (publication_table if publication_table is not None else published_table(root)) if fields else None
     found, dependencies = {}, {}
     if rows and table is not None:
         condition = "document_id IN (" + ",".join(_literal(row["document_id"]) for row in rows) + ")"
@@ -245,6 +254,12 @@ def overlay(root, rows, columns=None):
             row.update({name: defaults[name] for name in fields})
             if columns is None:
                 row["evidence_dependencies_json"] = "{}"
+        result.append(row)
+    from symbiknow.organization import corrections, projects
+    result = corrections.overlay(root, result, columns=fields)
+    if "organization_json" in fields:
+        result = projects.overlay(root, result)
+    for row in result:
         if "folder" in fields or "organization_json" in fields:
             manual = manual_rows.get(row["document_id"])
             if manual:
@@ -252,8 +267,8 @@ def overlay(root, rows, columns=None):
                     row["folder"] = manual["folder"]
                 if "organization_json" in fields:
                     decision = json.loads(row.get("organization_json", "{}"))
-                    row["organization_json"] = json.dumps({**decision, "folder": manual["folder"], "origin": "manual"})
-        result.append(row)
+                    row["organization_json"] = json.dumps({**decision, "folder": manual["folder"], "origin": "manual",
+                                                          "manual_folder_override": manual})
     return result
 
 
@@ -292,6 +307,8 @@ def _scope_condition(root, folder=None, group=None):
                     .select(["document_id"]).limit(max(1, organization.count_rows())).to_batches(batch_size=512)
                     for row in batch.to_pylist()}
         selected.update(assignment_ids(root))
+        from symbiknow.organization import corrections
+        selected.update(corrections.assignment_ids(root))
     identities = []
     ordered = sorted(selected) if selected is not None else []
     queries = [source.search()] if selected is None else [
@@ -391,6 +408,11 @@ def switch_generation(root, generation, base, prepared):
         from symbiknow.search.index import IndexChangedError
         raise IndexChangedError("Organization changed while preparing publication")
     atomic(_path(root, "published"), prepared)
+    from symbiknow.organization import readmodel
+    if prepared.get("read_projection"):
+        readmodel.checkpoint(root)
+    elif readmodel.ready(root):
+        readmodel.rebuild(root)
     (Path(root) / "temp" / "organization-staging" / generation / "publication.json").unlink(missing_ok=True)
 
 
@@ -493,6 +515,11 @@ class ProjectCatalog(_FrozenList):
                 key = name.casefold()
                 names.setdefault(key, project)
                 canonical[key] = project["name"]
+        # Registered features contribute owner candidates without becoming
+        # identity aliases. Independently registered projects retain their names.
+        for project in self:
+            for name in project.get("features", []):
+                canonical.setdefault(name.casefold(), project["name"])
         identities = {project["id"]: project for project in self}
         self.lookup = MappingProxyType(names)
         self.by_id = MappingProxyType(identities)
@@ -507,14 +534,17 @@ _CATALOG_LIVE = weakref.WeakValueDictionary()
 
 
 def catalog(root, publication=None):
+    from symbiknow.organization import projects as registry
     current = publication if publication is not None else manifest(root)
     reference = (current or {}).get("catalog")
     if reference:
         if Path(reference).name != reference:
             raise ValueError("Invalid organization catalog reference")
-        key = dependency_key("organization-catalog", library=str(Path(root).resolve()), reference=reference)
+        key = dependency_key("organization-catalog", library=str(Path(root).resolve()), reference=reference,
+                             registry_revision=registry.revision(root))
         def load():
-            value = ProjectCatalog(json.loads((Path(root) / "temp" / "organization-catalogs" / reference).read_text())["projects"])
+            records = json.loads((Path(root) / "temp" / "organization-catalogs" / reference).read_text())["projects"]
+            value = ProjectCatalog(registry.catalog_projects(root, records))
             return value, value.owned_indexes
         value = _CATALOG_CACHE.get_or_compute(key, load)[0]
         _CATALOG_LIVE[(str(Path(root).resolve()), reference)] = value
@@ -524,7 +554,7 @@ def catalog(root, publication=None):
     if projects is None:
         file = Path(root) / "temp" / "canonical-projects.json"
         projects = json.loads(file.read_text()).get("projects", []) if file.exists() else []
-    return ProjectCatalog(projects)
+    return ProjectCatalog(registry.catalog_projects(root, projects))
 
 
 def _catalog_reference(root, base, updates, *, journal=None, replace=False):
@@ -539,5 +569,7 @@ def _catalog_reference(root, base, updates, *, journal=None, replace=False):
         pending["prepared"]["catalog"] = reference
         atomic(journal, pending)
     atomic(Path(root) / "temp" / "organization-catalogs" / reference,
-           {"schema": 1, "projects": list(records.values())})
+           {"schema": 1, "projects": [
+               {key: record[key] for key in ("id", "name", "aliases", "features") if key in record}
+               for record in records.values()]})
     return reference

@@ -229,9 +229,18 @@ def test_strict_answer_contract_through_actual_mcp_sdk(monkeypatch, tmp_path):
                         ),
                     )
                     assert not r.is_error
-                    assert r.structured_content["matches"] == []
+                    from symbiknow.cli.client import call
+                    job = r.structured_content
+                    assert "job_id" in job
+                    import asyncio
+                    while job["status"] in {"queued", "running"}:
+                        await asyncio.sleep(.01)
+                        job = await call(client, "get_job", {"job_id": job["job_id"], "detail": detail})
+                    assert job["status"] == "completed", job
+                    result = job["result"]
+                    assert result["matches"] == []
                     assert (
-                        r.structured_content["answer"]["status"]
+                        result["answer"]["status"]
                         == "no_answer_in_evaluated_candidates"
                     )
             r = await client.call_tool("search", dict(query="Related documents", mode="keyword"))

@@ -1,0 +1,12 @@
+/* Supporting readiness text is separate from the file action's visible label. */
+.connected-app .file-table .file-select {
+  min-height: 28px;
+  padding-block: 0;
+}
+.file-table .file-readiness-meta {
+  padding-left: 23px;
+}
+.connected-app .grid-file .file-select {
+  height: auto;
+  min-height: 36px;
+}

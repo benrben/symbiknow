@@ -3,8 +3,11 @@
 import ast
 from importlib.util import resolve_name
 from pathlib import Path
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
+BRIDGE_PATH = "backend/symbiknow/api/agents/bridge/"
+BRIDGE_MODULE = "symbiknow.api.agents.bridge"
 INFRASTRUCTURE = {"backend/symbiknow/search/index.py", "backend/symbiknow/organization/store.py"}
 TRANSPORTS = {"backend/symbiknow/api/mcp.py", "backend/symbiknow/api/http.py"}
 RETIRED = {
@@ -25,6 +28,7 @@ RETIRED = {
 def check_source(source, relative):
     tree = ast.parse(source)
     aliases = {}
+    bridge = relative.startswith(BRIDGE_PATH)
     if (ROOT / "scripts/benchmark-review8.py").exists():
         raise SystemExit("Retired rebuild benchmark reintroduced; use benchmarks/rebuild.py")
     violations = []
@@ -40,10 +44,17 @@ def check_source(source, relative):
                 )
                 if alias.name in {"symbiknow.api.mcp", "symbiknow.api.http"} and relative not in TRANSPORTS:
                     fail(node, "domain imports transport")
+                if bridge and alias.name.split(".")[0] == "symbiknow":
+                    fail(node, "generic bridge imports Symbiknow; use relative imports internally")
         elif isinstance(node, ast.ImportFrom):
             package = ".".join(Path(relative).parent.parts[1:])
             module = (resolve_name("." * node.level + (node.module or ""), package)
                       if node.level else (node.module or ""))
+            if bridge and (
+                (node.level and module != BRIDGE_MODULE and not module.startswith(BRIDGE_MODULE + "."))
+                or (not node.level and module.split(".")[0] == "symbiknow")
+            ):
+                fail(node, "generic bridge imports outside its extraction boundary")
             for alias in node.names:
                 target = module + "." + alias.name
                 aliases[alias.asname or alias.name] = target
@@ -73,8 +84,22 @@ def check_source(source, relative):
             fail(node, "retired symbol " + name)
         if isinstance(node, ast.Call):
             target = resolve(node.func)
-            if target == "sqlite3.connect" and relative != "backend/symbiknow/freshness/store.py":
-                fail(node, "opens freshness database outside its owner")
+            if bridge and target in {"importlib.import_module", "__import__"}:
+                name = node.args[0] if node.args else None
+                if not isinstance(name, ast.Constant) or not isinstance(name.value, str):
+                    fail(node, "generic bridge has an unverifiable dynamic import")
+                elif name.value.startswith(".") or name.value.split(".")[0] == "symbiknow":
+                    fail(node, "generic bridge must use static relative imports internally")
+            if target == "sqlite3.connect" and relative not in {
+                "backend/symbiknow/library/storage.py", "backend/symbiknow/organization/edits.py",
+                "backend/symbiknow/freshness/store.py", "backend/symbiknow/organization/readmodel.py",
+                "backend/symbiknow/core/work.py",
+                "backend/symbiknow/organization/receipts.py",
+                "backend/symbiknow/organization/history.py", "backend/symbiknow/library/catalog.py",
+                "backend/symbiknow/organization/corrections.py",
+                "backend/symbiknow/organization/projects.py",
+            }:
+                fail(node, "opens database outside its declared owner")
             if relative not in INFRASTRUCTURE and (
                 target == "lancedb.connect"
                 or target.split(".")[-1] in {"open_table", "create_table", "drop_table"}
@@ -115,6 +140,9 @@ def main():
     ]
     if violations:
         raise SystemExit("\n".join(violations))
+    core = ROOT / "frontend/src/features/assistant/core"
+    if core.exists():
+        subprocess.run(["node", str(ROOT / "scripts/checks/assistant-imports.mjs")], check=True)
     print("Architecture ownership and retirement checks passed")
 
 

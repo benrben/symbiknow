@@ -22,6 +22,7 @@ from symbiknow.cli.client import call
 def test_shared_http_clients_browser_and_one_worker(tmp_path, monkeypatch):
     monkeypatch.setattr(server, "DATA_DIR", tmp_path)
     monkeypatch.setattr(server, "STORAGE_ONLY", False)
+    monkeypatch.setenv("SYMBIKNOW_WARMUP", "0")
     starts = []
     actual_worker = server._worker
 
@@ -54,9 +55,10 @@ def test_shared_http_clients_browser_and_one_worker(tmp_path, monkeypatch):
             tool_lists = await asyncio.gather(first.list_tools(), second.list_tools())
             assert all(
                 {t.name for t in result.tools}
-                == {"upload", "download", "search", "upload_folder", "download_folder",
-                    "remove_file", "scan_freshness", "get_freshness_scan",
-                    "cancel_freshness_scan", "review_freshness_finding"}
+                == {"upload", "download", "search", "ask", "resolve_jev_decision",
+                    "upload_folder", "download_folder", "remove_file", "get_job",
+                    "list_documents", "get_taxonomy", "list_jev_decisions",
+                    "get_organization_history", "list_jobs"}
                 for result in tool_lists
             )
             saved = await call(

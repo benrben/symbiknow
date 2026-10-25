@@ -2,12 +2,36 @@
 .connected-app .topbar { min-height: 72px; padding: 14px 24px; gap: 10px; border-bottom: 1px solid var(--border); }
 .connected-app .topbar form { border-radius: 10px; min-height: 42px; padding: 5px 8px; background: var(--surface-subtle); }
 .connected-app .topbar form input { min-width: 50px; font-size: 13px; }
+.header-assistants { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.assistant-launch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  white-space: nowrap;
+  font-size: 12px;
+}
+/* The launcher and its dimensions load with the shell, before the chat chunk. */
+.assistant-loading { position: fixed; top: 72px; right: 16px; z-index: 46; display: flex; align-items: center; gap: 16px; padding: 12px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
+.assistant-loading button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+
+@media (max-width: 1200px) {
+  .header-assistants .assistant-launch span { display: none; }
+  .header-assistants .assistant-launch { min-width: 44px; min-height: 44px; padding: 8px; }
+  .header-assistants .jev-presence { min-height: 44px; }
+}
 .search-ask-switch { display: flex; flex-shrink: 0; gap: 2px; padding-right: 8px; margin-right: 4px; border-right: 1px solid var(--border); }
 .search-ask-switch button { display: inline-flex; gap: 5px; align-items: center; border: 0; background: transparent; padding: 7px 9px; border-radius: 6px; font-size: 12px; color: var(--text-secondary); }
 .search-ask-switch button[aria-pressed="true"] { background: var(--selection); color: var(--accent); }
 .search-method-select { max-width: 105px; border: 0; background: transparent; font-size: 12px; }
 .ask-method { font-size: 11px; color: var(--accent); max-width: 80px; line-height: 1.5; }
-.connected-app .search-submit { padding: 4px 8px; background: var(--surface-raised); color: var(--text-secondary); }
+.connected-app .search-submit { padding: 4px 8px; min-width: 32px; min-height: 32px; flex-shrink: 0; background: var(--surface-raised); color: var(--text-secondary); }
 .tool-explanation { padding: 8px 24px; font-size: 11px; line-height: 1.5; color: var(--text-secondary); background: var(--surface-subtle); border-bottom: 1px solid var(--border); }
 .connected-app .sidebar { background: var(--surface-sidebar); }
 .connected-app .sidebar-brand { min-height: 72px; }
@@ -76,14 +100,68 @@
 .ask-card > svg { color: var(--accent); }.ask-card strong { font-size: 12px; }.ask-card p { font-size: 11px; line-height: 1.7; color: var(--text-secondary); margin: 0; }
 .ask-card button { display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 8px; background: var(--surface); border: 1px solid var(--border); }
 .ask-card small { font-size: 9px; line-height: 1.6; color: var(--text-secondary); }
-.connected-app .browse-footer { font-size: 10px; margin-top: 18px; }
+.connected-app .browse-footer { font-size: 10px; margin-top: 18px; padding-bottom: 4px; padding-right: 160px; flex-wrap: wrap; }
 .connected-app.reader-expanded main { padding: 0; }
+/* Keep the home list near the top while retaining an on-demand file preview. */
+.connected-workspace { gap: 16px; }
+.space-shelves { max-height: 150px; }
+.focus-document { min-height: 0; padding: 18px; }
+.focus-copy h2 { margin-top: 9px; margin-bottom: 7px; }
+.focus-actions { margin-top: 12px; }
+.focus-document.preview-expanded { grid-template-columns: minmax(0, 1fr) minmax(120px, .75fr); }
+.focus-document.preview-expanded .content-card { display: block; }
+.focus-preview-toggle { color: var(--text-secondary); }
+.exact-search-options { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--text-secondary); }
+.exact-search-options label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.exact-search-options input { margin: 0; }
+@media (max-width: 760px) {
+  .focus-document { padding: 16px; }
+  .focus-document.preview-expanded { grid-template-columns: 1fr; }
+  .exact-search-options { width: 100%; padding: 2px 4px 4px; }
+  .connected-app.reader-open .inspector-footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+}
 @media (max-width: 1200px) { .knowledge-rail { flex-basis: 238px; width: 238px; padding: 24px 15px; }.connected-app main { padding: 24px 20px; }.connected-app .topbar { padding: 12px 18px; gap: 6px; }.focus-document { padding: 18px; gap: 14px; }.focus-copy h2 { font-size: 20px; }.connected-app .topbar kbd { display: none; } }
 @media (max-width: 1000px) { .connected-app .content:not(.has-inspector) { flex-wrap: wrap; overflow-y: auto; }.connected-app .content:not(.has-inspector) > main { flex: 1 0 100%; width: 100%; box-sizing: border-box; overflow: visible; }.knowledge-rail { flex: 1 0 100%; width: 100%; border-left: 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; overflow: visible; }.rail-title { grid-column: 1 / -1; margin-bottom: 0; }.rail-section { margin: 0; }.ask-card { grid-column: 1 / -1; }.connected-app .ask-method { display: none; }.section-caption > span { max-width: 50%; text-align: right; } }
 @media (max-width: 760px) { .connected-app .topbar { flex-wrap: wrap; padding: 10px 14px; }.connected-app .topbar form { order: -1; flex: 1 0 100%; box-sizing: border-box; width: 100%; }.connected-app .sidebar-brand { min-height: 54px; }.connected-app main { padding: 22px 16px; }.connected-app .location-heading h1 { font-size: 25px; }.connected-app .content-heading { gap: 8px; margin-bottom: 20px; }.focus-document { grid-template-columns: 1fr; }.focus-document .content-card { display: none; }.knowledge-rail { display: block; padding: 22px 16px; }.rail-title,.rail-section { margin-bottom: 24px; }.tool-explanation { padding: 8px 14px; }.space-shelves { grid-template-columns: repeat(2,minmax(0,1fr)); }.connected-app .heading-tools { align-items: flex-start; }.search-ask-switch button { padding: 6px; }.search-ask-switch { padding-right: 5px; }.connected-app .topbar input { font-size: 12px; } }
 .connected-app .content-heading { position: static; min-height: 0; padding: 0; margin-bottom: 22px; }
 .connected-app .content-heading .location-heading { min-width: 150px; }
 .connected-app .heading-tools .library-actions { justify-content: flex-end; }
+@media (max-width: 760px) {
+  .connected-app .content-heading,
+  .connected-app .content-heading .location-heading,
+  .connected-app .content-heading .heading-tools {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .connected-app .content-heading .heading-tools {
+    align-items: stretch;
+  }
+  .connected-app .heading-tools .library-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    justify-content: stretch;
+    align-items: stretch;
+  }
+  .connected-app .library-actions > * {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .connected-app .library-actions > .freshness-trigger {
+    grid-column: 1 / -1;
+    justify-content: center;
+    white-space: normal;
+    min-height: 44px;
+  }
+  .connected-app .library-actions > .workspace-map-toggle {
+    min-height: 44px;
+    white-space: normal;
+  }
+}
 .more-connections { border: 0; background: transparent; color: var(--accent); font-size: 10px; padding: 5px; text-align: left; }
 .focus-document .card-prose > h2 { color: var(--text-secondary); font-size: 10px; line-height: 1.5; margin-bottom: 7px; }
 .search-row-excerpt { padding: 6px 8px 0 26px; }
@@ -92,7 +170,122 @@
 .search-row-excerpt .card-prose :is(h1,h2,h3,p,ul,ol,pre) { font-size: inherit; line-height: inherit; margin: 0; }
 .search-row-excerpt .content-card img { max-height: 60px; object-fit: contain; }
 .connected-app .search-table .name-column { width: auto; }
-.connected-app .search-table .type-column, .connected-app .search-table .type-cell { display: none; }
+.connected-app .search-table .type-column { width: 70px; }
 .connected-app .search-table .folder-column { width: 105px; }
 .connected-app .search-table .evidence-column { width: 118px; }
 .connected-app .search-table .evidence-cell .judgment-label { display: inline; white-space: normal; font-size: 10px; }
+.connected-app.reader-open .import-formats { display: none; }
+@media (max-width: 1024px) {
+  .connected-app .topbar { flex-wrap: wrap; }
+  .connected-app .topbar form { order: -1; flex: 1 0 100%; min-width: 0; width: 100%; box-sizing: border-box; }
+}
+@media (max-height: 480px) {
+  .connected-app.reader-open .topbar,
+  .connected-app.reader-open .tool-explanation,
+  .connected-app.reader-open .scope-chips { display: none; }
+  .connected-app.reader-open .inspector-heading { padding-top: 6px; padding-bottom: 6px; }
+  .connected-app.reader-open .inspector-heading p { margin: 0; }
+  /* Let reader chrome scroll instead of squeezing Find behind the footer when
+     rotation or the keyboard leaves less room than the controls require. */
+  .connected-app.reader-open .inspector { overflow-y: auto; }
+  .connected-app.reader-open .inspector-heading,
+  .connected-app.reader-open .inspector-meta,
+  .connected-app.reader-open .inspector-footer { flex-shrink: 0; }
+  .connected-app.reader-open .inspector > [data-orientation] {
+    flex: 1 0 180px;
+    min-height: 180px;
+  }
+}
+@media (pointer: coarse) {
+  .connected-app .topbar form { height: auto; min-height: 44px; }
+  .connected-app .search-ask-switch button,
+  .connected-app .search-method-select,
+  .connected-app .topbar .search-submit,
+  .connected-app .topbar .filters-button,
+  .connected-app .topbar .import-button { min-height: 44px; }
+  .connected-app .search-ask-switch button { padding-inline: 10px; }
+  .connected-app .search-method-select { width: 132px; max-width: 132px; font-size: 13px; }
+  .exact-search-options { gap: 8px; font-size: 12px; }
+  .exact-search-options label { min-height: 44px; padding-inline: 4px; }
+}
+@media (max-width: 1024px), (pointer: coarse) {
+  /* iOS zooms focused text fields below 16px, moving controls out of view. */
+  :root input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  .connected-app .topbar input, :root textarea, :root select { font-size: 16px; }
+}
+/* The heading scrolls away here, so the column header pins to the top and the pager stays at the end of the list. */
+.connected-app .file-table th { top: -28px; }
+@media (max-width: 1200px) { .connected-app .file-table th { top: -24px; } }
+@media (max-width: 760px) { .connected-app .file-table th { top: -22px; } }
+/* Below 1000px the unpadded content pane scrolls instead of main. */
+@media (max-width: 1000px) { .connected-app .content:not(.has-inspector) .file-table th { top: 0; } }
+.connected-app .browse-footer { position: static; }
+/* Keep outline jumps and find matches clear of the sticky reader bars. */
+.prose :is(h1, h2, h3, h4, h5, h6), .prose [id] { scroll-margin-top: 112px; }
+@media (max-width: 760px) {
+  .connected-app .topbar .search-method-select { width: auto; max-width: none; flex: 0 0 auto; }
+  .connected-app .topbar .filters-button { min-width: 44px; padding-inline: 10px; position: relative; }
+  .connected-app .filters-label { display: none; }
+  .connected-app .filters-button .filter-count { position: absolute; top: -5px; right: -5px; }
+  .space-shelves { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: minmax(150px, 46%); max-height: none; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+  .space-tile { scroll-snap-align: start; }
+}
+@media (max-width: 600px) {
+  .connected-app .import-label, .connected-app .topbar .jev-presence strong { display: none; }
+  .connected-app .topbar .import-button { min-width: 44px; padding-inline: 12px; }
+}
+@media (max-width: 760px) {
+  .canvas-hint { right: auto; max-width: calc(100% - 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .canvas-toolbar { bottom: 26px; }
+}
+/* "..." buttons read as buttons at rest, not decoration. */
+.icon.row-menu, .sidebar .icon.folder-menu, .topbar .icon[aria-label="Library actions"], .inspector .icon[aria-label="Document actions"] {
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.icon.row-menu { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 4px; border-radius: 6px; }
+.sidebar .icon.folder-menu { width: 28px; min-width: 28px; height: 28px; opacity: .75; border-radius: 6px; }
+.folder-nav-row:hover .folder-menu, .folder-nav-row:focus-within .folder-menu { opacity: 1; }
+.icon.row-menu:hover, .sidebar .icon.folder-menu:hover, .topbar .icon[aria-label="Library actions"]:hover, .inspector .icon[aria-label="Document actions"]:hover { background: var(--selection); border-color: var(--accent); color: var(--accent); }
+.icon.row-menu:active, .sidebar .icon.folder-menu:active, .topbar .icon[aria-label="Library actions"]:active,
+.icon.row-menu[data-state="open"], .sidebar .icon.folder-menu[data-state="open"], .topbar .icon[aria-label="Library actions"][data-state="open"] { background: var(--selection); border-color: var(--accent); color: var(--accent); filter: brightness(1.15); }
+.icon.row-menu:focus-visible, .sidebar .icon.folder-menu:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Hover quick action next to the "..." */
+.actions-cell { display: flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+.row-open { opacity: 0; min-height: 28px; padding: 2px 10px; font-size: 12px; }
+.file-row:hover .row-open, .file-row:focus-within .row-open { opacity: 1; }
+@media (hover: none) { .row-open { opacity: 1; } }
+.file-table .actions-column { width: 116px; }
+/* Menus: grouped, iconned, with destructive actions last and red. */
+.menu [role="menuitem"] svg { flex-shrink: 0; color: var(--text-secondary); }
+.menu [role="menuitem"][data-highlighted] svg { color: inherit; }
+.menu .menu-separator { height: 1px; margin: 4px 2px; background: var(--border); }
+.menu .menu-label { padding: 6px 8px 2px; font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-secondary); }
+.menu .menu-danger, .menu .menu-danger svg { color: var(--error); }
+.menu .menu-danger[data-highlighted] { background: color-mix(in srgb, var(--error) 18%, transparent); color: var(--error); }
+.menu .menu-danger[data-disabled] { opacity: .5; }
+.menu a[role="menuitem"] { color: inherit; text-decoration: none; }
+/* Ask/grep helper floats over the page so switching modes never shifts the layout. */
+.connected-app .topbar + .tool-explanation, .tool-explanation { position: relative; height: 0; padding: 0; border: 0; background: none; overflow: visible; z-index: 25; }
+.tool-explanation > span { position: absolute; top: 0; left: 0; right: 0; display: block; padding: 8px 24px; background: var(--surface-subtle); border-bottom: 1px solid var(--border); box-shadow: 0 6px 12px #0003; }
+@media (max-width: 760px) { .tool-explanation > span { padding: 8px 14px; } }
+/* Ask's fixed method reads as a label, not a dropdown. */
+.ask-method { display: inline-flex; align-items: center; padding: 4px 10px; border: 1px dashed var(--border); border-radius: 999px; cursor: default; white-space: nowrap; max-width: none; }
+/* Status inside a control is a pill, not more button text. */
+.status-pill { display: inline-flex; align-items: center; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--selection); color: var(--accent); font-size: 11px; font-weight: 600; line-height: 16px; }
+/* A compact featured card leaves room for the file list. */
+.focus-document { padding: 14px 18px; min-height: 0; gap: 14px; }
+.focus-copy h2 { font-size: 18px; margin: 8px 0 6px; }
+.focus-actions { margin-top: 12px; }
+.connected-workspace { gap: 18px; }
+/* Selected rows stand out: stronger fill and a left accent bar. */
+.connected-app .file-list tbody tr.selected { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
+.connected-app .file-list tbody tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.connected-app .grid-file.selected { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); box-shadow: inset 0 0 0 1px var(--accent), inset 3px 0 0 var(--accent); }
+/* Secondary text is easier to read. */
+.file-description > .file-readiness, .file-description > .file-organization-status, .grid-file .file-description > .file-readiness, .grid-file .file-description > .file-organization-status { font-size: 11px; line-height: 15px; color: color-mix(in srgb, var(--text) 78%, var(--surface)); }
+.section-caption > span { font-size: 11px; color: color-mix(in srgb, var(--text) 78%, var(--surface)); }
+/* The sidebar resize handle is findable. */
+.sidebar-resizer { background: linear-gradient(var(--border), var(--border)) center / 1px 100% no-repeat; }
+.sidebar-resizer:hover, .sidebar-resizer:focus-visible { background: var(--accent); }

@@ -9,9 +9,17 @@ from symbiknow.organization.policy import representative_evidence
 from symbiknow.core.cache import CoalescingCache, dependency_key
 from symbiknow.core.contracts import DomainResult
 from symbiknow.library.storage import source_revision
-from symbiknow.search.index import get_document_status, document_evidence, INDEX_LOCK, browse_documents, revisions, metadata_batches
+from symbiknow.search.index import document_read_state, document_evidence, INDEX_LOCK, browse_documents, revisions, metadata_batches
 
 _AGGREGATES = CoalescingCache(max_entries=16, max_bytes=8 * 1024**2, max_inflight=16)
+
+
+class _ReadChanged(Exception):
+    pass
+
+
+def _read_signature(head, row):
+    return (head, *((row or {}).get(key) for key in ("version", "evidence_revision", "status", "indexed_version")))
 
 
 def public(row):
@@ -28,14 +36,15 @@ class LibraryService:
     def __init__(self, context):
         self.context = context
 
-    def connections(self, doc_id, version, deduplicate=True, snapshot=None):
+    def connections(self, doc_id, version, deduplicate=True, snapshot=None, *, states=None):
         """Bounded incoming/outgoing relations from the published organization view."""
         from symbiknow.search.index import relationship_rows
 
         with nullcontext(snapshot) if snapshot else self.context.snapshots.read() as snapshot:
             if snapshot.heads_many([doc_id]).get(doc_id) != version:
                 return []
-            states = relationship_rows(self.context.DATA_DIR, doc_id)
+            if states is None:
+                states = relationship_rows(self.context.DATA_DIR, doc_id)
             identities = set(states)
             identities.update(
                 link.get("document_id")
@@ -69,6 +78,31 @@ class LibraryService:
             return (unique_relationships(result) if deduplicate else result)[:100]
 
     def detail(self, doc_id, version=None, section="full") -> DomainResult:
+        if section == "summary":
+            return self._detail(doc_id, version, section, None, None, [])
+        for _ in range(3):
+            token = self._capture_read(doc_id)
+            # Immutable history and sampled evidence can be slow native reads.
+            # Their source/evidence token is checked at the final publication.
+            history = self.context.originals.history_page(doc_id, head=token[0]) if section == "full" else None
+            evidence = (document_evidence(self.context.DATA_DIR, doc_id, token[0])
+                        if section != "summary" and (version is None or version == token[0]) else [])
+            try:
+                return self._detail(doc_id, version, section, token, history, evidence)
+            except _ReadChanged:
+                continue
+        raise ValueError("Document changed while reading; retry the request")
+
+    def _capture_read(self, doc_id):
+        with self.context.snapshots.read() as snapshot:
+            head = snapshot.heads_many([doc_id]).get(doc_id)
+            if head is None:
+                raise FileNotFoundError("Document not found")
+            return _read_signature(head, document_read_state(self.context.DATA_DIR, doc_id))
+
+    def _detail(self, doc_id, version, section, token, history, evidence):
+        from symbiknow.search.index import relationship_rows
+
         with self.context.snapshots.read() as snapshot:
             current_metadata = snapshot.metadata_many([doc_id]).get(doc_id)
             if not current_metadata:
@@ -78,9 +112,14 @@ class LibraryService:
                 if version is None or version == current_metadata["version"]
                 else self.context.originals.metadata(doc_id, version)
             )
-            row = get_document_status(self.context.DATA_DIR, doc_id)
+            # The connection shortlist already includes the requested document.
+            # Share its guarded organization lookup with the detail instead of
+            # repeating the same source/dependency scans under the read lock.
+            states = relationship_rows(self.context.DATA_DIR, doc_id)
+            row = states.get(doc_id)
             current = current_metadata["version"]
-            history = self.context.originals.history_page(doc_id) if section == "full" else None
+            if token is not None and _read_signature(current, row) != token:
+                raise _ReadChanged()
             return DomainResult(
                 {
                     "document": public(metadata),
@@ -96,6 +135,12 @@ class LibraryService:
                         in {
                             "project_scope",
                             "canonical_project",
+                            "automatic_owner_suggestion",
+                            "effective_owner",
+                            "manual_folder_override",
+                            "correction_provenance",
+                            "correction_ids",
+                            "reference_resolution",
                             "ownership",
                             "organization_reason",
                             "folder_confidence",
@@ -112,12 +157,8 @@ class LibraryService:
                     }
                     if section != "summary" and row and metadata["version"] == current
                     else None,
-                    "evidence": document_evidence(
-                        self.context.DATA_DIR, doc_id, metadata["version"]
-                    )
-                    if section != "summary" and metadata["version"] == current
-                    else [],
-                    "connections": self.connections(doc_id, metadata["version"], snapshot=snapshot)[
+                    "evidence": evidence,
+                    "connections": self.connections(doc_id, metadata["version"], snapshot=snapshot, states=states)[
                         : 5 if section == "summary" else 100
                     ],
                     "versions": [public(v) for v in reversed(history["versions"])]
@@ -155,6 +196,7 @@ class LibraryService:
             params.get("recent") == "true",
             params.get("sort", "filename"),
             params.get("descending") == "true",
+            params.get("cursor"),
         )
         result["documents"] = [public(r) for r in result["documents"]]
         result.update(
@@ -164,6 +206,7 @@ class LibraryService:
                 self._manual_revision(),
                 params.get("folder"),
                 params.get("group"),
+                params.get("taxonomy_after", ""),
             )
         )
         result.update(
@@ -181,7 +224,10 @@ class LibraryService:
 
         return summary(self.context.DATA_DIR).get("revision", "")
 
-    def _aggregates(self, data_dir, revision, manual_revision, selected_folder, selected_group):
+    def _aggregates(self, data_dir, revision, manual_revision, selected_folder, selected_group, after=""):
+        from symbiknow.organization import readmodel
+        if readmodel.ready(data_dir):
+            return readmodel.aggregates(data_dir, selected_folder, selected_group, after=after)
         key = dependency_key(
             "library-aggregates",
             library=data_dir,
@@ -202,7 +248,7 @@ class LibraryService:
             }
         return result
 
-    def _aggregate_rows(self, data_dir, selected_folder, selected_group):
+    def _aggregate_rows(self, data_dir, selected_folder, selected_group, after=""):
         from symbiknow.organization.edits import assignment_ids
 
         manual_ids = assignment_ids(data_dir)
@@ -295,7 +341,9 @@ class LibraryService:
         from symbiknow.organization.rebuild import status
         from symbiknow.search.index import remove_document
 
-        with self.context.write_lock, INDEX_LOCK:
+        from symbiknow.library.storage import object_write
+        guard = object_write(self.context.DATA_DIR, args["document_id"]) if action == "delete-document" else nullcontext()
+        with guard, self.context.write_lock, INDEX_LOCK:
             state = status(self.context)
             if state and state["status"] in ("queued", "running"):
                 raise ValueError("Wait for the organization rebuild to finish before deleting")
@@ -339,15 +387,16 @@ class LibraryService:
             return result
 
     def card(self, doc_id, version) -> DomainResult:
-        with self.context.snapshots.read() as snapshot:
-            from symbiknow.organization.rebuild import common_context
+        from symbiknow.organization.rebuild import common_context
 
+        for _ in range(3):
+            token = self._capture_read(doc_id)
             common = common_context(self.context)
             evidence = (
                 representative_evidence(
                     document_evidence(self.context.DATA_DIR, doc_id, version), common
                 )
-                if snapshot.heads_many([doc_id]).get(doc_id) == version
+                if token[0] == version
                 else []
             )
             # Fixed text budget, no original bodies or PDF embeds on browse cards.
@@ -361,16 +410,33 @@ class LibraryService:
                 from itertools import islice
                 from io import StringIO
 
-                with self.context.originals.verified_file(doc_id, version) as (path, _):
-                    with path.open("rb") as handle:
-                        content = handle.read(64 * 1024)
-                # Bound both the parser input and the returned cells. Never interpret formulas.
-                sample = content[: 64 * 1024].decode("utf-8-sig", errors="replace")
+                from symbiknow.library import storage
                 try:
-                    result["table"] = [
-                        [cell[:160] for cell in row[:6]]
-                        for row in islice(csv.reader(StringIO(sample)), 9)
-                    ]
-                except csv.Error:
-                    pass  # Extracted text and original download remain available.
-            return DomainResult(result)
+                    with storage.verified_ranges(self.context.DATA_DIR, doc_id, version) as (reader, _):
+                        content = reader.read(0, 64 * 1024)
+                except storage.RangeNotReady:
+                    self.context.jobs.start("original-prepare", {"document_id": doc_id, "version": version})
+                else:
+                    # Bound both parser input and returned cells; never interpret formulas.
+                    sample = content.decode("utf-8-sig", errors="replace")
+                    try:
+                        result["table"] = [
+                            [cell[:160] for cell in row[:6]]
+                            for row in islice(csv.reader(StringIO(sample)), 9)
+                        ]
+                    except csv.Error:
+                        pass
+            with self.context.snapshots.read() as snapshot:
+                current = snapshot.heads_many([doc_id]).get(doc_id)
+                if current is None:
+                    raise FileNotFoundError("Document not found")
+                if _read_signature(current, document_read_state(self.context.DATA_DIR, doc_id)) != token:
+                    continue
+                # Historical bytes remain available only while their original
+                # object exists, even if deletion raced an already opened lease.
+                # Current metadata was already read authoritatively by this
+                # snapshot; only a historical version needs a separate lookup.
+                if current != version:
+                    self.context.originals.metadata(doc_id, version)
+                return DomainResult(result)
+        raise ValueError("Document changed while reading; retry the request")

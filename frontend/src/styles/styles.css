@@ -1766,16 +1766,15 @@ summary {
 }
 .markdown-table-scroll table {
   border-collapse: collapse;
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
 }
 .markdown-table-scroll th,
 .markdown-table-scroll td {
   border: 1px solid var(--border);
   padding: 6px 9px;
   text-align: start;
-  max-width: 360px;
-  overflow-wrap: anywhere;
+  min-width: 8ch;
+  overflow-wrap: break-word;
 }
 .markdown-table-scroll th {
   background: var(--surface-subtle, #f4f6f8);

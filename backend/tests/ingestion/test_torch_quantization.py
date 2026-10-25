@@ -94,7 +94,40 @@ def test_quantized_embedding_and_linear_execute_on_mps():
         assert output.shape == (1, 3, 64)
         assert output.dtype == torch.float32
         assert bool(output.isfinite().all())
-        assert m.language_model.embed_tokens.weight.qdata.device.type == "mps"
+        assert vectors.device.type == "mps"
+        assert m.language_model.embed_tokens.weight.qdata.device.type == "cpu"
+
+
+def test_wide_projection_dequantizes_in_blocks_below_the_mps_heap_limit(monkeypatch):
+    from symbiknow.embeddings import quantization
+
+    monkeypatch.setattr(quantization, "MPS_BUFFER_LIMIT", 64 * 64 * 4)
+    m = model()
+    m.language_model.wide = torch.nn.Linear(64, 200, bias=False).bfloat16()
+    original = m.language_model.wide.weight.detach().float().clone()
+    quantize_text(m)
+    wide = m.language_model.wide
+    assert isinstance(wide, quantization.RowBlockInt8Linear)
+    assert [block.qdata.shape[0] for block in wide.blocks] == [64, 64, 64, 8]
+    assert all(block.qdata.numel() * 4 <= quantization.MPS_BUFFER_LIMIT for block in wide.blocks)
+    assert isinstance(m.language_model.projection.weight, Int8Tensor)
+    inputs = torch.randn(3, 64, generator=torch.Generator().manual_seed(14))
+    output = wide(inputs)
+    assert output.shape == (3, 200)
+    assert output.dtype == torch.float32
+    assert torch.allclose(output, inputs @ original.T, atol=0.05, rtol=0.02)
+
+
+def test_token_groups_bound_padded_batch_tokens(monkeypatch):
+    lengths = {"a": 3, "b": 3, "c": 9, "d": 1, "e": 1}
+
+    def tokenizer(items, **kwargs):
+        return {"input_ids": [[0] * lengths[item] for item in items]}
+
+    monkeypatch.setattr(embeddings, "get_tokenizer", lambda: tokenizer)
+    assert embeddings._token_groups(["a", "b", "c", "d", "e"], budget=9) == [["a", "b"], ["c"], ["d", "e"]]
+    assert embeddings._token_groups(["a", "b"], budget=100) == [["a", "b"]]
+    assert embeddings._token_groups(["c"], budget=1) == [["c"]]
 
 
 def test_int8_manifest_cannot_silently_mix_with_existing_float32_index(tmp_path, monkeypatch):

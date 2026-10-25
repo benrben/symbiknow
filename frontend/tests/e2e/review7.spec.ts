@@ -27,7 +27,10 @@ test("external same-version folder moves refresh search and scope without resubm
   );
   const move = async (folder: string) => {
     const result = await page.request.post("/api/move-documents", {
-      headers: { Origin: "http://127.0.0.1:8766", "X-Symbiknow-UI": "1" },
+      headers: {
+        Origin: `http://127.0.0.1:${process.env.SYMBIKNOW_DEV_PORT || "5174"}`,
+        "X-Symbiknow-UI": "1",
+      },
       data: {
         folder,
         documents: [
@@ -121,7 +124,7 @@ for (const search of [false, true]) {
         },
       });
     });
-    await page.route("**/api/search", (route) =>
+    await page.route(/\/api\/(?:search|ask)$/, (route) =>
       route.fulfill({
         json: {
           matches: docs,

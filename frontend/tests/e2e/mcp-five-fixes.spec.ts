@@ -107,7 +107,7 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
     }),
   );
   const requests: any[] = [];
-  await page.route("**/api/search", (route) => {
+  await page.route(/\/api\/(?:search|ask)$/, (route) => {
     requests.push(route.request().postDataJSON());
     return route.fulfill({
       json: {
@@ -131,6 +131,9 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
       },
     });
   });
+  await page.route("**/api/original-ready?*", (route) =>
+    route.fulfill({ json: { ready: true } }),
+  );
   await page.route("**/api/original?*", (route) =>
     route.fulfill({
       contentType: "text/plain",
@@ -142,7 +145,7 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
   await page
     .getByRole("button", { name: /^Symbiknow \d+$/, exact: true })
     .click();
-  await setSearchMode(page, "keyword");
+  await setSearchMode(page, "exact");
   await setAnswerChecking(page, true);
   await page
     .getByLabel("Search your knowledge")
@@ -169,7 +172,7 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
   await page.screenshot({
     path: path.join(out, "files-coverage-conflicts.png"),
   });
-  await page.getByRole("button", { name: "Map", exact: true }).press("Enter");
+  await chooseView(page, "Map");
   await page
     .getByRole("button", { name: "Freeform map", exact: true })
     .press("Enter");
@@ -199,7 +202,7 @@ test("shared evidence coverage and conflict states retain Files/Canvas search an
   await expect(page.getByLabel("Search your knowledge")).toHaveValue(
     "reset versions and views",
   );
-  await expectSearchMode(page, "keyword");
+  await expectSearchMode(page, "semantic");
   await expectAnswerChecking(page, true);
   await chooseView(page, "List");
   expect(requests.length).toBe(count);

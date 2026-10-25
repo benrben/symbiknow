@@ -71,7 +71,11 @@ def test_provider_limit_is_not_an_outage_or_a_negative_answer(numeric, limited, 
             client=client,
         )
     matches, answer = jev.answer_results(result["matches"], result)
-    assert len(calls) == 1 and not matches
+    # A multi-question request may be divided once before the first single
+    # question proves that even the unchanged state cannot fit.
+    assert len(calls) == (2 if limited and not numeric else 1)
+    assert not matches
+    assert all(json.loads(call.content)["state"] == json.loads(calls[0].content)["state"] for call in calls)
     assert result["status"] == answer["status"] == ("not_evaluated" if limited else "unavailable")
     if limited:
         assert result["reason"] == answer["reason"] == "context_budget"

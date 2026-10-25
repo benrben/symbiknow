@@ -189,6 +189,7 @@ const edgeTypes = { routed: RoutedLink };
 const nodeTypes = { folder: FolderNode, document: DocumentNode };
 type XY = { x: number; y: number };
 const GEOMETRY_VERSION = 3;
+const MIN_ZOOM = 0.01;
 type Origin = "generated" | "manual" | "legacy";
 type Geometry = { version: number; cardWidth: number; cardHeight: number };
 type Layout = {
@@ -259,7 +260,7 @@ function validLayout(value: Layout, allowPrevious = true): Layout {
       !(value.overview && !value.overviewPositions) &&
       v &&
       [v.x, v.y, v.zoom].every(Number.isFinite) &&
-      v.zoom >= 0.15 &&
+      v.zoom >= MIN_ZOOM &&
       v.zoom <= 2
         ? v
         : undefined,
@@ -928,8 +929,10 @@ export default function LibraryCanvas(p: {
       : 1;
     // At marker scale keep the readable group navigation beside the graph,
     // instead of covering the first cards and intercepting their pointer input.
+    // A narrow surface has no room beside it: the navigation spans the width.
     const leftInset =
-      !reading && fittedZoom < (p.search && overview ? 0.75 : 0.45) ? 360 : 24;
+      !reading && (surface?.width ?? 0) >= 720 &&
+      fittedZoom < (p.search && overview ? 0.75 : 0.45) ? 360 : 24;
     if (surface && leftInset > 24)
       fittedZoom = Math.min(
         fittedZoom,
@@ -949,9 +952,10 @@ export default function LibraryCanvas(p: {
       setOverview(true);
       return;
     }
-    // Keep readable labels even when the library needs vertical panning.
+    // Fit the entire bounded map even in a short split pane. The separate
+    // folder navigation stays readable; selecting a group restores reading scale.
     // Reserve top arrange buttons and bottom toolbar/hint space explicitly.
-    const nextZoom = Math.max(reading ? 0.75 : 0.15, Math.min(1, fittedZoom));
+    const nextZoom = Math.max(reading ? 0.75 : MIN_ZOOM, Math.min(1, fittedZoom));
     if (surface)
       void flow.setViewport(
         {
@@ -1126,7 +1130,7 @@ export default function LibraryCanvas(p: {
         zoomOnScroll={false}
         zoomActivationKeyCode={["Meta", "Control"]}
         panActivationKeyCode="Space"
-        minZoom={0.15}
+        minZoom={MIN_ZOOM}
         maxZoom={2}
         onlyRenderVisibleElements={import.meta.env.VITE_VISIBLE_MAP === "1"}
       >

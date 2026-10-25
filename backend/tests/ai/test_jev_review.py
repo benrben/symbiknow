@@ -80,7 +80,12 @@ def test_unfiled_review_preserves_organization_links_manual_placements_and_layou
     patch.setattr(jev, "organize_document", organize)
     result = mutate(client, "rebuild", {"mode": "unfiled"})
     assert result.status_code == 200
-    assert result.json()["mode"] == "unfiled"
+    job = result.json()
+    assert job["status"] == "queued"
+    server.application().jobs.process_one()
+    finished = server.application().jobs.get(job["job_id"])
+    assert finished["status"] == "completed", finished
+    assert finished["result"]["mode"] == "unfiled"
     assert row(root, unfiled)["links_json"] == json.dumps([outgoing])
     assert row(root, existing) == before
     with pytest.raises(ValueError, match="already running"):
@@ -224,7 +229,9 @@ def test_links_only_sdk_request_asks_only_relationship_questions(monkeypatch):
         source, source["evidence"], [target], folders=["Atlas"], links_only=True
     )
     assert result["status"] == "evaluated" and len(result["links"]) == 1
-    assert len(calls) == 1 and set(calls[0]) == {"pair_1_0_0", "status_0_0", "status_1_0"}
+    assert len(calls) == 2
+    assert set(calls[0]) == {"pair_1_0_0", "source_claim_1_0_0", "target_claim_1_0_0"}
+    assert set(calls[1]) == {"support_1_0_0", "conflict_1_0_0", "topic_1_0_0", "context_1_0_0"}
     assert "folder" not in result and "groups" not in result
     calls.clear()
     assert jev.organize_document(source, source["evidence"], [], links_only=True)["links"] == []
@@ -235,7 +242,7 @@ def test_owner_acceptance_is_not_overwritten_by_a_rejected_link():
     source = match("source", text="Atlas / Storage / Guide\nAtlas preserves versions.")
     target = match("target", text="Unrelated weather record.")
     with sdk_client(
-        {"project_owner": "Atlas", "pair_1_0_0": "none"}
+        {"project_owner": "Atlas", "pair_1_0_0": "none"}, {"topic_1_0_0": .01}
     ) as sdk:
         result = jev.organize_document(
             source, source["evidence"], [target], folders=["Atlas / Storage"], client=sdk
@@ -347,5 +354,5 @@ async def test_mcp_retries_one_retrieval_race_then_explains_busy_state(context):
         result = await client.call_tool("search", {"query": "Atlas", "mode": "keyword"})
         assert result.is_error and len(calls) == 2
         assert "Retry this search" in result.content[0].text
-        invalid = await client.call_tool("search", {"query": "Atlas", "continuation": "bad"})
+        invalid = await client.call_tool("search", {"query": "Atlas", "mode": "keyword", "continuation": "bad"})
         assert invalid.is_error and "restart search" in invalid.content[0].text

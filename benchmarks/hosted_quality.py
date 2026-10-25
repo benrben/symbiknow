@@ -24,10 +24,12 @@ FIXTURE = REPO / "benchmarks/fixtures/hosted-quality.json"
 
 
 def source_hash(root):
+    """Every judgment module, so a prompt or gate edit is a distinct measured source."""
     digest = hashlib.sha256()
-    for name in ("ai/jev.py", "ai/proof.py", "ai/numeric.py", "core/cache.py"):
-        digest.update(name.encode())
-        digest.update((root / "backend/symbiknow" / name).read_bytes())
+    package = root / "backend/symbiknow"
+    for path in [*sorted((package / "ai").glob("*.py")), package / "core/cache.py"]:
+        digest.update(path.relative_to(package).as_posix().encode())
+        digest.update(path.read_bytes())
     return digest.hexdigest()
 
 
@@ -99,6 +101,8 @@ def worker(root):
                   "judgments": [m.get("jev", {}) for m in result["matches"]],
                   "provider_responses": responses,
                   "provider_error": result.get("status") == "unavailable"}
+        if hasattr(jev, "judgment_descriptor"):
+            report["descriptor"] = jev.judgment_descriptor()
     except Exception as exc:
         report = {"passed": False, "provider_error": False,
                   "execution_error": True, "error_type": type(exc).__name__}
@@ -130,21 +134,57 @@ def summarize(rows):
             "observed_pass_rate_wilson95": interval(successes, len(rows)),
             "p50_seconds": statistics.median(durations) if durations else None,
             "p95_seconds": durations[math.ceil(.95*len(durations))-1] if durations else None,
-            "provider_calls": sum(row.get("metrics", {}).get("provider_calls", 0) for row in rows)}
+            **{name: sum(row.get("metrics", {}).get(name, 0) for row in rows)
+               for name in ("provider_calls", "provider_input_tokens", "provider_output_tokens",
+                            "provider_question_splits", "provider_question_presplits")}}
+
+
+def effects(rows, cases):
+    """Parameter-effect map for one frozen paired cohort; every attempt counts.
+
+    A regression is a case every baseline attempt passed that some current
+    attempt failed. Costs are reported beside quality, never instead of it.
+    """
+    table, regressed, improved = {}, [], []
+    for case in cases:
+        sides = {variant: summarize([r for r in rows if r["variant"] == variant and r["case"] == case["id"]])
+                 for variant in ("baseline", "current")}
+        before, after = sides["baseline"], sides["current"]
+        if before["samples"] and before["passed"] == before["samples"] and after["passed"] < after["samples"]:
+            regressed.append(case["id"])
+        elif after["samples"] and after["passed"] == after["samples"] and before["passed"] < before["samples"]:
+            improved.append(case["id"])
+        table[case["id"]] = {
+            "category": case["category"],
+            "passed": [before["passed"], after["passed"]], "samples": [before["samples"], after["samples"]],
+            "statuses": [before["statuses"], after["statuses"]],
+            **{f"{name}_delta": after[name] - before[name]
+               for name in ("provider_calls", "provider_input_tokens", "provider_output_tokens")},
+        }
+    totals = {variant: summarize([r for r in rows if r["variant"] == variant]) for variant in ("baseline", "current")}
+    return {"regressed_cases": regressed, "improved_cases": improved,
+            "unchanged_cases": [c["id"] for c in cases if c["id"] not in regressed + improved],
+            **{f"{name}_delta": totals["current"][name] - totals["baseline"][name]
+               for name in ("passed", "provider_calls", "provider_input_tokens", "provider_output_tokens")},
+            "per_case": table}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", type=Path)
     parser.add_argument("--baseline", type=Path)
+    parser.add_argument("--current-only", action="store_true", help="Evaluate only the current source, without a comparison checkout")
+    parser.add_argument("--fixture", type=Path, default=FIXTURE)
+    parser.add_argument("--check", action="store_true", help="Exit unsuccessfully if any case fails or the provider is unavailable")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--validate-only", action="store_true")
+    parser.add_argument("--change", help="What the current source changes and why; required for a paired run")
     args = parser.parse_args()
     if args.worker:
         worker(args.worker.resolve())
         return
-    fixture = json.loads(FIXTURE.read_text())
+    fixture = json.loads(args.fixture.read_text())
     cases = fixture["cases"]
     assert len({case["id"] for case in cases}) == len(cases)
     for case in cases:
@@ -154,14 +194,18 @@ def main():
     if args.validate_only:
         print(f"Validated {len(cases)} frozen synthetic cases")
         return
-    if args.output is None or args.baseline is None or args.repeats < 1:
-        parser.error("--baseline, --output and positive --repeats are required")
-    variants = {"baseline": args.baseline.resolve(), "current": REPO}
+    if args.output is None or (args.baseline is None and not args.current_only) or args.repeats < 1:
+        parser.error("--baseline or --current-only, --output and positive --repeats are required")
+    if args.baseline is not None and args.current_only:
+        parser.error("Choose either --baseline or --current-only")
+    if args.baseline is not None and not (args.change or "").strip():
+        parser.error("A paired run must record --change: what the current source changes and why")
+    variants = {"current": REPO} if args.current_only else {"baseline": args.baseline.resolve(), "current": REPO}
     report = {"started_utc": datetime.now(timezone.utc).isoformat(),
-              "fixture_sha256": hashlib.sha256(FIXTURE.read_bytes()).hexdigest(),
+              "fixture_sha256": hashlib.sha256(args.fixture.read_bytes()).hexdigest(),
               "source_hashes": {name: source_hash(root) for name, root in variants.items()},
               "provenance": fixture["provenance"], "cache": "fresh process; no namespace",
-              "repeats": args.repeats, "rows": []}
+              "repeats": args.repeats, "change": args.change, "rows": []}
     rng = random.Random(20261020)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     for repeat in range(args.repeats):
@@ -190,10 +234,19 @@ def main():
         **{variant: summarize([row for row in report["rows"]
                                if row["variant"] == variant and row["case"] == case["id"]])
            for variant in variants}} for case in cases}
+    if "baseline" in variants:
+        report["effects"] = effects(report["rows"], cases)
     report["completed_utc"] = datetime.now(timezone.utc).isoformat()
     report["final_source_hashes"] = {name: source_hash(root) for name, root in variants.items()}
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     print(json.dumps(report["summary"], indent=2))
+    if "effects" in report:
+        print("regressed:", report["effects"]["regressed_cases"] or "none",
+              "| improved:", report["effects"]["improved_cases"] or "none")
+    # Gate on the measured candidate: any failed current attempt or regression.
+    if args.check and (not all(row["passed"] for row in report["rows"] if row["variant"] == "current")
+                       or report.get("effects", {}).get("regressed_cases")):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

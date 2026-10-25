@@ -64,6 +64,7 @@ class SearchAnswer(TypedDict):
     reason: NotRequired[str]
     candidate_count: NotRequired[int]
     evaluated_count: NotRequired[int]
+    withheld_count: NotRequired[int]
     values: NotRequired[list[NumericValue]]
 
 
@@ -74,6 +75,14 @@ class StoredLink(TypedDict):
     relation: str
     source_chunk_id: str
     target_chunk_id: str
+    reviewed_by: NotRequired[str]
+    reviewed_at: NotRequired[str]
+    decision_id: NotRequired[str]
+    correction_id: NotRequired[str]
+    confidence: NotRequired[float]
+    reason: NotRequired[str]
+    proof: NotRequired[dict[str, Any]]
+    additional_evidence: NotRequired[list[dict[str, Any]]]
 
 
 class Link(StoredLink):
@@ -88,6 +97,7 @@ class JudgedEvidence(TypedDict):
     text_start: NotRequired[int]
     text_end: NotRequired[int]
     truncated: NotRequired[bool]
+    original_text_length: NotRequired[int]
     location: NotRequired[Provenance]
 
 
@@ -98,6 +108,8 @@ class VerificationDependency(TypedDict):
     sha256: str
     text_start: int
     text_end: int
+    truncated: NotRequired[bool]
+    original_text_length: NotRequired[int]
     evidence_revision: NotRequired[str]
 
 
@@ -156,12 +168,16 @@ RenamedPaths = TypedDict("RenamedPaths", {"from": str, "to": str})
 
 
 class OrganizationChange(TypedDict):
+    all_documents: NotRequired[bool]
     kind: str
     paths: NotRequired[RenamedPaths | None]
     document_ids: list[str]
 
 
 class Library(TypedDict):
+    next_cursor: NotRequired[str | None]
+    taxonomy_has_more: NotRequired[bool]
+    taxonomy_next_after: NotRequired[str | None]
     organization_reset: NotRequired[OrganizationReset]
     manual_revision: NotRequired[str]
     library_id: NotRequired[str]
@@ -382,5 +398,166 @@ class OrganizationDecision(TypedDict):
 
 
 class JevDecisionQueue(TypedDict):
+    revision: NotRequired[str]
+    next_cursor: NotRequired[str | None]
+    next_after: NotRequired[str]
     decisions: list[OrganizationDecision]
     has_more: bool
+
+
+class AgentProvider(TypedDict):
+    id: str
+    name: str
+    installed: bool
+    available: bool
+    version: str
+    reason: str
+    untested: bool
+
+
+class AgentModel(TypedDict):
+    id: str
+    name: str
+    description: str
+    default: bool
+    efforts: list[str]
+    default_effort: str
+
+
+class AgentSession(TypedDict):
+    session_id: str
+    token: str
+    provider: str
+    model: str
+    model_name: str
+    effort: str
+
+
+class AgentEvent(TypedDict):
+    type: str
+    session_id: str
+    run_id: str
+    seq: int
+    timestamp: NotRequired[int]
+    automatic: NotRequired[bool]
+    model: NotRequired[str]
+    id: NotRequired[str]
+    name: NotRequired[str]
+    kind: NotRequired[str]
+    text: NotRequired[str]
+    message: NotRequired[str]
+    status: NotRequired[str]
+    args: NotRequired[dict[str, Any]]
+    preview: NotRequired[dict[str, Any]]
+    result: NotRequired[Any]
+    ok: NotRequired[bool]
+    expires_at: NotRequired[int]
+
+
+class JobResponse(TypedDict):
+    job_id: str
+    status: Literal["queued", "running", "completed", "failed"]
+    result: NotRequired[dict[str, Any] | None]
+    error: NotRequired[str | None]
+    next_cursor: NotRequired[str | None]
+
+
+class InventoryProject(TypedDict):
+    id: str
+    name: str
+
+
+class InventoryDocument(TypedDict):
+    document_id: str
+    version: str
+    filename: str
+    mime_type: str
+    size: int
+    sha256: str
+    created_at: str
+    source_filename: str
+    stored: bool
+    storage_status: str
+    indexing_status: str
+    searchable: bool
+    searchable_text: bool
+    searchable_visual: bool
+    indexing_error: str
+    project: InventoryProject | None
+    folder: str
+    topics: list[str]
+    groups: list[str]
+    organization_status: str
+    evidence_revision: str
+    folder_origin: str
+
+
+class InventoryPage(TypedDict):
+    documents: list[InventoryDocument]
+    count: int
+    total_originals: int
+    total: NotRequired[int]
+    revision: str
+    has_more: bool
+    next_cursor: str | None
+    filters: dict[str, str | None]
+    scope: str
+
+
+class TaxonomyFacet(TypedDict):
+    dimension: Literal["projects", "folders", "topics", "statuses"]
+    id: str
+    name: str
+    count: int
+    definition: str | None
+
+
+class TaxonomyPage(TypedDict):
+    items: list[TaxonomyFacet]
+    revision: str
+    has_more: bool
+    next_cursor: str | None
+    semantics: dict[str, str]
+
+
+class OrganizationHistoryEntry(TypedDict):
+    id: str
+    kind: str
+    action: str
+    actor: str | None
+    timestamp: str | None
+    reason: str | None
+    version: str | None
+    document_id: str
+    evidence_revision: NotRequired[str | None]
+    value: NotRequired[Any]
+    effective_owner: NotRequired[InventoryProject | None]
+    automatic_owner_suggestion: NotRequired[InventoryProject | None]
+    target_document_id: NotRequired[str]
+    target_version: NotRequired[str]
+
+
+class OrganizationHistoryPage(TypedDict):
+    document_id: str
+    current: dict[str, Any]
+    entries: list[OrganizationHistoryEntry]
+    revision: str
+    has_more: bool
+    next_cursor: str | None
+    limitations: list[str]
+
+
+class RecoverableJob(TypedDict):
+    job_id: str
+    status: str
+    created_at: str
+    kind: str
+    error: str | None
+
+
+class RecoverableJobPage(TypedDict):
+    jobs: list[RecoverableJob]
+    revision: str
+    has_more: bool
+    next_cursor: str | None
+    scope: str

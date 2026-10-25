@@ -10,7 +10,7 @@ from symbiknow.core.cache import CoalescingCache, dependency_key
 # Stable evidence analysis and corpus decisions have separate byte budgets.
 _ANALYSIS = CoalescingCache(max_entries=2048, max_bytes=16 * 1024**2, max_inflight=8)
 _CORPUS = CoalescingCache(max_entries=16, max_bytes=16 * 1024**2, max_inflight=2)
-ANALYSIS_POLICY = "organization-features-2"
+ANALYSIS_POLICY = "organization-features-3-identity-subject-separation"
 
 
 def _reused(cache, namespace):
@@ -113,7 +113,38 @@ def heading_projects(evidence):
     return names
 
 
+def identity_statements(evidence):
+    """Explicit identity claims are hypotheses with exact supporting passages.
+
+    They are local evidence, never permission to merge registry identities.
+    Names can be lowercase product names; dates, title suffixes and feature
+    headings are not identity claims.
+    """
+    token = r"[\w](?:[\w-]|\.(?=\w))*"
+    name = rf"{token}(?:[ \t]+[A-Z](?:[\w-]|\.(?=\w))*){{0,3}}"
+    patterns = [
+        rf"(?P<left>{name})\s+is\s+(?:the\s+)?(?:user-facing\s+|public\s+|new\s+)?name\s+(?:of|for)\s+(?P<right>{name})",
+        rf"(?P<left>{name})\s+(?:is\s+)?(?:also\s+known\s+as|formerly\s+known\s+as|renamed\s+to)\s+(?P<right>{name})",
+    ]
+    claims = []
+    for row in evidence:
+        if row.get("basis") == "title":
+            continue
+        text = row.get("text", "")
+        for pattern in patterns:
+            for match in re.finditer(pattern, text):
+                claims.append({"left": match["left"], "right": match["right"],
+                               "reason": "explicit identity statement",
+                               "evidence_id": row.get("evidence_id", row.get("chunk_id")),
+                               "passage": match.group(), "start": match.start(), "end": match.end()})
+    return claims
+
+
 def project_candidates(evidence, folders=(), projects=(), limit=16):
+    return [candidate["name"] for candidate in project_candidate_details(evidence, folders, projects, limit)]
+
+
+def project_candidate_details(evidence, folders=(), projects=(), limit=16):
     """Small, canonical owner hypotheses grounded in the full document context.
 
     Candidate discovery is not assignment: Jev still decides membership. A known
@@ -125,17 +156,20 @@ def project_candidates(evidence, folders=(), projects=(), limit=16):
         "download", "upload", "convert", "selection", "compact", "evidence", "passage",
         "provider", "continuation", "cached", "premise", "parameters", "details",
     }
-    # A generated topic vocabulary is not a registry of accepted projects.
-    canonical = {f.split(" / ")[0].casefold(): f.split(" / ")[0] for f in (folders if not projects else ())
-                 if any(c.isalpha() for c in f.split(" / ")[0])
-                 and not any(word in generic for word in re.findall(r"[^\W\d_]+", f.split(" / ")[0].casefold()))}
+    # Folder roots are spelling hints only: they become candidates only when
+    # corroborated by source text (including narrow OCR normalization below).
+    # They never register an identity or establish ownership on their own.
+    folder_hints = {f.split(" / ")[0].casefold(): f.split(" / ")[0] for f in folders
+                    if any(c.isalpha() for c in f.split(" / ")[0])
+                    and not any(word in generic for word in re.findall(r"[^\W\d_]+", f.split(" / ")[0].casefold()))}
+    canonical = dict(folder_hints) if not projects else {}
     if hasattr(projects, "canonical_names"):
         canonical = projects.canonical_names
         known = projects.names
         matcher = projects.matcher
     else:
         for project in projects:
-            for name in [project["name"], *project.get("aliases", [])]:
+            for name in [project["name"], *project.get("aliases", []), *project.get("features", [])]:
                 canonical[name.casefold()] = project["name"]
         known = ProjectNames(canonical.values())
         from symbiknow.organization.matcher import ProjectMatcher
@@ -143,7 +177,8 @@ def project_candidates(evidence, folders=(), projects=(), limit=16):
     text = "\n".join(r.get("text", "") for r in evidence if r.get("basis") != "title")
     headings = "\n".join(h for r in evidence for h in r.get("provenance", {}).get("headings", []))
     context = text + "\n" + headings
-    hinted = set().union(*(matcher.find(row.get("text", "")) for row in evidence if row.get("basis") == "title"))
+    hinted = (set().union(*(matcher.find(row.get("text", "")) for row in evidence if row.get("basis") == "title"))
+              if projects else set())
     grounded = matcher.find(context)
     # Prefixes in headings such as Product / Search or Product MCP protocol are
     # subjects of a known product, unless independently registered as an owner.
@@ -160,13 +195,18 @@ def project_candidates(evidence, folders=(), projects=(), limit=16):
             alias = folded[:boundary]
             if alias in canonical:
                 suffix = name[len(alias):].strip().lower().split()
-                if suffix and all(word in {"mcp", "api", "sdk", "protocol", "search", "storage", "interface"} for word in suffix):
+                if suffix and all(word in {"mcp", "api", "sdk", "protocol", "search", "storage", "interface",
+                                           "app", "engine", "overview", "playground", "decision", "log",
+                                           "speed", "plan", "parallel", "jobs", "results", "comparison"}
+                                  or word in canonical for word in suffix):
                     return canonical[alias]
         return name
 
     def plausible(name):
         words = re.findall(r"[^\W\d_]+", name.lower())
-        return bool(words) and not any(w in generic for w in words)
+        return (name.casefold() in canonical or
+                (bool(words) and len(words) <= 4 and not any(w in generic for w in words)
+                 and not re.search(r"\d{4}|[():?]", name)))
 
     paths = {normalize(path.split(" / ")[0]) for path in topic_paths(evidence, known)}
     grounded = {name for name in grounded if name in paths or not any(
@@ -174,25 +214,82 @@ def project_candidates(evidence, folders=(), projects=(), limit=16):
     )}
     hypothesis = normalize(project_scope(evidence, known))
     explicit = {normalize(name) for name in heading_projects(evidence) if plausible(name)}
-    new = {name for name in paths | {hypothesis} if name and plausible(name)}
+    new = {name for name in paths if name and plausible(name)}
+    # Multiword proper names in ordinary prose (Vela Labs, Oak Garden) remain
+    # plausible owners even without a project heading. A lone first word such
+    # as Decode, Installed or Final has no equivalent identity evidence.
+    if (hypothesis and plausible(hypothesis) and len(hypothesis.split()) >= 2
+            and all(word[:1].isupper() for word in hypothesis.split())):
+        new.add(hypothesis)
     new.update(explicit)
+    statements = identity_statements(evidence)
+    identity_names = {normalize(claim[side]) for claim in statements for side in ("left", "right")}
+    new.update(name for name in identity_names if plausible(name))
     # An explicit comparison names another possible owner even when it is not
     # registered yet. Keep it for Jev to reject; topic vocabulary is not enough.
     for match in re.finditer(r"\b(?:[Uu]nlike|[Cc]ompared (?:to|with)) ([A-Z][\w-]*(?: [A-Z][\w-]*)*)", context):
         name = normalize(match[1])
         if plausible(name):
             new.add(name)
-    # Scan sentence subjects only when no known identity is grounded. This keeps
-    # discovery of new projects without promoting every capitalized UI label.
+    # A recognized dependency must not suppress an unfamiliar owning project.
+    # Require a named sentence subject with substantive product behavior, not
+    # an arbitrary capitalized section or a question's opening word.
+    subject_pattern = (r"(?:^|[.!?\n]\s*)([A-Z][\w'-]*(?:[ \t]+[A-Z][\w'-]*){0,3})"
+                       r"\s+(?:owns|manages|accepts|processes|provisions|disables|provides|stores|runs|builds|uses|implements|serves|powers|offers|supports)\b")
+    subject_names = {normalize(m[1]) for m in re.finditer(subject_pattern, text)}
+    subject_names.update(normalize(m[1]) for m in re.finditer(
+        r"(?:^|[.!?\n]\s*)([\w'-]+(?:[ \t]+[A-Z][\w'-]*){0,3})"
+        r"\s+is\s+(?:an?|our|the)\s+(?:[\w-]+\s+){0,3}(?:project|app|engine|platform|product|service)\b", text))
+    subject_names.update(normalize(m[1]) for m in re.finditer(
+        r"\b(?:At|For|at|for)\s+([A-Z][\w'-]*(?:[ \t]+[A-Z][\w'-]*){0,3})\b", text))
+    new.update(name for name in subject_names if plausible(name))
     if not grounded:
         for sentence in _sentences(text):
             name = normalize(project_scope([{"text": sentence}], known))
-            if name and plausible(name):
+            if name and plausible(name) and name in subject_names:
                 new.add(name)
-    return sorted(grounded | hinted | new, key=lambda name: (
-        name not in explicit, name not in grounded, name not in hinted,
+    # A one-letter name ("S" from a size label) is not an identity, and once
+    # registered it would match ordinary text in nearly every document.
+    names = sorted({name for name in grounded | hinted | new
+                    if len(re.findall(r"[^\W\d_]", name)) >= 2}, key=lambda name: (
+        name not in explicit, name not in identity_names, name not in grounded, name not in hinted,
         name not in paths, name != hypothesis, name.casefold()
     ))[:limit]
+    result = []
+    for name in names:
+        if hasattr(projects, "lookup"):
+            record = projects.lookup.get(name.casefold(), {})
+            aliases = [name, *record.get("aliases", []), *record.get("features", [])]
+        else:
+            aliases = [alias for alias, owner in canonical.items() if owner == name] or [name]
+        support = []
+        for row in evidence:
+            passage = row.get("text", "")
+            matched = next((alias for alias in aliases if re.search(
+                r"(?<!\w)" + re.escape(alias) + r"(?!\w)", passage, re.I)), None)
+            if matched:
+                match = re.search(r"(?<!\w)" + re.escape(matched) + r"(?!\w)", passage, re.I)
+                start, end = max(0, match.start() - 200), min(len(passage), match.end() + 600)
+                support.append({"evidence_id": row.get("evidence_id", row.get("chunk_id")),
+                                "basis": row.get("basis", "text"), "passage": passage[start:end],
+                                "start": start, "end": end, "matched_name": matched})
+        reasons = []
+        if name in explicit:
+            reasons.append("project heading")
+        if name in identity_names:
+            reasons.append("explicit identity statement")
+        if name in grounded:
+            reasons.append("registered project, alias or feature in content" if projects
+                           else "source name corroborated by a folder spelling hint; ownership unverified")
+        if name in paths:
+            reasons.append("project prefix in contextual heading")
+        if name in subject_names:
+            reasons.append("named subject describing product behavior")
+        if name in hinted:
+            reasons.append("filename hint requiring content corroboration")
+        result.append({"name": name, "reasons": reasons or ["content-derived owner hypothesis"],
+                       "supporting_passages": support[:6]})
+    return result
 
 
 def ownership_evidence(evidence, owners=(), limit=6):
@@ -218,12 +315,12 @@ def project_identity(name, projects=()):
     if hasattr(projects, "lookup"):
         found = projects.lookup.get(name.casefold())
         if found is not None:
-            return found
+            return {key: found[key] for key in ("id", "name", "aliases", "features") if key in found}
     for project in (() if hasattr(projects, "lookup") else projects):
         if name.casefold() in {
             n.casefold() for n in [project["name"], *project.get("aliases", [])]
         }:
-            return project
+            return {key: project[key] for key in ("id", "name", "aliases", "features") if key in project}
     return {
         "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "symbiknow:project:" + name.casefold())),
         "name": name,
@@ -424,6 +521,67 @@ def topical_name(name):
             for token in re.findall(r"\w+", name.lower())
         )
     )
+
+
+def meaningful_subject(name, evidence):
+    """Require a contextual noun-like subject, not an incidental sentence token.
+
+    This applies only to automatic child folders. Project identities and manual
+    folder names have separate authorities, so a project named Read is valid.
+    """
+    subject = name.split(" / ")[-1].strip()
+    if not topical_name(subject) or len(subject.split()) > 5 or re.search(r"\d{4}|[?!]", subject):
+        return False
+    occurrences = 0
+    for row in evidence:
+        if row.get("basis") == "title":
+            continue
+        text = row.get("text", "")
+        for match in re.finditer(r"(?<!\w)" + re.escape(subject) + r"(?!\w)", text, re.I):
+            before = text[max(0, match.start() - 100):match.start()]
+            after = text[match.end():match.end() + 100]
+            # Introductory questions/instructions do not name a reusable subject.
+            if (not before.strip(" #\n\t\"'“”") or before.endswith("\n")
+                    or re.search(r"[.!?]\s*$", before)) and re.match(
+                        r"\s+(?:this|these|that|those|the document|you|when|whether)\b", after, re.I):
+                continue
+            line = text[text.rfind("\n", 0, match.start()) + 1:text.find("\n", match.end()) if "\n" in text[match.end():] else len(text)]
+            if re.match(r"\s*(?:does|do|is|are|can|could|should|would|read|see)\s", line, re.I):
+                continue
+            occurrences += 1
+    if occurrences:
+        return True
+    # Descriptive compound subjects can be expressed across a sentence (an
+    # employee receives an account after access approval) rather than as a
+    # literal adjacent phrase. Every content word still needs support.
+    words = _tokens(subject)
+    if len(words) >= 2:
+        return any(set(words) <= set(_tokens(row.get("text", "")))
+                   for row in evidence if row.get("basis") != "title")
+    return False
+
+
+def descriptive_metadata(evidence):
+    """Keep literal dates, security identifiers and document form out of topics."""
+    values = {"dates": [], "tickers": [], "document_roles": []}
+    seen = set()
+    for row in evidence:
+        if row.get("basis") == "title":
+            continue
+        text = row.get("text", "")
+        headings = "\n".join(row.get("provenance", {}).get("headings", []))
+        for key, pattern, source in (
+            ("dates", r"\b\d{4}-\d{2}-\d{2}\b", text),
+            ("tickers", r"\b(?:NYSE|NASDAQ|AMEX|TSX):\s*[A-Z][A-Z0-9.-]{0,9}\b", text),
+            ("document_roles", r"\b(?:overview|decision log|research report|benchmark|runbook|plan|index)\b", headings or text.split("\n", 1)[0]),
+        ):
+            for match in re.finditer(pattern, source, re.I if key == "document_roles" else 0):
+                value = match.group()
+                if (key, value.casefold()) in seen or len(values[key]) >= 32:
+                    continue
+                seen.add((key, value.casefold()))
+                values[key].append({"value": value, "evidence_id": row.get("evidence_id", row.get("chunk_id"))})
+    return values
 
 
 def _subject(texts, project):

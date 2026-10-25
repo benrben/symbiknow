@@ -69,7 +69,6 @@ test("Files, folders and Canvas design references with twelve real repository do
   await chooseView(page, "Canvas");
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await expect(page.locator(".react-flow__node-document")).toHaveCount(7);
-  await expect(page.locator(".canvas .card-prose").first()).toBeVisible();
   await page.screenshot({ path: path.join(output, "canvas-view.png") });
   await page
     .getByRole("button", {
@@ -77,6 +76,8 @@ test("Files, folders and Canvas design references with twelve real repository do
       exact: true,
     })
     .click();
+  await page.getByRole("button", { name: "Fit selection", exact: true }).click();
+  await expect(page.locator(".canvas .card-prose").first()).toBeVisible();
   await expect(page.locator(".react-flow__edge")).toHaveCount(2);
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await page.screenshot({ path: path.join(output, "canvas-links.png") });

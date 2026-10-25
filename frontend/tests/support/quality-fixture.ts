@@ -30,110 +30,122 @@ export async function fixture(page: Page) {
     relation: "supports",
   };
   let failPassages = true;
-  await page.route("**/api/**", async (route) => {
-    const url = new URL(route.request().url()),
-      q = url.searchParams,
-      endpoint = url.pathname.split("/").at(-1);
-    const i = Number((q.get("id") || "quality-0").split("-").at(-1)),
-      doc = documents[i] || documents[0];
-    if (endpoint === "freshness")
-      return route.fulfill({
-        json: { scan: null, findings: [], has_more: false, next_after: "", recent_scans: [] },
-      });
-    if (endpoint === "library") {
-      const offset = Number(q.get("offset") || 0),
-        limit = Number(q.get("limit") || 60);
-      return route.fulfill({
-        json: {
-          documents: documents.slice(offset, offset + limit),
-          total: 70,
-          library_total: 70,
-          has_more: offset + limit < 70,
-          folders: { "Research / Guides": 70 },
-          scoped_folders: { "Research / Guides": 70 },
-          groups: ["Research review"],
-          processing: false,
-          processing_states: {},
-          library_id: "quality-library",
-          index_revision: "fixed",
-          organization_revision: "fixed",
-          max_file_bytes: 268435456,
-          max_chunk_bytes: 262144,
-        },
-      });
-    }
-    if (endpoint === "document")
-      return route.fulfill({
-        json: {
-          document: { ...doc, version: q.get("version") || "v2" },
-          current_version: "v2",
-          organization: doc,
-          evidence: [evidence(i)],
-          connections: i === 0 ? [link] : [],
-          versions: [{ ...doc, version: "v1" }, doc],
-        },
-      });
-    if (endpoint === "original")
-      return route.fulfill({
-        contentType: "text/plain",
-        body:
-          `# ${doc.filename}\n\nLiteral a+b? and **inline emphasis** are searchable.\n\n` +
-          Array.from(
-            { length: 24 },
-            (_, n) =>
-              `## Section ${n + 1}\n\nNeedle ${n + 1}. ${"A readable paragraph retains the original text and precise version. ".repeat(8)}\n\n`,
-          ).join(""),
-      });
-    if (endpoint === "card")
-      return route.fulfill({ json: { evidence: [evidence(i)] } });
-    if (endpoint === "neighborhood")
-      return route.fulfill({
-        json: { documents: documents.slice(0, 2), links: [link] },
-      });
-    if (endpoint === "link") {
-      return failPassages
-        ? route.fulfill({
-            status: 503,
-            json: { error: "Temporary evidence failure" },
-          })
-        : route.fulfill({
-            json: { source: [evidence(0)], target: [evidence(1)], link },
-          });
-    }
-    if (endpoint === "rebuild")
-      return route.fulfill({
-        json: {
-          request_id: "quality-job",
-          status: "completed",
-          mode: "links",
-          total: 70,
-          completed: 70,
-          failed: 0,
-          skipped: 0,
-          links_added: 1,
-          details: [],
-          failures: {},
-          folder: null,
-          grouping: false,
-          links: true,
-        },
-      });
-    if (endpoint === "history")
-      return route.fulfill({
-        json: {
-          versions: [doc, { ...doc, version: "v1" }],
-          has_more: false,
-          head: "v2",
-        },
-      });
-    if (endpoint === "search")
-      return route.fulfill({
-        json: { matches: [], evaluation: { status: "not_requested" } },
-      });
-    return route.fulfill({ json: {} });
-  });
+  await page.route(
+    (url) => url.pathname.startsWith("/api/"),
+    async (route) => {
+      const url = new URL(route.request().url()),
+        q = url.searchParams,
+        endpoint = url.pathname.split("/").at(-1);
+      const i = Number((q.get("id") || "quality-0").split("-").at(-1)),
+        doc = documents[i] || documents[0];
+      if (endpoint === "freshness")
+        return route.fulfill({
+          json: {
+            scan: null,
+            findings: [],
+            has_more: false,
+            next_after: "",
+            recent_scans: [],
+          },
+        });
+      if (endpoint === "library") {
+        const offset = Number(q.get("cursor") || q.get("offset") || 0),
+          limit = Number(q.get("limit") || 60);
+        return route.fulfill({
+          json: {
+            documents: documents.slice(offset, offset + limit),
+            total: 70,
+            library_total: 70,
+            has_more: offset + limit < 70,
+            next_cursor: offset + limit < 70 ? String(offset + limit) : null,
+            folders: { "Research / Guides": 70 },
+            scoped_folders: { "Research / Guides": 70 },
+            groups: ["Research review"],
+            processing: false,
+            processing_states: {},
+            library_id: "quality-library",
+            index_revision: "fixed",
+            organization_revision: "fixed",
+            max_file_bytes: 268435456,
+            max_chunk_bytes: 262144,
+          },
+        });
+      }
+      if (endpoint === "document")
+        return route.fulfill({
+          json: {
+            document: { ...doc, version: q.get("version") || "v2" },
+            current_version: "v2",
+            organization: doc,
+            evidence: [evidence(i)],
+            connections: i === 0 ? [link] : [],
+            versions: [{ ...doc, version: "v1" }, doc],
+          },
+        });
+      if (endpoint === "original-ready")
+        return route.fulfill({ json: { ready: true } });
+      if (endpoint === "original")
+        return route.fulfill({
+          contentType: "text/plain",
+          body:
+            `# ${doc.filename}\n\nLiteral a+b? and **inline emphasis** are searchable.\n\n` +
+            Array.from(
+              { length: 24 },
+              (_, n) =>
+                `## Section ${n + 1}\n\nNeedle ${n + 1}. ${"A readable paragraph retains the original text and precise version. ".repeat(8)}\n\n`,
+            ).join(""),
+        });
+      if (endpoint === "card")
+        return route.fulfill({ json: { evidence: [evidence(i)] } });
+      if (endpoint === "neighborhood")
+        return route.fulfill({
+          json: { documents: documents.slice(0, 2), links: [link] },
+        });
+      if (endpoint === "link") {
+        return failPassages
+          ? route.fulfill({
+              status: 503,
+              json: { error: "Temporary evidence failure" },
+            })
+          : route.fulfill({
+              json: { source: [evidence(0)], target: [evidence(1)], link },
+            });
+      }
+      if (endpoint === "rebuild")
+        return route.fulfill({
+          json: {
+            request_id: "quality-job",
+            status: "completed",
+            mode: "links",
+            total: 70,
+            completed: 70,
+            failed: 0,
+            skipped: 0,
+            links_added: 1,
+            details: [],
+            failures: {},
+            folder: null,
+            grouping: false,
+            links: true,
+          },
+        });
+      if (endpoint === "history")
+        return route.fulfill({
+          json: {
+            versions: [doc, { ...doc, version: "v1" }],
+            has_more: false,
+            head: "v2",
+          },
+        });
+      if (endpoint === "search")
+        return route.fulfill({
+          json: { matches: [], evaluation: { status: "not_requested" } },
+        });
+      return route.fulfill({ json: {} });
+    },
+  );
   await page.goto("/");
-  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await expect(page.getByLabel("Files in this space")).toBeVisible();
   return {
     documents,
     recoverPassages: () => {
@@ -142,7 +154,9 @@ export async function fixture(page: Page) {
   };
 }
 export async function openGuide(page: Page) {
-  await page.getByRole("button", { name: "Open Guide", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Select Guide.md", exact: true })
+    .dblclick();
   await expect(
     page.getByRole("searchbox", { name: "Find in document" }),
   ).toBeVisible();

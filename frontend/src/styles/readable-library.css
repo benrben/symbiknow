@@ -66,6 +66,41 @@
   line-height: 18px;
   overflow-wrap: anywhere;
 }
+.file-description > .file-readiness,
+.file-description > .file-organization-status {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-description > .file-readiness {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+.file-table .file-select {
+  height: auto;
+  min-height: calc(var(--row-height) - 2px);
+  padding-block: 4px;
+}
+/* Readiness adds a second text line to file rows. Keep the surrounding cells
+   compact while leaving enough vertical room for both lines. */
+.connected-app .file-table.file-list td {
+  padding-block: 2px;
+}
+.app.connected-app[data-density="comfortable"] .file-table.file-list td {
+  padding-block: 6px;
+}
+.grid-file .file-description > .file-readiness,
+.grid-file .file-description > .file-organization-status {
+  font-size: 10px;
+  line-height: 14px;
+}
 .file-card-meta {
   display: flex;
   justify-content: space-between;

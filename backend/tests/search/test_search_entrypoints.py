@@ -4,6 +4,7 @@ import asyncio
 from copy import deepcopy
 
 from mcp import Client
+from symbiknow.cli.client import call
 import pytest
 from starlette.testclient import TestClient
 
@@ -13,6 +14,16 @@ from symbiknow.search import index as search
 from symbiknow.api import mcp as server
 from symbiknow.api import http as ui
 from tests.ai.test_jev_proof import document, sdk
+
+
+def complete(value):
+    if "job_id" in value:
+        assert value["status"] == "queued"
+        server.application().jobs.process_one()
+        value = server.application().jobs.get(value["job_id"])
+        assert value["status"] == "completed", value
+        return value["result"]
+    return value
 
 
 @pytest.fixture
@@ -53,16 +64,15 @@ def test_ui_and_actual_mcp_sdk_share_one_answer_window(shared_search):
         headers={"Origin": "http://127.0.0.1", "X-Symbiknow-UI": "1"},
     )
     assert response.status_code == 200
-    browser = response.json()
+    browser = complete(response.json())
 
     async def from_mcp():
         async with Client(server.mcp) as client:
-            result = await client.call_tool(
+            result = await call(client,
                 "search",
                 {"query": "what is hybrid mode?", "mode": "answer", "limit": 10, "detail": "full"},
             )
-            assert not result.is_error
-            return result.structured_content
+            return result
 
     mcp = asyncio.run(from_mcp())
     assert calls == [("hybrid", 8, None, None)] * 2
@@ -85,16 +95,18 @@ def test_browsing_keeps_requested_window_and_small_answer_limit_is_honored(share
 
 def test_context_budget_reason_survives_actual_ui_and_mcp_projection(shared_search, monkeypatch):
     _, http = shared_search
-    too_long = document(texts=tuple("x" * 2400 for _ in range(8)))
-    monkeypatch.setattr(search, "find_documents", lambda *a, **k: [too_long])
+    # Oversized evidence is fitted into ranked windows; a question beyond the
+    # proof's own budget still cannot be checked and must say so.
+    monkeypatch.setattr(search, "find_documents", lambda *a, **k: [document()])
+    question = "what is hybrid mode? " + "Explain every qualifier. " * 200
     response = http.post(
         "/api/search",
-        json={"query": "what is hybrid mode?", "evaluate": True},
+        json={"query": question, "evaluate": True},
         headers={"Origin": "http://127.0.0.1", "X-Symbiknow-UI": "1"},
     )
     assert response.status_code == 200
-    browser = response.json()
-    compact = server.search("what is hybrid mode?", mode="answer", detail="compact")
+    browser = complete(response.json())
+    compact = server.search(question, mode="answer", detail="compact")
     for result in (browser, compact):
         assert not result["matches"]
         assert result["answer"]["status"] == "not_evaluated"
@@ -109,12 +121,12 @@ def test_ask_is_semantic_checked_and_same_over_mcp_and_http(shared_search):
     assert response.status_code == 200
     async def run():
         async with Client(server.mcp) as client:
-            result = await client.call_tool("ask", {"query": "what is hybrid mode?", "folder": "reflax", "detail": "full"})
-            assert not result.is_error
-            return result.structured_content
+            result = await call(client, "ask", {"query": "what is hybrid mode?", "folder": "reflax", "detail": "full"})
+            return result
+    browser = complete(response.json())
     result = asyncio.run(run())
     assert calls == [("semantic", 3, "reflax", None)] * 2
-    assert response.json()["answer"] == result["answer"]
+    assert browser["answer"] == result["answer"]
     assert result["answer"]["evaluated_count"] == 3
     invalid = http.post("/api/ask", json={"query": "hello", "limit": 4}, headers={"Origin": "http://127.0.0.1", "X-Symbiknow-UI": "1"})
     assert invalid.status_code == 400
@@ -127,4 +139,5 @@ def test_grep_entrypoint_does_not_request_judging(shared_search, monkeypatch):
     monkeypatch.setattr(jev, "judge_matches", unexpected)
     response = http.post("/api/search", json={"query": 'grep -in "hybrid"', "mode": "grep", "limit": 2}, headers={"Origin": "http://127.0.0.1", "X-Symbiknow-UI": "1"})
     assert response.status_code == 200
+    complete(response.json())
     assert calls == [("grep", 2, None, None)]

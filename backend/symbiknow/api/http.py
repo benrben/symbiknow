@@ -5,20 +5,12 @@ from __future__ import annotations
 from symbiknow.core.paths import REPO_ROOT
 
 import json
-import uuid
-from io import BytesIO
-import tempfile
-import zipfile
-import shutil
-import threading
-import time
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response
-from starlette.background import BackgroundTask
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
@@ -83,275 +75,103 @@ def _link_evidence(doc_id, version, target, target_version, source_chunk, target
     return {"link": valid, "source": source, "target": target_rows}
 
 
-def thumbnail(doc_id, version):
-    from symbiknow.previews.service import JOBS, RENDERER_REVISION
-    from symbiknow.core.cache import dependency_key
-
-    return JOBS.run(
-        dependency_key("preview", library=str(server.DATA_DIR.resolve()), kind="thumbnail",
-                       document=doc_id, version=version, renderer=RENDERER_REVISION),
-        _thumbnail, doc_id, version
-    )
-
-
 def _cached_preview(path, doc_id, version, *, page=False):
-    """Copy a bounded preview while holding the same lock as eviction/deletion."""
-    with server.write_lock:
-        info_path = path.with_suffix(".json")
-        if not path.exists() or (page and not info_path.exists()):
-            return None
-        storage.read_metadata(server.DATA_DIR, doc_id, version)
-        headers = {
-            "Cache-Control": "private, max-age=86400",
-            "X-Content-Type-Options": "nosniff",
-        }
-        if page:
-            headers["X-PDF-Page-Count"] = str(json.loads(info_path.read_text())["pages"])
-        content = path.read_bytes()
-        from symbiknow.previews.service import prune
-
-        prune(path.parent, path)
-        return Response(content, media_type="image/jpeg", headers=headers)
+    from symbiknow.previews.service import cached
+    result = cached(server.application(), path, doc_id, version, page=page)
+    return Response(result[0], media_type="image/jpeg", headers=result[1]) if result else None
 
 
 def _thumbnail(doc_id, version):
-    from symbiknow.previews.service import RENDERER_REVISION
-    storage._validate_id(doc_id)
-    storage._validate_version(version)
-    if not version:
-        raise ValueError("Thumbnail must pin a version")
-    path = server.DATA_DIR / "temp" / "thumbnails" / f"{doc_id}-{version}-{RENDERER_REVISION}.jpg"
-    cached = _cached_preview(path, doc_id, version)
-    if cached is not None:
-        return cached
-    from PIL import Image
-
-    metadata = storage.read_metadata(server.DATA_DIR, doc_id, version)
-    if metadata["mime_type"] == "application/pdf" and metadata["size"] > 32 * 1024**2:
-        raise ValueError("PDF is too large for a thumbnail; open or download the original")
-    with storage.verified_file(server.DATA_DIR, doc_id, version) as (source_path, metadata):
-        if metadata["mime_type"] == "application/pdf":
-            import subprocess
-            import sys
-
-            try:
-                content = subprocess.run(
-                    [
-                        sys.executable,
-                        str(Path(__file__).resolve().parents[1] / "previews/pdf.py"),
-                        str(source_path),
-                    ],
-                    check=True,
-                    timeout=20,
-                    capture_output=True,
-                ).stdout
-            except (subprocess.SubprocessError, OSError):
-                raise ValueError(
-                    "PDF thumbnail unavailable; open or download the original"
-                ) from None
-            source_input = BytesIO(content)
-        else:
-            source_input = source_path
-        with Image.open(source_input) as source:
-            source.thumbnail((264, 340))
-            output = BytesIO()
-            rgb = source.convert("RGB")
-            try:
-                rgb.save(output, format="JPEG", quality=85)
-            finally:
-                rgb.close()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
-    with server.write_lock:
-        if storage.current_version(server.DATA_DIR, doc_id) is None:
-            raise FileNotFoundError("Document deleted during preview")
-        temporary.write_bytes(output.getvalue())
-        temporary.replace(path)
-        return _cached_preview(path, doc_id, version)
+    from symbiknow.previews.service import render_thumbnail
+    content, headers = render_thumbnail(server.application(), doc_id, version)
+    return Response(content, media_type="image/jpeg", headers=headers)
 
 
-def pdf_page(doc_id, version, page_number):
-    from symbiknow.previews.service import JOBS, RENDERER_REVISION
-    from symbiknow.core.cache import dependency_key
-
-    return JOBS.run(
-        dependency_key("preview", library=str(server.DATA_DIR.resolve()), kind="pdf-page",
-                       document=doc_id, version=version, page=str(page_number), renderer=RENDERER_REVISION),
-        _pdf_page,
-        doc_id,
-        version,
-        page_number,
-    )
+def thumbnail(doc_id, version):
+    from symbiknow.previews.service import JOBS
+    return JOBS.run((str(server.DATA_DIR), "thumbnail", doc_id, version), _thumbnail, doc_id, version)
 
 
 def _pdf_page(doc_id, version, page_number):
-    """Reader-sized page image; originals and the first-page card cache stay separate."""
-    import subprocess
-    import sys
-    from symbiknow.previews.service import RENDERER_REVISION
+    from symbiknow.previews.service import render_page
+    content, headers = render_page(server.application(), doc_id, version, page_number)
+    return Response(content, media_type="image/jpeg", headers=headers)
 
-    storage._validate_id(doc_id)
-    storage._validate_version(version)
-    if not version:
-        raise ValueError("PDF preview must pin a version")
-    page_number = int(page_number)
-    if not 1 <= page_number <= 10000:
-        raise ValueError("PDF page is out of range")
-    path = server.DATA_DIR / "temp" / "thumbnails" / f"{doc_id}-{version}-page-{page_number}-{RENDERER_REVISION}.jpg"
-    info_path = path.with_suffix(".json")
-    cached = _cached_preview(path, doc_id, version, page=True)
-    if cached is not None:
-        return cached
-    metadata = storage.read_metadata(server.DATA_DIR, doc_id, version)
-    if metadata["mime_type"] != "application/pdf":
-        raise ValueError("Page preview requires a PDF")
-    if metadata.get("size", 0) > 32 * 1024 * 1024:
-        raise ValueError("PDF is too large for an inline preview; open or download the original")
-    with storage.verified_file(server.DATA_DIR, doc_id, version) as (input_path, _):
-        try:
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    str(Path(__file__).resolve().parents[1] / "previews/pdf.py"),
-                    str(input_path),
-                    str(page_number),
-                    "1400",
-                ],
-                check=True,
-                timeout=20,
-                capture_output=True,
-            )
-            page_count = int(result.stderr.decode().rsplit("pages:", 1)[1].strip())
-        except (subprocess.SubprocessError, OSError, ValueError, IndexError):
-            raise ValueError("PDF page unavailable or out of range; open the original") from None
-    with server.write_lock:
-        if storage.current_version(server.DATA_DIR, doc_id) is None:
-            raise FileNotFoundError("Document deleted during preview")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        staging = path.with_suffix(".tmp")
-        staging.write_bytes(result.stdout)
-        staging.replace(path)
-        info_staging = info_path.with_suffix(".json.tmp")
-        info_staging.write_text(json.dumps({"pages": page_count}))
-        info_staging.replace(info_path)
-        return _cached_preview(path, doc_id, version, page=True)
+
+def pdf_page(doc_id, version, page_number):
+    from symbiknow.previews.service import JOBS
+    return JOBS.run((str(server.DATA_DIR), "page", doc_id, version, page_number), _pdf_page, doc_id, version, page_number)
 
 
 def card(doc_id, version):
     return server.application().library.card(doc_id, version).to_wire()
 
 
-_EXPORT_LOCK = threading.RLock()
-_EXPORTS = {}
-_EXPORT_SLOTS = threading.BoundedSemaphore(2)
+async def selection_export(request):
+    """Stream a pinned ZIP descriptor with standard conditional/range behavior."""
+    from secrets import token_hex
+    from starlette.responses import StreamingResponse, MalformedRangeHeader, RangeNotSatisfiable
+    from symbiknow.transfers.exports import opened
 
-
-def bulk_download(args):
-    if not _EXPORT_SLOTS.acquire(blocking=False):
-        raise ValueError("Two ZIP exports are already being prepared; retry shortly")
+    lease = opened(server.application(), request.query_params.get("token", ""))
+    handle, count, stat = await run_in_threadpool(lease.__enter__)
     try:
-        return _bulk_download(args)
-    finally:
-        _EXPORT_SLOTS.release()
+        # Reuse the installed Starlette range parser/header rules; its FileResponse
+        # cannot serve here because it reopens a path after deletion/expiry locks.
+        headers = FileResponse("export.zip", stat_result=stat, media_type="application/zip",
+                               filename="Symbiknow files.zip", headers={
+                                   "X-Symbiknow-File-Count": str(count),
+                                   "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"})
+        ranges = [(0, stat.st_size)]
+        status, boundary, part_header = 200, None, None
+        raw = request.headers.get("range")
+        if raw and (not request.headers.get("if-range") or headers._should_use_range(request.headers["if-range"])):
+            parsed = headers._parse_range_header(raw, stat.st_size)
+            if parsed:
+                ranges, status = parsed, 206
+                if len(ranges) == 1:
+                    start, end = ranges[0]
+                    headers.headers["Content-Range"] = f"bytes {start}-{end - 1}/{stat.st_size}"
+                    headers.headers["Content-Length"] = str(end - start)
+                else:
+                    boundary = token_hex(13)
+                    length, part_header = headers.generate_multipart(ranges, boundary, stat.st_size, "application/zip")
+                    headers.headers["Content-Type"] = "multipart/byteranges; boundary=" + boundary
+                    headers.headers["Content-Length"] = str(length)
 
 
-def _expire_export(token):
-    with _EXPORT_LOCK:
-        item = _EXPORTS.pop(token, None)
-    if item:
-        item[0].unlink(missing_ok=True)
+        def stream():
+            if request.method == "HEAD":
+                return
+            for start, end in ranges:
+                if part_header:
+                    yield part_header(start, end)
+                handle.seek(start)
+                while start < end:
+                    content = handle.read(min(256 * 1024, end - start))
+                    if not content:
+                        raise OSError("Export ended before its recorded size")
+                    start += len(content)
+                    yield content
+                if boundary:
+                    yield b"\r\n"
+            if boundary:
+                yield ("--" + boundary + "--").encode("ascii")
 
+        class ExportResponse(StreamingResponse):
+            async def __call__(self, scope, receive, send):
+                try:
+                    await super().__call__(scope, receive, send)
+                finally:
+                    lease.__exit__(None, None, None)
 
-def _bulk_download(args):
-    items = args.get("documents", [])
-    if not isinstance(items, list) or not 1 <= len(items) <= 100:
-        raise ValueError("Select 1–100 loaded files to download")
-    # Validate the entire explicit selection before sending a successful ZIP.
-    metadata, failures = [], []
-    for item in items:
-        try:
-            metadata.append(
-                storage.read_metadata(server.DATA_DIR, item["document_id"], item["version"])
-            )
-        except (FileNotFoundError, ValueError, KeyError):
-            failures.append(
-                {
-                    "document_id": item.get("document_id"),
-                    "version": item.get("version"),
-                    "error": "Selected version is unavailable",
-                }
-            )
-    if failures:
-        return JSONResponse(
-            {
-                "error": "Download stopped: some selected versions are unavailable.",
-                "failures": failures,
-            },
-            status_code=400,
-        )
-    if sum(row.get("size", 0) for row in metadata) > 1024**3:
-        raise ValueError("Bulk download is limited to 1 GiB; download smaller selections")
-    export_root = server.DATA_DIR / "temp" / "exports"
-    export_root.mkdir(parents=True, exist_ok=True)
-    for old in export_root.glob("*.zip"):
-        if time.time() - old.stat().st_mtime > 600:
-            old.unlink(missing_ok=True)
-    handle = tempfile.NamedTemporaryFile(suffix=".zip", dir=export_root, delete=False)
-    destination = Path(handle.name)
-    handle.close()
-    try:
-        names = set()
-        with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_STORED) as archive:
-            for row in metadata:
-                name = row["filename"].replace("\\", "/").split("/")[-1]
-                name = "".join(c for c in name if ord(c) >= 32) or "document"
-                if name in {".", ".."}:
-                    name = "document"
-                base, suffix = Path(name).stem, Path(name).suffix
-                count = 1
-                while name.casefold() in names:
-                    count += 1
-                    name = f"{base} ({count}){suffix}"
-                names.add(name.casefold())
-                with storage.verified_file(server.DATA_DIR, row["document_id"], row["version"]) as (
-                    source_path,
-                    _,
-                ):
-                    with (
-                        source_path.open("rb") as source_file,
-                        archive.open(name, "w", force_zip64=True) as target,
-                    ):
-                        shutil.copyfileobj(source_file, target, length=1024 * 1024)
-        if args.get("prepare"):
-            token = str(uuid.uuid4())
-            with _EXPORT_LOCK:
-                for key, (old_path, expires, timer) in list(_EXPORTS.items()):
-                    if expires < time.time():
-                        timer.cancel()
-                        old_path.unlink(missing_ok=True)
-                        _EXPORTS.pop(key)
-                while len(_EXPORTS) >= 4:
-                    key = next(iter(_EXPORTS))
-                    old_path, _, timer = _EXPORTS.pop(key)
-                    timer.cancel()
-                    old_path.unlink(missing_ok=True)
-                timer = threading.Timer(300, _expire_export, args=(token,))
-                timer.daemon = True
-                _EXPORTS[token] = (destination, time.time() + 300, timer)
-                timer.start()
-            return JSONResponse({"url": "/api/export?token=" + token, "expires_in": 300})
-        return FileResponse(
-            destination,
-            media_type="application/zip",
-            filename="Symbiknow files.zip",
-            headers={
-                "X-Symbiknow-File-Count": str(len(metadata)),
-                "X-Content-Type-Options": "nosniff",
-            },
-            background=BackgroundTask(destination.unlink, missing_ok=True),
-        )
-    except Exception:
-        destination.unlink(missing_ok=True)
+        return ExportResponse(stream(), status_code=status, headers=dict(headers.headers))
+    except (MalformedRangeHeader, RangeNotSatisfiable) as error:
+        lease.__exit__(None, None, None)
+        return Response(status_code=416 if isinstance(error, RangeNotSatisfiable) else 400,
+                        headers={"Content-Range": f"bytes */{stat.st_size}"})
+    except BaseException:
+        lease.__exit__(None, None, None)
         raise
 
 
@@ -401,13 +221,113 @@ def original(doc_id, version, preview=False):
     )
 
 
+async def original_ranges(request, doc_id, version, preview=False):
+    from starlette.responses import StreamingResponse
+    import re
+    lease = storage.verified_ranges(server.DATA_DIR, doc_id, version)
+    try:
+        reader, metadata = await run_in_threadpool(lease.__enter__)
+    except storage.RangeNotReady as pending:
+        return JSONResponse(server.application().jobs.start("original-prepare", {"document_id": doc_id, "version": pending.metadata["version"]}), status_code=202)
+    try:
+        size = metadata["size"]
+        start, end, status = 0, size, 200
+        etag = '"' + metadata["sha256"] + '"'
+        raw = request.headers.get("range", "")
+        if raw and request.headers.get("if-range", etag) == etag:
+            match = re.fullmatch(r"bytes=(\d*)-(\d*)", raw)
+            if not match or not any(match.groups()):
+                raise ValueError("Invalid range")
+            left, right = match.groups()
+            start = int(left) if left else max(0, size - int(right))
+            end = min(size, int(right) + 1) if left and right else size
+            if start >= end or start >= size:
+                raise ValueError("Range is outside the original")
+            status = 206
+        mime = metadata["mime_type"].split(";")[0]
+        safe = mime in {"application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp", "text/plain", "text/markdown", "text/x-markdown"}
+        disposition = "inline" if preview and safe else "attachment"
+        headers = {
+            "Content-Disposition": f"{disposition}; filename*=UTF-8''{quote(Path(metadata['filename']).name)}",
+            "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store",
+            "Content-Security-Policy": "sandbox; default-src 'none'",
+            "Content-Length": str(end - start), "Accept-Ranges": "bytes", "ETag": etag,
+        }
+        if status == 206:
+            headers["Content-Range"] = f"bytes {start}-{end - 1}/{size}"
+        # Authenticate the first bytes before committing HTTP success headers.
+        first = await run_in_threadpool(reader.read, start, min(262144, end - start)) if end > start else b""
+        def stream():
+            offset = start
+            yield first
+            offset += len(first)
+            while offset < end:
+                chunk = reader.read(offset, min(262144, end - offset))
+                yield chunk
+                offset += len(chunk)
+        class RangeResponse(StreamingResponse):
+            async def __call__(self, scope, receive, send):
+                try:
+                    await super().__call__(scope, receive, send)
+                finally:
+                    lease.__exit__(None, None, None)
+        return RangeResponse(stream(), status_code=status, headers=headers,
+                             media_type=mime if safe else "application/octet-stream")
+    except ValueError:
+        lease.__exit__(None, None, None)
+        return Response(status_code=416, headers={"Content-Range": f"bytes */{metadata['size']}"})
+    except BaseException:
+        lease.__exit__(None, None, None)
+        raise
+
+
+def search_presentation(result):
+    for match in result["matches"]:
+        match.pop("source", None)
+        passages = [r for r in match.get("evidence", []) if r.get("text")]
+        supports = match.get("jev", {}).get("supporting_chunk_ids", [])
+        chosen = next((r for r in passages if r.get("evidence_id") in supports), None)
+        match["excerpt"] = clean_text(
+            (chosen or (passages[0] if passages else {})).get("text", "")
+        )
+    return result
+
+
 async def api(request: Request):
     try:
         action = request.path_params["action"]
         p = request.query_params
         if request.method == "GET":
+            if action == "catalog":
+                return JSONResponse(await run_in_threadpool(
+                    server.application().catalog.list_documents, limit=int(p.get("limit", 50)),
+                    cursor=p.get("cursor"), folder=p.get("folder"), topic=p.get("topic"),
+                    project=p.get("project"), status=p.get("status")))
+            if action == "taxonomy":
+                return JSONResponse(await run_in_threadpool(
+                    server.application().catalog.taxonomy, dimension=p.get("dimension", "all"),
+                    limit=int(p.get("limit", 50)), cursor=p.get("cursor")))
+            if action == "organization-history":
+                return JSONResponse(await run_in_threadpool(
+                    server.application().catalog.history, p["id"],
+                    limit=int(p.get("limit", 50)), cursor=p.get("cursor")))
+            if action == "organization-correction":
+                return JSONResponse(await run_in_threadpool(server.application().corrections.inspect, p["id"]))
+            if action == "original-ready":
+                def ready_original():
+                    try:
+                        with storage.verified_ranges(server.DATA_DIR, p["id"], p.get("version")) as (_, metadata):
+                            return {"ready": True, "version": metadata["version"]}
+                    except storage.RangeNotReady as pending:
+                        return server.application().jobs.start("original-prepare", {"document_id": p["id"], "version": pending.metadata["version"]})
+                return JSONResponse(await run_in_threadpool(ready_original))
+            if action == "job":
+                result = await run_in_threadpool(server.application().jobs.get, p["id"])
+                if result.get("result") and "matches" in result["result"]:
+                    search_presentation(result["result"])
+                return JSONResponse(result)
             if action == "jev-decisions":
-                return JSONResponse(await run_in_threadpool(server.application().decisions.list))
+                return JSONResponse(await run_in_threadpool(server.application().decisions.list, int(p.get("limit", 50)), p.get("after", "")))
             if action == "freshness":
                 return JSONResponse(await run_in_threadpool(
                     server.application().freshness.get, p.get("scan_id"), p.get("after", ""),
@@ -425,21 +345,7 @@ async def api(request: Request):
                     }
                 )
             if action == "export":
-                with _EXPORT_LOCK:
-                    item = _EXPORTS.pop(p.get("token", ""), None)
-                if item is None:
-                    raise FileNotFoundError()
-                destination, expires, timer = item
-                timer.cancel()
-                if expires < time.time():
-                    destination.unlink(missing_ok=True)
-                    raise FileNotFoundError()
-                return FileResponse(
-                    destination,
-                    media_type="application/zip",
-                    filename="Symbiknow files.zip",
-                    background=BackgroundTask(destination.unlink, missing_ok=True),
-                )
+                return await selection_export(request)
             if action == "progress":
                 return JSONResponse(await run_in_threadpool(progress))
             if action == "library":
@@ -464,28 +370,17 @@ async def api(request: Request):
             if action == "card":
                 return JSONResponse(await run_in_threadpool(card, p["id"], p["version"]))
             if action in ("download", "original"):
-                return await run_in_threadpool(
-                    original, p["id"], p.get("version"), action == "original"
-                )
-            if action == "thumbnail":
-                from symbiknow.previews.service import JOBS
-
-                return await JOBS.wait(
-                    (str(server.DATA_DIR), "thumbnail", p["id"], p["version"]),
-                    _thumbnail,
-                    p["id"],
-                    p["version"],
-                )
-            if action == "pdf-page":
-                from symbiknow.previews.service import JOBS
-
-                return await JOBS.wait(
-                    (str(server.DATA_DIR), "page", p["id"], p["version"], p.get("page", "1")),
-                    _pdf_page,
-                    p["id"],
-                    p["version"],
-                    p.get("page", "1"),
-                )
+                return await original_ranges(request, p["id"], p.get("version"), action == "original")
+            if action in {"preview-ready", "thumbnail", "pdf-page"}:
+                from symbiknow.previews.service import preview_path, request as request_preview
+                page = int(p.get("page", "1")) if action == "pdf-page" or p.get("page") else None
+                if action != "preview-ready":
+                    path = preview_path(server.application(), p["id"], p["version"], page)
+                    cached = await run_in_threadpool(_cached_preview, path, p["id"], p["version"], page=page is not None)
+                    if cached is not None:
+                        return cached
+                job = await run_in_threadpool(request_preview, server.application(), p["id"], p["version"], page)
+                return JSONResponse(job, status_code=202 if job.get("job_id") else 200)
             if action == "link":
                 return JSONResponse(
                     await run_in_threadpool(
@@ -528,6 +423,10 @@ async def api(request: Request):
                         {"error": "Request too large; use chunked upload"}, status_code=413
                     )
             args = json.loads(body)
+            if action == "organization-correction":
+                return JSONResponse(await run_in_threadpool(server.application().corrections.apply, args))
+            if action == "project-ownership":
+                return JSONResponse(await run_in_threadpool(server.application().corrections.correct_ownership, args))
             if action == "jev-decision":
                 return JSONResponse(await run_in_threadpool(
                     server.application().decisions.resolve, args["decision_id"],
@@ -543,12 +442,16 @@ async def api(request: Request):
                     server.application().freshness.review, args["scan_id"], args["finding_id"],
                     args["expected_revision"], args["decision"], args.get("note", "")))
             if action == "bulk-download":
-                return await run_in_threadpool(bulk_download, args)
-            if action in ("delete-document", "delete-folder"):
+                return JSONResponse(await run_in_threadpool(server.application().jobs.start, "bulk-export", {"documents": args.get("documents", [])}))
+            if action == "delete-folder":
+                return JSONResponse(await run_in_threadpool(server.application().jobs.start, "organization-edit", {"action": "remove-folder", "args": args}))
+            if action == "delete-document":
                 return JSONResponse(await run_in_threadpool(delete_item, action, args))
             if action in ("rename-folder", "move-folder", "move-documents"):
                 from symbiknow.organization.edits import edit
 
+                if action != "move-documents":
+                    return JSONResponse(await run_in_threadpool(server.application().jobs.start, "organization-edit", {"action": action, "args": args}))
                 return JSONResponse(await run_in_threadpool(edit, action, args))
             if action == "statuses":
                 from symbiknow.search.index import document_statuses
@@ -567,35 +470,41 @@ async def api(request: Request):
                 from symbiknow.core.retry import clear
 
                 application = server.application()
-                with application.write_lock:
-                    metadata = storage.read_metadata(application.DATA_DIR, args["document_id"])
-                    if metadata["version"] != args["expected_version"]:
-                        raise ValueError("File changed; refresh before retrying")
-                    clear(application.DATA_DIR, args["document_id"])
-                    application.schedule(args["document_id"])
+                def retry_index():
+                    with application.write_lock:
+                        metadata = storage.read_metadata(application.DATA_DIR, args["document_id"])
+                        if metadata["version"] != args["expected_version"]:
+                            raise ValueError("File changed; refresh before retrying")
+                        clear(application.DATA_DIR, args["document_id"])
+                        application.schedule(args["document_id"])
+
+                # Lock waits and native metadata reads must not stop the ASGI
+                # loop from serving unrelated requests or streaming originals.
+                await run_in_threadpool(retry_index)
                 return JSONResponse({"queued": True})
             if action == "upload":
-                result = await run_in_threadpool(server.upload, args["files"])
+                result = await run_in_threadpool(server.submit_upload, args["files"])
                 result["files"] = [
                     {k: v for k, v in r.items() if k not in ("source", "index_error")}
                     for r in result["files"]
                 ]
                 return JSONResponse(result)
             if action in {"search", "ask"}:
-                result = await run_in_threadpool(server.ask if action == "ask" else server.search, **dict(args, detail="full"))
-                for match in result["matches"]:
-                    match.pop("source", None)
-                    passages = [r for r in match.get("evidence", []) if r.get("text")]
-                    supports = match.get("jev", {}).get("supporting_chunk_ids", [])
-                    chosen = next((r for r in passages if r.get("evidence_id") in supports), None)
-                    match["excerpt"] = clean_text(
-                        (chosen or (passages[0] if passages else {})).get("text", "")
-                    )
+                if action == "ask" or args.get("evaluate") or args.get("mode") == "answer":
+                    options = {k: v for k, v in args.items() if k in {"query", "mode", "limit", "folder", "group"}}
+                    if action == "ask":
+                        if not 1 <= options.get("limit", 3) <= 3:
+                            raise ValueError("Ask checks between 1 and 3 files")
+                        options.update(mode="semantic", limit=options.get("limit", 3))
+                    options["evaluate"] = True
+                    return JSONResponse(await run_in_threadpool(server.application().jobs.start, "ask", options))
+                result = await run_in_threadpool(server.ask if action == "ask" else server.submit_search, **dict(args, detail="full"))
+                if "job_id" in result:
+                    return JSONResponse(result)
+                search_presentation(result)
                 return JSONResponse(result)
             if action == "rebuild":
-                from symbiknow.organization.rebuild import request as rebuild
-
-                return JSONResponse(rebuild_public(await run_in_threadpool(rebuild, **args)))
+                return JSONResponse(await run_in_threadpool(server.application().jobs.start, "organization-rebuild", args))
         return JSONResponse({"error": "Unknown action"}, status_code=404)
     except (FileNotFoundError, KeyError):
         return JSONResponse({"error": "Document or requested data not found"}, status_code=404)
@@ -697,6 +606,22 @@ def create_app():
     # SDK 2.3 enters server.lifespan once in its HTTP manager, sharing it across
     # all MCP sessions and the browser. Mounting a separate owner is unnecessary.
     app = server.mcp.streamable_http_app()
+    from contextlib import asynccontextmanager
+    from symbiknow.api.agents.http import AgentRoutes
+
+    agents = AgentRoutes(server.application)
+    original_lifespan = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def lifespan(application):
+        async with original_lifespan(application):
+            try:
+                yield
+            finally:
+                await agents.close()
+
+    app.router.lifespan_context = lifespan
+    app.router.routes.extend(agents.routes())
     app.router.routes.append(Route("/api/{action}", api, methods=["GET", "POST"]))
     if BUILD.exists():
         app.router.routes.append(Mount("/", app=StaticFiles(directory=BUILD, html=True)))

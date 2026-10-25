@@ -207,15 +207,21 @@ def test_organization_candidates_reserve_same_project_topic_despite_global_distr
     candidates = search.organization_neighbors(root, source, evidence)
     assert candidates[0]["document_id"] == peer["document_id"]
     pairs = {f"pair_{n}_{s}_{t}": "none" for n in range(1, 6) for s in range(12) for t in range(12)}
-    with sdk_client(pairs | {"pair_1_0_0": "related"}) as sdk:
+    refused = {f"{check}_{n}_{s}_{t}": 0 for check in ("topic", "context", "support", "conflict")
+                       for n in range(1, 6) for s in range(12) for t in range(12)}
+    accepted = {"pair_1_0_0": "related", "topic_1_0_0": .99, "context_1_0_0": .99,
+                "support_1_0_0": 0, "conflict_1_0_0": 0}
+    with sdk_client(pairs | {"pair_1_0_0": "related"}, refused | accepted) as sdk:
         decision = organize_document(source, evidence, candidates, client=sdk)
     assert [link["document_id"] for link in decision["links"]] == [peer["document_id"]]
     audits = decision["link_evaluations"]
-    assert len(audits) == 5
+    # Substantive ranking may abstain on template-only distractors rather than
+    # spending every semantic slot. The recovered peer must remain first.
+    assert 1 <= len(audits) <= 5
     assert audits[0]["accepted"] and audits[0]["document_id"] == peer["document_id"]
     assert all(not item["accepted"] and item["relation"] == "none" for item in audits[1:])
     # Retrieval does not assert a link when the provider declines it.
-    with sdk_client(pairs) as sdk:
+    with sdk_client(pairs, refused) as sdk:
         assert organize_document(source, evidence, candidates, client=sdk)["links"] == []
 
 

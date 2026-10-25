@@ -101,6 +101,7 @@ def test_initial_boundary_recovers_idempotently_and_later_manual_edit_wins(conte
     search.save_organization(root, doc["document_id"], "v1", decision("Old"))
     move(doc["document_id"], "Old")
     original = organization_edits.atomic
+    original_reset = organization_edits.reset_expected
     class Crash(BaseException):
         pass
     def interrupted(path, value):
@@ -109,9 +110,15 @@ def test_initial_boundary_recovers_idempotently_and_later_manual_edit_wins(conte
                 or (cut == "after_manifest" and path.name == "organization-published.json" and value.get("reset_request"))):
             raise Crash()
     monkeypatch.setattr(organization_edits, "atomic", interrupted)
+    if cut == "after_manual":
+        def interrupted_reset(*args, **kwargs):
+            original_reset(*args, **kwargs)
+            raise Crash()
+        monkeypatch.setattr(organization_edits, "reset_expected", interrupted_reset)
     with pytest.raises(Crash):
         rebuild.request()
     monkeypatch.setattr(organization_edits, "atomic", original)
+    monkeypatch.setattr(organization_edits, "reset_expected", original_reset)
     move(doc["document_id"], "Manual after start")
     organization_store.recover(root)
     organization_store.recover(root)
@@ -174,6 +181,54 @@ def test_retry_never_clears_already_published_files(context):
         pass
     assert search.get_document_status(root, published)["folder"] == "Fresh"
     assert rebuild.status()["status"] == "completed"
+
+
+def test_progressive_neighbor_publications_and_retry_preserve_source_guards(context):
+    """Publishing a neighbor's organization must not invalidate its evidence."""
+    root, monkeypatch, _ = context
+    enable(monkeypatch)
+    docs = [indexed(root, name=name) for name in ("a.txt", "b.txt", "c.txt")]
+    original_epochs = {doc["document_id"]: search.get_document_status(root, doc["document_id"])["evidence_revision"]
+                       for doc in docs}
+
+    def neighbors(_root, source, *args, **kwargs):
+        return [{**doc, "evidence_revision": original_epochs[doc["document_id"]],
+                 "evidence": search.document_evidence(root, doc["document_id"], "v1")}
+                for doc in docs if doc["document_id"] != source["document_id"]]
+
+    calls = []
+    def organize(doc, *args, **kwargs):
+        calls.append(doc["document_id"])
+        return {"status": "unavailable"} if len(calls) == 3 else decision("Reviewed")
+
+    monkeypatch.setattr(rebuild, "organization_neighbors", neighbors)
+    monkeypatch.setattr("symbiknow.ai.jev.organize_document", organize)
+    rebuild.request()
+    while rebuild.process_one():
+        pass
+    first = rebuild.status()
+    assert first["status"] == "partial_failure"
+    assert len(first["completed_ids"]) == 2
+    assert set(first["failures"]) == {calls[-1]}
+    for identity in first["completed_ids"]:
+        row = search.get_document_status(root, identity)
+        assert row["folder"] == "Reviewed"
+        assert json.loads(row["evidence_dependencies_json"]) == {
+            other: epoch for other, epoch in original_epochs.items() if other != identity}
+
+    # Restart reconstructs persisted outcomes; retry only the failed document.
+    restart(monkeypatch)
+    rebuild.request(retry=True)
+    while rebuild.process_one():
+        pass
+    final = rebuild.status()
+    assert final["status"] == "completed" and final["failures"] == {}
+    assert set(final["completed_ids"]) == set(original_epochs)
+    assert len(calls) == 4
+    for identity, epoch in original_epochs.items():
+        row = search.get_document_status(root, identity)
+        assert row["version"] == "v1" and row["evidence_revision"] == epoch
+        assert row["folder"] == "Reviewed"
 
 
 @pytest.mark.parametrize("changed", ["source", "supporting_neighbor"])
@@ -279,3 +334,26 @@ def test_delayed_starter_cannot_reclear_a_completed_job_after_next_job_starts(co
     assert search.revisions(root) == revision
     assert search.get_document_status(root, first["document_id"])["folder"] == "Reviewed first"
     assert search.get_document_status(root, second["document_id"])["folder"] == "New"
+
+
+def test_reset_moves_corrected_documents_to_new_and_publishes_fresh_review(context):
+    # Reported: after Reset, documents with assistant corrections stayed in
+    # their corrected folders and the fresh review could never move them.
+    root, monkeypatch, _ = context
+    enable(monkeypatch)
+    doc = indexed(root, name="corrected.txt")
+    search.save_organization(root, doc["document_id"], "v1", decision("Automatic"))
+    row = search.get_document_status(root, doc["document_id"])
+    server.application().corrections.apply(dict(
+        document_id=doc["document_id"], expected_version="v1", expected_evidence_revision=row["evidence_revision"],
+        expected_manual_revision=None, expected_correction_revision=None, reason="Assistant review",
+        action="correct-folder", value="Corrected / Folder", actor="agent"))
+    assert search.get_document_status(root, doc["document_id"])["folder"] == "Corrected / Folder"
+    monkeypatch.setattr("symbiknow.ai.jev.organize_document", lambda *a, **k: decision("Fresh / Result"))
+    rebuild.request()
+    assert search.get_document_status(root, doc["document_id"])["folder"] == "New"
+    while rebuild.process_one():
+        pass
+    assert search.get_document_status(root, doc["document_id"])["folder"] == "Fresh / Result"
+    history = server.application().corrections.inspect(doc["document_id"])["history"]
+    assert [h["action"] for h in history] == ["correct-folder", "reset-corrections"]

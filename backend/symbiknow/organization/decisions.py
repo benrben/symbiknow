@@ -3,6 +3,7 @@
 Only actionable uncertainty is projected; provider failures, intentional unfiled
 results and accepted work are not decisions. Receipts live beside manual edits.
 """
+import base64
 import hashlib
 import json
 
@@ -119,22 +120,61 @@ class DecisionService:
         ])
         return "connection:" + hashlib.sha256(json.dumps(endpoints).encode()).hexdigest()
 
-    def list(self, limit=50):
-        if not isinstance(limit, int) or not 1 <= limit <= 100:
+    def list(self, limit=50, after=""):
+        from symbiknow.library import storage
+        from symbiknow.organization import readmodel, receipts as receipt_store
+        if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("limit must be between 1 and 100")
         with self.context.snapshots.read() as snapshot:
-            receipts, pending = self._receipts(), []
-            seen = {receipt.get("scope", identity) for identity, receipt in receipts.items()}
-            for batch in index.metadata_batches(self.root):
-                for row in batch:
-                    for proposal in self._proposals(row, snapshot):
-                        scope = self._scope(proposal)
-                        if proposal["id"] not in receipts and scope not in seen:
-                            seen.add(scope)
-                            pending.append(proposal)
-                            if len(pending) > limit:
-                                return {"decisions": pending[:limit], "has_more": True}
-            return {"decisions": pending, "has_more": False}
+            revision = hashlib.sha256(json.dumps([storage.source_revision(self.root), index.revisions(self.root),
+                                                 receipt_store.revision(self.root), limit], sort_keys=True).encode()).hexdigest()
+            document, proposal_after = "", ""
+            if after:
+                try:
+                    if not isinstance(after, str) or len(after) > 8192:
+                        raise ValueError()
+                    token = json.loads(base64.b64decode(after, altchars=b"-_", validate=True))
+                    if (not isinstance(token, list) or len(token) != 3 or token[0] != revision
+                            or any(not isinstance(v, str) for v in token)):
+                        raise ValueError()
+                    _, document, proposal_after = token
+                except (ValueError, TypeError, UnicodeDecodeError):
+                    raise ValueError("Decisions changed; restart the queue") from None
+            if readmodel.ready(self.root):
+                identities = readmodel.candidates(self.root, document, 100, inclusive=bool(proposal_after))
+            else:
+                capture = index.capture_metadata(self.root)
+                identities = ([document] if proposal_after else []) + [row["document_id"] for row in
+                    index.captured_metadata_page(self.root, capture, after=document, limit=100 - bool(proposal_after))]
+            rows = index.document_statuses(self.root, identities)
+            pending, seen = [], set()
+
+            def cursor(identity, proposal=""):
+                return base64.urlsafe_b64encode(json.dumps([revision, identity, proposal]).encode()).decode()
+
+            def result(more, continuation=""):
+                return {"decisions": pending, "has_more": more, "next_after": continuation,
+                        "next_cursor": continuation or None, "revision": revision}
+
+            def proposal_key(proposal):
+                return ("0:" if proposal["kind"] == "folder" else "1:") + proposal["id"]
+
+            for identity in identities:
+                proposals = [p for p in self._proposals(rows[identity], snapshot)
+                             if not receipt_store.handled(self.root, p["id"], self._scope(p))] if identity in rows else []
+                for proposal in sorted(proposals, key=proposal_key):
+                    if identity == document and proposal_key(proposal) <= proposal_after:
+                        continue
+                    scope = self._scope(proposal)
+                    if scope in seen:
+                        continue
+                    if len(pending) == limit:
+                        last = pending[-1]
+                        return result(True, cursor(last["document_id"], proposal_key(last)))
+                    seen.add(scope)
+                    pending.append(proposal)
+            more = len(identities) == 100
+            return result(more, cursor(identities[-1]) if more else "")
 
     def resolve(self, decision_id, action, value=None, *, actor="user"):
         if action not in {"accept", "change", "skip"}:
@@ -146,8 +186,8 @@ class DecisionService:
         if action != "change" and value is not None:
             raise ValueError("Only change accepts a value")
         with self.context.snapshots.read() as snapshot:
-            receipts = self._receipts()
-            previous = receipts.get(decision_id)
+            from symbiknow.organization import receipts as receipt_store
+            previous = receipt_store.get(self.root, decision_id)
             if previous:
                 if previous["action"] != action or previous.get("value") != value:
                     raise ValueError("This decision was already handled; refresh the queue")
@@ -158,7 +198,7 @@ class DecisionService:
             if not proposal:
                 raise ValueError("This decision changed or was handled elsewhere; refresh the queue")
             scope = self._scope(proposal)
-            if any(receipt.get("scope") == scope for receipt in receipts.values()):
+            if receipt_store.handled(self.root, decision_id, scope):
                 raise ValueError("This decision was already handled; refresh the queue")
             chosen = proposal["suggested"] if action == "accept" else value
             if action != "skip":
@@ -179,7 +219,13 @@ class DecisionService:
                     index.save_organization(self.root, identity, proposal["version"], dict(
                         state, links=links, evidence_revision=proposal["evidence_revision"],
                         dependency_evidence_revisions=json.loads(row.get("evidence_dependencies_json") or "{}")))
-            receipt = dict(id=decision_id, action=action, value=value, actor=actor, scope=scope)
-            receipts[decision_id] = receipt
-            edits.atomic(self.path, receipts)
+            from datetime import datetime, timezone
+            receipt = dict(id=decision_id, action=action, value=value, actor=actor, scope=scope,
+                           document_id=identity, version=proposal["version"],
+                           evidence_revision=proposal["evidence_revision"], kind=proposal["kind"],
+                           created_at=datetime.now(timezone.utc).isoformat())
+            for field in ("target_document_id", "target_version", "target_evidence_revision"):
+                if field in proposal:
+                    receipt[field] = proposal[field]
+            receipt_store.save(self.root, receipt)
             return receipt

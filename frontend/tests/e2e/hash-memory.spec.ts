@@ -9,7 +9,9 @@ const root = path.resolve(
 );
 test("paired 64MiB hash native browser memory", async () => {
   test.setTimeout(90000);
-  const dir = await fs.mkdtemp("/private/tmp/symbiknow-hash-");
+  const dir = await fs.mkdtemp(
+    path.join((await import("node:os")).tmpdir(), "symbiknow-hash-"),
+  );
   const file = path.join(dir, "hash.bin");
   const handle = await fs.open(file, "w");
   for (let i = 0; i < 64; i++) await handle.write(Buffer.alloc(1024 ** 2, 87));
@@ -17,14 +19,15 @@ test("paired 64MiB hash native browser memory", async () => {
   const reports: unknown[] = [];
   for (const mode of ["old", "worker"]) {
     const browser = await chromium.launch({
-      executablePath:
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      executablePath: process.env.SYMBIKNOW_CHROME,
     });
     try {
       const page = await browser.newPage();
-      await page.goto("http://127.0.0.1:5174/");
+      await page.goto(
+        `http://127.0.0.1:${process.env.SYMBIKNOW_DEV_PORT || "5174"}/`,
+      );
       await page.evaluate(async () => {
-        await import(/* @vite-ignore */ "/src/api.ts");
+        await import(/* @vite-ignore */ "/src/shared/api/client.ts");
       });
       await page.evaluate(() => {
         const i = document.createElement("input");
@@ -70,7 +73,9 @@ test("paired 64MiB hash native browser memory", async () => {
             (x) => x.toString(16).padStart(2, "0"),
           ).join("");
         }
-        const { hashFile } = await import(/* @vite-ignore */ "/src/api.ts");
+        const { hashFile } = await import(
+          /* @vite-ignore */ "/src/shared/api/client.ts"
+        );
         return hashFile(f);
       }, mode);
       clearInterval(timer);
@@ -83,7 +88,9 @@ test("paired 64MiB hash native browser memory", async () => {
     }
   }
   expect((reports[0] as any).digest).toBe((reports[1] as any).digest);
-  await fs.mkdir(path.join(root, "artifacts/memory-research"), { recursive: true });
+  await fs.mkdir(path.join(root, "artifacts/memory-research"), {
+    recursive: true,
+  });
   await fs.writeFile(
     path.join(root, "artifacts/memory-research/browser-hash-paired.json"),
     JSON.stringify(

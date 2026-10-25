@@ -937,7 +937,11 @@ summary:focus-visible {
   color: var(--text-secondary);
 }
 .reader-file-list > button span {
+  display: -webkit-box;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .reader-file-list > button:hover {
   background: var(--surface-frame);
@@ -1829,6 +1833,15 @@ summary:focus-visible {
     font-size: 16px;
   }
   .sidebar-folder-search {
+    min-height: 44px;
+  }
+  .menu [role="menuitem"],
+  .search-options-dialog .folder-options button,
+  .search-options-footer button {
+    min-height: 44px;
+  }
+  .search-options-dialog .folder-picker-search {
+    height: 44px;
     min-height: 44px;
   }
 }

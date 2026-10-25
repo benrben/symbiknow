@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 
+from symbiknow.ai.sensitive import contains_likely_secret
 from symbiknow.freshness import judgments
 from symbiknow.freshness.store import FreshnessStore, encode
 from symbiknow.search.metrics import CURRENT, add, stage
@@ -69,12 +70,14 @@ class FreshnessService:
         self.processing = threading.Lock()
 
     def start(self, document_ids=None, reference_document_ids=None, request_id=None):
-        from symbiknow.library.storage import list_documents, source_revision
-        from symbiknow.search.index import revisions
+        from symbiknow.library.storage import source_revision
+        from symbiknow.search.index import revisions, capture_metadata
 
         for ids in (document_ids, reference_document_ids):
             if ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
                 raise ValueError("Document IDs must be a list of strings")
+            if ids is not None and len(ids) > 100:
+                raise ValueError("Select at most 100 documents, or omit the scope for a whole-library job")
         if document_ids == []:
             raise ValueError("Choose documents or omit the scope to scan the whole library")
         if request_id is not None and (not isinstance(request_id, str) or not 1 <= len(request_id) <= 128):
@@ -92,10 +95,11 @@ class FreshnessService:
                     return self._public_job(job)
             if db.execute("SELECT 1 FROM jobs WHERE active=1").fetchone():
                 raise ValueError("A freshness scan is already running; open or cancel it first")
-            originals = list_documents(self.context.DATA_DIR)
-            known = {d["document_id"] for d in originals}
-            if (set(scope or []) | set(refs)) - known:
+            selected = set(scope or []) | set(refs)
+            known = self.context.originals.metadata_many(selected)
+            if any(not known.get(identity) for identity in selected):
                 raise ValueError("A selected document or reference no longer exists")
+            capture = capture_metadata(self.context.DATA_DIR)
             # Scoped rechecks still retrieve peers from the entire captured library.
             scan = str(uuid.uuid4())
             job = {
@@ -105,30 +109,22 @@ class FreshnessService:
                 "source_revision": source_revision(self.context.DATA_DIR),
                 "index_revision": revisions(self.context.DATA_DIR)["index"],
                 "model": judgments.model_identity(), "policy": judgments.POLICY_VERSION,
-                "documents_total": len(originals), "documents_read": 0,
+                "documents_total": capture["count"], "documents_read": 0,
+                "capture": capture, "capture_after": "", "capture_complete": False,
+                "original_capture_complete": False,
                 "passages_read": 0, "passages_classified": 0, "passages_matched": 0,
                 "pairs_total": 0, "pairs_checked": 0, "findings_total": 0,
                 "gaps": {}, "usage": {}, "current_filename": "",
             }
             db.execute("INSERT INTO jobs VALUES(?,?,?,?,?)",
                        (scan, request_id, 1, encode(job), time.time_ns()))
-            for offset in range(0, len(originals), 500):
-                batch = originals[offset:offset + 500]
-                states = self.context.evidence.document_statuses([d["document_id"] for d in batch])
-                for meta in batch:
-                    state = states.get(meta["document_id"]) or {}
-                    data = {**meta, "evidence_revision": state.get("evidence_revision", ""),
-                            "index_status": state.get("status", "pending"),
-                            "indexed_version": state.get("indexed_version", "")}
-                    db.execute("INSERT INTO documents(scan,id,payload,filename) VALUES(?,?,?,?)",
-                               (scan, meta["document_id"], encode(data), meta["filename"]))
         self.context.wake.set()
         return self._public_job(job)
 
     @staticmethod
     def _public_job(job):
         return {key: value for key, value in job.items()
-                if key not in {"source_revision", "index_revision", "scope_identity", "matching_document_id"}}
+                if key not in {"source_revision", "index_revision", "scope_identity", "matching_document_id", "capture", "capture_after", "capture_complete", "original_capture_complete"}}
 
     @staticmethod
     def _gap(job, name, count=1):
@@ -399,6 +395,48 @@ class FreshnessService:
         if job["model"] != judgments.model_identity() or job["policy"] != judgments.POLICY_VERSION:
             raise ValueError("Scan model/policy changed; start a new scan")
         scan = job["scan_id"]
+        if job.get("capture_complete") is False:
+            from symbiknow.search.index import captured_metadata_page
+            rows = captured_metadata_page(self.context.DATA_DIR, job["capture"], job["capture_after"], 128)
+            with self.lock, self.store.connection() as db:
+                current = self.store.job(db, scan)
+                if current["status"] not in ACTIVE:
+                    return
+                for row in rows:
+                    data = {**row, "index_status": row.get("status", "pending")}
+                    db.execute("INSERT OR IGNORE INTO documents(scan,id,payload,filename) VALUES(?,?,?,?)",
+                               (scan, row["document_id"], encode(data), row["filename"]))
+                current["capture_after"] = rows[-1]["document_id"] if rows else current["capture_after"]
+                current["capture_complete"] = len(rows) < 128
+                self.store.save_job(db, current)
+            return
+        if job.get("original_capture_complete") is False:
+            # Include originals whose index registration has not finished. The
+            # inventory runs only in the worker and flushes bounded batches;
+            # INSERT OR IGNORE makes an interrupted capture safe to replay.
+            from itertools import islice
+            from symbiknow.library.storage import iter_documents
+            originals = iter(iter_documents(self.context.DATA_DIR))
+            try:
+                while batch := list(islice(originals, 128)):
+                    if self.context.stop.is_set():
+                        return
+                    with self.lock, self.store.connection() as db:
+                        current = self.store.job(db, scan)
+                        if current["status"] not in ACTIVE:
+                            return
+                        before = db.total_changes
+                        db.executemany("INSERT OR IGNORE INTO documents(scan,id,payload,filename) VALUES(?,?,?,?)",
+                                       [(scan, row["document_id"], encode({**row, "index_status": "pending", "evidence_revision": ""}), row["filename"]) for row in batch])
+                        current["documents_total"] += db.total_changes - before
+                        self.store.save_job(db, current)
+            finally:
+                originals.close()
+            with self.lock, self.store.connection() as db:
+                current = self.store.job(db, scan)
+                current["original_capture_complete"] = True
+                self.store.save_job(db, current)
+            return
         with self.lock, self.store.connection() as db:
             pending = db.execute("SELECT payload FROM documents WHERE scan=? AND status='pending' ORDER BY id LIMIT 1", (scan,)).fetchone()
         if pending:
@@ -500,9 +538,13 @@ class FreshnessService:
     def _read_document(self, job, doc):
         scan = job["scan_id"]
         valid = self._valid_documents([doc]) == "valid"
-        count, chunks, empty = 0, 0, 0
+        count, chunks, empty, sensitive = 0, 0, 0, False
         if valid:
             for batch in self.context.evidence.batches(doc["document_id"], doc["version"]):
+                # Likely credentials are never sent to the hosted comparison.
+                if any(contains_likely_secret(row["text"]) for row in batch):
+                    sensitive = True
+                    break
                 if self.context.stop.is_set():
                     return
                 with self.lock, self.store.connection() as db:
@@ -526,7 +568,11 @@ class FreshnessService:
             state = db.execute("SELECT status FROM documents WHERE scan=? AND id=?", (scan, doc["document_id"])).fetchone()
             if state and state[0] == "removed":
                 return
-            if not valid or not count:
+            if sensitive:
+                count = empty = 0
+                self._gap(current, "sensitive_content_withheld")
+                db.execute("DELETE FROM passages WHERE scan=? AND document=?", (scan, doc["document_id"]))
+            elif not valid or not count:
                 self._gap(current, "unreadable_or_changed_documents")
                 db.execute("DELETE FROM passages WHERE scan=? AND document=?", (scan, doc["document_id"]))
             if empty:

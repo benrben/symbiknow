@@ -80,13 +80,10 @@ def test_real_stdio_bulk_versions_retry_and_bytes(tmp_path):
                 "upload_folder",
                 "download_folder",
                 "remove_file",
-                "scan_freshness",
-                "get_freshness_scan",
-                "cancel_freshness_scan",
-                "review_freshness_finding",
                 "ask",
-                "list_jev_decisions",
                 "resolve_jev_decision",
+                "list_documents", "get_taxonomy", "list_jev_decisions", "get_organization_history", "list_jobs",
+                "get_job",
             }
             uploaded = await upload_files(session, [one, two], request_ids=request_ids)
             assert all(item["stored"] and not item["searchable"] for item in uploaded)

@@ -27,6 +27,7 @@ _ACTIVE_JOB = None
 _ACTIVE_STAMP = None
 _PERSISTED = None
 _SNAPSHOT_LOCK = threading.RLock()
+_REQUEST_LOCK = threading.Lock()
 
 
 def _stamp(context=None):
@@ -231,7 +232,7 @@ def _persist(state, progress_only=False):
     _ACTIVE_JOB, _ACTIVE_STAMP = state, _stamp()
 
 
-def request(folder=None, grouping=True, links=True, retry=False, mode="reset"):
+def validate_request(folder=None, grouping=True, links=True, retry=False, mode="reset"):
     if mode not in ("reset", "unfiled", "links"):
         raise ValueError("Choose reset, unfiled, or links review")
     if type(grouping) is not bool or type(links) is not bool or type(retry) is not bool:
@@ -248,16 +249,29 @@ def request(folder=None, grouping=True, links=True, retry=False, mode="reset"):
         raise ValueError(
             "Jev is unavailable. Set TYPESAFE_API_KEY and enable indexing. Existing organization is intact."
         )
+    return folder, grouping, links, retry, mode
+
+
+def request(folder=None, grouping=True, links=True, retry=False, mode="reset", *, request_id=None):
+    folder, grouping, links, retry, mode = validate_request(folder, grouping, links, retry, mode)
     from symbiknow.ai.jev import preflight
 
     # Availability is checked before a durable reset boundary or manual edit is changed.
     with current_application().write_lock:
-        previous = status()
+        previous = _state()
+        if request_id and previous and previous["request_id"] == request_id:
+            return previous
         if previous and previous["status"] in ("queued", "running"):
             raise ValueError("One organization job is already running")
     preflight()
-    with current_application().write_lock, INDEX_LOCK:
-        previous = status()
+    with _REQUEST_LOCK:
+        from symbiknow.organization import readmodel
+        from symbiknow.search.index import metadata_batches, IndexChangedError
+        with current_application().snapshots.read():
+            baseline = readmodel.fingerprint(current_application().DATA_DIR)
+        previous = _state()
+        if request_id and previous and previous["request_id"] == request_id:
+            return previous
         if previous and previous["status"] in ("queued", "running"):
             raise ValueError("One organization job is already running")
         if retry:
@@ -295,14 +309,8 @@ def request(folder=None, grouping=True, links=True, retry=False, mode="reset"):
         table = _table(current_application().DATA_DIR, "documents")
         if table is not None:
             selected = set(ids)
-            for batch in (
-                table.search()
-                .select(["document_id", "version", "evidence_revision", "folder", "groups", "links_json", "organization_status", "organization_json"])
-                .limit(max(1, table.count_rows()))
-                .to_batches()
-            ):
-                from symbiknow.organization.store import overlay
-                for row in overlay(current_application().DATA_DIR, batch.to_pylist()):
+            for batch in metadata_batches(current_application().DATA_DIR, batch_size=128):
+                for row in batch:
                     if mode != "reset" or row["document_id"] not in selected:
                         if row["folder"]:
                             vocabulary["folders"].append(row["folder"])
@@ -311,7 +319,7 @@ def request(folder=None, grouping=True, links=True, retry=False, mode="reset"):
         if retry:
             vocabulary = previous["vocabulary"]
         state = {
-            "request_id": previous["request_id"] if retry else str(uuid.uuid4()),
+            "request_id": previous["request_id"] if retry else (request_id or str(uuid.uuid4())),
             "mode": mode,
             "status": "queued",
             "folder": folder,
@@ -344,7 +352,10 @@ def request(folder=None, grouping=True, links=True, retry=False, mode="reset"):
             state["reset_assignments"] = overrides(current_application().DATA_DIR, ids)
         if retry:
             state["reset_started"] = previous.get("reset_started", True)
-        _persist(state)  # Captured IDs precede the durable clear boundary.
+        with current_application().snapshots.read():
+            if readmodel.fingerprint(current_application().DATA_DIR) != baseline:
+                raise IndexChangedError("Library changed while capturing the organization review; retry")
+            _persist(state)  # Captured IDs precede the durable clear boundary.
         if previous and previous["request_id"] != state["request_id"]:
             # A fresh request explicitly supersedes retryable paid receipts from
             # the prior terminal job; only Retry retains those dependencies.
@@ -377,6 +388,14 @@ def _start_reset(state):
                          common_lines=[], candidate_folders={}, phase="clearing")
             _persist(state)
             cleanup_staging(current_application().DATA_DIR, state["request_id"])
+        # Corrections retire with the organization they adjusted; their history
+        # remains and any correction made after this boundary still applies.
+        from symbiknow.organization import corrections, projects
+        corrections.reset(current_application().DATA_DIR, state["document_ids"], grouping=state["grouping"],
+                          links=state["links"], request_id=state["request_id"])
+        if state["grouping"]:
+            projects.reset_ownership(current_application().DATA_DIR, state["document_ids"],
+                                     request_id=state["request_id"])
         reset_organization(current_application().DATA_DIR, state["document_ids"],
                            grouping=state["grouping"], links=state["links"],
                            assignments=state.get("reset_assignments", {}), request_id=state["request_id"])
@@ -644,7 +663,7 @@ def process_one():
             organization_neighbors(
                 current_application().DATA_DIR,
                 metadata,
-                topic_evidence,
+                evidence,
                 state.get("common_lines", []),
                 folders=state.get("candidate_folders", {}).get(doc_id, [])
                 if state["grouping"]
@@ -699,7 +718,9 @@ def process_one():
                 neighbor["document_id"]: neighbor.get("evidence_revision", "") for neighbor in neighbors
             }
         if decision.get("status") != "evaluated":
-            raise ValueError(decision.get("error") or "No text evidence available for Jev")
+            raise ValueError(decision.get("error") or (
+                decision["organization_reason"] if decision.get("reason") == "sensitive_content"
+                else "No text evidence available for Jev"))
         with current_application().write_lock, INDEX_LOCK:
             if storage.current_version(current_application().DATA_DIR, doc_id) != metadata["version"]:
                 current_application().schedule(doc_id)

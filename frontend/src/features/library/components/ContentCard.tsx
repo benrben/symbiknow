@@ -27,20 +27,17 @@ export default function ContentCard({
     [pending, setPending] = useState(true);
   const revision = useDataRevision();
   const k = kind(doc),
-    key = JSON.stringify([doc.document_id, doc.version, revision]);
+    key = JSON.stringify([doc.document_id, doc.version, k === "Image" || k === "PDF" ? "" : revision]);
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setVisible(true);
-          observer.disconnect();
-        }
+        setVisible(entries.some((e) => e.isIntersecting));
       },
       { rootMargin: "150px" },
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
-  }, [key]);
+  }, [doc.document_id, doc.version]);
   useEffect(() => {
     if (!visible && !(search && doc.evidence)) return;
     setFailed(false);
@@ -50,8 +47,10 @@ export default function ContentCard({
     setPending(true);
     const c = new AbortController();
     if (k === "Image" || k === "PDF") {
-      setPending(false);
-      return;
+      void api("preview-ready?id=" + encodeURIComponent(doc.document_id) + "&version=" + encodeURIComponent(doc.version), undefined, c.signal)
+        .then(() => { if (!c.signal.aborted) setPending(false); })
+        .catch(e => { if (e.name !== "AbortError") { setFailed(true); setPending(false); } });
+      return () => c.abort();
     }
     if (search && doc.evidence) {
       const rows = searchEvidence(doc, evaluate);
@@ -106,7 +105,7 @@ export default function ContentCard({
       className={`content-card nodrag nowheel preview-${k.toLowerCase()}`}
       aria-label={`${k} preview`}
     >
-      {visible && !failed && (k === "Image" || k === "PDF") ? (
+      {visible && !pending && !failed && (k === "Image" || k === "PDF") ? (
         <img
           loading="lazy"
           alt={doc.filename}
@@ -160,7 +159,7 @@ export default function ContentCard({
           </span>
         </div>
       )}
-      {visible && !failed && k === "PDF" && (
+      {visible && !pending && !failed && k === "PDF" && (
         <span className="preview-page-label">Page 1</span>
       )}
     </div>

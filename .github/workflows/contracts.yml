@@ -1,4 +1,4 @@
-name: Application ownership contracts
+name: Application release checks
 on: [push, pull_request]
 jobs:
   ownership:
@@ -8,5 +8,85 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
       - run: python scripts/checks/architecture.py
       - run: python scripts/contracts/generate.py --check
+      - run: npm --prefix frontend run test:unit
+      - run: npm --prefix frontend run build
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: '3.12'
+      - run: sh scripts/setup/install_rocfl.sh
+      - run: sh scripts/setup/install_ocfl_reader.sh
+      - run: uv sync --locked
+      - run: uv run ruff check backend scripts benchmarks
+      - run: uv run pytest
+        env:
+          SYMBIKNOW_WARMUP: '0'
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: sh scripts/setup/install_rocfl.sh
+      - run: sh scripts/setup/install_ocfl_reader.sh
+      - run: uv sync --locked
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend exec -- playwright install --with-deps chromium firefox webkit
+      - run: npm --prefix frontend run build
+      - run: npm --prefix frontend test
+      - run: npm --prefix frontend run test:performance
+      - run: npm --prefix frontend run test:quality
+      - run: npm --prefix frontend run test:mobile
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-traces
+          path: |
+            frontend/test-results
+            frontend/quality-test-results
+            frontend/mobile-test-results
+
+  performance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned read-path dependencies without model weights
+        run: |
+          python - <<'PYTHON'
+          import subprocess, sys, tomllib
+          dependencies = tomllib.load(open("pyproject.toml", "rb"))["project"]["dependencies"]
+          names = {"lancedb", "pyarrow", "typesafe-sdk", "filelock", "python-dotenv"}
+          subprocess.check_call([sys.executable, "-m", "pip", "install", *[d for d in dependencies if d.split("==")[0] in names]])
+          PYTHON
+      - run: python benchmarks/read_paths.py --documents 1000 --output artifacts/performance --check
+      - run: python benchmarks/read_paths.py --documents 100000 --output artifacts/performance --check
+      - run: python benchmarks/vector_candidates.py --output artifacts/performance
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-distributions-and-profiles
+          path: artifacts/performance

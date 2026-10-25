@@ -33,6 +33,7 @@ ROCFL_VERSION = "1.7.0"
 _METADATA_BYTES = 16 * 1024 * 1024
 _WRITE_LOCK = threading.RLock()
 _LOCK_FD = threading.local()
+_OBJECT_FD = threading.local()
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}\Z")
 _VERSION = re.compile(r"v[1-9][0-9]*\Z")
 
@@ -84,7 +85,7 @@ def _run(data_dir: str | Path, *args: str, missing_ok: bool = False) -> bytes | 
         # A killed Python daemon leaves an in-flight rocfl command running and
         # holding the inherited flock. Restart cannot race that commit.
         start_new_session=True,
-        pass_fds=(getattr(_LOCK_FD, "fd"),) if hasattr(_LOCK_FD, "fd") else (),
+        pass_fds=tuple(fd for fd in (getattr(_LOCK_FD, "fd", None), getattr(_OBJECT_FD, "fd", None)) if fd is not None),
     )
     if result.returncode:
         error = result.stderr.decode("utf-8", errors="replace").strip()
@@ -126,6 +127,30 @@ def _write_lock(data_dir: str | Path):
             del _LOCK_FD.fd
             del _LOCK_FD.root
             fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def object_write(data_dir, document_id):
+    """Serialize staging and deletion for one original, outside read snapshots."""
+    _validate_id(document_id)
+    key = (str(Path(data_dir).resolve()), document_id)
+    if getattr(_OBJECT_FD, "key", None) == key:
+        yield
+        return
+    if hasattr(_OBJECT_FD, "key"):
+        raise StorageError("Cannot nest writes to different originals")
+    directory = Path(key[0]) / "temp" / "object-locks"
+    directory.mkdir(parents=True, exist_ok=True)
+    # Persistent lock names must not be unlinked: another process may hold one.
+    with (directory / (document_id + ".lock")).open("a+b") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        _OBJECT_FD.key, _OBJECT_FD.fd = key, handle.fileno()
+        try:
+            yield
+        finally:
+            del _OBJECT_FD.key
+            del _OBJECT_FD.fd
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 @contextmanager
@@ -499,6 +524,32 @@ def list_documents(data_dir: str | Path) -> list[dict]:
     return result
 
 
+def iter_documents(data_dir, batch_size=128):
+    """Bounded bootstrap/recovery enumeration; never used by a request handler."""
+    with tempfile.TemporaryFile() as errors:
+        process = subprocess.Popen([_binary(), "--no-styles", "-r", str(Path(data_dir).resolve() / "files"), "ls", "-ot"],
+                                   stdout=subprocess.PIPE, stderr=errors, text=True)
+        try:
+            batch = []
+            for line in process.stdout:
+                identity = line.strip()
+                if not identity:
+                    continue
+                batch.append(identity)
+                if len(batch) >= batch_size:
+                    yield from (row for row in metadata_many(data_dir, batch).values() if row)
+                    batch.clear()
+            if batch:
+                yield from (row for row in metadata_many(data_dir, batch).values() if row)
+            if process.wait():
+                raise StorageError("Original inventory enumeration failed")
+        finally:
+            process.stdout.close()
+            if process.poll() is None:
+                process.terminate()
+                process.wait()
+
+
 def read_file(
     data_dir: str | Path, document_id: str, version: str | None = None
 ) -> tuple[bytes, dict]:
@@ -523,6 +574,7 @@ def save_file(
     document_id: str | None = None,
     request_id: str | None = None,
     expected_version: str | None = None,
+    create_only: bool = False,
 ) -> dict:
     """Commit bytes before returning. Retries with a request_id create no version.
 
@@ -563,44 +615,46 @@ def save_file(
         "size": content.stat().st_size if isinstance(content, Path) else len(content),
     }
     init_storage(data_dir)
-    with _write_lock(data_dir):
-        if _deletion_path(data_dir, document_id).exists():
-            raise VersionConflict(
-                "This document was deleted. Upload with a new request ID to create a new document."
-            )
-        head = current_version(data_dir, document_id)
-        if head:
-            receipts = _repair_receipts(data_dir, document_id, head)
-            receipt = receipts / (hashlib.sha256(request_id.encode()).hexdigest() + ".json")
-            if not receipt.exists():
-                # Detect a partially lost derived lookup before interpreting a miss.
-                # Enumerate tiny receipt filenames, never historical OCFL metadata.
-                count = sum(1 for entry in receipts.glob("*.json") if entry.name != "head.json")
-                if count != int(head[1:]):
-                    (receipts / "head.json").unlink(missing_ok=True)
-                    _repair_receipts(data_dir, document_id, head)
-            if receipt.exists():
-                # OCFL remains authoritative, including after a lost commit response.
-                previous = read_metadata(
-                    data_dir, document_id, json.loads(receipt.read_text())["version"]
+    with object_write(data_dir, document_id):
+        with _write_lock(data_dir):
+            if _deletion_path(data_dir, document_id).exists():
+                raise VersionConflict(
+                    "This document was deleted. Upload with a new request ID to create a new document."
                 )
-                if any(previous.get(key) != value for key, value in fields.items()):
-                    raise VersionConflict(
-                        "request_id was already used with different file contents or metadata"
+            head = current_version(data_dir, document_id)
+            if head:
+                receipts = _repair_receipts(data_dir, document_id, head)
+                receipt = receipts / (hashlib.sha256(request_id.encode()).hexdigest() + ".json")
+                if not receipt.exists():
+                    # Detect a partially lost derived lookup before interpreting a miss.
+                    # Enumerate tiny receipt filenames, never historical OCFL metadata.
+                    count = sum(1 for entry in receipts.glob("*.json") if entry.name != "head.json")
+                    if count != int(head[1:]):
+                        (receipts / "head.json").unlink(missing_ok=True)
+                        _repair_receipts(data_dir, document_id, head)
+                if receipt.exists():
+                    # OCFL remains authoritative, including after a lost commit response.
+                    previous = read_metadata(
+                        data_dir, document_id, json.loads(receipt.read_text())["version"]
                     )
-                return previous
-        if expected_version is not None and expected_version != head:
-            raise VersionConflict(f"Expected {expected_version}, found {head or 'no version'}")
-        version = f"v{int(head[1:]) + 1}" if head else "v1"
-        metadata = {
-            **fields,
-            "version": version,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-        metadata_bytes = json.dumps(metadata, ensure_ascii=False).encode()
-        if len(metadata_bytes) > _METADATA_BYTES:
-            raise ValueError("Serialized version metadata exceeds the 16 MiB commit limit")
-        _begin_mutation(data_dir)
+                    if any(previous.get(key) != value for key, value in fields.items()):
+                        raise VersionConflict(
+                            "request_id was already used with different file contents or metadata"
+                        )
+                    return previous
+            if create_only and head:
+                raise VersionConflict("An existing document requires expected_version")
+            if expected_version is not None and expected_version != head:
+                raise VersionConflict(f"Expected {expected_version}, found {head or 'no version'}")
+            version = f"v{int(head[1:]) + 1}" if head else "v1"
+            metadata = {
+                **fields,
+                "version": version,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            metadata_bytes = json.dumps(metadata, ensure_ascii=False).encode()
+            if len(metadata_bytes) > _METADATA_BYTES:
+                raise ValueError("Serialized version metadata exceeds the 16 MiB commit limit")
         # Discard incomplete prior staging for this object. Committed history is
         # never reset; an interrupted upload can then be retried from its bytes.
         _run(data_dir, "reset", document_id, missing_ok=True)
@@ -629,8 +683,20 @@ def save_file(
                         "Staged original changed during upload; retry from the original file"
                     )
                 _run(data_dir, "cp", document_id, str(path), "--", name)
-            _run(data_dir, "commit", "-n", "Symbiknow", "-m", "upload " + request_id, document_id)
-        _repair_receipts(data_dir, document_id, version)
+            with _write_lock(data_dir):
+                if current_version(data_dir, document_id) != head or _deletion_path(data_dir, document_id).exists():
+                    raise VersionConflict("Original changed during upload staging")
+                previous_source_revision = source_revision(data_dir)
+                _begin_mutation(data_dir)
+                from symbiknow.core.work import WorkStore
+                WorkStore(data_dir).enqueue("ingest", document_id, {}, replace=True)
+                _run(data_dir, "commit", "-n", "Symbiknow", "-m", "upload " + request_id, document_id)
+                from symbiknow.library.catalog import source_committed
+                source_committed(data_dir, metadata, previous_source_revision)
+                _repair_receipts(data_dir, document_id, version)
+                from symbiknow.organization import readmodel
+                readmodel.source_changed(data_dir, document_id)
+            prepare_ranges(data_dir, document_id, version, source=Path(temp) / "original")
         return metadata
 
 
@@ -644,13 +710,14 @@ def delete_document(data_dir, document_id, expected_version):
     _validate_version(expected_version)
     if expected_version is None:
         raise ValueError("Deletion requires expected_version")
-    with _write_lock(data_dir):
+    with object_write(data_dir, document_id), _write_lock(data_dir):
         path = _deletion_path(data_dir, document_id)
         head = current_version(data_dir, document_id)
         if path.exists():
             if json.loads(path.read_text())["version"] != expected_version:
                 raise VersionConflict("Deletion receipt refers to a different version")
             if head is None:
+                clear_deleted_caches(data_dir, document_id)
                 return
         if head is None:
             raise FileNotFoundError("Document not found")
@@ -665,14 +732,34 @@ def delete_document(data_dir, document_id, expected_version):
             handle.flush()
             os.fsync(handle.fileno())
         temporary.replace(path)
+        previous_source_revision = source_revision(data_dir)
         _begin_mutation(data_dir)
         _run(data_dir, "purge", "--force", document_id)
+        from symbiknow.library.catalog import source_deleted
+        source_deleted(data_dir, document_id, previous_source_revision)
     clear_deleted_caches(data_dir, document_id)
 
 
 def clear_deleted_caches(data_dir, document_id):
+    from symbiknow.library.catalog import source_deleted
+    source_deleted(data_dir, document_id)
     from symbiknow.ingestion.artifacts import discard_document
     discard_document(data_dir, document_id)
+    from symbiknow.core.work import WorkStore
+    from symbiknow.transfers.exports import purge_document
+    from symbiknow.transfers.service import purge_source
+    WorkStore(data_dir).purge_document(document_id)
+    purge_document(data_dir, document_id)
+    purge_source(data_dir, document_id)
+    from symbiknow.organization.corrections import purge_document as purge_corrections
+    purge_corrections(data_dir, document_id)
+    from symbiknow.organization.projects import purge_document as purge_projects
+    purge_projects(data_dir, document_id)
+    from symbiknow.organization.receipts import purge_document as purge_receipts
+    purge_receipts(data_dir, document_id)
+    with _range_db(data_dir) as db:
+        db.execute("DELETE FROM files WHERE id=?", (document_id,))
+        db.execute("DELETE FROM blocks WHERE id=?", (document_id,))
     # A leased FileResponse may not have opened its file yet. Keep its pinned
     # path until the last reader exits; new reads still fail OCFL validation.
     with _TRANSFER_LOCK:
@@ -695,8 +782,14 @@ def recover_deletions(data_dir):
     root = Path(data_dir).resolve() / "temp" / "deleted-documents"
     for path in sorted(root.glob("*.json")):
         receipt = json.loads(path.read_text())
-        delete_document(data_dir, receipt["document_id"], receipt["version"])
+        # Older releases could mark index cleanup complete while retaining jobs,
+        # exports and range metadata. Always replay this idempotent cleanup.
         clear_deleted_caches(data_dir, receipt["document_id"])
+        if not receipt.get("derived_removed"):
+            delete_document(data_dir, receipt["document_id"], receipt["version"])
+            clear_deleted_caches(data_dir, receipt["document_id"])
+            from symbiknow.search.index import remove_document
+            remove_document(data_dir, receipt["document_id"])
 
 
 def _digest_path(path):
@@ -772,7 +865,7 @@ def verified_file(data_dir, document_id, version=None):
     """Stream rocfl once into a verified, version-pinned temporary file.
 
     Leases protect active readers from eviction. Storage lock covers validation and
-    extraction, never network transfer/rendering. Only rocfl reads OCFL layout.
+    descriptor pinning, never extraction/transfer/rendering. Rocfl resolves OCFL layout.
     """
     _validate_id(document_id)
     _validate_version(version)
@@ -782,61 +875,44 @@ def verified_file(data_dir, document_id, version=None):
             metadata = read_metadata(data_dir, document_id, version)
             root.mkdir(parents=True, exist_ok=True)
             path = root / f"{document_id}-{metadata['version']}-{metadata['sha256']}.bin"
-            if not path.exists():
-                staging = path.with_suffix(".tmp")
-                try:
-                    with staging.open("wb") as output, tempfile.TemporaryFile() as errors:
-                        result = subprocess.run(
-                            [
-                                _binary(),
-                                "--no-styles",
-                                "-r",
-                                str(Path(data_dir).resolve() / "files"),
-                                "cat",
-                                "-v",
-                                metadata["version"],
-                                document_id,
-                                "original",
-                            ],
-                            stdout=output,
-                            stderr=errors,
-                            start_new_session=True,
-                            pass_fds=(_LOCK_FD.fd,),
-                        )
-                        if result.returncode:
-                            raise StorageError("rocfl streaming read failed")
-                    if (
-                        staging.stat().st_size != metadata["size"]
-                        or _digest_path(staging) != metadata["sha256"]
-                    ):
-                        raise StorageError("Original byte integrity check failed")
-                    staging.replace(path)
-                    _TRANSFER_VERIFIED[path] = (
-                        path.stat().st_ino,
-                        path.stat().st_size,
-                        path.stat().st_mtime_ns,
-                    )
-                finally:
-                    staging.unlink(missing_ok=True)
-            stamp = (path.stat().st_ino, path.stat().st_size, path.stat().st_mtime_ns)
-            if _TRANSFER_VERIFIED.get(path) != stamp:
+            original = _original_path(data_dir, document_id, metadata["version"]).open("rb") if not path.exists() else None
+        if not path.exists():
+            staging = path.with_suffix(".tmp")
+            try:
+                with staging.open("wb") as output, original:
+                    shutil.copyfileobj(original, output, length=1024 * 1024)
                 if (
-                    path.stat().st_size != metadata["size"]
-                    or _digest_path(path) != metadata["sha256"]
+                    staging.stat().st_size != metadata["size"]
+                    or _digest_path(staging) != metadata["sha256"]
                 ):
-                    path.unlink(missing_ok=True)
-                    raise StorageError(
-                        "Cached original byte integrity check failed; retry to restore from OCFL"
-                    )
-            os.utime(path, None)
-            _TRANSFER_VERIFIED[path] = (
-                path.stat().st_ino,
-                path.stat().st_size,
-                path.stat().st_mtime_ns,
-            )
-            while len(_TRANSFER_VERIFIED) > 512:
-                _TRANSFER_VERIFIED.pop(next(iter(_TRANSFER_VERIFIED)))
-            _TRANSFER_ACTIVE[path] = _TRANSFER_ACTIVE.get(path, 0) + 1
+                    raise StorageError("Original byte integrity check failed")
+                staging.replace(path)
+                _TRANSFER_VERIFIED[path] = (
+                    path.stat().st_ino,
+                    path.stat().st_size,
+                    path.stat().st_mtime_ns,
+                )
+            finally:
+                staging.unlink(missing_ok=True)
+        stamp = (path.stat().st_ino, path.stat().st_size, path.stat().st_mtime_ns)
+        if _TRANSFER_VERIFIED.get(path) != stamp:
+            if (
+                path.stat().st_size != metadata["size"]
+                or _digest_path(path) != metadata["sha256"]
+            ):
+                path.unlink(missing_ok=True)
+                raise StorageError(
+                    "Cached original byte integrity check failed; retry to restore from OCFL"
+                )
+        os.utime(path, None)
+        _TRANSFER_VERIFIED[path] = (
+            path.stat().st_ino,
+            path.stat().st_size,
+            path.stat().st_mtime_ns,
+        )
+        while len(_TRANSFER_VERIFIED) > 512:
+            _TRANSFER_VERIFIED.pop(next(iter(_TRANSFER_VERIFIED)))
+        _TRANSFER_ACTIVE[path] = _TRANSFER_ACTIVE.get(path, 0) + 1
         _prune_transfers(root, keep=path)
     try:
         yield path, metadata
@@ -850,3 +926,140 @@ def verified_file(data_dir, document_id, version=None):
                     _TRANSFER_VERIFIED.pop(path, None)
                     _TRANSFER_DELETED.discard(path)
             _prune_transfers(root)
+
+
+class RangeNotReady(StorageError):
+    """The durable integrity projection has not yet been prepared for this version."""
+
+    def __init__(self, metadata):
+        super().__init__("Original integrity preparation is queued")
+        self.metadata = metadata
+
+
+@contextmanager
+def _range_db(data_dir):
+    import sqlite3
+    file = Path(data_dir) / "temp" / "original-ranges.sqlite3"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(file, timeout=15, check_same_thread=False)
+    try:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("CREATE TABLE IF NOT EXISTS files(id TEXT,version TEXT,sha256 TEXT,size INTEGER,path TEXT,PRIMARY KEY(id,version))")
+        db.execute("CREATE TABLE IF NOT EXISTS blocks(id TEXT,version TEXT,position INTEGER,digest TEXT,PRIMARY KEY(id,version,position))")
+        with db:
+            yield db
+    finally:
+        db.close()
+
+
+_RANGE_BLOCK = 256 * 1024
+
+
+def _original_path(data_dir, identity, version):
+    """Ask rocfl to resolve a pinned logical file; never infer its physical layout."""
+    output = _run(data_dir, "ls", "-pt", "-v", version, identity, "original").decode().strip()
+    fields = output.split("\t")
+    if len(fields) != 2 or fields[0] != "original":
+        raise StorageError("rocfl did not resolve the original file")
+    root = Path(data_dir).resolve() / "files"
+    file = Path(fields[1])
+    file = (file if file.is_absolute() else root / file).resolve()
+    if not file.is_relative_to(root):
+        raise StorageError("Original path is outside the repository")
+    return file
+
+
+def prepare_ranges(data_dir, document_id, version=None, *, source=None):
+    """Background/commit work: authenticate bytes once and persist block digests.
+
+    The metadata SHA-256 authenticates the entire preparation. Range reads verify
+    at most two blocks, independent of file size, without a staged full-file copy.
+    """
+    with read_snapshot(data_dir):
+        metadata = read_metadata(data_dir, document_id, version)
+        with _range_db(data_dir) as db:
+            found = db.execute("SELECT sha256,size FROM files WHERE id=? AND version=?", (document_id, metadata["version"])).fetchone()
+        if found == (metadata["sha256"], metadata["size"]):
+            return metadata
+        original = _original_path(data_dir, document_id, metadata["version"])
+        handle = (source or original).open("rb")
+    try:
+        digest, size, blocks = hashlib.sha256(), 0, []
+        while block := handle.read(_RANGE_BLOCK):
+            digest.update(block)
+            size += len(block)
+            blocks.append(hashlib.sha256(block).hexdigest())
+        if size != metadata["size"] or digest.hexdigest() != metadata["sha256"]:
+            raise StorageError("Original byte integrity check failed")
+        # Hash outside locks, then revalidate before publishing: a concurrent
+        # deletion must not leave new checksum records behind its purge.
+        with read_snapshot(data_dir):
+            if read_metadata(data_dir, document_id, metadata["version"]) != metadata:
+                raise StorageError("Original metadata changed during preparation")
+            relative = original.relative_to(Path(data_dir).resolve() / "files").as_posix()
+            with _range_db(data_dir) as db:
+                db.execute("DELETE FROM blocks WHERE id=? AND version=?", (document_id, metadata["version"]))
+                db.executemany("INSERT INTO blocks VALUES(?,?,?,?)", [(document_id, metadata["version"], position, block) for position, block in enumerate(blocks)])
+                db.execute("INSERT OR REPLACE INTO files VALUES(?,?,?,?,?)", (document_id, metadata["version"], digest.hexdigest(), size, relative))
+    finally:
+        handle.close()
+    return metadata
+
+
+class _RangeReader:
+    def __init__(self, handle, db, metadata):
+        self.handle, self.db, self.metadata = handle, db, metadata
+
+    def read(self, offset, length):
+        if type(offset) is not int or offset < 0 or offset > self.metadata["size"]:
+            raise ValueError("offset exceeds file size or is negative")
+        if type(length) is not int or not 1 <= length <= _RANGE_BLOCK:
+            raise ValueError("Read between 1 and 262144 bytes per range")
+        end = min(offset + length, self.metadata["size"])
+        if offset == end:
+            return b""
+        first, last = offset // _RANGE_BLOCK, (end - 1) // _RANGE_BLOCK
+        digests = dict(self.db.execute("SELECT position,digest FROM blocks WHERE id=? AND version=? AND position>=? AND position<=?",
+                                      (self.metadata["document_id"], self.metadata["version"], first, last)))
+        content = bytearray()
+        for position in range(first, last + 1):
+            self.handle.seek(position * _RANGE_BLOCK)
+            block = self.handle.read(_RANGE_BLOCK)
+            if hashlib.sha256(block).hexdigest() != digests.get(position):
+                raise StorageError("Original range integrity check failed")
+            start = max(0, offset - position * _RANGE_BLOCK)
+            stop = min(len(block), end - position * _RANGE_BLOCK)
+            content.extend(block[start:stop])
+        return bytes(content)
+
+
+@contextmanager
+def verified_ranges(data_dir, document_id, version=None):
+    """Pin an open original descriptor under the storage lock, then read unlocked."""
+    with _range_db(data_dir) as db:
+        with read_snapshot(data_dir):
+            metadata = read_metadata(data_dir, document_id, version)
+            row = db.execute("SELECT sha256,size,path FROM files WHERE id=? AND version=?", (document_id, metadata["version"])).fetchone()
+            if not row or row[:2] != (metadata["sha256"], metadata["size"]):
+                raise RangeNotReady(metadata)
+            root = Path(data_dir).resolve() / "files"
+            cached = Path(row[2])
+            if cached.is_absolute():
+                # Resolve old absolute records through OCFL, never by stripping a
+                # guessed prefix or reading the old library when it still exists.
+                file = _original_path(data_dir, document_id, metadata["version"])
+                db.execute("UPDATE files SET path=? WHERE id=? AND version=?", (file.relative_to(root).as_posix(), document_id, metadata["version"]))
+                db.commit()
+            else:
+                file = (root / cached).resolve()
+            if not file.is_relative_to(root):
+                raise StorageError("Original path is outside the repository")
+            handle = file.open("rb")
+            # Keep the checksum snapshot for already leased readers even when a
+            # deletion removes the durable records while their descriptor is open.
+            db.execute("BEGIN")
+            db.execute("SELECT 1 FROM blocks WHERE id=? AND version=? LIMIT 1", (document_id, metadata["version"])).fetchone()
+        try:
+            yield _RangeReader(handle, db, metadata), metadata
+        finally:
+            handle.close()

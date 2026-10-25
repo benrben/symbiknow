@@ -141,6 +141,25 @@ def test_cache_depends_on_all_supplied_windows(monkeypatch):
     assert len(calls) == 2
 
 
+@pytest.mark.parametrize("gate", ["PROOF_CONFIDENCE", "VERIFY_CONFIDENCE", "CITATION_PROBABILITY",
+                                  "CLAIM_SPAN_CONFIDENCE", "LINK_PROBABILITY", "TOPIC_PROBABILITY",
+                                  "OTHER_TOPIC_PROBABILITY"])
+def test_every_acceptance_gate_is_part_of_cached_decision_identity(gate, monkeypatch):
+    # Caches retain gated decisions; a changed gate must never reuse them.
+    monkeypatch.setattr(jev_proof, "_CACHE", jev_proof.ByteLRU())
+    calls = []
+    def call(state, questions, client=None):
+        calls.append(state)
+        with sdk() as client:
+            return client.system_one(state=state, questions=questions)
+    monkeypatch.setattr(jev, "_call", call)
+    docs = [match("one")]
+    judge_matches("Question", docs, cache_namespace="fixture")
+    assert judge_matches("Question", docs, cache_namespace="fixture")["cached"] == 1
+    monkeypatch.setattr(jev, gate, getattr(jev, gate) - 0.01)
+    assert judge_matches("Question", docs, cache_namespace="fixture")["cached"] == 0
+
+
 def test_provider_failure_never_cached(monkeypatch):
     monkeypatch.setattr(jev_proof, "_CACHE", jev_proof.ByteLRU())
     attempts = []
@@ -179,7 +198,8 @@ def test_hash_duplicates_are_bound_to_independent_source_ids():
     document, different, exact = match(), match("other"), match("exact")
     document["sha256"] = exact["sha256"] = "a" * 64
     different["sha256"] = "b" * 64
-    with sdk_client({"folder": "project_root", "pair_1_0_0": "related"}) as client:
+    with sdk_client({"folder": "project_root", "pair_1_0_0": "related"},
+                    {"support_1_0_0": .01}) as client:
         result = organize_document(document, document["evidence"], [different, exact],
                                    folders=["Geography"], client=client)
     links = {link["document_id"]: link for link in result["links"]}

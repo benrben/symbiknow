@@ -60,7 +60,12 @@ test("bounded upload, unchanged polls, lazy history and native ZIP download", as
     requests.filter((x) => x.includes("/api/library?")).length - initialPolls;
   expect(idlePolls).toBe(0);
   report.unchanged_library_reads_in_8s = idlePolls;
-  const dir = await fs.mkdtemp("/private/tmp/symbiknow-browser-transfer-");
+  const dir = await fs.mkdtemp(
+    path.join(
+      (await import("node:os")).tmpdir(),
+      "symbiknow-browser-transfer-",
+    ),
+  );
   const filename = path.join(dir, "memory-transfer.bin");
   const file = await fs.open(filename, "w");
   const block = Buffer.alloc(1024 ** 2, 87);
@@ -140,7 +145,18 @@ test("bounded upload, unchanged polls, lazy history and native ZIP download", as
     data: { prepare: true, documents: [doc] },
   });
   expect(response.ok()).toBe(true);
-  const { url } = await response.json();
+  let job = await response.json();
+  const deadline = Date.now() + 60000;
+  while (job.status !== "completed" || !job.result) {
+    if (job.status === "failed")
+      throw new Error(job.error || "ZIP preparation failed");
+    if (Date.now() > deadline) throw new Error("ZIP preparation timed out");
+    await page.waitForTimeout(100);
+    job = await (
+      await page.request.get(`/api/job?id=${encodeURIComponent(job.job_id)}`)
+    ).json();
+  }
+  const { url } = job.result;
   const downloadPromise = page.waitForEvent("download");
   await page.evaluate((url) => {
     const a = document.createElement("a");
@@ -166,12 +182,11 @@ test("bounded upload, unchanged polls, lazy history and native ZIP download", as
   report.browser_processes = await browserSession.send(
     "SystemInfo.getProcessInfo",
   );
-  const reportPath = process.env.SYMBIKNOW_MEMORY_REPORT || path.join(output, "browser-memory.json");
+  const reportPath =
+    process.env.SYMBIKNOW_MEMORY_REPORT ||
+    path.join(output, "browser-memory.json");
   await fs.mkdir(path.dirname(reportPath), { recursive: true });
-  await fs.writeFile(
-    reportPath,
-    JSON.stringify(report, null, 2),
-  );
+  await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   await page.request.post("/api/delete-document", {
     headers: { "X-Symbiknow-UI": "1", Origin: origin },
     data: { document_id: doc.document_id, expected_version: doc.version },

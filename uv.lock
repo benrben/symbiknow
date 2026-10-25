@@ -2221,6 +2221,7 @@ source = { editable = "." }
 dependencies = [
     { name = "docling" },
     { name = "filelock" },
+    { name = "httpx" },
     { name = "lancedb" },
     { name = "mcp" },
     { name = "pillow" },
@@ -2234,6 +2235,7 @@ dependencies = [
     { name = "transformers" },
     { name = "typesafe-sdk" },
     { name = "uvicorn" },
+    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
@@ -2249,6 +2251,7 @@ dev = [
 requires-dist = [
     { name = "docling", specifier = "==2.137.0" },
     { name = "filelock", specifier = "==4.1.1" },
+    { name = "httpx", specifier = "==0.28.1" },
     { name = "lancedb", specifier = "==0.40.0" },
     { name = "mcp", specifier = "==2.3.0" },
     { name = "pillow", specifier = "==12.3.0" },
@@ -2262,6 +2265,7 @@ requires-dist = [
     { name = "transformers", specifier = "==5.19.0" },
     { name = "typesafe-sdk", specifier = "==0.7.4" },
     { name = "uvicorn", specifier = "==0.54.0" },
+    { name = "websockets", specifier = "==16.1.1" },
 ]
 
 [package.metadata.requires-dev]

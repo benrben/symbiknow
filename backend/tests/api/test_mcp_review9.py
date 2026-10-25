@@ -133,13 +133,10 @@ def test_actual_sdk_pages_and_bad_cursors(tmp_path, monkeypatch):
                 "upload_folder",
                 "download_folder",
                 "remove_file",
-                "scan_freshness",
-                "get_freshness_scan",
-                "cancel_freshness_scan",
-                "review_freshness_finding",
                 "ask",
-                "list_jev_decisions",
+                "list_documents", "get_taxonomy", "list_jev_decisions", "get_organization_history", "list_jobs",
                 "resolve_jev_decision",
+                "get_job",
             }
             props = next(t for t in schema.tools if t.name == "search").input_schema["properties"]
             assert props["detail"]["default"] == "compact" and "continuation" in props

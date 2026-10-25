@@ -40,7 +40,8 @@ class ConversionManager:
 
     def _start(self):
         self.configuration = (os.getenv("SYMBIKNOW_CONVERSION_TIMEOUT", "300"),
-                              os.getenv("SYMBIKNOW_MAX_PAGES", "1000"))
+                              os.getenv("SYMBIKNOW_MAX_PAGES", "1000"),
+                              os.getenv("SYMBIKNOW_CONVERSION_DEVICE", "cpu"))
         self.responses = queue.Queue(maxsize=2)
         process = subprocess.Popen(
             self.command or [sys.executable, "-m", "symbiknow.ingestion.conversion.worker", str(os.getpid()), str(self.idle_seconds)],
@@ -95,7 +96,8 @@ class ConversionManager:
                 if self.closed:
                     raise RuntimeError("Conversion manager is closed")
                 configuration = (os.getenv("SYMBIKNOW_CONVERSION_TIMEOUT", "300"),
-                                 os.getenv("SYMBIKNOW_MAX_PAGES", "1000"))
+                                 os.getenv("SYMBIKNOW_MAX_PAGES", "1000"),
+                                 os.getenv("SYMBIKNOW_CONVERSION_DEVICE", "cpu"))
                 if self.process is not None and (
                         self.process.poll() is not None or configuration != self.configuration):
                     self._stop()
@@ -118,7 +120,10 @@ class ConversionManager:
                         raise RuntimeError("Invalid conversion worker response")
                     if result.get("error"):
                         error = ValueError if result.get("permanent") else RuntimeError
-                        raise error(f"Docling conversion failed ({result['error']}); original is safe. Retry after checking OCR/model configuration.")
+                        hint = ("The file may be corrupt, encrypted or not a valid document of its type; upload a valid copy "
+                                "as a new version. If other files of this type also fail, check OCR/model configuration."
+                                if result["error"] == "ConversionError" else "Retry after checking OCR/model configuration.")
+                        raise error(f"Docling conversion failed ({result['error']}); original is safe. {hint}")
                     self.jobs += 1
                     self.completed += 1
                     if (self.jobs >= self.max_jobs or result.get("rss_bytes", 0) >= self.max_rss_bytes

@@ -165,14 +165,20 @@ class ApplicationContext:
         self.organization_attempts = set()
         self.__dict__.update(dependencies)
         self.originals = Originals(self.DATA_DIR)
+        from symbiknow.core.work import WorkStore
+        self.work = WorkStore(self.DATA_DIR)
         self.evidence = Evidence(self.DATA_DIR)
         self.snapshots = SnapshotCoordinator(self)
+        from symbiknow.ai.jev import configure_answer_cache
+        configure_answer_cache(self.DATA_DIR)
         from symbiknow.search.service import SearchService
 
         self.search = SearchService(self)
         from symbiknow.library.service import LibraryService
 
         self.library = LibraryService(self)
+        from symbiknow.library.catalog import CatalogService
+        self.catalog = CatalogService(self)
         from symbiknow.transfers.service import TransferService
 
         self.transfers = TransferService(self)
@@ -182,6 +188,11 @@ class ApplicationContext:
         from symbiknow.organization.decisions import DecisionService
 
         self.decisions = DecisionService(self)
+        from symbiknow.organization.corrections import CorrectionService
+
+        self.corrections = CorrectionService(self)
+        from symbiknow.core.jobs import JobService
+        self.jobs = JobService(self)
 
     @property
     def STORAGE_ONLY(self):
@@ -216,10 +227,11 @@ class ApplicationContext:
             self.retry_ids.discard(identity)
 
     def schedule(self, document_id):
+        self.work.enqueue("ingest", document_id, {}, replace=True)
         try:
             self.pending.put_nowait(document_id)
         except queue.Full:
-            self.rescan.set()
+            pass  # The durable indexed queue owns overflow and crash recovery.
         self.wake.set()
 
 

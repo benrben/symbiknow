@@ -1,9 +1,11 @@
+import type { JobResponse } from "./contracts.generated";
 import { useSyncExternalStore } from "react";
 import type { Doc, Evidence, Link, Library, CardPreview } from "./contracts.generated.ts";
 export type {
   OrganizationDecision, JevDecisionQueue, DocumentReference, EvidenceReference, ProcessingDescriptor, RevisionToken,
   Evidence, SearchAnswer, Link, Doc, Library, Detail, Rebuild, CardPreview,
   SearchResponse, VersionsPage, LinkEvidence,
+  InventoryDocument, InventoryPage, TaxonomyFacet, TaxonomyPage, OrganizationHistoryPage,
 } from "./contracts.generated.ts";
 
 export function folderCounts(leaves: Record<string, number>) {
@@ -37,12 +39,15 @@ export function indexingLabel(status?: string) {
       {
         indexed: "Stored · Searchable",
         pending: "Stored · Indexing queued",
+        queued: "Stored · Indexing queued",
+        indexing: "Stored · Indexing in progress",
+        unregistered: "Stored · Not yet registered for search",
         empty: "Stored · Empty / no extracted content",
         unsupported: "Stored · Unsupported format · Download available",
         failed: "Stored · Indexing failed",
         disabled: "Stored · Indexing disabled",
       } as Record<string, string>
-    )[status || "pending"] || "Stored"
+    )[status || ""] || "Stored · Search status not reported"
   );
 }
 // One bounded data owner for all component reads. Revisions include same-head
@@ -57,15 +62,55 @@ export function useDataRevision() {
   );
 }
 const responses = new Map<string, { value: unknown; bytes: number; until: number }>();
-const inFlight = new Map<string, Promise<unknown>>();
+type SharedRequest = { promise: Promise<unknown>; controller: AbortController; consumers: number; settled: boolean };
+const inFlight = new Map<string, SharedRequest>();
 let retainedBytes = 0;
 const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+const librarySnapshots = new Map<string, { value: Library; bytes: number }>();
+let librarySnapshotBytes = 0;
+const MAX_LIBRARY_SNAPSHOT_BYTES = 4 * 1024 * 1024;
+function librarySnapshotKey(action: string) {
+  const [operation, query = ""] = action.split("?", 2);
+  if (operation !== "library") return undefined;
+  const parameters = new URLSearchParams(query);
+  parameters.sort();
+  return JSON.stringify([readRevision, parameters.toString()]);
+}
+/** A revision-bound display snapshot only. Call api() to refresh every visit. */
+export function peekCachedLibrary(action: string): Library | undefined {
+  const key = librarySnapshotKey(action);
+  const snapshot = key && librarySnapshots.get(key);
+  if (!snapshot) return undefined;
+  librarySnapshots.delete(key!);
+  librarySnapshots.set(key!, snapshot);
+  return structuredClone(snapshot.value);
+}
+function retainLibrary(action: string, value: Library) {
+  if (!value.library_id || value.index_revision === undefined
+      || value.organization_revision === undefined || value.manual_revision === undefined) return;
+  const key = librarySnapshotKey(action);
+  if (!key) return;
+  const bytes = new TextEncoder().encode(JSON.stringify(value)).byteLength;
+  if (bytes > MAX_LIBRARY_SNAPSHOT_BYTES / 4) return;
+  const previous = librarySnapshots.get(key);
+  if (previous) librarySnapshotBytes -= previous.bytes;
+  librarySnapshots.delete(key);
+  librarySnapshots.set(key, { value: structuredClone(value), bytes });
+  librarySnapshotBytes += bytes;
+  while (librarySnapshots.size > 16 || librarySnapshotBytes > MAX_LIBRARY_SNAPSHOT_BYTES) {
+    const oldest = librarySnapshots.keys().next().value!;
+    librarySnapshotBytes -= librarySnapshots.get(oldest)!.bytes;
+    librarySnapshots.delete(oldest);
+  }
+}
 export function invalidateResponses(revision: string = crypto.randomUUID()) {
   if (revision === readRevision) return;
   readRevision = revision;
   readEpoch += 1;
   responses.clear();
   retainedBytes = 0;
+  librarySnapshots.clear();
+  librarySnapshotBytes = 0;
   revisionListeners.forEach((listener) => listener());
 }
 function observeRevision(value: unknown, epoch: number) {
@@ -89,6 +134,30 @@ function abortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
     promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
   });
 }
+function consume<T>(request: SharedRequest, signal?: AbortSignal): Promise<T> {
+  request.consumers++;
+  return abortable(request.promise as Promise<T>, signal).then(value => structuredClone(value)).finally(() => {
+    request.consumers--;
+    if (!request.consumers && !request.settled) request.controller.abort();
+  });
+}
+export type Job<T> = Omit<JobResponse, "result"> & { result?: T };
+export async function waitForJob<T>(job: Job<T>, signal?: AbortSignal, progress?: (value: T) => void): Promise<T> {
+  let delay = 25;
+  for (;;) {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    if (job.status === "completed" && job.result === undefined) {
+      job = await api<Job<T>>("job?id=" + encodeURIComponent(job.job_id), undefined, signal);
+      continue;
+    }
+    if (job.result) progress?.(job.result);
+    if (job.status === "completed") return job.result as T;
+    if (job.status === "failed") throw new Error(job.error || "Job failed");
+    await abortable(new Promise(resolve => setTimeout(resolve, delay)), signal);
+    delay = Math.min(3000, delay * 2);
+    job = await api<Job<T>>("job?id=" + encodeURIComponent(job.job_id), undefined, signal);
+  }
+}
 function canonicalRequest(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalRequest);
   if (value && typeof value === "object")
@@ -101,11 +170,12 @@ export async function api<T>(
   args?: object,
   signal?: AbortSignal,
 ): Promise<T> {
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   const operation = action.split("?")[0];
   const post = args !== undefined;
   const read = !post || ["search", "ask", "statuses"].includes(operation);
   const files = (args as { files?: { final?: boolean; total_size?: number }[] } | undefined)?.files;
-  const mayPublish = post && !["search", "statuses", "bulk-download", "rebuild"].includes(operation)
+  const mayPublish = post && !["search", "statuses", "bulk-download", "rebuild", "agent-models", "agent-sessions"].includes(operation)
     && (operation !== "upload" || !!files?.some((file) => file.total_size === undefined || file.final === true));
   if (mayPublish) invalidateResponses();
   const key = JSON.stringify([readRevision, action, canonicalRequest(args)]);
@@ -113,14 +183,15 @@ export async function api<T>(
   const retained = cacheable && responses.get(key);
   if (retained && retained.until > Date.now()) return abortable(Promise.resolve(structuredClone(retained.value) as T), signal);
   const existing = read && inFlight.get(key);
-  if (existing) return abortable(existing as Promise<T>, signal).then((value) => structuredClone(value));
+  if (existing && !existing.controller.signal.aborted) return consume<T>(existing, signal);
   if (read && inFlight.size >= 128) throw new Error("Too many pending library reads; retry shortly");
   const revision = readRevision;
   const epoch = readEpoch;
+  const controller = new AbortController();
+  const shared: SharedRequest = { controller, consumers: 0, settled: false, promise: Promise.resolve() };
   const work = (async () => {
     const response = await fetch("/api/" + action, {
-      // Coalesced consumers cancel their own wait; the shared request completes.
-      ...(!read ? { signal } : {}),
+      signal: read ? controller.signal : signal,
       ...(args ? {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Symbiknow-UI": "1" },
@@ -131,10 +202,19 @@ export async function api<T>(
       const error = await response.json().catch(() => ({ error: "Request failed" }));
       throw new Error(error.error);
     }
-    const value = await response.json();
+    let value = await response.json();
+    // Search displays retrieval progress explicitly. Mutations retain their
+    // existing result contract while the server performs them as durable jobs.
+    if (value?.job_id && operation !== "job" && !["search", "ask"].includes(operation))
+      value = await waitForJob(value, read ? controller.signal : signal);
+    if (read && controller.signal.aborted)
+      throw new DOMException("Aborted", "AbortError");
     if (cacheable && revision !== readRevision)
       throw new DOMException("Library revision changed", "AbortError");
     if (read) observeRevision(value, epoch);
+    // observeRevision may have advanced the epoch: retain under the response's
+    // observed revision, never the request's older namespace.
+    if (!post && operation === "library") retainLibrary(action, value);
     if (cacheable && revision === readRevision) {
       const bytes = new TextEncoder().encode(JSON.stringify(value)).byteLength;
       if (bytes <= MAX_RESPONSE_BYTES / 4) {
@@ -153,11 +233,13 @@ export async function api<T>(
     return value as T;
   })();
   if (read) {
-    inFlight.set(key, work);
-    work.then(() => inFlight.delete(key), () => inFlight.delete(key));
+    shared.promise = work;
+    inFlight.set(key, shared);
+    const finish = () => { shared.settled = true; if (inFlight.get(key) === shared) inFlight.delete(key); };
+    work.then(finish, finish);
   }
   if (mayPublish) work.then(() => invalidateResponses(), () => invalidateResponses());
-  return abortable(work, signal).then((value) => structuredClone(value));
+  return read ? consume<T>(shared, signal) : abortable(work, signal).then((value) => structuredClone(value));
 }
 export const title = (d: Doc) => d.filename.replace(/\.[^.]+$/, "");
 export const formatLabel = (d: Doc) =>
@@ -214,6 +296,16 @@ export function sameValue(a: unknown, b: unknown): boolean {
   );
 }
 
+export type UploadWarning = {
+  code: string;
+  document_id: string;
+  version: string;
+  filename: string;
+  reason: string;
+  message?: string;
+};
+export type UploadReceipt = Doc & { stored: boolean; warnings?: UploadWarning[]; error?: string };
+
 export async function uploadFile(
   file: File,
   onProgress: (n: number) => void,
@@ -226,7 +318,7 @@ export async function uploadFile(
     );
   const hash = await hashFile(file);
   const request_id = options.requestId || crypto.randomUUID();
-  let result: Doc | undefined;
+  let result: UploadReceipt | undefined;
   for (
     let offset = 0;
     offset < file.size || offset === 0;
@@ -252,7 +344,7 @@ export async function uploadFile(
     };
     // Retry the identical chunk/request receipt after a transient lost response.
     let reply:
-      { files: (Doc & { error?: string; stored: boolean })[] } | undefined;
+      { files: UploadReceipt[] } | undefined;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         reply = await api("upload", { files: [args] });
@@ -262,7 +354,8 @@ export async function uploadFile(
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
     }
-    const item = reply!.files[0];
+    let item = reply!.files[0];
+    if ((item as unknown as Job<Doc>).job_id) item = await waitForJob(item as unknown as Job<typeof item>);
     if (item.error) throw new Error(item.error);
     if (item.stored) result = item;
     onProgress(
@@ -270,5 +363,59 @@ export async function uploadFile(
     );
     if (!file.size) break;
   }
-  return result!;
+  if (!result) throw new Error("Upload finished without a stored receipt; retry to check the same upload.");
+  return result;
+}
+
+/** Tokens stay in memory and WebSocket subprotocol headers, never in URLs. */
+export function assistantSocket(session: { session_id: string; token: string }): WebSocket {
+  const url = new URL(`/api/agent-chat/${encodeURIComponent(session.session_id)}`, window.location.href);
+  url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return new WebSocket(url, ["symbiknow-assistant", `token.${session.token}`]);
+}
+
+export async function prepareOriginal(doc: Doc, signal?: AbortSignal) {
+  await api("original-ready?id=" + encodeURIComponent(doc.document_id) + "&version=" + encodeURIComponent(doc.version), undefined, signal);
+}
+/** Read ready originals in one round trip; prepare only when the server asks. */
+export async function readOriginalText(doc: Doc, signal?: AbortSignal) {
+  const limit = 2 * 1024 * 1024;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch(fileUrl(doc), { signal });
+    if (response.status === 202) {
+      await waitForJob(await response.json() as Job<unknown>, signal);
+      continue;
+    }
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.error || "Preview unavailable");
+    }
+    if (Number(response.headers.get("Content-Length")) > limit) {
+      await response.body?.cancel();
+      throw new Error("This text file is too large for an inline preview. Download the original to read it.");
+    }
+    // Enforce the preview bound even when the server streams without a length.
+    const reader = response.body?.getReader();
+    if (!reader) return "";
+    const decoder = new TextDecoder();
+    const parts: string[] = [];
+    let bytes = 0;
+    try {
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) return parts.join("") + decoder.decode();
+        bytes += chunk.value.byteLength;
+        if (bytes > limit) {
+          await reader.cancel();
+          throw new Error("This text file is too large for an inline preview. Download the original to read it.");
+        }
+        parts.push(decoder.decode(chunk.value, { stream: true }));
+      }
+    } finally { reader.releaseLock(); }
+  }
+  throw new Error("Original preparation did not finish. Retry the preview or download the original.");
+}
+export async function downloadOriginal(doc: Doc) {
+  await prepareOriginal(doc);
+  window.location.assign(fileUrl(doc, true));
 }

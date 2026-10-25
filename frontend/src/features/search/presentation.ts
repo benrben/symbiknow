@@ -77,6 +77,8 @@ export function emptySearchMessage(
       body:
         answer.reason === "context_budget"
           ? "The retrieved text exceeds the answer-checking limit. Narrow the question or folder, or show related files. This does not mean the answer is missing."
+          : answer.reason === "sensitive_content"
+          ? "The retrieved files may contain credentials, so their text was not sent for answer checking. Open the related files to read them locally. This does not mean the answer is missing."
           : "The retrieved files were not evaluated. Retry the check or show related files; this does not mean the answer is missing.",
     };
   return {
@@ -86,4 +88,20 @@ export function emptySearchMessage(
         : "No supported answer found",
     body: `Checked ${answer.evaluated_count ?? 0} of ${answer.candidate_count ?? 0} candidates in this scope. ${answer.status === "needs_context" ? "The evidence is ambiguous or conflicting." : "No answer was established in the checked passages."}`,
   };
+}
+
+// Cosine distance of the best semantic match at or beyond which nothing is a
+// strong match. Calibrated on the current embedding model: gibberish queries
+// bottom out near 0.32, real topics reach 0.16-0.28. It only changes a notice;
+// results are never hidden.
+export const WEAK_MATCH_DISTANCE = 0.3;
+
+export function hasNoStrongMatch(matches: Doc[], mode: string, evaluate: boolean) {
+  if (mode !== "semantic" || evaluate || !matches.length) return false;
+  const distances = matches.map((d) => {
+    const retrieval = (d as { retrieval?: { score?: number | null; score_kind?: string } }).retrieval;
+    return retrieval?.score_kind === "_distance" && typeof retrieval.score === "number" ? retrieval.score : undefined;
+  });
+  if (distances.some((value) => value === undefined)) return false;
+  return Math.min(...(distances as number[])) >= WEAK_MATCH_DISTANCE;
 }

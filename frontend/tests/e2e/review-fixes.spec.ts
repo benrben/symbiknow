@@ -82,13 +82,14 @@ test("filtered folder tiles, canvas counts, empty recovery and sidebar global co
     );
     const counts: Record<string, number> = {};
     for (const d of scoped) counts[d.folder] = (counts[d.folder] || 0) + 1;
-    const offset = Number(q.get("offset") || 0);
+    const offset = Number(q.get("cursor") || 0);
     await route.fulfill({
       json: {
         ...base,
         documents: scoped.slice(offset, offset + 2),
         total: scoped.length,
         has_more: offset + 2 < scoped.length,
+        next_cursor: offset + 2 < scoped.length ? String(offset + 2) : null,
         folders,
         scoped_folders: counts,
         groups: ["Review A", "Review B", "Review Empty"],
@@ -101,8 +102,8 @@ test("filtered folder tiles, canvas counts, empty recovery and sidebar global co
   await page
     .getByRole("button", { name: /^Engineering \d+$/, exact: true })
     .click();
-  await expect(page.locator(".subfolder-grid")).toContainText("Storage2 files");
-  await expect(page.locator(".subfolder-grid")).toContainText("Search1 files");
+  await expect(page.locator(".space-shelves")).toContainText("Storage2 files");
+  await expect(page.locator(".space-shelves")).toContainText("Search1 file");
   await expect(page.locator(".grid-file")).toHaveCount(2);
   await page
     .getByRole("button", { name: /^Search scope and filters(?: \d+)?$/ })
@@ -111,13 +112,17 @@ test("filtered folder tiles, canvas counts, empty recovery and sidebar global co
     .getByLabel("Topic group", { exact: true })
     .selectOption("Review A");
   await page.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(page.locator(".subfolder-grid")).toContainText("Storage1 files");
-  await expect(page.locator(".subfolder-grid")).not.toContainText("Search");
+  await expect(page.locator(".space-shelves")).toContainText("Storage1 file");
+  await expect(page.locator(".space-shelves")).not.toContainText("Search");
   await expect(
     page.getByRole("treeitem", { name: "Engineering, 3 files", exact: true }),
   ).toBeVisible();
   await chooseView(page, "Canvas");
-  await expect(page.locator(".folder-heading")).toContainText("1 file");
+  await expect(page.locator(".folder-heading")).toHaveCount(2);
+  await expect(page.locator(".folder-heading")).toHaveText([
+    "Engineering1 file",
+    "Storage1 file",
+  ]);
   await chooseView(page, "Cards");
   await page
     .getByRole("button", { name: /^Search scope and filters(?: \d+)?$/ })
@@ -129,7 +134,7 @@ test("filtered folder tiles, canvas counts, empty recovery and sidebar global co
   await expect(
     page.getByRole("heading", { name: "No files match these filters" }),
   ).toBeVisible();
-  await expect(page.locator(".subfolder-grid")).toHaveCount(0);
+  await expect(page.locator(".space-shelves")).toHaveCount(0);
   await screenshot(page, "filtered-empty");
   await page
     .getByRole("button", { name: "Clear filters", exact: true })
@@ -169,7 +174,7 @@ test("Recent displays Saved descending and every requested sort leaves Recent wi
   await page.getByRole("button", { name: "Sort by Name" }).click();
   const sorted = await (await response).json();
   await expect(
-    page.getByRole("heading", { name: "All files", exact: true }),
+    page.getByRole("heading", { name: "Your knowledge", exact: true }),
   ).toBeVisible();
   await expect(
     table.getByRole("columnheader", { name: "Name" }),
@@ -242,6 +247,9 @@ test("GFM tables and task lists render in the reader, Quick Look and cards witho
       },
     }),
   );
+  await page.route("**/api/original-ready?*", (route) =>
+    route.fulfill({ json: { ready: true } }),
+  );
   await page.route("**/api/original?*", (route) =>
     route.fulfill({ contentType: "text/markdown", body: markdown }),
   );
@@ -254,7 +262,7 @@ test("GFM tables and task lists render in the reader, Quick Look and cards witho
       },
     }),
   );
-  await page.route("**/api/search", (route) =>
+  await page.route(/\/api\/(?:search|ask)$/, (route) =>
     route.fulfill({
       json: {
         matches: [
@@ -291,7 +299,7 @@ test("GFM tables and task lists render in the reader, Quick Look and cards witho
     page.locator(".prose input[type=checkbox]").first(),
   ).toBeChecked();
   await expect(page.locator(".prose pre code")).toContainText('print("שלום")');
-  await page.getByRole("button", { name: "Split view", exact: true }).click();
+  await page.getByRole("button", { name: "Show file list", exact: true }).click();
   await select.press("Space");
   await expect(page.getByRole("dialog").getByRole("table")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -310,7 +318,7 @@ test("GFM tables and task lists render in the reader, Quick Look and cards witho
     .getByRole("button", { name: /^(Back to library|Close inspector)$/ })
     .click();
   await page.getByRole("button", { name: "Clear search" }).click();
-  await page.getByRole("button", { name: "Cards" }).click();
+  await chooseView(page, "Cards");
   await expect(page.locator(".card-prose table")).toBeVisible();
   expect(external).toEqual([]);
   await screenshot(page, "gfm-table-card");

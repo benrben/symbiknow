@@ -79,6 +79,7 @@ export type SearchAnswer = {
   reason?: string;
   candidate_count?: number;
   evaluated_count?: number;
+  withheld_count?: number;
   values?: Array<NumericValue>;
 };
 
@@ -89,6 +90,14 @@ export type StoredLink = {
   relation: string;
   source_chunk_id: string;
   target_chunk_id: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  decision_id?: string;
+  correction_id?: string;
+  confidence?: number;
+  reason?: string;
+  proof?: Record<string, unknown>;
+  additional_evidence?: Array<Record<string, unknown>>;
 };
 
 export type Link = {
@@ -98,6 +107,14 @@ export type Link = {
   relation: string;
   source_chunk_id: string;
   target_chunk_id: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  decision_id?: string;
+  correction_id?: string;
+  confidence?: number;
+  reason?: string;
+  proof?: Record<string, unknown>;
+  additional_evidence?: Array<Record<string, unknown>>;
   source_document_id: string;
   source_filename: string;
   target_filename: string;
@@ -109,6 +126,7 @@ export type JudgedEvidence = {
   text_start?: number;
   text_end?: number;
   truncated?: boolean;
+  original_text_length?: number;
   location?: Provenance;
 };
 
@@ -119,6 +137,8 @@ export type VerificationDependency = {
   sha256: string;
   text_start: number;
   text_end: number;
+  truncated?: boolean;
+  original_text_length?: number;
   evidence_revision?: string;
 };
 
@@ -181,12 +201,16 @@ export type RenamedPaths = {
 };
 
 export type OrganizationChange = {
+  all_documents?: boolean;
   kind: string;
   paths?: RenamedPaths | null;
   document_ids: Array<string>;
 };
 
 export type Library = {
+  next_cursor?: string | null;
+  taxonomy_has_more?: boolean;
+  taxonomy_next_after?: string | null;
   organization_reset?: OrganizationReset;
   manual_revision?: string;
   library_id?: string;
@@ -411,6 +435,167 @@ export type OrganizationDecision = {
 };
 
 export type JevDecisionQueue = {
+  revision?: string;
+  next_cursor?: string | null;
+  next_after?: string;
   decisions: Array<OrganizationDecision>;
   has_more: boolean;
+};
+
+export type AgentProvider = {
+  id: string;
+  name: string;
+  installed: boolean;
+  available: boolean;
+  version: string;
+  reason: string;
+  untested: boolean;
+};
+
+export type AgentModel = {
+  id: string;
+  name: string;
+  description: string;
+  default: boolean;
+  efforts: Array<string>;
+  default_effort: string;
+};
+
+export type AgentSession = {
+  session_id: string;
+  token: string;
+  provider: string;
+  model: string;
+  model_name: string;
+  effort: string;
+};
+
+export type AgentEvent = {
+  type: string;
+  session_id: string;
+  run_id: string;
+  seq: number;
+  timestamp?: number;
+  automatic?: boolean;
+  model?: string;
+  id?: string;
+  name?: string;
+  kind?: string;
+  text?: string;
+  message?: string;
+  status?: string;
+  args?: Record<string, unknown>;
+  preview?: Record<string, unknown>;
+  result?: unknown;
+  ok?: boolean;
+  expires_at?: number;
+};
+
+export type JobResponse = {
+  job_id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  result?: Record<string, unknown> | null;
+  error?: string | null;
+  next_cursor?: string | null;
+};
+
+export type InventoryProject = {
+  id: string;
+  name: string;
+};
+
+export type InventoryDocument = {
+  document_id: string;
+  version: string;
+  filename: string;
+  mime_type: string;
+  size: number;
+  sha256: string;
+  created_at: string;
+  source_filename: string;
+  stored: boolean;
+  storage_status: string;
+  indexing_status: string;
+  searchable: boolean;
+  searchable_text: boolean;
+  searchable_visual: boolean;
+  indexing_error: string;
+  project: InventoryProject | null;
+  folder: string;
+  topics: Array<string>;
+  groups: Array<string>;
+  organization_status: string;
+  evidence_revision: string;
+  folder_origin: string;
+};
+
+export type InventoryPage = {
+  documents: Array<InventoryDocument>;
+  count: number;
+  total_originals: number;
+  total?: number;
+  revision: string;
+  has_more: boolean;
+  next_cursor: string | null;
+  filters: Record<string, string | null>;
+  scope: string;
+};
+
+export type TaxonomyFacet = {
+  dimension: "projects" | "folders" | "topics" | "statuses";
+  id: string;
+  name: string;
+  count: number;
+  definition: string | null;
+};
+
+export type TaxonomyPage = {
+  items: Array<TaxonomyFacet>;
+  revision: string;
+  has_more: boolean;
+  next_cursor: string | null;
+  semantics: Record<string, string>;
+};
+
+export type OrganizationHistoryEntry = {
+  id: string;
+  kind: string;
+  action: string;
+  actor: string | null;
+  timestamp: string | null;
+  reason: string | null;
+  version: string | null;
+  document_id: string;
+  evidence_revision?: string | null;
+  value?: unknown;
+  effective_owner?: InventoryProject | null;
+  automatic_owner_suggestion?: InventoryProject | null;
+  target_document_id?: string;
+  target_version?: string;
+};
+
+export type OrganizationHistoryPage = {
+  document_id: string;
+  current: Record<string, unknown>;
+  entries: Array<OrganizationHistoryEntry>;
+  revision: string;
+  has_more: boolean;
+  next_cursor: string | null;
+  limitations: Array<string>;
+};
+
+export type RecoverableJob = {
+  job_id: string;
+  status: string;
+  created_at: string;
+  kind: string;
+  error: string | null;
+};
+
+export type RecoverableJobPage = {
+  jobs: Array<RecoverableJob>;
+  revision: string;
+  has_more: boolean;
+  next_cursor: string | null;
+  scope: string;
 };

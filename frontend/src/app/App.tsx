@@ -11,17 +11,26 @@ import {
   type CSSProperties,
 } from "react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
+import OriginalInventory from "../features/library/components/OriginalInventory";
 import {
   MoreHorizontal,
+  MessageCircle,
   Upload,
   ChevronRight,
   Download,
   X,
+  Archive,
+  History,
+  RefreshCw,
+  RotateCcw,
+  Sparkles,
 } from "lucide-react";
 import {
   api,
-  uploadFile,
-  indexingLabel,
+  peekCachedLibrary,
+  waitForJob,
+  type Job,
+  type SearchResponse,
   folderCounts,
   type Doc,
   type Library,
@@ -34,6 +43,8 @@ import {
   reconcilePresentation,
   immediateFolders,
 } from "../shared/presentation/format";
+const Assistant = lazy(() => import("../features/assistant/Assistant"));
+import { useAppUI } from "../features/assistant/useAppUI";
 import Sidebar from "../features/library/components/Sidebar";
 import AppearanceMenu from "../features/appearance/components/AppearanceMenu";
 import SearchBar, { type Mode } from "../features/search/components/SearchBar";
@@ -46,10 +57,12 @@ import ReviewHistory from "../features/organization/components/ReviewHistory";
 import FreshnessReview from "../features/freshness/components/FreshnessReview";
 import JevProgress from "../features/organization/components/JevProgress";
 import JevDecisions from "../features/organization/components/JevDecisions";
+import { useTransfers } from "../features/transfers/useTransfers";
+import TransferPanel, { ImportFormats } from "../features/transfers/TransferPanel";
 import { ConnectedWorkspace } from "../features/library/components/ConnectedWorkspace";
 import ConnectionMap from "../features/connections/components/ConnectionMap";
 import ReaderNavigator from "../features/reader/components/ReaderNavigator";
-import { emptySearchMessage, reconcileSearchMatches, sortSearchMatches } from "../features/search/presentation";
+import { emptySearchMessage, hasNoStrongMatch, reconcileSearchMatches, sortSearchMatches } from "../features/search/presentation";
 import DeleteDialog, { type DeleteTarget } from "../features/library/components/DeleteDialog";
 import OrganizationDialog, {
   type OrganizationTarget,
@@ -64,16 +77,9 @@ const empty: Library = {
   max_file_bytes: 268435456,
   max_chunk_bytes: 262144,
 };
-type Transfer = {
-  file: File;
-  id: string;
-  percent: number;
-  state: string;
-  error?: string;
-  options?: { id: string; expected: string };
-  document?: Doc;
-};
 export default function App() {
+  const [assistantLauncher, setAssistantLauncher] = useState<HTMLButtonElement | null>(null);
+  const [assistantVisible, setAssistantVisible] = useState(false);
   const [library, setLibrary] = useState<Library>(empty),
     [loading, setLoading] = useState(true),
     [error, setError] = useState("");
@@ -81,6 +87,10 @@ export default function App() {
     [group, setGroup] = useState<string>(),
     [recent, setRecent] = useState(false);
   const [scopeNotice, setScopeNotice] = useState("");
+  const pageCursors = useRef<(string | undefined)[]>([undefined]);
+  const pageIndex = useRef(0);
+  const libraryAbort = useRef<AbortController | undefined>(undefined);
+  const taxonomyCursor = useRef("");
   const [view, setView] = usePreference<"map" | "files">(
     library.library_id,
     "connectedView",
@@ -105,7 +115,7 @@ export default function App() {
     420,
     (v) => Number.isFinite(v) && v >= 340 && v <= 600,
   );
-  const [density] = usePreference<"compact" | "comfortable">(
+  const [density, setDensity] = usePreference<"compact" | "comfortable">(
     library.library_id,
     "density",
     "compact",
@@ -121,7 +131,9 @@ export default function App() {
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState("");
   const [linksRetry, setLinksRetry] = useState(0);
+  const restoringReader = useRef(false);
   useEffect(() => {
+    if (restoringReader.current) { restoringReader.current = false; return; }
     setReaderExpanded(false);
     setInspectorVisible(false);
   }, [folder, group, recent]);
@@ -140,9 +152,9 @@ export default function App() {
     (v) => typeof v === "boolean",
   );
   const [loadedScope, setLoadedScope] = useState("");
-  const wantedScope = JSON.stringify([folder, group, recent]);
   const [sort, setSort] = useState("filename"),
     [descending, setDescending] = useState(false);
+  const wantedScope = JSON.stringify([folder, group, recent, sort, descending]);
   const [query, setQuery] = useState(""),
     [submitted, setSubmitted] = useState(""),
     [searchNonce, setSearchNonce] = useState(0);
@@ -152,6 +164,7 @@ export default function App() {
     [unavailable, setUnavailable] = useState(false),
     [answer, setAnswer] = useState<SearchAnswer>({ status: "not_requested" });
   const [inspectorVisible, setInspectorVisible] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [selected, setSelected] = useState<Doc>(),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
     [inspectorTab, setInspectorTab] = useState("preview"),
@@ -163,6 +176,8 @@ export default function App() {
     sequence: number;
     document_id: string;
     version: string;
+    evidence_id?: string;
+    agent?: boolean;
   }>();
   const [layoutRevision, setLayoutRevision] = useState(0),
     [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(),
@@ -173,7 +188,6 @@ export default function App() {
   const [resetOpen, setResetOpen] = useState(false),
     [rebuild, setRebuild] = useState<Rebuild | null>(null),
     [progressHidden, setProgressHidden] = useState(true),
-    [transfers, setTransfers] = useState<Transfer[]>([]),
     [dragging, setDragging] = useState(false),
     [downloadBusy, setDownloadBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null),
@@ -191,6 +205,7 @@ export default function App() {
     searchAbort = useRef<AbortController | undefined>(undefined);
   const showSearch = !!submitted,
     busy = !!rebuild && ["queued", "running"].includes(rebuild.status);
+  const scopeLabel = [folder === "" ? "Unfiled" : folder || "All files", group && `topic ${group}`].filter(Boolean).join(" · ");
   const matches = useMemo(
     () =>
       reconcileSearchMatches(rawMatches, library.documents, loadedScope === wantedScope, folder, group),
@@ -229,7 +244,11 @@ export default function App() {
       return showSearch ? matches : library.documents;
     return sortSearchMatches(matches, searchSort, searchDescending);
   }, [showSearch, matches, library.documents, searchSort, searchDescending]);
-  useEffect(() => setSearchOrder({ field: "relevance", descending: false }), [submitted]);
+  const restoringSearchOrder = useRef(false);
+  useEffect(() => {
+    if (restoringSearchOrder.current) { restoringSearchOrder.current = false; return; }
+    setSearchOrder({ field: "relevance", descending: false });
+  }, [submitted]);
   const libraryVersions = library.documents
     .map((d) => d.document_id + ":" + d.version)
     .join(",");
@@ -244,7 +263,7 @@ export default function App() {
     if (reconcilePresentation(r)) setLayoutRevision((n) => n + 1);
   }
   const load = useCallback(
-    async (more = false, quiet = false) => {
+    async (more = false, quiet = false, previous = false, taxonomy = false) => {
       const requestScope = JSON.stringify([
         folder,
         group,
@@ -255,53 +274,55 @@ export default function App() {
       if (quiet && activeLibrary.current?.scope === requestScope) return;
       const generation = ++libraryGeneration.current;
       activeLibrary.current = { scope: requestScope, generation };
-      if (!quiet) setLoading(true);
+      libraryAbort.current?.abort();
+      const controller = new AbortController();
+      libraryAbort.current = controller;
       try {
         const p = new URLSearchParams({
-          offset: String(more ? library.documents.length : 0),
-          limit: String(
-            more ? 60 : Math.min(100, Math.max(60, library.documents.length)),
-          ),
+          limit: "60",
           recent: String(recent),
           sort,
           descending: String(descending),
         });
+        let cursor: string | undefined;
+        if (previous) cursor = pageCursors.current[Math.max(0, pageIndex.current - 1)];
+        else if (more) cursor = library.next_cursor || undefined;
+        else if (taxonomy) cursor = pageCursors.current[pageIndex.current];
+        if (cursor) p.set("cursor", cursor);
+        if (taxonomyCursor.current) p.set("taxonomy_after", taxonomyCursor.current);
         if (folder !== undefined) p.set("folder", folder);
         if (group) p.set("group", group);
-        const r = await api<Library>("library?" + p);
-        // Poll every loaded page without exceeding the API's 100-row bound.
-        if (!more && quiet) {
-          while (r.has_more && r.documents.length < library.documents.length) {
-            p.set("offset", String(r.documents.length));
-            p.set(
-              "limit",
-              String(
-                Math.min(100, library.documents.length - r.documents.length),
-              ),
-            );
-            const next = await api<Library>("library?" + p);
-            r.documents.push(...next.documents);
-            r.has_more = next.has_more;
-          }
-        }
-        if (generation !== libraryGeneration.current) return;
-        applyPresentationChange(r);
-        setLibrary((old) => {
-          const byId = new Map(old.documents.map((d) => [d.document_id, d]));
-          const next = {
-            ...r,
-            documents: more
-              ? [...old.documents, ...r.documents]
-              : r.documents.map((d) => {
+        const action = "library?" + p;
+        const targetPage = previous ? Math.max(0, pageIndex.current - 1)
+          : more ? pageIndex.current + 1 : taxonomy ? pageIndex.current : 0;
+        const targetCursors = more
+          ? [...pageCursors.current.slice(0, pageIndex.current + 1), cursor]
+          : !previous && !taxonomy ? [undefined] : pageCursors.current;
+        const applyPage = (r: Library) => {
+          pageIndex.current = targetPage;
+          pageCursors.current = targetCursors;
+          applyPresentationChange(r);
+          setLibrary((old) => {
+            const byId = new Map(old.documents.map((d) => [d.document_id, d]));
+            const next = {
+              ...r,
+              documents: r.documents.map((d) => {
                   const existing = byId.get(d.document_id);
                   return existing && sameValue(existing, d) ? existing : d;
                 }),
-          };
-          return sameValue(old, next) ? old : next;
-        });
-        setLoadedScope(JSON.stringify([folder, group, recent]));
-        setError("");
-        if (folder && !(folder in folderCounts(r.folders))) {
+            };
+            return sameValue(old, next) ? old : next;
+          });
+          setLoadedScope(requestScope);
+          setError("");
+        };
+        const cached = !quiet && peekCachedLibrary(action);
+        if (cached) { applyPage(cached); setLoading(false); }
+        else if (!quiet) setLoading(true);
+        const r = await api<Library>(action, undefined, controller.signal);
+        if (generation !== libraryGeneration.current || controller.signal.aborted) return;
+        applyPage(r);
+        if (folder && !taxonomyCursor.current && !r.taxonomy_has_more && !(folder in folderCounts(r.folders))) {
           const parts = folder.split(" / ");
           let next: string | undefined;
           while (parts.length > 1) {
@@ -316,9 +337,9 @@ export default function App() {
           );
           setFolder(next);
         }
-        if (group && !r.groups.includes(group)) setGroup(undefined);
+        if (group && !taxonomyCursor.current && !r.taxonomy_has_more && !r.groups.includes(group)) setGroup(undefined);
       } catch (e) {
-        if (generation === libraryGeneration.current)
+        if (generation === libraryGeneration.current && (e as Error).name !== "AbortError")
           setError((e as Error).message);
       } finally {
         if (generation === libraryGeneration.current) setLoading(false);
@@ -326,10 +347,12 @@ export default function App() {
           activeLibrary.current = undefined;
       }
     },
-    [folder, group, recent, sort, descending, library.documents.length],
+    [folder, group, recent, sort, descending, library.next_cursor],
   );
   useEffect(() => {
+    taxonomyCursor.current = "";
     void load();
+    return () => libraryAbort.current?.abort();
   }, [folder, group, recent, sort, descending]);
   useEffect(() => {
     let busy = false;
@@ -342,13 +365,15 @@ export default function App() {
           await api<
             Pick<
               Library,
-              "index_revision" | "organization_revision" | "processing"
+              "library_id" | "index_revision" | "organization_revision" | "manual_revision" | "processing"
             >
           >("progress");
         if (canceled) return;
         if (
           next.index_revision !== library.index_revision ||
-          next.organization_revision !== library.organization_revision
+          next.organization_revision !== library.organization_revision ||
+          next.manual_revision !== library.manual_revision ||
+          next.library_id !== library.library_id
         )
           await load(false, true);
         else
@@ -375,7 +400,7 @@ export default function App() {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", poll);
     };
-  }, [load, library.index_revision, library.organization_revision]);
+  }, [load, library.library_id, library.index_revision, library.organization_revision, library.manual_revision]);
   useEffect(() => {
     if (rebuild) void load(false, true);
   }, [rebuild?.request_id, rebuild?.status, rebuild?.phase]);
@@ -403,17 +428,13 @@ export default function App() {
     setSearching(true);
     setSearchError("");
     let succeeded = false;
-    api<{
-      matches: Doc[];
-      evaluation: { status: string };
-      status: string;
-      answer?: SearchAnswer;
-    }>(
+    api<SearchResponse | Job<SearchResponse>>(
       evaluate ? "ask" : "search",
       evaluate ? { query: submitted, folder, group, limit: 3 } : { query: submitted, mode, folder, group, limit: 40 },
       c.signal,
     )
-      .then((r) => {
+      .then(async (reply) => {
+        const present = (r: SearchResponse) => {
         if (n !== searchGeneration.current) return;
         succeeded = true;
         setMatches(r.matches);
@@ -427,6 +448,9 @@ export default function App() {
           setSearchError(
             "Indexing is disabled. Stored files remain available in All files.",
           );
+        };
+        if ("job_id" in reply) await waitForJob(reply, c.signal, present);
+        else present(reply);
       })
       .catch((e) => {
         if (e.name !== "AbortError" && n === searchGeneration.current)
@@ -485,7 +509,8 @@ export default function App() {
     setNeighbors([]);
     setLinksError("");
     setLinksLoading(false);
-    if (!focusDoc) return;
+    // Neighborhoods feed the map; Files and the reader have their own bounded reads.
+    if (!focusDoc || view !== "map") return;
     setLinksLoading(true);
     api<{ documents: Doc[]; links: Link[] }>(
       `neighborhood?id=${encodeURIComponent(focusDoc.document_id)}&version=${encodeURIComponent(focusDoc.version)}`,
@@ -507,6 +532,7 @@ export default function App() {
     return () => c.abort();
   }, [
     linksRetry,
+    view,
     focusDoc?.document_id,
     focusDoc?.version,
     rebuild?.completed,
@@ -516,6 +542,8 @@ export default function App() {
   ]);
   const select = useCallback(
     (d: Doc, e?: SelectionEvent) => {
+      setAgentOpened("");
+      setAgentMatch(undefined);
       lastFocus.current = document.activeElement as HTMLElement;
       setChosenLink(undefined);
       if (selected?.document_id !== d.document_id) setInspectorTab("preview");
@@ -571,6 +599,34 @@ export default function App() {
     },
     [select],
   );
+  const { command: agentCommand, context: assistantContext, agentOpened, agentMatch,
+    setAgentOpened, setAgentMatch } = useAppUI({
+    view: { selected, selectedIds, folder, group, recent, inspectorVisible, readerExpanded,
+      inspectorTab, query, submitted, mode, evaluate, view, layout, sort, descending, searchOrder },
+    documents: visibleDocs,
+    folders: Object.keys(folderCounts(library.folders)), groups: library.groups,
+    ready: showSearch ? hasSearchResults && !searching : loadedScope === wantedScope && !loading,
+    error: showSearch ? searchError : error,
+    hasEvidence: !!(hasSearchResults && matches.find(d => d.document_id === selected?.document_id)?.evidence?.length),
+    update: (next, action) => {
+      if (next.inspectorVisible && (next.folder !== folder || next.group !== group || next.recent !== recent))
+        restoringReader.current = true;
+      setSelected(next.selected); setSelectedIds(next.selectedIds);
+      setFolder(next.folder); setGroup(next.group); setRecent(next.recent);
+      setInspectorVisible(next.inspectorVisible); setReaderExpanded(next.readerExpanded);
+      setInspectorTab(next.inspectorTab); setChosenLink(undefined);
+      if (next.submitted !== submitted) restoringSearchOrder.current = true;
+      setQuery(next.query); setSubmitted(next.submitted); setMode(next.mode); setEvaluate(next.evaluate);
+      if (action !== "highlight_evidence") setEvidenceNavigation(undefined);
+      setView(next.view); setLayout(next.layout); setSort(next.sort); setDescending(next.descending);
+      setSearchOrder(next.searchOrder);
+      if (action === "show_search") setSearchNonce(n => n + 1);
+    },
+    highlight: (doc, evidence) => setEvidenceNavigation(old => ({
+      sequence: (old?.sequence || 0) + 1, document_id: doc.document_id, version: doc.version,
+      evidence_id: evidence, agent: true,
+    })),
+  });
   const quickLookDoc = useCallback(
     (d: Doc) => {
       previewOrigin.current = document.activeElement as HTMLElement;
@@ -581,6 +637,8 @@ export default function App() {
     [select],
   );
   function closeInspector() {
+    setAgentOpened("");
+    setAgentMatch(undefined);
     setInspectorVisible(false);
     setReaderExpanded(false);
     setChosenLink(undefined);
@@ -700,117 +758,19 @@ export default function App() {
     if (!node) return;
     node.scrollTop = scrolls.current.get(contextKey) || 0;
   }, [contextKey]);
-  const pending = transfers.filter(
-    (t) =>
-      t.document &&
-      t.percent === 100 &&
-      !t.error &&
-      t.state === indexingLabel("pending"),
-  );
-  useEffect(() => {
-    if (!pending.length) return;
-    const c = new AbortController();
-    let busy = false;
-    const poll = async () => {
-      if (busy || document.hidden) return;
-      busy = true;
-      try {
-        const result = await api<{ documents: Record<string, Doc> }>(
-          "statuses",
-          {
-            document_ids: pending.map((t) => t.document!.document_id),
-          },
-          c.signal,
-        );
-        if (!c.signal.aborted)
-          setTransfers((ts) =>
-            ts.map((item) => {
-              const row =
-                item.document && result.documents[item.document.document_id];
-              return row
-                ? {
-                    ...item,
-                    state:
-                      row.version === item.document!.version
-                        ? indexingLabel(row.status)
-                        : "Stored · Historical version",
-                  }
-                : item;
-            }),
-          );
-      } catch {
-        /* Next status poll retries. */
-      } finally {
-        busy = false;
-      }
-    };
-    void poll();
-    const interval = setInterval(() => void poll(), 4000);
-    return () => {
-      c.abort();
-      clearInterval(interval);
-    };
-  }, [pending.map((t) => t.id).join(",")]);
-  async function transfer(item: Transfer) {
-    setTransfers((ts) =>
-      ts.map((t) =>
-        t.id === item.id ? { ...t, error: undefined, state: "Uploading" } : t,
-      ),
-    );
-    try {
-      const d = await uploadFile(
-        item.file,
-        (n) =>
-          setTransfers((ts) =>
-            ts.map((t) => (t.id === item.id ? { ...t, percent: n } : t)),
-          ),
-        { requestId: item.id, ...item.options },
-        library,
-      );
-      setTransfers((ts) =>
-        ts.map((t) =>
-          t.id === item.id
-            ? {
-                ...t,
-                document: d,
-                state: indexingLabel(d.status),
-                percent: 100,
-              }
-            : t,
-        ),
-      );
+  const transfers = useTransfers({
+    limits: library,
+    onStored: async (doc, updating) => {
       await load(false, true);
-      if (item.options) {
-        select(d);
+      if (updating) {
+        select(doc);
         // An explicit successful update opens the newly stored version.
-        setSelected(d);
+        setSelected(doc);
       }
-    } catch (e) {
-      setTransfers((ts) =>
-        ts.map((t) =>
-          t.id === item.id
-            ? { ...t, state: "Failed", error: (e as Error).message }
-            : t,
-        ),
-      );
-    }
-  }
-  const uploadQueue = useRef(Promise.resolve());
-  function addFiles(files: File[], updating?: Doc) {
-    const items: Transfer[] = files.map((file) => ({
-      file,
-      id: crypto.randomUUID(),
-      percent: 0,
-      state: "Queued",
-      options: updating
-        ? { id: updating.document_id, expected: updating.version }
-        : undefined,
-    }));
-    setTransfers((ts) => [...ts, ...items]);
-    uploadQueue.current = uploadQueue.current.then(async () => {
-      for (const item of items) await transfer(item);
-    });
-  }
+    },
+    onOpen: (doc) => { openDoc(doc); setSelected(doc); },
+  });
+  const { addFiles } = transfers;
   function update(d: Doc) {
     updateDoc.current = d;
     updateInput.current?.click();
@@ -848,7 +808,8 @@ export default function App() {
               : ""),
         );
       }
-      const { url } = await r.json();
+      const submitted = await r.json();
+      const { url } = submitted.job_id ? await waitForJob<{url: string}>(submitted) : submitted;
       const a = document.createElement("a");
       a.href = url;
       a.download = "Symbiknow files.zip";
@@ -1025,7 +986,7 @@ export default function App() {
       query={submitted}
       evaluate={evaluate}
       unavailable={unavailable}
-      layout="list"
+      layout={layout}
       scope={folder}
       sort={showSearch ? searchSort : recent ? "date" : sort}
       descending={showSearch ? searchDescending : recent || descending}
@@ -1108,6 +1069,8 @@ export default function App() {
       <Sidebar
         key={library.library_id + ":" + layoutRevision}
         folders={library.folders}
+        onNextTaxonomy={library.taxonomy_has_more ? () => { taxonomyCursor.current = library.taxonomy_next_after || ""; void load(false, false, false, true); } : undefined}
+        onFirstTaxonomy={taxonomyCursor.current ? () => { taxonomyCursor.current = ""; void load(false, false, false, true); } : undefined}
         folder={folder}
         recent={recent}
         libraryId={library.library_id}
@@ -1154,17 +1117,17 @@ export default function App() {
           inputRef={input}
           query={query}
           onQuery={setQuery}
-          onSubmit={() => {
-            if (query.trim()) {
-              setSubmitted(query.trim());
+          onSubmit={(searchQuery) => {
+            if (searchQuery.trim()) {
+              setSubmitted(searchQuery.trim());
               setSearchNonce((n) => n + 1);
             } else clear();
           }}
           onClear={clear}
           mode={mode}
-          onMode={setMode}
+          onMode={(value) => { setMode(value); setSubmitted(""); }}
           evaluate={evaluate}
-          onEvaluate={(value) => { setEvaluate(value); if (value) setMode("semantic"); }}
+          onEvaluate={(value) => { setEvaluate(value); setSubmitted(""); if (value) setMode("semantic"); }}
           folder={folder}
           onFolder={setFolder}
           folders={library.folders}
@@ -1175,6 +1138,14 @@ export default function App() {
           submitted={showSearch}
           actions={
             <>
+              <div className="header-assistants" role="group" aria-label="Library assistants">
+                <JevDecisions onResolved={() => { void load(false, true); setSearchNonce(n => n + 1); }} />
+                <button ref={setAssistantLauncher} className="assistant-launch" type="button"
+                  aria-label="Ask an agent" title="Ask an agent" aria-expanded={assistantVisible}
+                  aria-controls="assistant-panel" onClick={() => setAssistantVisible(value => !value)}>
+                  <MessageCircle size={17} aria-hidden="true" /><span>Ask an agent</span>
+                </button>
+              </div>
               <AppearanceMenu />
               <Menu.Root>
                 <Menu.Trigger asChild>
@@ -1188,6 +1159,23 @@ export default function App() {
                 </Menu.Trigger>
                 <Menu.Portal>
                   <Menu.Content className="menu" align="end">
+                    <Menu.Label className="menu-label">Browse</Menu.Label>
+                    <Menu.Item onSelect={() => setInventoryOpen(true)}>
+                      <Archive size={14} aria-hidden="true" /> Browse all originals
+                    </Menu.Item>
+                    <Menu.Item onSelect={() => setReviewHistoryOpen(true)}>
+                      <History size={14} aria-hidden="true" /> Review history
+                    </Menu.Item>
+                    <Menu.Item onSelect={() => void load()}>
+                      <RefreshCw size={14} aria-hidden="true" /> Refresh library
+                    </Menu.Item>
+                    {rebuild && (
+                      <Menu.Item onSelect={() => setProgressHidden(false)}>
+                        <Sparkles size={14} aria-hidden="true" /> Show review status
+                      </Menu.Item>
+                    )}
+                    <Menu.Separator className="menu-separator" />
+                    <Menu.Label className="menu-label">Organize with Jev</Menu.Label>
                     <Menu.Item
                       disabled={busy || !library.unfiled_review_count}
                       onSelect={() => setReviewMode("unfiled")}
@@ -1202,67 +1190,20 @@ export default function App() {
                     </Menu.Item>
                     <Menu.Separator className="menu-separator" />
                     <Menu.Item
+                      className="menu-danger"
                       disabled={busy}
                       onSelect={() => setResetOpen(true)}
                     >
-                      Reset organization…
+                      <RotateCcw size={14} aria-hidden="true" /> Reset organization…
                     </Menu.Item>
-                    <Menu.Item onSelect={() => setReviewHistoryOpen(true)}>
-                      Review history
-                    </Menu.Item>
-                    <Menu.Item onSelect={() => void load()}>
-                      Refresh library
-                    </Menu.Item>
-                    {rebuild && (
-                      <Menu.Item onSelect={() => setProgressHidden(false)}>
-                        Show review status
-                      </Menu.Item>
-                    )}
                   </Menu.Content>
                 </Menu.Portal>
               </Menu.Root>
             </>
           }
         />
-        {transfers.some(t => t.error || t.state === "Uploading") && (
-          <div className="transfers" aria-live="polite">
-            {transfers.filter(t => t.error || t.state === "Uploading").map((t) => (
-              <div key={t.id}>
-                <Upload size={14} />
-                <strong>{t.file.name}</strong>
-                <span>
-                  {t.state === "Uploading"
-                    ? `Uploading ${t.percent}% · ${Math.round((t.file.size * t.percent) / 100).toLocaleString()} / ${t.file.size.toLocaleString()} bytes`
-                    : t.state}
-                </span>
-                {t.error ? (
-                  <>
-                    <span className="error">{t.error}</span>
-                    <button
-                      onClick={() => {
-                        uploadQueue.current = uploadQueue.current.then(() =>
-                          transfer(t),
-                        );
-                      }}
-                    >
-                      Retry
-                    </button>
-                  </>
-                ) : t.percent === 100 ? (
-                  <button
-                    onClick={() =>
-                      setTransfers((ts) => ts.filter((x) => x.id !== t.id))
-                    }
-                  >
-                    Dismiss
-                  </button>
-                ) : (
-                  <progress max={100} value={t.percent} />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <ImportFormats maxFileBytes={library.max_file_bytes} />
+        <TransferPanel {...transfers} />
         {busy && reviewStatus}
         <div
           className={
@@ -1333,18 +1274,35 @@ export default function App() {
                 </h1>
                 <p className="secondary" role="status" aria-live="polite">
                   {showSearch
-                    ? searching
+                    ? searching || (!hasSearchResults && !searchError)
                       ? hasSearchResults
-                        ? `${matches.length} retrieved files · Refreshing…`
-                        : "Searching…"
-                      : `Showing ${matches.length} matches · ${evaluate ? `${answer.evaluated_count ?? checked} checked · ${matches.filter((d) => d.jev?.status === "evaluated" && d.evidence?.some((e) => !!e.text && d.jev?.supporting_chunk_ids?.includes(e.evidence_id))).length} supporting · ${matches.filter((d) => d.jev?.status === "evaluated" && d.jev?.possible_conflicting_chunk_ids?.length).length} possible conflict · ${Math.max(0, (answer.candidate_count ?? matches.length) - (answer.evaluated_count ?? checked))} not checked` : "Answer checking off"}${searchSort !== "relevance" ? " · Sorted loaded matches" : ""}`
+                        ? `${matches.length} loaded matches in ${scopeLabel} · Refreshing…`
+                        : `Searching in ${scopeLabel}…`
+                      : hasSearchResults ? `Showing ${matches.length} loaded matches in ${scopeLabel} · ${evaluate ? `${answer.evaluated_count ?? checked} checked · ${matches.filter((d) => d.jev?.status === "evaluated" && d.evidence?.some((e) => !!e.text && d.jev?.supporting_chunk_ids?.includes(e.evidence_id))).length} supporting · ${matches.filter((d) => d.jev?.status === "evaluated" && d.jev?.possible_conflicting_chunk_ids?.length).length} possible conflict · ${Math.max(0, (answer.candidate_count ?? matches.length) - (answer.evaluated_count ?? checked))} not checked` : "Answer checking off"}${searchSort !== "relevance" ? " · Sorted loaded matches" : ""}` : `Search unavailable in ${scopeLabel}`
                     : `${library.total} files${folder ? ` · ${childFolders.length} subfolders` : ""}${recent ? " · Latest version activity" : ""}`}
                 </p>
+                {showSearch && <div className="search-inventory-context">
+                  <p className="secondary">Current search request: <q>{submitted}</q></p>
+                  {loadedScope === wantedScope && <p>
+                    {library.total} files total in {scopeLabel}. Search returns a limited set of matching files.
+                    {" "}<button className="link-button" onClick={clear}>Show all {library.total} files in this scope</button>
+                  </p>}
+                </div>}
               </div>
               <div className="heading-tools">
                 {!busy && !readerExpanded && reviewStatus}
                 <div className="library-actions">
-                  <FreshnessReview onOpen={openDoc} onUpdate={update} />
+                  {view !== "map" && <select aria-label="File layout" title="File layout" value={layout}
+                    onChange={(event) => setLayout(event.target.value as "list" | "grid")}>
+                    <option value="list">List</option>
+                    <option value="grid">Cards</option>
+                  </select>}
+                  <select aria-label="Display density" title="Row density" value={density}
+                    onChange={(event) => setDensity(event.target.value as "compact" | "comfortable")}>
+                    <option value="compact">Compact</option>
+                    <option value="comfortable">Comfortable</option>
+                  </select>
+                  {view !== "map" && <FreshnessReview onOpen={openDoc} onUpdate={update} />}
                   {folder === "" && !showSearch && (
                     <button
                       disabled={busy || !library.unfiled_review_count}
@@ -1406,6 +1364,11 @@ export default function App() {
                       : mode === "grep" ? "These files contain matching extracted lines. Open Evidence to inspect the source passages. Results are not checked answers." : "Results are retrieved by meaning. Open Evidence to inspect matching passages; relevance is not a factual verification."}
                   </span>
                 </div>
+                {!searching && !searchError && hasNoStrongMatch(rawMatches, mode, evaluate) && (
+                  <p className="notice" role="status">
+                    No strong match for this search. These are the closest files, but they may not be relevant. Try different words, or use Exact text.
+                  </p>
+                )}
                 {searchError && (
                   <p className="notice error" role="alert">
                     {searchError}
@@ -1500,9 +1463,9 @@ export default function App() {
                   view === "map" ? (
                     canvas
                   ) : (
-                    <ConnectedWorkspace featured={focusDoc} selected={selected} folders={childFolders}
+                    <ConnectedWorkspace featured={focusDoc} selected={selected} folders={recent ? [] : childFolders}
                       files={files} group={group} onOpen={openDoc} onFolder={setFolder}
-                      onMap={() => { setView("map"); setFreeformMap(false); }} />
+                      onMap={() => { if (focusDoc) setSelectedIds([focusDoc.document_id]); setView("map"); setFreeformMap(false); }} />
                   )
                 ) : (
                   <div className="empty">
@@ -1537,6 +1500,7 @@ export default function App() {
                         Showing {library.documents.length} of {library.total}{" "}
                         files
                       </span>
+                      {pageIndex.current > 0 && <button disabled={loading} onClick={() => void load(false, false, true)}>Previous page</button>}
                       {library.has_more && (
                         <button
                           disabled={
@@ -1545,7 +1509,7 @@ export default function App() {
                           }
                           onClick={() => void load(true)}
                         >
-                          Load more files
+                          Next page
                         </button>
                       )}
                       {view === "map" &&
@@ -1612,6 +1576,7 @@ export default function App() {
                   doc={selected}
                   visibleIds={visibleDocs.map((d) => d.document_id)}
                   initialTab={inspectorTab}
+                  onTabChange={setInspectorTab}
                   evidenceNavigation={evidenceNavigation}
                   onVersion={(version) =>
                     setSelected((d) => (d ? { ...d, version } : d))
@@ -1631,7 +1596,7 @@ export default function App() {
                     library.organization_revision
                   }
                   match={
-                    hasSearchResults
+                    agentMatch?.document_id === selected.document_id && agentMatch.version === selected.version ? agentMatch : hasSearchResults
                       ? matches.find(
                           (m) => m.document_id === selected.document_id,
                         )
@@ -1749,18 +1714,16 @@ export default function App() {
             setSelected(undefined);
             setSelectedIds([]);
             setOpen(false);
-            setTransfers((ts) =>
-              ts.filter(
-                (t) => t.document?.document_id !== target.doc.document_id,
-              ),
-            );
+            transfers.forgetDocument(target.doc.document_id);
           } else await api("delete-folder", { folder: target.folder });
           setSearchNonce((n) => n + 1);
           await load(false, true);
         }}
       />
       <ReviewHistory job={rebuild} libraryId={library.library_id} open={reviewHistoryOpen} onOpenChange={setReviewHistoryOpen} onShowCurrent={() => setProgressHidden(false)} />
-      <JevDecisions onResolved={() => { void load(false, true); setSearchNonce(n => n + 1); }} />
+      <OriginalInventory open={inventoryOpen} onOpenChange={setInventoryOpen} onOpen={openDoc} />
+      <Suspense fallback={assistantVisible ? <div className="assistant-loading" role="status">Loading chat…<button type="button" aria-label="Close agent chat" onClick={() => { setAssistantVisible(false); assistantLauncher?.focus(); }}><X size={18} /></button></div> : null}><Assistant launcher={assistantLauncher} visible={assistantVisible} setVisible={setAssistantVisible} context={assistantContext} command={agentCommand} changed={() => { void load(false, true); setSearchNonce(n => n + 1); }} /></Suspense>
+      {agentOpened && <div className="assistant-opened">{agentOpened}<button type="button" onClick={() => history.back()}>Back</button></div>}
       {dragging && (
         <div className="drop-overlay">
           <Upload size={36} />

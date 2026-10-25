@@ -10,7 +10,7 @@ export default function AppearanceMenu() {
         <button
           className="icon"
           aria-label="Appearance"
-          title={`Appearance: ${mode}`}
+          title={`Theme: ${mode === "system" ? "System" : mode === "dark" ? "Dark" : "Light"} · Click to change`}
         >
           {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
         </button>

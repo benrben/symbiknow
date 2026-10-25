@@ -30,7 +30,7 @@ test("100-document map pan and zoom measurement", async ({ page }) => {
       },
     }),
   );
-  await page.route("**/api/search", (r) =>
+  await page.route(/\/api\/(?:search|ask)$/, (r) =>
     r.fulfill({
       json: {
         matches: docs,
@@ -73,7 +73,9 @@ test("100-document map pan and zoom measurement", async ({ page }) => {
     after: await cdp.send("Performance.getMetrics"),
     heap: await cdp.send("Runtime.getHeapUsage"),
   };
-  await fs.mkdir(path.join(project, "artifacts/memory-research"), { recursive: true });
+  await fs.mkdir(path.join(project, "artifacts/memory-research"), {
+    recursive: true,
+  });
   await fs.writeFile(
     path.join(project, `artifacts/memory-research/map-${report.mode}.json`),
     JSON.stringify(report, null, 2),

@@ -6,14 +6,15 @@ import {
   Sparkles,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useState, type RefObject, type ReactNode } from "react";
+import { useEffect, useState, type RefObject, type ReactNode } from "react";
 import { folderCounts } from "../../../shared/api/client";
 export type Mode = "semantic" | "grep";
+type SearchStyle = Mode | "exact";
 export default function SearchBar(p: {
   inputRef: RefObject<HTMLInputElement | null>;
   query: string;
   onQuery: (q: string) => void;
-  onSubmit: () => void;
+  onSubmit: (query: string) => void;
   onClear: () => void;
   mode: Mode;
   onMode: (m: Mode) => void;
@@ -31,6 +32,14 @@ export default function SearchBar(p: {
 }) {
   const [folderQuery, setFolderQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchStyle, setSearchStyle] = useState<SearchStyle>(p.mode);
+  const [matchCase, setMatchCase] = useState(true);
+  const [wholeWord, setWholeWord] = useState(false);
+  useEffect(() => {
+    setSearchStyle((current) => p.mode === "semantic"
+      ? "semantic"
+      : current === "semantic" ? "grep" : current);
+  }, [p.mode]);
   const paths = Object.keys(folderCounts(p.folders))
     .filter((f) => !!f && f.toLowerCase().includes(folderQuery.toLowerCase()))
     .sort();
@@ -41,7 +50,14 @@ export default function SearchBar(p: {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            p.onSubmit();
+            const rawQuery = p.query.trim();
+            if (searchStyle === "exact" && rawQuery) {
+              const flags = `${matchCase ? "" : "i"}${wholeWord ? "w" : ""}`;
+              const escaped = rawQuery.replace(/'/g, "'\\''");
+              p.onSubmit(`grep -F${flags} -e '${escaped}'`);
+            } else {
+              p.onSubmit(rawQuery);
+            }
           }}
         >
           <div className="search-ask-switch" role="group" aria-label="Search or ask">
@@ -51,7 +67,7 @@ export default function SearchBar(p: {
           <input
             ref={p.inputRef}
             aria-label="Search your knowledge"
-            placeholder={p.evaluate ? "Ask a question about your files…" : p.mode === "grep" ? 'grep -in "your pattern"' : p.folder ? "Search in " + p.folder.split(" / ").at(-1) : "Find an idea, a file, a connection…"}
+            placeholder={p.evaluate ? "Ask a question about your files…" : searchStyle === "exact" ? "Search exact text…" : p.mode === "grep" ? 'grep -in "your pattern"' : p.folder ? "Search in " + p.folder.split(" / ").at(-1) : "Find an idea, a file, a connection…"}
             value={p.query}
             onChange={(e) => p.onQuery(e.target.value)}
           />
@@ -70,8 +86,16 @@ export default function SearchBar(p: {
           )}
           <button className="search-submit" type="submit" aria-label={p.evaluate ? "Ask Jev" : "Run search"}>↵</button>
         </form>
-        {!p.evaluate ? <select className="search-method-select" aria-label="Search mode" value={p.mode} onChange={e => p.onMode(e.target.value as Mode)}><option value="semantic">Semantic</option><option value="grep">Grep</option></select>
-          : <span className="ask-method" title="Semantic retrieval and evidence checking. Selected passages are sent to the configured hosted judge.">Semantic + checking</span>}
+        {!p.evaluate ? <select className="search-method-select" aria-label="Search mode" title="Search mode" value={searchStyle} onChange={e => {
+          const next = e.target.value as SearchStyle;
+          setSearchStyle(next);
+          p.onMode(next === "semantic" ? "semantic" : "grep");
+        }}><option value="semantic">Semantic</option><option value="exact">Exact text</option><option value="grep">Advanced grep</option></select>
+          : <span className="ask-method" role="status" title="Ask always uses semantic retrieval plus evidence checking. Selected passages are sent to the configured hosted judge. Switch to Search to change the mode.">Semantic + checking</span>}
+        {!p.evaluate && searchStyle === "exact" && <div className="exact-search-options" role="group" aria-label="Exact text options">
+          <label><input type="checkbox" checked={matchCase} onChange={e => setMatchCase(e.target.checked)} /> Match case</label>
+          <label><input type="checkbox" checked={wholeWord} onChange={e => setWholeWord(e.target.checked)} /> Whole word</label>
+        </div>}
         <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
           <Dialog.Trigger asChild>
             <button
@@ -92,7 +116,7 @@ export default function SearchBar(p: {
                 <div>
                   <Dialog.Title>Search filters</Dialog.Title>
                   <Dialog.Description>
-                    Choose where to search and how to find relevant files.
+                    Choose where to search and how to find relevant files. Use Browse all originals in Library actions to filter saved files by project or search status.
                   </Dialog.Description>
                 </div>
                 <Dialog.Close asChild>
@@ -161,9 +185,9 @@ export default function SearchBar(p: {
                 ))}
               </select>
               <p className="field-help">
-                Groups connect related topics across folders.
+                Topics describe subjects across folders. A folder is placement, not project ownership.
               </p>
-              <p className="field-help">Search finds passages by meaning or with grep commands. Ask uses semantic search and sends selected passages to the configured hosted judge for answer checking.</p>
+              <p className="field-help">Search finds passages by meaning, exact text, or advanced grep. Ask uses semantic search and sends selected passages to the configured hosted judge for answer checking.</p>
               <div className="search-options-footer">
                 <button
                   onClick={() => {
@@ -181,15 +205,15 @@ export default function SearchBar(p: {
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
-        <button className="import-button primary" onClick={p.add}>
+        <button className="import-button primary" aria-label="Import" title="Import files" onClick={p.add}>
           <Upload size={16} />
-          Import
+          <span className="import-label">Import</span>
         </button>
         {p.actions}
       </header>
-      {(p.evaluate || p.mode === "grep") && <div className="tool-explanation" role="note">{p.evaluate
+      {(p.evaluate || searchStyle === "grep") && <div className="tool-explanation" role="note"><span>{p.evaluate
         ? "Ask checks up to 3 files by meaning. Selected passages are sent to the configured hosted judge."
-        : 'Grep searches extracted text in the current scope. Example: grep -in "cache" · Supports -i, -F, -E, -w, -x, -v, -n and -e. No file paths or shell operators.'}</div>}
+        : 'Advanced grep searches extracted text in the current scope. Example: grep -in "cache" · Supports -i, -F, -E, -w, -x, -v, -n and -e. No file paths or shell operators.'}</span></div>}
       {(p.folder !== undefined || p.group) && (
         <div className="scope-chips" aria-label="Current search scope">
           {p.folder !== undefined && (

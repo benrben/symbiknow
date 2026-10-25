@@ -24,6 +24,8 @@ MODEL_REVISION = "2c791de4ddbe5cabd592cc93692f7acb67e52555"
 MLX_VLM_REVISION = "3d87e88402f307efbf68e568971aa887ee7d9ed0"
 TORCHAO_VERSION = "0.17.0"
 TORCH_INT8_GROUP = 16
+# Padded tokens per torch forward pass; indexing sends four 512-token chunks.
+TOKEN_BUDGET = 4096
 _RUNTIME_LOCK = threading.RLock()
 
 
@@ -205,6 +207,22 @@ def _features(processor, items, images=False):
         )
 
 
+def _token_groups(items, budget=TOKEN_BUDGET):
+    """Split text so one padded forward pass stays within the token budget."""
+    if len(items) < 2:
+        return [items]
+    with _RUNTIME_LOCK:
+        lengths = [len(ids) for ids in get_tokenizer()(list(items), truncation=True, max_length=2048)["input_ids"]]
+    groups, start, longest = [], 0, 0
+    for index, length in enumerate(lengths):
+        longest = max(longest, length)
+        if index > start and longest * (index - start + 1) > budget:
+            groups.append(items[start:index])
+            start, longest = index, length
+    groups.append(items[start:])
+    return groups
+
+
 def _valid(vectors, dimension):
     result = np.asarray(vectors, dtype=np.float32)
     if result.ndim != 2 or result.shape[1] != dimension or not np.isfinite(result).all():
@@ -267,6 +285,12 @@ class EmbeddingGemma2:
         self.device, self.dtype = device, dtype
 
     def encode(self, items, images=False):
+        groups = [items] if images else _token_groups(items)
+        if len(groups) > 1:
+            return np.concatenate([self._encode(group) for group in groups])
+        return self._encode(items, images)
+
+    def _encode(self, items, images=False):
         import torch
 
         features = _features(self.processor, items, images)
@@ -388,7 +412,7 @@ class ModelManager:
         self.loads = 0
         self.factory = factory
         self.timeout = (
-            float(os.getenv("SYMBIKNOW_MODEL_IDLE_SECONDS", "60")) if timeout is None else timeout
+            float(os.getenv("SYMBIKNOW_MODEL_IDLE_SECONDS", "0")) if timeout is None else timeout
         )
 
     @property
@@ -522,7 +546,7 @@ class ModelManager:
     def job_boundary(self):
         with self.lock:
             if self.runtime:
-                if self.runtime.vision:
+                if self.runtime.vision and (self.timeout > 0 or os.environ.get("SYMBIKNOW_RELEASE_MODELS_AFTER_JOB") == "1"):
                     self._unload()
                     self._clear_vectors()
                     if self.timer:
@@ -532,10 +556,10 @@ class ModelManager:
                     self.runtime.clear()
 
     def conversion_boundary(self):
-        # OCR/layout conversion does not use embedding weights. Avoid carrying
-        # a cached encoder into the child-model peak. New searches can reload it
-        # while conversion runs; this lock waits for any current inference first.
-        self.unload(force=True)
+        # Keep interactive weights warm by default. Memory-constrained installs
+        # can opt into releasing them at conversion/job boundaries.
+        if self.timeout > 0 or os.environ.get("SYMBIKNOW_RELEASE_MODELS_AFTER_JOB") == "1":
+            self.unload(force=True)
 
     def _vector_cache_stats(self):
         with self.cache_lock:

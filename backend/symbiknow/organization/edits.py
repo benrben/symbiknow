@@ -9,7 +9,8 @@ import json
 import os
 import re
 import uuid
-import copy
+import sqlite3
+from contextlib import contextmanager
 from collections import OrderedDict
 import threading
 from pathlib import Path
@@ -36,39 +37,64 @@ def path(data_dir):
 
 _SNAPSHOTS = OrderedDict()
 _SNAPSHOT_LOCK = threading.RLock()
+_FOLDER_OPERATIONS = threading.RLock()
 
 
-def _state(data_dir):
-    file = path(data_dir).resolve()
-    with _SNAPSHOT_LOCK:
-        stamp = (file.stat().st_mtime_ns, file.stat().st_ino) if file.exists() else None
-        cached = _SNAPSHOTS.get(file)
-        if cached is None or cached[0] != stamp:
-            value = json.loads(file.read_text()) if stamp else {"schema": 1, "assignments": {}}
-            cached = (stamp, value, frozenset(value["assignments"]))
-            _SNAPSHOTS[file] = cached
-        _SNAPSHOTS.move_to_end(file)
-        while len(_SNAPSHOTS) > 4:
-            _SNAPSHOTS.popitem(last=False)
-        return cached[1]
+@contextmanager
+def _database(data_dir):
+    file = path(data_dir).with_suffix(".sqlite3")
+    file.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(file, timeout=15)
+    try:
+        with _SNAPSHOT_LOCK:
+            db.execute("PRAGMA journal_mode=WAL")
+            db.execute("CREATE TABLE IF NOT EXISTS assignments(id TEXT PRIMARY KEY,payload TEXT NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,payload TEXT NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY,args TEXT,state TEXT,result TEXT)")
+            db.execute("CREATE TABLE IF NOT EXISTS moves(operation TEXT,id TEXT,version TEXT,source TEXT,destination TEXT,state TEXT DEFAULT 'pending',PRIMARY KEY(operation,id))")
+            db.execute("CREATE INDEX IF NOT EXISTS pending_moves ON moves(operation,state,id)")
+        legacy = path(data_dir)
+        # The marker lives in the copied database: file inode/mtime are not a
+        # migration identity. Import and marker commit together, exactly once.
+        with db:
+            saved = db.execute("SELECT payload FROM metadata WHERE key='legacy'").fetchone()
+            if not saved:
+                db.execute("BEGIN IMMEDIATE")
+                saved = db.execute("SELECT payload FROM metadata WHERE key='legacy'").fetchone()
+            if not saved:
+                value = json.loads(legacy.read_text()) if legacy.exists() else {"schema": 1, "assignments": {}}
+                db.executemany("INSERT OR IGNORE INTO assignments VALUES(?,?)", [(identity, json.dumps(assignment)) for identity, assignment in value["assignments"].items()])
+                db.execute("INSERT OR IGNORE INTO metadata VALUES('summary',?)", (json.dumps({k: value[k] for k in ("revision", "change") if k in value}),))
+                db.execute("INSERT INTO metadata VALUES('legacy','imported')")
+            yield db
+    finally:
+        db.close()
+
+
+def _publish(db, change):
+    # Presentation invalidation is bounded even when a background operation moves
+    # a large folder. The authoritative assignments are indexed separately.
+    ids = change.get("document_ids", [])
+    change = {**change, "document_ids": ids[:100], "all_documents": len(ids) > 100}
+    db.execute("INSERT OR REPLACE INTO metadata VALUES('summary',?)",
+               (json.dumps({"revision": str(uuid.uuid4()), "change": change}),))
 
 
 def read(data_dir):
-    # Mutable copies only for callers performing an edit.
-    with _SNAPSHOT_LOCK:
-        return copy.deepcopy(_state(data_dir))
+    """Full export for background maintenance; never used by a bounded read."""
+    with _database(data_dir) as db:
+        state = json.loads(db.execute("SELECT payload FROM metadata WHERE key='summary'").fetchone()[0])
+        return {"schema": 1, **state, "assignments": {r[0]: json.loads(r[1]) for r in db.execute("SELECT id,payload FROM assignments")}}
 
 
 def summary(data_dir):
-    with _SNAPSHOT_LOCK:
-        value = _state(data_dir)
-        return {key: copy.deepcopy(value[key]) for key in ("revision", "change") if key in value}
+    with _database(data_dir) as db:
+        return json.loads(db.execute("SELECT payload FROM metadata WHERE key='summary'").fetchone()[0])
 
 
 def assignment_ids(data_dir):
-    with _SNAPSHOT_LOCK:
-        _state(data_dir)
-        return _SNAPSHOTS[path(data_dir).resolve()][2]
+    with _database(data_dir) as db:
+        return frozenset(r[0] for r in db.execute("SELECT id FROM assignments"))
 
 
 def normalize(value, allow_empty=False):
@@ -89,57 +115,63 @@ def normalize(value, allow_empty=False):
 
 
 def override(data_dir, identity):
-    return copy.deepcopy(_state(data_dir)["assignments"].get(identity))
+    return overrides(data_dir, [identity]).get(identity)
 
 
 def overrides(data_dir, identities):
-    """One authoritative ledger snapshot for a bounded metadata batch."""
-    with _SNAPSHOT_LOCK:
-        assignments = _state(data_dir)["assignments"]
-        return {identity: copy.deepcopy(assignments[identity]) for identity in identities if identity in assignments}
+    """One indexed lookup per bounded batch; no full-ledger deserialization."""
+    from itertools import islice
+    result = {}
+    iterator = iter(dict.fromkeys(identities))
+    with _database(data_dir) as db:
+        while batch := list(islice(iterator, 256)):
+            result.update((r[0], json.loads(r[1])) for r in db.execute(
+                "SELECT id,payload FROM assignments WHERE id IN (" + ",".join("?" for _ in batch) + ")", batch))
+    return result
 
 
 def clear(data_dir, identities, reset=False):
-    state = read(data_dir)
-    for identity in identities:
-        state["assignments"].pop(identity, None)
-    state["revision"] = str(uuid.uuid4())
-    if reset:
-        state["change"] = {"kind": "reset", "document_ids": list(identities)}
-    atomic(path(data_dir), state)
+    identities = list(identities)
+    with _database(data_dir) as db:
+        db.executemany("DELETE FROM assignments WHERE id=?", [(identity,) for identity in identities])
+        _publish(db, {"kind": "reset" if reset else "move", "document_ids": identities})
+    from symbiknow.organization import readmodel
+    readmodel.refresh(data_dir, identities)
 
 
 def reset_expected(data_dir, expected, request_id):
-    """Replayable explicit reset: never erase a manual edit made after capture."""
-    with _SNAPSHOT_LOCK:
-        state = read(data_dir)
-        removed = [identity for identity, assignment in expected.items()
-                   if state["assignments"].get(identity) == assignment]
-        if not removed:
-            return
-        for identity in removed:
-            state["assignments"].pop(identity)
-        state["revision"] = str(uuid.uuid4())
-        state["change"] = {"kind": "reset", "request_id": request_id, "document_ids": removed}
-        atomic(path(data_dir), state)
+    """Replayable reset; the SQL predicate preserves every later manual edit."""
+    removed = []
+    with _database(data_dir) as db:
+        for identity, assignment in expected.items():
+            found = db.execute("SELECT payload FROM assignments WHERE id=?", (identity,)).fetchone()
+            if found and json.loads(found[0]) == assignment:
+                db.execute("DELETE FROM assignments WHERE id=?", (identity,))
+                removed.append(identity)
+        if removed:
+            _publish(db, {"kind": "reset", "request_id": request_id, "document_ids": removed})
+    if removed:
+        from symbiknow.organization import readmodel
+        readmodel.refresh(data_dir, removed)
 
 
 def recover(data_dir):
-    # Schema 1 transactions already stored their authoritative assignments before
-    # writing derived rows. The shared manual view now publishes those atomically.
-    state = read(data_dir)
-    if state.pop("transaction", None) is not None:
-        atomic(path(data_dir), state)
+    # Legacy authoritative assignments migrate transactionally on first access.
+    with _database(data_dir):
+        pass
 
 
-def edit(action, args, context=None):
+def edit(action, args, context=None, *, operation_id=None):
     from symbiknow.core.application import current_application
     server = context or current_application()
     from symbiknow.search.index import INDEX_LOCK, _table, get_document_status
+    from symbiknow.organization import readmodel
+    if action != "move-documents" and readmodel.ready(server.DATA_DIR):
+        with _FOLDER_OPERATIONS:
+            return _edit_folder(action, args, server, operation_id or str(uuid.uuid4()))
 
     with server.write_lock, INDEX_LOCK:
         recover(server.DATA_DIR)
-        state = read(server.DATA_DIR)
         table = _table(server.DATA_DIR, "documents")
         rows = []
         rename = None
@@ -202,14 +234,95 @@ def edit(action, args, context=None):
             }
             rename = {"from": source, "to": destination} if destination else None
 
-        for row in rows:
-            identity = row["document_id"]
-            state["assignments"][identity] = {"folder": destinations[identity], "revision": str(uuid.uuid4())}
-        state["revision"] = str(uuid.uuid4())
-        state["change"] = {
-            "kind": "rename" if rename else "move",
-            "paths": rename,
-            "document_ids": list(destinations),
-        }
-        atomic(path(server.DATA_DIR), state)
+        with _database(server.DATA_DIR) as db:
+            db.executemany("INSERT OR REPLACE INTO assignments VALUES(?,?)", [
+                (identity, json.dumps({"folder": folder, "revision": str(uuid.uuid4())}))
+                for identity, folder in destinations.items()])
+            _publish(db, {"kind": "rename" if rename else "move", "paths": rename, "document_ids": list(destinations)})
+        from symbiknow.organization import readmodel
+        readmodel.refresh(server.DATA_DIR, destinations)
         return {"updated": len(rows), "folder": destination, "paths": rename}
+
+
+def _edit_folder(action, args, context, operation_id):
+    """Capture once, then publish bounded guarded batches with durable progress."""
+    from symbiknow.organization import readmodel
+    from symbiknow.search.index import document_statuses
+    from itertools import islice
+    root = context.DATA_DIR
+    binding = json.dumps([action, args], sort_keys=True)
+    source = normalize(args["folder"])
+    if action == "remove-folder":
+        destination = ""
+    elif action == "rename-folder":
+        name = normalize(args["name"])
+        if " / " in name:
+            raise ValueError("Rename accepts one folder name; use Move to for a path")
+        parent = source.rsplit(" / ", 1)[0] if " / " in source else ""
+        destination = (parent + " / " if parent else "") + name
+    elif action == "move-folder":
+        parent = normalize(args["destination"], allow_empty=True)
+        if parent == source or parent.startswith(source + " / "):
+            raise ValueError("A folder cannot move into itself or a descendant")
+        destination = (parent + " / " if parent else "") + source.split(" / ")[-1]
+    else:
+        raise ValueError("Unknown organization edit")
+    rename = {"from": source, "to": destination} if destination else None
+    with _database(root) as db:
+        old = db.execute("SELECT args,state,result FROM operations WHERE id=?", (operation_id,)).fetchone()
+        if old and old[0] != binding:
+            raise ValueError("Operation ID belongs to another edit")
+        if old and old[1] == "completed":
+            return json.loads(old[2])
+        capturing = not old or old[1] == "capturing"
+        if capturing:
+            db.execute("INSERT OR REPLACE INTO operations VALUES(?,?,'capturing',NULL)", (operation_id, binding))
+            db.execute("DELETE FROM moves WHERE operation=?", (operation_id,))
+    if capturing:
+        with readmodel.connection(root) as snapshot:
+            snapshot.execute("BEGIN")
+            if destination and destination != source and snapshot.execute(
+                "SELECT 1 FROM counts WHERE kind='folder-casefold' AND name=? AND value>0", (destination.casefold(),)).fetchone():
+                raise ValueError("A folder already exists at the destination; choose another name")
+            cursor = snapshot.execute("SELECT d.payload FROM membership m JOIN documents d ON d.id=m.id WHERE m.scope=? ORDER BY m.id", (readmodel.scope_key(source),))
+            count = 0
+            while batch := list(islice(cursor, 128)):
+                values = []
+                for row in batch:
+                    row = readmodel.decode(row[0])
+                    target = destination + row["folder"][len(source):] if destination else ""
+                    values.append((operation_id, row["document_id"], row["version"], row["folder"], target))
+                with _database(root) as db:
+                    db.executemany("INSERT INTO moves(operation,id,version,source,destination) VALUES(?,?,?,?,?)", values)
+                count += len(values)
+            if not count:
+                raise FileNotFoundError("Folder not found")
+        with _database(root) as db:
+            db.execute("UPDATE operations SET state='applying' WHERE id=?", (operation_id,))
+    while True:
+        if context.stop.is_set():
+            raise InterruptedError("Folder edit will resume after restart")
+        with _database(root) as db:
+            batch = db.execute("SELECT id,version,source,destination FROM moves WHERE operation=? AND state='pending' ORDER BY id LIMIT 16", (operation_id,)).fetchall()
+        if not batch:
+            break
+        with context.snapshots.read() as snapshot:
+            ids = [r[0] for r in batch]
+            rows, heads = document_statuses(root, ids), snapshot.heads_many(ids)
+            applied = []
+            with _database(root) as db:
+                for identity, version, old_folder, target in batch:
+                    row = rows.get(identity)
+                    valid = row and row["version"] == heads.get(identity) == version and row["folder"] == old_folder
+                    if valid:
+                        db.execute("INSERT OR REPLACE INTO assignments VALUES(?,?)", (identity, json.dumps({"folder": target, "revision": str(uuid.uuid4())})))
+                        applied.append(identity)
+                    db.execute("UPDATE moves SET state=? WHERE operation=? AND id=?", ("applied" if valid else "skipped", operation_id, identity))
+                _publish(db, {"kind": "rename" if rename else "move", "paths": rename, "document_ids": applied})
+            readmodel.refresh(root, applied)
+    with _database(root) as db:
+        counts = dict(db.execute("SELECT state,count(*) FROM moves WHERE operation=? GROUP BY state", (operation_id,)))
+        result = {"updated": counts.get("applied", 0), "skipped": counts.get("skipped", 0), "folder": destination, "paths": rename}
+        db.execute("UPDATE operations SET state='completed',result=? WHERE id=?", (json.dumps(result), operation_id))
+        db.execute("DELETE FROM moves WHERE operation=?", (operation_id,))
+    return result

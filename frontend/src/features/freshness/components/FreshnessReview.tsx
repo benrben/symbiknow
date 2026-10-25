@@ -12,6 +12,7 @@ const labels: Record<string, string> = {
 const gaps: Record<string, string> = {
   unreadable_or_changed_documents: "Files unreadable or changed",
   passages_without_text: "Passages without readable text",
+  sensitive_content_withheld: "Files withheld because they may contain credentials",
   bounded_candidate_windows: "Comparison searches with limited coverage",
   context_limit_pairs: "Pairs needing more context than could be checked",
   changed_evidence_pairs: "Comparisons affected by changed evidence",
@@ -28,11 +29,14 @@ export default function FreshnessReview(p: {
   onUpdate: (doc: Doc) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [page, setPage] = useState<FreshnessPage>();
+  const [response, setResponse] = useState<{ key: string; value: FreshnessPage }>();
   const [scanId, setScanId] = useState("");
   const [after, setAfter] = useState("");
   const [category, setCategory] = useState("");
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [referenceError, setReferenceError] = useState("");
+  const [referenceLoading, setReferenceLoading] = useState(false);
   const [working, setWorking] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [note, setNote] = useState<Record<string, string>>({});
@@ -40,16 +44,21 @@ export default function FreshnessReview(p: {
   const [referenceName, setReferenceName] = useState("");
   const [referenceOpen, setReferenceOpen] = useState(false);
   const [referenceOffset, setReferenceOffset] = useState(0);
-  const [referencePage, setReferencePage] = useState<Library>();
+  const [referenceResponse, setReferenceResponse] = useState<{ offset: number; value: Library }>();
+  const referencePage = referenceResponse?.offset === referenceOffset ? referenceResponse.value : undefined;
+  const pageKey = JSON.stringify([scanId, open ? after : "", open ? category : "", p.doc?.document_id, open]);
+  const page = response?.key === pageKey ? response.value : undefined;
   const scan = page?.scan;
   useEffect(() => {
     if (!open || !referenceOpen) return;
     const controller = new AbortController();
+    setReferenceLoading(true); setReferenceError("");
     void api<Library>(`library?limit=100&offset=${referenceOffset}`, undefined, controller.signal)
-      .then(setReferencePage)
-      .catch(e => { if (e.name !== "AbortError") setError(e.message); });
+      .then(value => { if (!controller.signal.aborted) setReferenceResponse({ offset: referenceOffset, value }); })
+      .catch(e => { if (!controller.signal.aborted) setReferenceError(e.message); })
+      .finally(() => { if (!controller.signal.aborted) setReferenceLoading(false); });
     return () => controller.abort();
-  }, [open, referenceOpen, referenceOffset]);
+  }, [open, referenceOpen, referenceOffset, refresh]);
   useEffect(() => {
     // A closed document-specific control does no polling.
     if (p.doc && !open) return;
@@ -64,16 +73,16 @@ export default function FreshnessReview(p: {
       if (p.doc) params.set("document_id", p.doc.document_id);
       try {
         const result = await api<FreshnessPage>("freshness?" + params, undefined, controller.signal);
-        if (alive) { setPage(result); setError(""); }
+        if (alive) { setResponse({ key: pageKey, value: result }); setLoadError(""); }
       } catch (e) {
-        if (alive && (e as Error).name !== "AbortError") setError((e as Error).message);
+        if (alive && (e as Error).name !== "AbortError") setLoadError((e as Error).message);
       } finally {
         if (alive) timer = setTimeout(() => void load(), 4000);
       }
     };
     void load();
     return () => { alive = false; controller.abort(); clearTimeout(timer); };
-  }, [open, scanId, after, category, refresh, p.doc?.document_id]);
+  }, [open, scanId, after, category, refresh, p.doc?.document_id, pageKey]);
 
   async function action(work: () => Promise<unknown>) {
     setWorking(true); setError("");
@@ -102,7 +111,7 @@ export default function FreshnessReview(p: {
         <button className="freshness-trigger">
           <FileSearch size={16} />
           {p.doc ? "Review freshness" : "Check for outdated documents"}
-          {!p.doc && active(scan?.status) ? " · Running" : !p.doc && scan?.findings_total ? ` · ${scan.findings_total}` : ""}
+          {!p.doc && active(scan?.status) ? <span className="status-pill" role="status">Running</span> : !p.doc && scan?.findings_total ? <span className="status-pill">{scan.findings_total}</span> : null}
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -119,14 +128,14 @@ export default function FreshnessReview(p: {
             <Dialog.Close asChild><button className="icon" aria-label="Close freshness review"><X size={18} /></button></Dialog.Close>
           </div>
           <div className="freshness-controls">
-            <button disabled={working || active(scan?.status)} onClick={() => void start(p.doc ? [p.doc.document_id] : undefined)}>
+            <button disabled={working || !page || !!loadError || active(scan?.status)} onClick={() => void start(p.doc ? [p.doc.document_id] : undefined)}>
               {p.doc ? "Recheck this file" : "Scan all documents"}
             </button>
             {scan && active(scan.status) && <button disabled={working} onClick={() => void action(() => api("freshness-cancel", { scan_id: scan.scan_id }))}>Cancel scan</button>}
             <details onToggle={e => setReferenceOpen(e.currentTarget.open)}>
               <summary>Optional reference</summary>
               <label>Trusted reference document
-                <select value={reference} onChange={e => {
+                <select disabled={referenceLoading || !referencePage} value={reference} onChange={e => {
                   setReference(e.target.value);
                   setReferenceName(referencePage?.documents.find(d => d.document_id === e.target.value)?.filename || "");
                 }}>
@@ -136,13 +145,16 @@ export default function FreshnessReview(p: {
                 </select>
               </label>
               <div className="freshness-controls">
-                {referenceOffset > 0 && <button onClick={() => setReferenceOffset(v => Math.max(0, v - 100))}>Previous reference files</button>}
-                {referencePage?.has_more && <button onClick={() => setReferenceOffset(v => v + 100)}>More reference files</button>}
+                {referenceOffset > 0 && <button disabled={referenceLoading} onClick={() => setReferenceOffset(v => Math.max(0, v - 100))}>Previous reference files</button>}
+                {referencePage?.has_more && <button disabled={referenceLoading} onClick={() => setReferenceOffset(v => v + 100)}>More reference files</button>}
               </div>
+              {referenceLoading && <p role="status">Loading reference files…</p>}
+              {referenceError && <p role="alert">{referenceError} <button onClick={() => setRefresh(v => v + 1)}>Retry reference files</button></p>}
               <small>Choose a reference only if it applies to the same product, environment and time. Without one, disagreements remain conflicts.</small>
             </details>
           </div>
           {error && <p className="notice error" role="alert">{error}</p>}
+          {loadError && <p className="notice error" role="alert">{loadError} <button onClick={() => setRefresh(v => v + 1)}>Retry freshness results</button></p>}
           {scan && (
             <section className="freshness-progress" aria-live="polite">
               <strong>{scan.status === "partial" ? "Finished with gaps" : scan.status === "completed" ? "Scan finished" : scan.status.replaceAll("_", " ")}</strong>
@@ -172,7 +184,8 @@ export default function FreshnessReview(p: {
             </label>
           </div>
           {p.doc && <p>Showing findings involving {p.doc.filename}.</p>}
-          {!scan && <p>No scan yet. Start a scan when you want to check the library.</p>}
+          {!page && !loadError && <p role="status">Loading freshness review…</p>}
+          {page && !scan && <p>No scan yet. Start a scan when you want to check the library.</p>}
           {scan && !page?.findings.length && <p>{active(scan.status) ? "Findings will appear as comparisons finish." : "No suggestions in this view. This does not prove the documents are up to date."}</p>}
           <div className="freshness-findings">
             {page?.findings.map(f => (

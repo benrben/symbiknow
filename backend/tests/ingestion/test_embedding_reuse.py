@@ -86,9 +86,10 @@ def test_actual_vision_precision_gets_its_own_text_vector_identity():
         assert np.all(owner.embed_query("cat") == 2)
         assert owner.runtime.calls == 2  # image plus one text query on vision weights
         owner.job_boundary()
-        assert owner.query_vectors.bytes == 0
-        assert np.all(owner.embed_query("cat") == 1)
-        assert owner.loads == 3
+        assert owner.query_vectors.bytes > 0
+        owner.conversion_boundary()
+        assert np.all(owner.embed_query("cat") == 2)
+        assert owner.loads == 2
     finally:
         owner.unload(force=True)
 

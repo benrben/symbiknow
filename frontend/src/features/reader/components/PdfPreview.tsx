@@ -1,22 +1,26 @@
+import { downloadOriginal } from "../../../shared/api/client";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { fileUrl, type Doc } from "../../../shared/api/client";
+import { readPreview } from "../preview";
 
 export default function PdfPreview({ doc }: { doc: Doc }) {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState<number>();
-  const [url, setUrl] = useState("");
+  const [preview, setPreview] = useState<{ identity: string; url: string }>();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const identity = `${doc.document_id}:${doc.version}:${page}`;
+  const url = preview?.identity === identity ? preview.url : "";
   useEffect(() => {
     const controller = new AbortController();
     let objectUrl = "";
-    setUrl("");
+    setPreview(undefined);
     setError("");
     setLoading(true);
-    fetch(
+    readPreview(
       `/api/pdf-page?id=${encodeURIComponent(doc.document_id)}&version=${encodeURIComponent(doc.version)}&page=${page}`,
-      { signal: controller.signal },
+      controller.signal,
     )
       .then(async (response) => {
         if (!response.ok)
@@ -28,7 +32,7 @@ export default function PdfPreview({ doc }: { doc: Doc }) {
         const blob = await response.blob();
         if (controller.signal.aborted) return;
         objectUrl = URL.createObjectURL(blob);
-        setUrl(objectUrl);
+        setPreview({ identity, url: objectUrl });
         if (Number.isInteger(count) && count > 0) setPages(count);
       })
       .catch((e) => {
@@ -41,7 +45,7 @@ export default function PdfPreview({ doc }: { doc: Doc }) {
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [doc.document_id, doc.version, page]);
+  }, [doc.document_id, doc.version, page, identity]);
   return (
     <div className="pdf-preview-container">
       <div className="pdf-navigation">
@@ -82,7 +86,15 @@ export default function PdfPreview({ doc }: { doc: Doc }) {
       {error && (
         <p className="notice" role="status">
           PDF page preview unavailable. {error}.{" "}
-          <a href={fileUrl(doc, true)}>Download PDF</a>
+          <a
+            href={fileUrl(doc, true)}
+            onClick={(e) => {
+              e.preventDefault();
+              void downloadOriginal(doc);
+            }}
+          >
+            Download PDF
+          </a>
         </p>
       )}
       {url && (

@@ -74,9 +74,19 @@ export type NumericValue = {
   calculation: Calculation | null;
 };
 
+export type ProviderFailure = {
+  code: string;
+  message: string;
+  retryable: boolean;
+  recovery: string;
+  http_status?: number;
+  request_id?: string;
+};
+
 export type SearchAnswer = {
   status: string;
   reason?: string;
+  failure?: ProviderFailure;
   candidate_count?: number;
   evaluated_count?: number;
   withheld_count?: number;
@@ -389,6 +399,21 @@ export type CardPreview = {
 export type Evaluation = {
   status: string;
   error?: string;
+  failure?: ProviderFailure;
+};
+
+export type RetrievalFallbackArguments = {
+  query: string;
+  mode: "semantic" | "keyword" | "hybrid" | "grep";
+  limit: number;
+  folder: string | null;
+  group: string | null;
+  evaluate: false;
+};
+
+export type RetrievalFallback = {
+  tool: "search";
+  arguments: RetrievalFallbackArguments;
 };
 
 export type IndexingProgress = {
@@ -397,11 +422,21 @@ export type IndexingProgress = {
   retry_documents: number;
 };
 
+export type RelatedDoc = {
+  document_id: string;
+  version: string;
+  filename: string;
+  folder?: string;
+  relevance: number;
+};
+
 export type SearchResponse = {
   matches: Array<Doc>;
   status?: string;
   evaluation: Evaluation;
   answer?: SearchAnswer;
+  related?: Array<RelatedDoc>;
+  retrieval_fallback?: RetrievalFallback;
   continue_search?: string | null;
   indexing?: IndexingProgress;
 };

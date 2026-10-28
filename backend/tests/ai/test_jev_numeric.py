@@ -342,3 +342,10 @@ def test_publication_and_refresh_require_context_document(tmp_path, monkeypatch,
     else:
         assert refreshed[0]["jev"]["status"] == "not_evaluated"
         assert refreshed[0]["jev"]["reason"] == "evidence_changed"
+
+
+def test_equal_authority_conflicting_value_needs_context_not_no_answer():
+    r, (matches, answer) = evaluate(verdicts={"v0": "conflicting"})
+    assert not matches and "values" not in answer
+    assert answer["status"] == "needs_context"
+    assert r["matches"][0]["jev"]["evidence_disagreement"] == "accepted"

@@ -59,9 +59,19 @@ class NumericValue(TypedDict):
     calculation: Calculation | None
 
 
+class ProviderFailure(TypedDict):
+    code: str
+    message: str
+    retryable: bool
+    recovery: str
+    http_status: NotRequired[int]
+    request_id: NotRequired[str]
+
+
 class SearchAnswer(TypedDict):
     status: str
     reason: NotRequired[str]
+    failure: NotRequired[ProviderFailure]
     candidate_count: NotRequired[int]
     evaluated_count: NotRequired[int]
     withheld_count: NotRequired[int]
@@ -352,6 +362,21 @@ class CardPreview(TypedDict):
 class Evaluation(TypedDict):
     status: str
     error: NotRequired[str]
+    failure: NotRequired[ProviderFailure]
+
+
+class RetrievalFallbackArguments(TypedDict):
+    query: str
+    mode: Literal["semantic", "keyword", "hybrid", "grep"]
+    limit: int
+    folder: str | None
+    group: str | None
+    evaluate: Literal[False]
+
+
+class RetrievalFallback(TypedDict):
+    tool: Literal["search"]
+    arguments: RetrievalFallbackArguments
 
 
 class IndexingProgress(TypedDict):
@@ -360,11 +385,19 @@ class IndexingProgress(TypedDict):
     retry_documents: int
 
 
+class RelatedDoc(IdentityFields):
+    filename: str
+    folder: NotRequired[str]
+    relevance: float
+
+
 class SearchResponse(TypedDict):
     matches: list[Doc]
     status: NotRequired[str]
     evaluation: Evaluation
     answer: NotRequired[SearchAnswer]
+    related: NotRequired[list[RelatedDoc]]
+    retrieval_fallback: NotRequired[RetrievalFallback]
     continue_search: NotRequired[str | None]
     indexing: NotRequired[IndexingProgress]
 

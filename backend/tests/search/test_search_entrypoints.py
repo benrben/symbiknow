@@ -141,3 +141,48 @@ def test_grep_entrypoint_does_not_request_judging(shared_search, monkeypatch):
     assert response.status_code == 200
     complete(response.json())
     assert calls == [("grep", 2, None, None)]
+
+
+def test_no_answer_in_small_window_rechecks_one_deeper_window(shared_search, monkeypatch):
+    calls, _ = shared_search
+    judged = []
+
+    def provider(state, questions, client=None):
+        # The answer only exists once the sixth-ranked document is supplied.
+        found = any(d["document_id"] == "d5" for d in state["documents"])
+        judged.append(len(state["documents"]))
+        with sdk({} if found else {"coverage": "missing"}) as client:
+            return client.system_one(state=state, questions=questions)
+
+    monkeypatch.setattr(jev, "_call", provider)
+    answered = server.search("needle", mode="answer", limit=3, detail="full")
+    assert [c[1] for c in calls] == [3, jev.ANSWER_CANDIDATES]
+    assert judged == [3, jev.ANSWER_CANDIDATES]
+    assert answered["answer"]["status"] == "answered"
+    calls.clear()
+
+    def absent(state, questions, client=None):
+        with sdk({"coverage": "missing"}) as client:
+            return client.system_one(state=state, questions=questions)
+
+    monkeypatch.setattr(jev, "_call", absent)
+    missing = server.search("absent", mode="answer", limit=3, detail="full")
+    # Deepened once, never repeatedly.
+    assert [c[1] for c in calls] == [3, jev.ANSWER_CANDIDATES]
+    assert missing["answer"]["status"] == "no_answer_in_evaluated_candidates"
+
+
+def test_deeper_window_never_weakens_a_checked_negative(shared_search, monkeypatch):
+    calls, _ = shared_search
+
+    def provider(state, questions, client=None):
+        # Confident "missing" for three files; an unsure judgment for six.
+        wide = len(state["documents"]) > 3
+        with sdk({"coverage": "missing"}, confidence=0.5 if wide else 0.99) as client:
+            return client.system_one(state=state, questions=questions)
+
+    monkeypatch.setattr(jev, "_call", provider)
+    result = server.search("absent", mode="answer", limit=3, detail="full")
+    assert [c[1] for c in calls] == [3, jev.ANSWER_CANDIDATES]
+    assert result["answer"]["status"] == "no_answer_in_evaluated_candidates"
+    assert result["answer"]["evaluated_count"] == 3

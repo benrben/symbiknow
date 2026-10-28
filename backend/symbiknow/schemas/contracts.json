@@ -263,6 +263,36 @@
       ],
       "additionalProperties": true
     },
+    "ProviderFailure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string"
+        },
+        "http_status": {
+          "type": "integer"
+        },
+        "request_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable",
+        "recovery"
+      ],
+      "additionalProperties": true
+    },
     "SearchAnswer": {
       "type": "object",
       "properties": {
@@ -271,6 +301,9 @@
         },
         "reason": {
           "type": "string"
+        },
+        "failure": {
+          "$ref": "#/$defs/ProviderFailure"
         },
         "candidate_count": {
           "type": "integer"
@@ -1579,10 +1612,84 @@
         },
         "error": {
           "type": "string"
+        },
+        "failure": {
+          "$ref": "#/$defs/ProviderFailure"
         }
       },
       "required": [
         "status"
+      ],
+      "additionalProperties": true
+    },
+    "RetrievalFallbackArguments": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "semantic",
+            "keyword",
+            "hybrid",
+            "grep"
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evaluate": {
+          "enum": [
+            false
+          ]
+        }
+      },
+      "required": [
+        "query",
+        "mode",
+        "limit",
+        "folder",
+        "group",
+        "evaluate"
+      ],
+      "additionalProperties": true
+    },
+    "RetrievalFallback": {
+      "type": "object",
+      "properties": {
+        "tool": {
+          "enum": [
+            "search"
+          ]
+        },
+        "arguments": {
+          "$ref": "#/$defs/RetrievalFallbackArguments"
+        }
+      },
+      "required": [
+        "tool",
+        "arguments"
       ],
       "additionalProperties": true
     },
@@ -1606,6 +1713,33 @@
       ],
       "additionalProperties": true
     },
+    "RelatedDoc": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "relevance": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "document_id",
+        "version",
+        "filename",
+        "relevance"
+      ],
+      "additionalProperties": true
+    },
     "SearchResponse": {
       "type": "object",
       "properties": {
@@ -1623,6 +1757,15 @@
         },
         "answer": {
           "$ref": "#/$defs/SearchAnswer"
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RelatedDoc"
+          }
+        },
+        "retrieval_fallback": {
+          "$ref": "#/$defs/RetrievalFallback"
         },
         "continue_search": {
           "anyOf": [

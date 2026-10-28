@@ -49,7 +49,7 @@ class SearchService:
                 }
             )
         from symbiknow.search.index import IndexChangedError
-        from symbiknow.ai.jev import MAX_MATCHES
+        from symbiknow.ai.jev import ANSWER_CANDIDATES, MAX_MATCHES
 
         # Answer checking has one server-owned retrieval window. A caller's larger
         # display limit must not deepen retrieval and overflow the verifier context.
@@ -57,55 +57,75 @@ class SearchService:
 
         # find_documents releases INDEX_LOCK while embedding, then validates its
         # current-version rows. An outer lock would serialize unrelated searches.
-        from symbiknow.search.metrics import stage
+        from symbiknow.search.metrics import add, stage
 
-        with stage("retrieval"):
-            # One retry for concurrent ingestion/organization, before spending any
-            # provider budget. Never spin or return a mixed-version snapshot.
-            for attempt in range(2):
-                try:
-                    matches = self.context.evidence.find_documents(
-                        query,
-                        mode,
-                        retrieval_limit,
-                        folder,
-                        group,
-                        defer_links=True,
-                    )
-                    break
-                except IndexChangedError:
-                    if attempt:
-                        raise self.context.search_error(
-                            "The library is changing during retrieval. Retry this search after indexing or Jev organization finishes."
-                        ) from None
-                    from symbiknow.search.metrics import add
+        def retrieve(count):
+            with stage("retrieval"):
+                # One retry for concurrent ingestion/organization, before spending any
+                # provider budget. Never spin or return a mixed-version snapshot.
+                for attempt in range(2):
+                    try:
+                        return self.context.evidence.find_documents(
+                            query,
+                            mode,
+                            count,
+                            folder,
+                            group,
+                            defer_links=True,
+                        )
+                    except IndexChangedError:
+                        if attempt:
+                            raise self.context.search_error(
+                                "The library is changing during retrieval. Retry this search after indexing or Jev organization finishes."
+                            ) from None
+                        add("retrieval_retries", 1)
 
-                    add("retrieval_retries", 1)
-        candidate_epochs = {match["document_id"]: match.get("evidence_revision", "") for match in matches}
-        if on_retrieved:
-            on_retrieved(matches)
-        evaluation = {"status": "not_requested"}
-        if evaluate:
+        def judge(matches):
             from symbiknow.ai.jev import judge_matches
 
+            epochs = {match["document_id"]: match.get("evidence_revision", "") for match in matches}
             try:
                 with stage("jev"):
                     evaluation = judge_matches(
-                        query, matches, cache_namespace=str(self.context.DATA_DIR.resolve())
+                        query, matches, cache_namespace=str(self.context.DATA_DIR.resolve()),
+                        scope=dict(folder=folder, group=group) if folder or group else None,
                     )
                 matches = evaluation.get("matches", matches)
                 for match in matches:
                     judgment = match.get("jev", {})
                     if judgment.get("verification_dependencies"):
                         match["jev"] = {**judgment, "verification_dependencies": [
-                            {**dependency, "evidence_revision": candidate_epochs.get(dependency["document_id"], "")}
+                            {**dependency, "evidence_revision": epochs.get(dependency["document_id"], "")}
                             for dependency in judgment["verification_dependencies"]
                         ]}
             except Exception as exc:
-                evaluation = {
-                    "status": "unavailable",
-                    "error": f"Jev unavailable ({type(exc).__name__})",
-                }
+                from symbiknow.ai.provider_errors import provider_failure
+
+                evaluation = provider_failure(exc)
+            return matches, evaluation
+
+        matches = retrieve(retrieval_limit)
+        if on_retrieved:
+            on_retrieved(matches)
+        evaluation = {"status": "not_requested"}
+        if evaluate:
+            from symbiknow.ai.jev import answer_results
+
+            matches, evaluation = judge(matches)
+            deeper = min(ANSWER_CANDIDATES, MAX_MATCHES)
+            # Jev found no answer in a full small window: a needed premise often
+            # ranks just below a lookalike, so check one deeper window once.
+            if (len(matches) == retrieval_limit < deeper
+                    and answer_results(matches, evaluation)[1]["status"] == "no_answer_in_evaluated_candidates"):
+                add("answer_retrieval_deepened", 1)
+                wider = retrieve(deeper)
+                if on_retrieved:
+                    on_retrieved(wider)
+                wider, wide_evaluation = judge(wider)
+                # The deeper check can only add an answer; it never turns the
+                # first window's checked negative into a less certain one.
+                if answer_results(wider, wide_evaluation)[1]["status"] in {"answered", "partial", "corrected_premise"}:
+                    matches, evaluation = wider, wide_evaluation
         evaluation = {key: value for key, value in evaluation.items() if key != "matches"}
         matches, revision = self.refresh(matches, folder, group)
         comparison = evaluation.get("cross_document_assessment", {})
@@ -132,16 +152,31 @@ class SearchService:
                             "reason": "disagreement_evidence_changed",
                         }
         answer = {"status": "not_requested"}
+        related = []
         if evaluate:
-            from symbiknow.ai.jev import answer_results
+            from symbiknow.ai.jev import answer_results, related_results
 
+            related = related_results(matches, evaluation)
             matches, answer = answer_results(matches, evaluation)
+        unavailable = answer.get("status") == "unavailable"
         return DomainResult(
             {
                 "matches": matches,
-                "status": "ok",
+                "status": "unavailable" if unavailable else "ok",
                 "evaluation": evaluation,
                 "answer": answer,
+                # Relevant files Jev found no answer in; never answer evidence.
+                **({"related": related} if related else {}),
+                # Keep checked matches reserved for accepted evidence. A fresh
+                # retrieval-only call uses the same scope and version guards,
+                # without mistaking unchecked candidates for verified answers.
+                **({"retrieval_fallback": {
+                    "tool": "search",
+                    "arguments": {
+                        "query": query, "mode": mode, "limit": retrieval_limit,
+                        "folder": folder, "group": group, "evaluate": False,
+                    },
+                }} if unavailable else {}),
                 "indexing": {
                     "processing": self.context.processing.is_set(),
                     "queued_uploads": self.context.pending.qsize(),

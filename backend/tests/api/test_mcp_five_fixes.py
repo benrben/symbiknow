@@ -32,9 +32,10 @@ def test_partial_sdk_response_preserves_support_without_claiming_complete_covera
     assert judgment["supporting_chunk_ids"] == ["doc1:v1:0"]
 
 
-@pytest.mark.parametrize("confidence,accepted", [(.599, False), (.6, True), (.7999, True), (.8, True)])
+@pytest.mark.parametrize("confidence,accepted", [(.449, False), (.599, False), (.6, True), (.7999, True), (.8, True)])
 def test_proof_verification_uses_its_named_acceptance_boundary(confidence, accepted):
-    with sdk({"coverage": "complete"}, confidence=confidence) as client:
+    # Below the gate only a strong focused answer check could publish; this one is weak.
+    with sdk({"coverage": "complete"}, {"states_0_0": 0.89}, confidence=confidence) as client:
         result = jev.judge_matches("What changes search?", [match()], client=client)
     assert bool(jev.answer_results(result["matches"], result)[0]) is accepted
 

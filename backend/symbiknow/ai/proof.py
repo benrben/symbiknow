@@ -1,14 +1,25 @@
 """Bounded joint-document proofs with versioned provenance and whole-context caching."""
 
 import hashlib
+import os
 import re
 import threading
 
 from symbiknow.core.cache import ByteLRU, CoalescingCache, dependency_key, reuse_success
 from symbiknow.ai.jev import ContextBudgetError
+from symbiknow.ai.provider_errors import provider_failure
 from symbiknow.search.metrics import add
 
 VERSION = "joint-proof-4-fitted-windows/qualified-links-2/explicit-anchor-windows-1"
+PER_DOCUMENT_VERSION = "per-document-proof-1"
+
+
+def search_mode():
+    """Experimental switch: SYMBIKNOW_JEV_SEARCH_MODE=per_document judges each file alone."""
+    mode = os.getenv("SYMBIKNOW_JEV_SEARCH_MODE", "joint")
+    if mode not in {"joint", "per_document"}:
+        raise ValueError("SYMBIKNOW_JEV_SEARCH_MODE must be joint or per_document")
+    return mode
 MAX_PASSAGES = 12
 MAX_DOCUMENT_TEXT = 16000
 MAX_CONTEXT_TEXT = 50000
@@ -201,30 +212,99 @@ def dependencies(docs):
     ]
 
 
-def search_decision(query, docs, provider):
+def search_decision(query, docs, provider, scope=None):
     from symbiknow.ai import decisions as rules
     from symbiknow.ai import jev
 
-    row = dict(action="search", question=query, _documents=docs)
+    row = dict(action="search", question=query, _documents=docs, scope=scope)
     response = provider.system_one(
-        state=rules.search_state(query, docs),
+        state=rules.search_state(query, docs, scope),
         questions=rules.build_questions(row, docs),
     )
     first = rules.decode(row, docs, response)
     confidences = [first["confidence"], *[r["confidence"] for r in first["roles"].values()]]
-    if min(confidences) >= jev.PROOF_CONFIDENCE:
+    off = rules.off_subject(first["roles"], docs, response)
+    if off:
+        # A cited passage concerns a different (lookalike) entity: re-decide the
+        # whole answer without it rather than trusting the first coverage.
+        add("proof_off_subject_passages", len(off))
+        kept = rules.without(docs, off)
+        if not kept:
+            return dict(first, answer_status="none", references=[], coverage="missing", off_subject=sorted(off))
+        row = dict(row, _documents=kept)
+    # A correction always gets the targeted denial check below.
+    elif min(confidences) >= jev.PROOF_CONFIDENCE and first["coverage"] != "correction":
         return first
     second = rules.verify_search(row, provider)
+    if off:
+        second["off_subject"] = sorted(off)
+    if second["coverage"] == "correction" and second["confidence"] >= jev.VERIFY_CONFIDENCE:
+        # The generic citation can also pick the passage asserting the premise.
+        check = rules.check_correction(row, provider)
+        if check["denials"]:
+            return dict(second, references=check["denials"], correction_check=check)
+        return dict(second, answer_status="needs_context", references=[], correction_check=check)
+    distribution = second["coverage_distribution"]
+    top = sorted(distribution, key=distribution.get, reverse=True)[:2]
+    answer_kind = next((k for k in top if k in {"complete", "partial"} and distribution[k] > 0), None)
+    if "conflicting" in top and answer_kind and second["cited"] and distribution["conflicting"] > 0 and (
+            second["confidence"] < jev.VERIFY_CONFIDENCE or second["coverage"] == "conflicting"):
+        # The answer hinges on a suspected conflict: settle it pair by pair, since
+        # lookalike scopes and injected instructions often read as disagreement.
+        check = rules.check_conflict(row, second["cited"], provider)
+        if check["conflict_probability"] < jev.CONFLICT_CLEAR_PROBABILITY:
+            return dict(second, coverage=answer_kind, references=second["cited"], conflict_check=check,
+                        answer_status={"complete": "answered", "partial": "partial"}[answer_kind])
+        return dict(second, coverage="conflicting", answer_status="needs_context", references=[], conflict_check=check)
     if second["confidence"] >= jev.VERIFY_CONFIDENCE:
         return second
+    if (second["coverage"] in {"complete", "partial"} and second["cited"]
+            and second["confidence"] >= jev.BORDERLINE_CONFIDENCE):
+        # Just under the gate on the coarse coverage choice: a focused yes/no per
+        # cited passage decides, and only a strong yes for every one publishes.
+        check = rules.check_answer(row, second["cited"], provider)
+        if check["answer_probability"] >= jev.STATES_ANSWER_PROBABILITY:
+            return dict(second, references=second["cited"], answer_check=check,
+                        answer_status={"complete": "answered", "partial": "partial"}[second["coverage"]])
+        return dict(second, answer_status="needs_context", references=[], answer_check=check)
     # The first pass already failed its acceptance gate. An uncertain check
     # cannot revive that preliminary answer (or establish a negative answer).
     return dict(second, answer_status="needs_context", references=[])
 
 
-def judge(query, matches, *, client=None, cache_namespace=None):
+def per_document_decision(query, docs, provider):
+    """Ask each document alone whether it fully or partly answers the question.
+
+    No document sees another, so cross-document joins (rule plus condition,
+    alias plus fact) can only surface as separate partial answers.
+    """
+    from symbiknow.ai import decisions as rules
+
+    judged = {}
+    for doc in docs:
+        response = provider.system_one(state=rules.document_state(query, doc),
+                                       questions=rules.document_questions(doc))
+        judged[doc["document_id"]] = rules.decode_document(doc, response)
+    found = {r["coverage"] for r in judged.values()}
+    status = next((s for c, s in (("full", "answered"), ("partial", "partial"),
+                                  ("correction", "corrected_premise")) if c in found), "none")
+    return dict(
+        status="evaluated",
+        answer_status=status,
+        references=[ref for r in judged.values() for ref in r["references"]],
+        coverage={"answered": "complete", "partial": "partial",
+                  "corrected_premise": "correction"}.get(status, "missing"),
+        returned=[d for d, r in judged.items() if r["coverage"] != "none"],
+        confidence=max(r["confidence"] for r in judged.values()),
+        documents=judged,
+    )
+
+
+def judge(query, matches, *, client=None, cache_namespace=None, scope=None):
     from symbiknow.ai import jev
 
+    mode = search_mode()
+    policy = VERSION if mode == "joint" else f"{VERSION}/{PER_DOCUMENT_VERSION}"
     try:
         if len(query) > 4000:
             raise ContextBudgetError("Question budget")
@@ -237,12 +317,15 @@ def judge(query, matches, *, client=None, cache_namespace=None):
                 ],
             )
         key = dependency_key("proof-judgment", library=cache_namespace, query=query,
-                             documents=docs, version=VERSION, descriptor=jev.judgment_descriptor())
+                             documents=docs, version=policy, scope=scope, descriptor=jev.judgment_descriptor())
         cached = None
 
         def compute():
             provider = Provider(client)
-            decision = search_decision(query, docs, provider)
+            if mode == "joint":
+                decision = search_decision(query, docs, provider, scope)
+            else:
+                decision = per_document_decision(query, docs, provider)
             return dict(decision=decision, model=provider.model, calls=provider.calls)
 
         if client is None and cache_namespace is not None:
@@ -262,8 +345,7 @@ def judge(query, matches, *, client=None, cache_namespace=None):
         )
     except Exception as error:
         return dict(
-            status="unavailable",
-            error=f"Jev unavailable ({type(error).__name__})",
+            **provider_failure(error),
             matches=[
                 dict(m, jev=dict(status="unavailable", reason="provider_unavailable"))
                 for m in matches
@@ -286,13 +368,20 @@ def judge(query, matches, *, client=None, cache_namespace=None):
             )
             continue
         citations = [e["chunk_id"] for e in doc["evidence"] if e["chunk_id"] in refs]
-        label = (
-            "uncertain"
-            if uncertain or conflicting
-            else ("direct" if coverage == "complete" else "partial")
-            if citations and not correction
-            else "related"
-        )
+        if "documents" in decision:
+            # Per-document mode: each file keeps its own answers, not the joint one.
+            own = decision["documents"][doc["document_id"]]["coverage"]
+            coverage = {"full": "complete", "partial": "partial"}.get(own, "none")
+            correction = own == "correction"
+            label = {"full": "direct", "partial": "partial", "none": "unrelated"}.get(own, "related")
+        else:
+            label = (
+                "uncertain"
+                if uncertain or conflicting
+                else ("direct" if coverage == "complete" else "partial")
+                if citations and not correction
+                else "related"
+            )
         judgment = dict(
             status="evaluated",
             label=label,
@@ -323,7 +412,7 @@ def judge(query, matches, *, client=None, cache_namespace=None):
             **({"context_scope": doc["context_scope"]} if "context_scope" in doc else {}),
             basis=sorted({e["basis"] for e in doc["evidence"]}),
             verification_dependencies=deps if citations else [],
-            context_policy=VERSION,
+            context_policy=policy,
             prompt_version=jev.PROMPT_VERSION,
             policy_version=jev.POLICY_VERSION,
             explanation="Answer coverage was checked jointly against supplied original windows. Citations include required rules and observed facts; context dependencies are verified before publication. This is not a check of the complete library.",
@@ -333,10 +422,10 @@ def judge(query, matches, *, client=None, cache_namespace=None):
         status="evaluated",
         matches=output,
         cached=len(docs) if cached is not None else 0,
-        proof_assessment=dict(**assessment, context_policy=VERSION, cache_hit=cached is not None),
+        proof_assessment=dict(**assessment, context_policy=policy, cache_hit=cached is not None),
         cross_document_assessment=dict(
             status="evaluated",
-            context_policy=VERSION,
+            context_policy=policy,
             compared_chunk_ids=[d["chunk_id"] for d in deps],
             scope="All supplied proof windows; not the complete library",
         ),

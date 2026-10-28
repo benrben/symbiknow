@@ -55,6 +55,23 @@ export function reconcileSearchMatches(
   });
 }
 
+export function unavailableAnswerMessage(
+  answer: SearchAnswer,
+  hasCheckedAnswers = false,
+) {
+  // The backend supplies fixed, sanitized messages rather than provider bodies.
+  const failure = answer.failure;
+  const guidance = failure
+    ? `${failure.message} ${failure.recovery}`
+    : "Answer checking could not be completed.";
+  return {
+    title: "Answer checking unavailable",
+    body: `${guidance} ${hasCheckedAnswers
+      ? "Only previously accepted answers are shown."
+      : "This does not mean the answer is missing."} Switch to Search to browse related files.`,
+  };
+}
+
 // Presentation only: the backend decides whether an answer was established.
 export function emptySearchMessage(
   answer: SearchAnswer,
@@ -66,11 +83,7 @@ export function emptySearchMessage(
       title: "No matching files",
       body: "Try different words, another mode, or a broader scope.",
     };
-  if (unavailable)
-    return {
-      title: "Answer checking unavailable",
-      body: "This is not a no-answer judgment. Retry the check or browse related files.",
-    };
+  if (unavailable) return unavailableAnswerMessage(answer);
   if (answer.status === "not_evaluated")
     return {
       title: "Answer was not checked",

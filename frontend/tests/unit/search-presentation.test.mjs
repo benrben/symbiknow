@@ -12,7 +12,7 @@ const { outputText } = ts.transpileModule(source, {
     module: ts.ModuleKind.ES2022,
   },
 });
-const { emptySearchMessage, reconcileSearchMatches, sortSearchMatches } = await import(
+const { emptySearchMessage, reconcileSearchMatches, sortSearchMatches, unavailableAnswerMessage } = await import(
   "data:text/javascript;base64," + Buffer.from(outputText).toString("base64")
 );
 
@@ -76,6 +76,70 @@ test("unchecked, unavailable and genuine negative judgments stay distinct", () =
     "No matching files",
   );
 });
+
+test("billing failures explain the required fix before another check", () => {
+  const message = emptySearchMessage({
+    status: "unavailable",
+    failure: {
+      code: "billing_required",
+      message: "Jev could not check the evidence because the provider rejected billing.",
+      retryable: false,
+      recovery: "Check credits and billing for the configured Jev provider account, then retry the check.",
+      http_status: 402,
+    },
+  }, true, true);
+  assert.equal(message.title, "Answer checking unavailable");
+  assert.match(message.body, /provider rejected billing/);
+  assert.match(message.body, /Check credits and billing.*then retry/);
+  assert.match(message.body, /does not mean the answer is missing/);
+  assert.match(message.body, /browse related files/);
+  assert.doesNotMatch(message.body, /Retry the check or/);
+});
+
+test("transient provider failures retain the provider's recovery advice", () => {
+  const message = unavailableAnswerMessage({
+    status: "unavailable",
+    failure: {
+      code: "rate_limited",
+      message: "Jev is temporarily rate limited by the provider.",
+      retryable: true,
+      recovery: "Wait for the provider's rate limit to reset, then retry the check.",
+      http_status: 429,
+    },
+  });
+  assert.match(message.body, /temporarily rate limited/);
+  assert.match(message.body, /Wait for.*rate limit to reset, then retry/);
+});
+
+test("nonretryable failures do not acquire generic retry advice", () => {
+  const message = unavailableAnswerMessage({
+    status: "unavailable",
+    failure: {
+      code: "permission_denied",
+      message: "The provider denied access to Jev.",
+      retryable: false,
+      recovery: "Check the configured provider account's permissions and model access.",
+    },
+  });
+  assert.match(message.body, /permissions and model access/);
+  assert.doesNotMatch(message.body, /retry|try again/i);
+});
+
+test("legacy unavailable responses neither invent a cause nor promise retry will help", () => {
+  const message = unavailableAnswerMessage({ status: "unavailable" });
+  assert.match(message.body, /could not be completed/);
+  assert.match(message.body, /does not mean the answer is missing/);
+  assert.match(message.body, /browse related files/);
+  assert.doesNotMatch(message.body, /billing|retry|try again/i);
+});
+
+test("partial provider failures preserve the meaning of already checked answers", () => {
+  const message = unavailableAnswerMessage({ status: "unavailable" }, true);
+  assert.match(message.body, /Only previously accepted answers are shown/);
+  assert.match(message.body, /browse related files/);
+  assert.doesNotMatch(message.body, /answer is missing/);
+});
+
 const match = {
   document_id: "answer",
   version: "v2",

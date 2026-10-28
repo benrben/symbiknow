@@ -217,6 +217,15 @@ def project_search(result, detail="compact", *, offset=0, continuation=None, que
         "response_budget_bytes": COMPACT_BYTES,
         "sdk_result_budget_bytes": SDK_RESULT_BYTES,
     }
+    if _bytes(out) > _PAYLOAD_BYTES and "retrieval_fallback" in out:
+        # The exact query and scope can be large even when a provider failure
+        # returns no matches. Never shorten them into a different search.
+        out.pop("retrieval_fallback")
+        out["omissions"]["retrieval_fallback"] = (
+            "use detail=full for exact retrieval-only arguments"
+        )
+    if _bytes(out) > _PAYLOAD_BYTES:
+        raise ValueError("Compact metadata exceeds budget; repeat with detail=full")
     for original in originals[offset:]:
         entry = _entry(original, query)
         out["matches"].append(entry)

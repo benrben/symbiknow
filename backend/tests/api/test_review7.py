@@ -225,7 +225,8 @@ def test_search_cache_metadata_changes_conflicts_low_confidence_and_query_window
     second = jev.judge_matches(
         query, [doc | {"folder": "Review / Renamed"}], cache_namespace="cache-regression"
     )
-    assert len(calls) == 2  # The uncertain first pass receives an exact-text check.
+    # The uncertain first pass receives an exact-text check, then the denial check.
+    assert len(calls) == 3
     assert second["matches"][0]["folder"] == "Review / Renamed"
     judgment = first["matches"][0]["jev"]
     assert judgment["premise_correction_status"] == "accepted"
@@ -234,7 +235,7 @@ def test_search_cache_metadata_changes_conflicts_low_confidence_and_query_window
     assert not judgment["evaluated_evidence_complete"]
     updated = doc | {"version": "v2", "evidence": [rows[0] | {"evidence_id": "opaque:v2:t0"}]}
     jev.judge_matches(query, [updated], cache_namespace="cache-regression")
-    assert len(calls) == 4
+    assert len(calls) == 6
 
 
 def test_document_sampling_reaches_tail_and_query_adds_stored_adjacent_context(tmp_path):

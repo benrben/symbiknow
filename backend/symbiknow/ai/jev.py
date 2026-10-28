@@ -13,12 +13,16 @@ from time import monotonic, perf_counter
 import weakref
 
 from symbiknow.search.metrics import add
+from symbiknow.ai.provider_errors import ProviderConfigurationError, provider_failure
 
 from typesafe_sdk import Choice, Noul, NoulCriteria, RetryPolicy, TypeSafeClient, TypeSafeBadRequestError, SystemOneResponse
 
 from symbiknow.organization.policy import rank_names, representative_evidence, topic_paths, prose_paths, meaningful_subject, descriptive_metadata, project_scope, project_candidate_details, project_identity, ownership_evidence
 
 MAX_MATCHES = 8
+# Checked search re-judges this many retrieved files once when a smaller
+# window has no answer: a needed premise often ranks just below a lookalike.
+ANSWER_CANDIDATES = 6
 MAX_TEXT = 2400
 # Initial conservative policies; retained raw values support later calibration.
 OWNERSHIP_YES = 0.7
@@ -29,7 +33,11 @@ ANSWER_CONFIDENCE = 0.6
 # keys reuse on these same names; never repeat a gate as a literal elsewhere.
 PROOF_CONFIDENCE = 0.8  # first-pass coverage and every passage role
 VERIFY_CONFIDENCE = 0.6  # independent verify-pass coverage
+BORDERLINE_CONFIDENCE = 0.45  # verify coverage from here up to the gate gets a focused answer check
+STATES_ANSWER_PROBABILITY = 0.9  # every cited passage must plainly state the answer
 CITATION_PROBABILITY = 0.8  # verify-pass citation of one passage
+CONFLICT_CLEAR_PROBABILITY = 0.2  # every pairwise conflict check must stay below this
+LOOKALIKE_PROBABILITY = 0.5  # a cited passage at or above this is about a lookalike entity
 CLAIM_SPAN_CONFIDENCE = 0.6  # exact claim span chosen for a link endpoint
 LINK_PROBABILITY = 0.8  # link context, topic, support and conflict checks
 TOPIC_PROBABILITY = 0.75  # defined topic vocabulary
@@ -98,7 +106,7 @@ def _provider_client():
     """Bounded connection reuse; each checked-out client has one caller."""
     key = os.getenv("TYPESAFE_API_KEY", "").strip()
     if not key:
-        raise RuntimeError("TYPESAFE_API_KEY is missing; set it in .env")
+        raise ProviderConfigurationError("TYPESAFE_API_KEY is missing; set it in .env")
     model = os.getenv("TYPESAFE_DEFAULT_MODEL", DEFAULT_MODEL)
     base_url = os.getenv("TYPESAFE_BASE_URL") or None
     identity = hashlib.sha256(json.dumps([key, model, base_url]).encode()).digest()
@@ -271,7 +279,7 @@ def configure_answer_cache(data_dir):
 
 def _call(state, questions, client=None, *, reuse=True):
     if client is None and not os.getenv("TYPESAFE_API_KEY", "").strip():
-        raise RuntimeError("TYPESAFE_API_KEY is missing; set it in .env")
+        raise ProviderConfigurationError("TYPESAFE_API_KEY is missing; set it in .env")
     from symbiknow.ai.sensitive import contains_likely_secret, strings
     from symbiknow.search.metrics import stage
 
@@ -433,6 +441,26 @@ def _evidence(match, query=None):
     return result[: 6 if query else 3]
 
 
+def related_results(matches, evaluation):
+    """Current files Jev judged relevant but not answering, in per-document mode.
+
+    Metadata only, never evidence or citations: these are not answers. The
+    joint proof has no per-file relevance, so it reports none.
+    """
+    judged = evaluation.get("proof_assessment", {}).get("decision", {}).get("documents", {})
+    related = []
+    for match in matches:
+        own = judged.get(match["document_id"], {})
+        if match.get("jev", {}).get("status") == "evaluated" and own.get("coverage") == "related":
+            related.append(dict(
+                document_id=match["document_id"], version=match["version"],
+                filename=match.get("filename", ""),
+                **({"folder": match["folder"]} if match.get("folder") else {}),
+                relevance=own["answers"]["relevant"],
+            ))
+    return related
+
+
 def answer_results(matches, evaluation):
     """Publish answer evidence, never ordinary candidates, when checking answers.
 
@@ -500,6 +528,8 @@ def answer_results(matches, evaluation):
     )
     return accepted, {
         "status": status,
+        **({"failure": evaluation["failure"], "reason": evaluation["failure"]["code"]}
+           if status == "unavailable" and evaluation.get("failure") else {}),
         **(
             {"reason": evaluation["reason"]}
             if status == "not_evaluated" and evaluation.get("reason")
@@ -610,8 +640,7 @@ def _organize_metadata(document, evidence, folders=(), projects=(), *, client=No
             automatic_project = project
     except Exception as error:
         return {
-            "status": "unavailable",
-            "error": f"Jev unavailable ({type(error).__name__})",
+            **provider_failure(error),
             "folder": "",
             "groups": [],
             "links": [],
@@ -704,8 +733,7 @@ def _organize_metadata(document, evidence, folders=(), projects=(), *, client=No
         }
     except Exception as error:
         return {
-            "status": "unavailable",
-            "error": f"Jev unavailable ({type(error).__name__})",
+            **provider_failure(error),
             "folder": "",
             "groups": [],
             "links": [],
@@ -713,16 +741,16 @@ def _organize_metadata(document, evidence, folders=(), projects=(), *, client=No
 
 
 
-def judge_matches(query, matches, *, client=None, cache_namespace=None):
+def judge_matches(query, matches, *, client=None, cache_namespace=None, scope=None):
     """Select numeric answers first, otherwise verify a joint original-text proof."""
     from symbiknow.ai.numeric import judge_numeric
     from symbiknow.ai.proof import judge
 
     hidden = {m["document_id"] for m in matches if withheld(m)}
     sendable = [m for m in matches if m["document_id"] not in hidden]
-    result = judge_numeric(query, sendable, client=client, cache_namespace=cache_namespace)
+    result = judge_numeric(query, sendable, client=client, cache_namespace=cache_namespace, scope=scope)
     if result is None:
-        result = judge(query, sendable, client=client, cache_namespace=cache_namespace)
+        result = judge(query, sendable, client=client, cache_namespace=cache_namespace, scope=scope)
     if not hidden:
         return result
     add("sensitive_documents_withheld", len(hidden))
@@ -856,8 +884,7 @@ def _organization_decision(
         return result
     except Exception as error:
         return {
-            "status": "unavailable",
-            "error": f"Jev unavailable ({type(error).__name__})",
+            **provider_failure(error),
             "folder": "",
             "groups": [],
             "links": [],
@@ -926,6 +953,9 @@ def judgment_descriptor():
                 decisions=jev_decisions.VERSION, original_evidence_policy=jev_decisions.POLICY,
                 proof=jev_proof.VERSION, numeric=jev_numeric.VERSION, topics=jev_topics.VERSION,
                 acceptance=dict(initial=PROOF_CONFIDENCE, verification=VERIFY_CONFIDENCE,
-                                citation=CITATION_PROBABILITY, numeric=ANSWER_CONFIDENCE,
+                                citation=CITATION_PROBABILITY, conflict_clear=CONFLICT_CLEAR_PROBABILITY,
+                                lookalike=LOOKALIKE_PROBABILITY, borderline=BORDERLINE_CONFIDENCE,
+                                states_answer=STATES_ANSWER_PROBABILITY,
+                                numeric=ANSWER_CONFIDENCE,
                                 claim_span=CLAIM_SPAN_CONFIDENCE, link=LINK_PROBABILITY,
                                 topic=TOPIC_PROBABILITY, other_topic=OTHER_TOPIC_PROBABILITY))

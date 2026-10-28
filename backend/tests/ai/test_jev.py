@@ -141,7 +141,7 @@ def test_cache_depends_on_all_supplied_windows(monkeypatch):
     assert len(calls) == 2
 
 
-@pytest.mark.parametrize("gate", ["PROOF_CONFIDENCE", "VERIFY_CONFIDENCE", "CITATION_PROBABILITY",
+@pytest.mark.parametrize("gate", ["PROOF_CONFIDENCE", "VERIFY_CONFIDENCE", "CITATION_PROBABILITY", "CONFLICT_CLEAR_PROBABILITY", "LOOKALIKE_PROBABILITY", "BORDERLINE_CONFIDENCE", "STATES_ANSWER_PROBABILITY",
                                   "CLAIM_SPAN_CONFIDENCE", "LINK_PROBABILITY", "TOPIC_PROBABILITY",
                                   "OTHER_TOPIC_PROBABILITY"])
 def test_every_acceptance_gate_is_part_of_cached_decision_identity(gate, monkeypatch):

@@ -62,7 +62,7 @@ import TransferPanel, { ImportFormats } from "../features/transfers/TransferPane
 import { ConnectedWorkspace } from "../features/library/components/ConnectedWorkspace";
 import ConnectionMap from "../features/connections/components/ConnectionMap";
 import ReaderNavigator from "../features/reader/components/ReaderNavigator";
-import { emptySearchMessage, hasNoStrongMatch, reconcileSearchMatches, sortSearchMatches } from "../features/search/presentation";
+import { emptySearchMessage, hasNoStrongMatch, reconcileSearchMatches, sortSearchMatches, unavailableAnswerMessage } from "../features/search/presentation";
 import DeleteDialog, { type DeleteTarget } from "../features/library/components/DeleteDialog";
 import OrganizationDialog, {
   type OrganizationTarget,
@@ -443,7 +443,10 @@ export default function App() {
           r.evaluation.status === "unavailable" ||
             r.answer?.status === "unavailable",
         );
-        setAnswer(r.answer || { status: "not_requested" });
+        setAnswer({
+          ...(r.answer || { status: "not_requested" }),
+          failure: r.answer?.failure || r.evaluation.failure,
+        });
         if (r.status === "indexing_disabled")
           setSearchError(
             "Indexing is disabled. Stored files remain available in All files.",
@@ -1398,9 +1401,10 @@ export default function App() {
                   ))}
                 {unavailable && (
                   <p className="notice">
-                    {matches.some((m) => m.jev?.status === "evaluated")
-                      ? "Some answer checks are unavailable. Only previously accepted answers are shown."
-                      : "Answer checking is unavailable. Retry, or switch to Search to browse related files."}
+                    {unavailableAnswerMessage(
+                      answer,
+                      matches.some((m) => m.jev?.status === "evaluated"),
+                    ).body}
                   </p>
                 )}
                 {!searching &&

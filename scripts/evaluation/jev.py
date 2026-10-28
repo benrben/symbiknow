@@ -98,6 +98,8 @@ def main():
                 {
                     "expected": doc["expected_label"],
                     "predicted": predictions["answerability"][case["id"]][doc["document_id"]],
+                    **({"status": judged.get("status", receipt.get("status", "not_evaluated"))}
+                       if receipt else {}),
                 }
             )
     for case in corpus.get("grouping", []):

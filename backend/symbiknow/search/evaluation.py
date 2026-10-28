@@ -7,22 +7,35 @@ LABELS = ("direct", "partial", "related", "unrelated", "uncertain")
 
 def answerability_metrics(rows):
     confusion = {label: {other: 0 for other in LABELS} for label in LABELS}
+    abstentions = Counter()
+    statuses = Counter()
     for row in rows:
         expected, predicted = row["expected"], row["predicted"]
         if expected not in LABELS or predicted not in LABELS:
             raise ValueError("Expected and predicted verdicts must be recognized labels")
+        # Legacy label-only replays have no receipt. When a receipt exists,
+        # failure to judge is an abstention, never a correct 'uncertain' label.
+        status = row.get("status", "evaluated")
+        statuses[status] += 1
+        if status != "evaluated":
+            abstentions[expected] += 1
+            continue
         confusion[expected][predicted] += 1
     classes = {}
     for label in LABELS:
         true_positive = confusion[label][label]
-        actual = sum(confusion[label].values())
+        actual = sum(confusion[label].values()) + abstentions[label]
         predicted = sum(values[label] for values in confusion.values())
         classes[label] = {
             "support": actual,
             "precision": true_positive / predicted if predicted else None,
             "recall": true_positive / actual if actual else None,
         }
-    return {"count": len(rows), "confusion": confusion, "classes": classes}
+    return {"count": len(rows), "confusion": confusion, "classes": classes,
+            "evaluated_count": statuses["evaluated"],
+            "abstention_count": sum(abstentions.values()),
+            "abstentions_by_expected_class": dict(abstentions),
+            "evaluation_statuses": dict(statuses)}
 
 
 def grouping_metrics(expected, predicted):

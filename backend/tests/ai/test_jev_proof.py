@@ -41,7 +41,8 @@ def sdk(choices=None, probabilities=None, confidence=0.99, requests=None):
                     probabilities={v: float(v == choice) for v in q["criteria"]},
                 )
             else:
-                answers[key] = dict(type="noul", noul=probabilities.get(key, 0.99))
+                # Passages are about the asked entity unless a test says otherwise.
+                answers[key] = dict(type="noul", noul=probabilities.get(key, 0.01 if key.startswith("lookalike_") else 0.99))
         return httpx2.Response(200, json=dict(model="jev-1.14.0", usage={}, answers=answers))
 
     return TypeSafeClient(
@@ -133,7 +134,7 @@ def test_every_question_sent_is_decoded_and_never_repeats_passage_text():
         jev.judge_matches("Who is the real keeper?", [doc, document("d1")], client=client)
     first, verify = requests
     passages = ["0_0", "0_1", "1_0"]
-    assert set(first["questions"]) == {"coverage", *(f"proof_{p}" for p in passages)}
+    assert set(first["questions"]) == {"coverage", *(f"{kind}_{p}" for p in passages for kind in ("proof", "lookalike"))}
     assert set(verify["questions"]) == {"coverage", *(f"cite_{p}" for p in passages)}
     texts = [e["text"] for d in first["state"]["documents"] for e in d["evidence"]]
     for request in requests:

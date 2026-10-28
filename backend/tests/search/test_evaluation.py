@@ -16,6 +16,20 @@ def test_per_class_metrics_include_unrelated_and_missing_class_support():
         answerability_metrics([{"expected": "unrelated", "predicted": "invented"}])
 
 
+def test_unavailable_uncertain_prediction_is_an_abstention_not_a_correct_label():
+    metrics = answerability_metrics([
+        {"expected": "uncertain", "predicted": "uncertain", "status": "unavailable"},
+        {"expected": "direct", "predicted": "uncertain", "status": "not_evaluated"},
+        {"expected": "uncertain", "predicted": "uncertain", "status": "evaluated"},
+    ])
+    assert metrics["count"] == 3 and metrics["evaluated_count"] == 1
+    assert metrics["abstention_count"] == 2
+    assert metrics["evaluation_statuses"] == {"unavailable": 1, "not_evaluated": 1, "evaluated": 1}
+    assert metrics["classes"]["uncertain"] == {"support": 2, "precision": 1, "recall": .5}
+    assert metrics["classes"]["direct"] == {"support": 1, "precision": None, "recall": 0}
+    assert metrics["confusion"]["uncertain"]["uncertain"] == 1
+
+
 def test_pairwise_grouping_penalizes_cross_project_merges_and_fragmentation():
     gold = {"a": "one", "b": "one", "c": "two", "d": "two"}
     assert (
@@ -162,3 +176,35 @@ def test_evaluator_cli_preserves_legacy_label_replay_and_raw_judgments(tmp_path)
                 report["predictions"]["judgments"]["c"]["matches"][0]["jev"]["policy_version"]
                 == "pinned"
             )
+
+
+def test_evaluator_cli_counts_provider_failure_against_uncertain_gold(tmp_path):
+    import json
+    from pathlib import Path
+    import subprocess
+    import sys
+
+    corpus = {
+        "provenance": {"annotator": "test-author", "split": "regression", "independent": False},
+        "answerability": [{"id": "c", "question": "Q", "documents": [
+            {"document_id": "d", "version": "v1", "expected_label": "uncertain"},
+        ]}],
+    }
+    predictions = {
+        "answerability": {"c": {"d": "uncertain"}}, "grouping": {},
+        "judgments": {"c": {"status": "unavailable", "matches": [
+            {"document_id": "d", "jev": {"status": "unavailable", "reason": "provider_unavailable"}},
+        ]}},
+    }
+    source, saved, output = [tmp_path / name for name in ("corpus.json", "predictions.json", "report.json")]
+    source.write_text(json.dumps(corpus))
+    saved.write_text(json.dumps(predictions))
+    subprocess.run([
+        sys.executable, str(Path(__file__).resolve().parents[3] / "scripts/evaluation/jev.py"),
+        "--corpus", str(source), "--predictions", str(saved), "--output", str(output),
+    ], check=True, capture_output=True, timeout=10)
+    metrics = json.loads(output.read_text())["answerability"]
+    assert metrics["count"] == metrics["abstention_count"] == 1
+    assert metrics["evaluated_count"] == metrics["confusion"]["uncertain"]["uncertain"] == 0
+    assert metrics["classes"]["uncertain"] == {"support": 1, "precision": None, "recall": 0}
+    assert metrics["evaluation_statuses"] == {"unavailable": 1}

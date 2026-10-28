@@ -502,7 +502,10 @@ Searching
   value you cannot see.
 - Cite document_id, version and evidence_id. answer.status:
   no_answer_in_evaluated_candidates = not found in the top candidates (not proof of
-  absence); unavailable = the judge is offline, use ordinary results.
+  absence); unavailable = checking failed, not a no-answer judgment. Read
+  answer.failure for the cause and recovery; retryable=false needs corrective action.
+  retrieval_fallback gives exact search arguments for unchecked evidence in the same
+  scope. If compact output omits it, use get_job(detail="full").
 - Read hints when there are no matches (pending indexing, unknown folder).
 - page.continuation works only with identical arguments, for five minutes; don't
   store it.
@@ -1188,7 +1191,7 @@ def submit_search(
 @mcp.tool(structured_output=True)
 def ask(
     query: str,
-    limit: Annotated[int, Field(ge=1, le=3, description="Files to check; up to three to keep evidence within the judge context.")] = 3,
+    limit: Annotated[int, Field(ge=1, le=3, description="Files to check first; up to three. If Jev finds no answer, six are checked once.")] = 3,
     folder: Annotated[str | None, Field(description="Exact folder, including its subfolders.")] = None,
     group: str | None = None,
     detail: Literal["compact", "full"] = "compact",
@@ -1198,6 +1201,7 @@ def ask(
 
     Sends selected passages to the configured judge. Returns cited supporting evidence
     and explicit partial, absent, or unavailable status; never assumes an unchecked answer.
+    Per-document judging may add `related`: relevant files without an answer, not evidence.
     """
     if not 1 <= limit <= 3:
         raise SearchRequestError("Ask checks between 1 and 3 files")
@@ -1237,8 +1241,11 @@ def get_job(job_id: str, detail: Literal["compact", "full"] = "compact", cursor:
                 raise SearchRequestError("Job evidence changed or cursor is invalid; restart from its first page") from None
         def next_cursor(position):
             return base64.urlsafe_b64encode(json.dumps([binding, position]).encode()).decode()
-        value["result"] = project_search(result, detail, offset=offset, continuation=next_cursor,
-                                         query=record["payload"]["args"]["query"])
+        try:
+            value["result"] = project_search(result, detail, offset=offset, continuation=next_cursor,
+                                             query=record["payload"]["args"]["query"])
+        except ValueError as exc:
+            raise SearchRequestError(str(exc)) from None
         args = record["payload"]["args"]
         if not value["result"]["matches"] and not offset:
             if hints := _hints(args["query"], args.get("folder"), args.get("group"), result):

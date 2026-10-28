@@ -63,9 +63,10 @@ def test_answerability_preserves_negative_user_question_and_original_evidence():
     assert "Answerability is different from whether the answer is Yes" in requests[0]["questions"]["coverage"]["instructions"]
 
 
-@pytest.mark.parametrize("confidence,accepted", [(.599, False), (.6, True), (.799, True), (.8, True)])
+@pytest.mark.parametrize("confidence,accepted", [(.449, False), (.599, False), (.6, True), (.799, True), (.8, True)])
 def test_uncertain_proof_verification_preserves_acceptance_boundary(confidence, accepted):
-    with sdk({"coverage": "partial"}, confidence=confidence) as client:
+    # Below the gate only a strong focused answer check could publish; this one is weak.
+    with sdk({"coverage": "partial"}, {"states_0_0": 0.89}, confidence=confidence) as client:
         result = jev.judge_matches("Which refund fields are required?", [dict(CASES[0]["match"])], client=client)
     assert bool(jev.answer_results(result["matches"], result)[0]) is accepted
 
